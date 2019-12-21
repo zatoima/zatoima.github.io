@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Aurora | my opnion is my own</title>
+    <link>https:///zatoima.github.io/tags/aurora/</link>
+      <atom:link href="https:///zatoima.github.io/tags/aurora/index.xml" rel="self" type="application/rss+xml" />
+    <description>Aurora</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 13 Nov 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https:///zatoima.github.io/img/icon-192.png</url>
+      <title>Aurora</title>
+      <link>https:///zatoima.github.io/tags/aurora/</link>
+    </image>
+    
+    <item>
+      <title>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</title>
+      <link>https:///zatoima.github.io/aurora-postgresql-query-plan-management.html</link>
+      <pubDate>Wed, 13 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aurora-postgresql-query-plan-management.html</guid>
+      <description>&lt;h3 id=&#34;qpmquery-plan-management&#34;&gt;QPM(Query Plan Management)とは？&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;SQLに実行計画を記録して、その実行計画を固定化、もしくは別環境に実行計画を移行して固定化出来る機能。Oracleで言うところのSPM（SQL Plan Management）になる。Aurora(PostgreSQL)でもこの機能が使えるので実際にやってみる。&lt;/p&gt;
+&lt;h5 id=&#34;query-plan-management&#34;&gt;Query Plan Managementの制御方法&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;rds.enable_plan_management = { 0,1} #パラメータグループで設定
+
+apg_plan_mgmt.capture_plan_baselines = { manual, automatic, off }
+# automatic : 自動計画取り込み。1回以上実行されたSQLを取り込む
+# manual    : 個々のSQLを手動で実行計画を取り込む
+# off       : Query Planの取得を無効化
+
+apg_plan_mgmt.use_plan_baselines = { true, false }
+# true  : 取得したQuery Planを使用して実行計画を固定化する
+# false : 取得したQuery Planを使用しない。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;環境、及びシナリオ説明&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;開発環境から本番環境への実行計画の移行を想定。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;本番環境DB名：prod&lt;/li&gt;
+&lt;li&gt;開発環境DB名：dev&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;開発環境で実行したfull scan(seq scan)となる実行計画を本番環境に移行して非効率な実行計画を再現する。&lt;/p&gt;
+&lt;h3 id=&#34;devprod&#34;&gt;パラメータグループ変更（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;クラスターパラメータグループの &lt;code&gt;rds.enable_plan_management&lt;/code&gt; を&lt;code&gt;1&lt;/code&gt;に設定&lt;/p&gt;
+&lt;h3 id=&#34;devprod-1&#34;&gt;拡張機能の有効化（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;create extensionコマンドでapg_plan_mgmtをインストールする&lt;/p&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;\dx
+create extension apg_plan_mgmt;
+\dx
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行結果
+dev=&amp;gt; \dx
+                 List of installed extensions
+  Name   | Version |   Schema   |         Description          
+---------+---------+------------+------------------------------
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(1 row)
+dev=&amp;gt; 
+dev=&amp;gt; create extension apg_plan_mgmt;    #拡張機能を有効化
+CREATE EXTENSION
+dev=&amp;gt; \dx
+                                        List of installed extensions
+     Name      | Version |    Schema     |                            Description           
+                 
+---------------+---------+---------------+--------------------------------------------------
+-----------------
+ apg_plan_mgmt | 1.0.1   | apg_plan_mgmt | Amazon Aurora with PostgreSQL compatibility Query #★←apg_plan_mgmtが増えている
+ Plan Management
+ plpgsql       | 1.0     | pg_catalog    | PL/pgSQL procedural language
+(2 rows)
+dev=&amp;gt; 
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dba-plansdevprod&#34;&gt;dba_plans表の事前確認（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;apg_plan_mgmt.dba_plans表には当然何も格納されていない。&lt;/p&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+dev-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+dev-&amp;gt; ORDER BY sql_text, plan_created;
+ sql_hash | plan_hash | status | enabled | sql_text 
+----------+-----------+--------+---------+----------
+(0 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;devprod-2&#34;&gt;テスト用のテーブル作成（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;テスト用のテーブルを作成する&lt;/p&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE t1 AS
+SELECT num                         a -- 生成値
+      ,&#39;1&#39;                         b -- 定数
+      ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
+      ,current_timestamp      d 
+FROM   generate_series(1,10000) num
+;
+
+ALTER TABLE t1 ADD PRIMARY KEY(a);
+
+\d t1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-6&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; CREATE TABLE t1 AS
+dev-&amp;gt; SELECT num                         a -- 生成値
+dev-&amp;gt;       ,&#39;1&#39;                         b -- 定数
+dev-&amp;gt;       ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
+dev-&amp;gt;       ,current_timestamp      d 
+dev-&amp;gt; FROM   generate_series(1,10000) num
+dev-&amp;gt; ;
+SELECT 10000
+dev=&amp;gt; 
+dev=&amp;gt; ALTER TABLE t1 ADD PRIMARY KEY(a);
+ALTER TABLE
+dev=&amp;gt; 
+dev=&amp;gt; \d t1
+                         Table &amp;quot;public.t1&amp;quot;
+ Column |           Type           | Collation | Nullable | Default 
+--------+--------------------------+-----------+----------+---------
+ a      | integer                  |           | not null | 
+ b      | text                     |           |          | 
+ c      | text                     |           |          | 
+ d      | timestamp with time zone |           |          | 
+Indexes:
+    &amp;quot;t1_pkey&amp;quot; PRIMARY KEY, btree (a)
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sqlcapturedev&#34;&gt;SQLの実行、及び実行capture（dev環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;実行計画が&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLと、&lt;strong&gt;&lt;u&gt;Index Scan&lt;/u&gt;&lt;/strong&gt;になるSQLを実行。この時、&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLの実行計画だけを手動で取り込む。&lt;/p&gt;
+&lt;p&gt;この例では「Plan Hash: -52705300」が&lt;code&gt;apg_plan_mgmt.dba_plans&lt;/code&gt;表に取り込まれているのがわかる。&lt;/p&gt;
+&lt;h5 id=&#34;heading-7&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SET apg_plan_mgmt.capture_plan_baselines = manual; #実行計画の手動取り込みを有効化
+
+explain (hashes true) select count(*) from t1 where a &amp;gt; 1;
+
+SET apg_plan_mgmt.capture_plan_baselines = off;  #実行計画の手動取り込みを停止
+
+explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+
+SET apg_plan_mgmt.capture_plan_baselines = off;
+ 
+SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-8&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行ログ
+dev=&amp;gt; SET apg_plan_mgmt.capture_plan_baselines = manual;
+SET
+dev=&amp;gt; 
+dev=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 1;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Aggregate  (cost=214.00..214.01 rows=1 width=8)
+   -&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=10000 width=0)
+         Filter: (a &amp;gt; 1)
+ SQL Hash: -1895827505, Plan Hash: -52705300
+(4 rows)
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; SET apg_plan_mgmt.capture_plan_baselines = off;
+SET
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Aggregate  (cost=8.30..8.31 rows=1 width=8)
+   -&amp;gt;  Index Only Scan using t1_pkey on t1  (cost=0.29..8.30 rows=1 width=0)
+         Index Cond: (a &amp;gt; 9999)
+ Plan Hash: 1222455040
+(4 rows)
+dev=&amp;gt; 
+dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+dev-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+dev-&amp;gt; ORDER BY sql_text, plan_created;
+  sql_hash   | plan_hash |  status  | enabled |               sql_text               
+-------------+-----------+----------+---------+--------------------------------------
+ -1895827505 | -52705300 | Approved | t       | select count(*) from t1 where a &amp;gt; 1; #★←実行計画が取り込まれている
+(1 row)
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dev&#34;&gt;エクスポート用のテーブル作成(dev)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE plans_copy AS SELECT * FROM apg_plan_mgmt.plans;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-dumpdev&#34;&gt;pg_dumpを使用してエクスポートする(dev)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;export PGPASSWORD=postgres
+pg_dump -U postgres -h aurora-postgres-cluster-dev.cluster-xxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft dev &amp;gt; plans_copy.tar
+
+#必要に応じて不要になった中間テーブルを削除する
+--DROP TABLE plans_copy;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dbprod&#34;&gt;別DBでインポート(prod)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;pg_restore -U postgres -h aurora-postgres-cluster-prod.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft plans_copy.tar -d prod
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;prod&#34;&gt;インポート確認、及びマージ(prod)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;このあたりのマニュアルを参考に実行計画のマージを行います。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;実行計画の維持 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;計画のエクスポートおよびインポート&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;heading-9&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+ ON CONFLICT ON CONSTRAINT plans_pkey
+ DO UPDATE SET
+ status = EXCLUDED.status,
+ enabled = EXCLUDED.enabled,
+ last_used = CASE WHEN EXCLUDED.last_used &amp;gt; plans.last_used 
+ THEN EXCLUDED.last_used ELSE plans.last_used END, 
+ estimated_startup_cost = EXCLUDED.estimated_startup_cost,
+ estimated_total_cost = EXCLUDED.estimated_total_cost,
+ planning_time_ms = EXCLUDED.planning_time_ms,
+ execution_time_ms = EXCLUDED.execution_time_ms,
+-- estimated_rows = EXCLUDED.estimated_rows,
+-- actual_rows = EXCLUDED.actual_rows,
+ total_time_benefit_ms = EXCLUDED.total_time_benefit_ms, 
+ execution_time_benefit_ms = EXCLUDED.execution_time_benefit_ms;
+ 
+#管理計画を共有メモリにリロードする
+SELECT apg_plan_mgmt.reload(); -- refresh shared memory
+DROP TABLE plans_copy;
+
+-- 確認
+SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;この時、estimated_rows、actual_rowsをコメントアウトする必要あり。実際にはない行らしい。マニュアルの誤記？&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;ERROR:  column excluded.actual_rows does not exist
+LINE 13:  actual_rows = EXCLUDED.actual_rows,
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-10&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;prod=&amp;gt; INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+prod-&amp;gt;  ON CONFLICT ON CONSTRAINT plans_pkey
+prod-&amp;gt;  DO UPDATE SET
+prod-&amp;gt;  status = EXCLUDED.status,
+prod-&amp;gt;  enabled = EXCLUDED.enabled,
+prod-&amp;gt;  last_used = CASE WHEN EXCLUDED.last_used &amp;gt; plans.last_used 
+prod-&amp;gt;  THEN EXCLUDED.last_used ELSE plans.last_used END, 
+prod-&amp;gt;  estimated_startup_cost = EXCLUDED.estimated_startup_cost,
+prod-&amp;gt;  estimated_total_cost = EXCLUDED.estimated_total_cost,
+prod-&amp;gt;  planning_time_ms = EXCLUDED.planning_time_ms,
+prod-&amp;gt;  execution_time_ms = EXCLUDED.execution_time_ms,
+prod-&amp;gt; -- estimated_rows = EXCLUDED.estimated_rows,
+prod-&amp;gt; -- actual_rows = EXCLUDED.actual_rows,
+prod-&amp;gt;  total_time_benefit_ms = EXCLUDED.total_time_benefit_ms, 
+prod-&amp;gt;  execution_time_benefit_ms = EXCLUDED.execution_time_benefit_ms;
+INSERT 0 2
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; SELECT apg_plan_mgmt.reload();
+ reload 
+--------
+      0
+(1 row)
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; DROP TABLE plans_copy;
+DROP TABLE
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+prod-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+prod-&amp;gt; ORDER BY sql_text, plan_created;
+  sql_hash   | plan_hash  |   status   | enabled |                sql_text                 
+-------------+------------+------------+---------+-----------------------------------------
+ -1895827505 |  -52705300 | Approved   | t       | select count(*) from t1 where a &amp;gt; 1;
+(2 rows)
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql&#34;&gt;SQLの実行&lt;/h3&gt;
+&lt;p&gt;今回はindex scanとなるところをfullscanを選択させているケース。&lt;/p&gt;
+&lt;h5 id=&#34;heading-11&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- SQLのテスト
+SET apg_plan_mgmt.use_plan_baselines = true;
+explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+SET apg_plan_mgmt.use_plan_baselines = false;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-12&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;prod=&amp;gt; SET apg_plan_mgmt.use_plan_baselines = true;
+prod=&amp;gt; 
+prod=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Aggregate  (cost=189.00..189.01 rows=1 width=8)
+   -&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=1 width=0)
+         Filter: (a &amp;gt; 9999)
+ Note: An Approved plan was used instead of the minimum cost plan.
+ SQL Hash: -1895827505, Plan Hash: -52705300, Minimum Cost Plan Hash: 1222455040
+(5 rows)
+prod=&amp;gt; SET apg_plan_mgmt.use_plan_baselines = false;
+SET
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;今回の例ではwhere文でデータ取得件数を絞っているのでindex scanが実行プランとしては正しい。ただ、QPMで&lt;code&gt;select count(*) from t1 where a &amp;gt; 1;&lt;/code&gt;の実行計画が取り込まれており、この実行計画はFullscan(SeqScan)となる。敢えて非効率な実行計画を選択させたパターン。&lt;/p&gt;
+&lt;p&gt;実際にログ上にも&lt;code&gt;Note: An Approved plan was used instead of the minimum cost plan.&lt;/code&gt;と記載がありもっとコストのよい実行計画があるぞーと言っている。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;prod=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;&lt;/p&gt;
+&lt;p&gt;QUERY PLAN&lt;/p&gt;
+&lt;p&gt;Aggregate  (cost=189.00..189.01 rows=1 width=8)
+-&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=1 width=0)
+Filter: (a &amp;gt; 9999)
+Note: An Approved plan was used instead of the minimum cost plan.
+SQL Hash: -1895827505, Plan Hash: -52705300, Minimum Cost Plan Hash: 1222455040&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-13&#34;&gt;参考&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;実行計画の維持 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Amazon Aurora PostgreSQL でのクエリ計画管理のユースケース | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/&#34;&gt;https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</title>
+      <link>https:///zatoima.github.io/aws-aurora-postgres-password.html</link>
+      <pubDate>Fri, 08 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-aurora-postgres-password.html</guid>
+      <description>&lt;p&gt;Aurora(PostgreSQL)ではなく、PostgreSQLのお話。&lt;/p&gt;
+&lt;h3 id=&#34;1-pgpass-&#34;&gt;&lt;strong&gt;方法&lt;/strong&gt;1: &amp;lsquo;.pgpass&amp;rsquo; にパスワードを記載する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;ホームディレクトリに&amp;rsquo;.pgpass&#39;ファイルを作成してこちらにパスワードを記載。&lt;/p&gt;
+&lt;h5 id=&#34;pgpass&#34;&gt;.pgpassの書式&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;ホスト名:ポート:データベース:ユーザ:パスワード
+例）192.168.1.**:5432:dbname:dbuser:password
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;pgpass-1&#34;&gt;.pgpassの作成&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi $HOME/.pgpass
+aurorapostdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com:5432:aurorapostdb:master:postgres
+
+chmod 600 $HOME/.pgpass
+
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurorapostdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+psql (10.4, server 10.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;権限を変更しない場合、WARNINGが出る。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;WARNING: password file &amp;ldquo;/home/ec2-user/.pgpass&amp;rdquo; has group or world access; permissions should be u=rw (0600) or less&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;2&#34;&gt;方法2:環境変数に記載する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export PGPASSWORD=postgres
+psql -h aurorapostdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+
+[ec2-user@donald-dev-ec2-bastin ~]$ export PGPASSWORD=postgres
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurorapostdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+psql (10.4, server 10.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;参考&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;33.14. 環境変数 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/libpq-envars.html&#34;&gt;https://www.postgresql.jp/document/10/html/libpq-envars.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;33.15. パスワードファイル &lt;a href=&#34;https://www.postgresql.jp/document/10/html/libpq-pgpass.html&#34;&gt;https://www.postgresql.jp/document/10/html/libpq-pgpass.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Aurora(PostgresSQL)のクエリログの出力方法</title>
+      <link>https:///zatoima.github.io/aws-aurora-postgres-querylog.html</link>
+      <pubDate>Mon, 04 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-aurora-postgres-querylog.html</guid>
+      <description>&lt;h3 id=&#34;1&#34;&gt;1.バージョン確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;aurorapostdb=&amp;gt; select version();
+                                   version                                   
+-----------------------------------------------------------------------------
+ PostgreSQL 10.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.9.3, 64-bit
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;2&#34;&gt;2.パラメータグループを変更&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;19.8. エラー報告とログ取得 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/runtime-config-logging.html&#34;&gt;https://www.postgresql.jp/document/10/html/runtime-config-logging.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;log_statement=all #どのSQL文をログに記録するかを制御
+log_min_duration_statement=0 #0に設定すれば、すべての文の実行時間が出力
+log_destination=csvlog #csvlogがlog_destinationに含まれる場合、ログ項目はプログラムへの読み込みが簡便な&amp;quot;カンマ区切り値&amp;quot;書式（CSV）で出力
+log_duration=1
+log_error_verbosity=verbose #ログ取得されるそれぞれのメッセージに対し、サーバログに書き込まれる詳細の量を制御
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;3aurora&#34;&gt;3.Auroraを再起動する（パラメータの反映）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;4&#34;&gt;4.パラメータ確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;show log_statement; 
+show log_min_duration_statement;
+show log_destination;
+show log_duration;
+show log_error_verbosity;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;5&#34;&gt;5.テスト用のクエリの実行&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;直積のSQLを実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;select count(*) from pg_tables a, pg_stats b, pg_index c, pg_locks d;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;6&#34;&gt;6.マネージメントコンソールから確認する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;code&gt;error/postgresql.log.yyyy-mm-dd-hhmi.csv&lt;/code&gt; を確認&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191218134516337.png&#34; alt=&#34;image-20191218134516337&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>EC2上からpsqlでRDS Aurora(PostgreSQL)に接続するまで</title>
+      <link>https:///zatoima.github.io/aws-ec2-psql-install.html</link>
+      <pubDate>Thu, 17 Oct 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-ec2-psql-install.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;実行コマンド&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum search postgresql
+sudo yum -y install postgresql.x86_64
+
+psql -h &amp;lt;エンドポイント&amp;gt; -U &amp;lt;ユーザ名&amp;gt; -d &amp;lt;DB名&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;os&#34;&gt;OS情報&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ uname -a
+Linux donald-dev-ec2-bastin 4.14.138-114.102.amzn2.x86_64 #1 SMP Thu Aug 15 15:29:58 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;yum-searchpostgresql-client-programs&#34;&gt;yum searchでPostgreSQL client programsを探す&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;実行結果から&lt;code&gt;postgresql.x86_64&lt;/code&gt;が&lt;code&gt;PostgreSQL client programs&lt;/code&gt;と判明しました。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ sudo yum search postgresql
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+================================================================================= N/S matched: postgresql ==================================================================================
+freeradius-postgresql.x86_64 : Postgresql support for freeradius
+pcp-pmda-postgresql.x86_64 : Performance Co-Pilot (PCP) metrics for PostgreSQL
+postgresql.x86_64 : PostgreSQL client programs
+postgresql-contrib.x86_64 : Extension modules distributed with PostgreSQL
+postgresql-devel.x86_64 : PostgreSQL development header files and libraries
+postgresql-docs.x86_64 : Extra documentation for PostgreSQL
+postgresql-jdbc.noarch : JDBC driver for PostgreSQL
+postgresql-jdbc-javadoc.noarch : API docs for postgresql-jdbc
+postgresql-libs.x86_64 : The shared libraries required for any PostgreSQL clients
+postgresql-libs.i686 : The shared libraries required for any PostgreSQL clients
+postgresql-odbc.x86_64 : PostgreSQL ODBC driver
+postgresql-plperl.x86_64 : The Perl procedural language for PostgreSQL
+postgresql-plpython.x86_64 : The Python2 procedural language for PostgreSQL
+postgresql-pltcl.x86_64 : The Tcl procedural language for PostgreSQL
+postgresql-server.x86_64 : The programs needed to create and run a PostgreSQL server
+postgresql-static.x86_64 : Statically linked PostgreSQL libraries
+postgresql-test.x86_64 : The test suite distributed with PostgreSQL
+postgresql-upgrade.x86_64 : Support for upgrading from the previous major release of PostgreSQL
+qt-postgresql.x86_64 : PostgreSQL driver for Qt&#39;s SQL classes
+qt-postgresql.i686 : PostgreSQL driver for Qt&#39;s SQL classes
+qt3-PostgreSQL.x86_64 : PostgreSQL drivers for Qt 3&#39;s SQL classes
+qt3-PostgreSQL.i686 : PostgreSQL drivers for Qt 3&#39;s SQL classes
+qt5-qtbase-postgresql.x86_64 : PostgreSQL driver for Qt5&#39;s SQL classes
+qt5-qtbase-postgresql.i686 : PostgreSQL driver for Qt5&#39;s SQL classes
+PyGreSQL.x86_64 : A Python client library for PostgreSQL
+apr-util-pgsql.x86_64 : APR utility library PostgreSQL DBD driver
+libdbi-dbd-pgsql.x86_64 : PostgreSQL plugin for libdbi
+perl-DBD-Pg.x86_64 : A PostgreSQL interface for perl
+php-pgsql.x86_64 : A PostgreSQL database module for PHP
+python-psycopg2.x86_64 : A PostgreSQL database adapter for Python
+python-psycopg2-debug.x86_64 : A PostgreSQL database adapter for Python 2 (debug build)
+python-psycopg2-doc.x86_64 : Documentation for psycopg python PostgreSQL database adapter
+redland-pgsql.x86_64 : PostgreSQL storage support for Redland
+rhdb-utils.x86_64 : Miscellaneous utilities for PostgreSQL - Red Hat Edition
+tcl-pgtcl.x86_64 : A Tcl client library for PostgreSQL
+
+  Name and summary matches only, use &amp;quot;search all&amp;quot; for everything.
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql-client-programs&#34;&gt;PostgreSQL client programsをインストール&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ sudo yum -y install postgresql.x86_64
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+amzn2-core                                                                                                                                                           | 2.4 kB  00:00:00     
+Resolving Dependencies
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+--&amp;gt; Processing Dependency: postgresql-libs(x86-64) = 9.2.24-1.amzn2.0.1 for package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+--&amp;gt; Processing Dependency: libpq.so.5()(64bit) for package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+--&amp;gt; Finished Dependency Resolution
+
+Dependencies Resolved
+
+============================================================================================================================================================================================
+ Package                                         Arch                                   Version                                            Repository                                  Size
+============================================================================================================================================================================================
+Installing:
+ postgresql                                      x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 3.0 M
+Installing for dependencies:
+ postgresql-libs                                 x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 235 k
+
+Transaction Summary
+============================================================================================================================================================================================
+Install  1 Package (+1 Dependent package)
+
+Total download size: 3.3 M
+Installed size: 17 M
+Downloading packages:
+(1/2): postgresql-libs-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                 | 235 kB  00:00:00     
+(2/2): postgresql-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                      | 3.0 MB  00:00:00     
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                                                                        15 MB/s | 3.3 MB  00:00:00     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                1/2 
+  Installing : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     2/2 
+  Verifying  : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     1/2 
+  Verifying  : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                2/2 
+
+Installed:
+  postgresql.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                                    
+
+Dependency Installed:
+  postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                               
+
+Complete!
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;aurorapostgresql&#34;&gt;Aurora(PostgreSQL)へ接続&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;接続時にはセキュリティグループ等でEC2上の踏み台サーバからPostgreSQLへの接続を許可が必要。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ psql -h &amp;lt;エンドポイント&amp;gt; -U &amp;lt;ユーザ名&amp;gt; -d &amp;lt;DB名&amp;gt;
+Password for user master: 
+psql (9.2.24, server 10.7)
+WARNING: psql version 9.2, server version 10.0.
+         Some psql features might not work.
+SSL connection (cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

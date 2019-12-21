@@ -1,0 +1,1338 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>PostgreSQL | my opnion is my own</title>
+    <link>https:///zatoima.github.io/tags/postgresql/</link>
+      <atom:link href="https:///zatoima.github.io/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
+    <description>PostgreSQL</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 13 Dec 2019 20:00:00 +0900</lastBuildDate>
+    <image>
+      <url>https:///zatoima.github.io/img/icon-192.png</url>
+      <title>PostgreSQL</title>
+      <link>https:///zatoima.github.io/tags/postgresql/</link>
+    </image>
+    
+    <item>
+      <title>RDS(PostgreSQL)の論理レプリケーションの競合エラーを解消する</title>
+      <link>https:///zatoima.github.io/aws-rds-repllication-error-conflict.html</link>
+      <pubDate>Fri, 13 Dec 2019 20:00:00 +0900</pubDate>
+      <guid>https:///zatoima.github.io/aws-rds-repllication-error-conflict.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;競合を発生させる&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#subscribe側のテーブルに事前にINSERTする
+insert into LogicalReplicationTest values (1);
+
+#publisher側のテーブルにINSERTして伝搬させる
+insert into LogicalReplicationTest values (1);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;エラー確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code&gt;2019-11-30 15:13:26 UTC::@:[29680]:ERROR: duplicate key value violates unique constraint &amp;quot;logicalreplicationtest_pkey&amp;quot;
+2019-11-30 15:13:26 UTC::@:[29680]:DETAIL: Key (a)=(1) already exists.
+2019-11-30 15:13:26 UTC::@:[12125]:LOG: worker process: logical replication worker for subscription 110499 (PID 29680) exited with exit code 1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;この時の方針としては大きく２つある。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;競合が発生した原因を取り除く
+&lt;ul&gt;
+&lt;li&gt;上記の場合は、publisher側のテーブルに既にデータが入っていることが原因なので、publisher側をメンテナンスする。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;publisher側のLSNの適用位置を変更する&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;今回は上記の「2.publisher側のLSNの適用位置を変更する」をやってみる。あるべき姿は「1.競合が発生した原因を取り除く」&lt;/p&gt;
+&lt;h3 id=&#34;lsn&#34;&gt;現時点のLSNの位置を確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select * from pg_show_replication_origin_status();
+
+rdb=&amp;gt; select * from pg_show_replication_origin_status();
+ local_id | external_id | remote_lsn | local_lsn  
+----------+-------------+------------+------------
+        1 | pg_110499   | 0/306DC150 | B/E103DA48
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;publisherwallsn&#34;&gt;Publisher側のWALのLSNの位置を確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT pg_current_wal_lsn();
+
+rdb=&amp;gt; SELECT pg_current_wal_lsn();
+ pg_current_wal_lsn 
+--------------------
+ 0/306E3BF8
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;subscribelsn&#34;&gt;Subscribe側のLSNの位置を変更&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT pg_replication_origin_advance(&#39;pg_110499&#39;, &#39;0/306E3BF8&#39;);
+
+rdb=&amp;gt; select * from pg_show_replication_origin_status();
+ local_id | external_id | remote_lsn | local_lsn 
+----------+-------------+------------+-----------
+        1 | pg_43450    | 0/3006B190 | 0/0
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;読み取り位置が変更されることにより、競合が発生しなくなる。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>RDS(PostgreSQL)でpg_replication_origin_statusにアクセス出来ない(permission denied)</title>
+      <link>https:///zatoima.github.io/aws-rds-pg-replication-origin-status-error.html</link>
+      <pubDate>Tue, 10 Dec 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-rds-pg-replication-origin-status-error.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;&lt;strong&gt;バージョン&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;rdbtest=&amp;gt; select version();
+                                                 version                                    
+---------------------------------------------------------------------------------------
+ PostgreSQL 10.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5
+-11), 64-bit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;&lt;strong&gt;事象&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;pg_replication_origin_statusの情報をselectしようとするとpermission deniedでエラーが発生する。rds_superuserロールだとしても同様。この情報はsubscriber に反映されている変更のトランザクションログの位置(LSN)の位置とpublisher側のLSNの対応関係が記載されているので、この情報が見れないと論理レプリケーション時の運用時に困る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;rdbtest=&amp;gt; SELECT * FROM pg_replication_origin_status;
+ERROR:  permission denied for relation pg_replication_origin_status
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;&lt;strong&gt;対応策&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;pg_show_replication_origin_status()にアクセスしてLSNを取得する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;rdbtest=&amp;gt; select * from pg_show_replication_origin_status();
+ local_id | external_id | remote_lsn | local_lsn 
+----------+-------------+------------+-----------
+        1 | pg_43450    | 0/28D70910 | 0/0
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;&lt;strong&gt;参考&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;AWS Developer Forums: RDS Postgres Logical replication access &amp;hellip; &lt;a href=&#34;https://forums.aws.amazon.com/thread.jspa?threadID=301094&#34;&gt;https://forums.aws.amazon.com/thread.jspa?threadID=301094&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>PostgreSQLのpg_dump、pg_restoreについてまとめる</title>
+      <link>https:///zatoima.github.io/postgresql-about-pg_dump-pg_restore.html</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/postgresql-about-pg_dump-pg_restore.html</guid>
+      <description>&lt;h4 id=&#34;1&#34;&gt;1.はじめに&lt;/h4&gt;
+&lt;p&gt;これから何度も調べることになりそうなので、PostgreSQLのpg_dump、pg_restoreについてまとめておく。&lt;/p&gt;
+&lt;p&gt;スクリプトファイル形式とアーカイブファイル形式でバックアップが可能。それぞれでリストア方式が異なる。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;スクリプトファイル形式の論理バックアップ  :  psqlでリストア&lt;/li&gt;
+&lt;li&gt;アーカイブファイル形式の論理バックアップ  :  pg_restoreでリストア&lt;/li&gt;
+&lt;/ol&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;2&#34;&gt;2.基本コマンド&lt;/h4&gt;
+&lt;h4 id=&#34;heading&#34;&gt;スクリプトファイル形式の論理バックアップ&lt;/h4&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;データベース単位のバックアップ&lt;/h4&gt;
+&lt;p&gt;​	&lt;code&gt;mydb&lt;/code&gt;という名前のデータベースをSQLスクリプトファイルにダンプ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_dump mydb &amp;gt; db.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;テーブル単位のバックアップ&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;mytab&lt;/code&gt;という名前の単一のテーブルをダンプ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_dump -t mytab mydb &amp;gt; db.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;リストア&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;newdb&lt;/code&gt;というデータベースにdb.sqlの内容をリストア&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;psql -d newdb -f db.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;アーカイブファイル形式の論理バックアップ&lt;/h4&gt;
+&lt;p&gt;データベース単位のバックアップ&lt;/p&gt;
+&lt;p&gt;​	&lt;code&gt;mydb&lt;/code&gt;という名前のデータベースをアーカイブファイル形式にダンプ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_dump -Fc mydb &amp;gt; db.dump
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;p&gt;テーブル単位のバックアップ&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;mytab&lt;/code&gt;という名前の単一のテーブルをアーカイブファイル形式にダンプ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_dump -t mytab -Fc mydb &amp;gt; db.dump
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;リストア&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;newdb&lt;/code&gt;というデータベースにdb.dumpの内容をリストア&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pg_restore -d newdb db.dump
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;3&#34;&gt;3.オプション&lt;/h3&gt;
+&lt;h4 id=&#34;pg-dump&#34;&gt;pg_dump&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;引数（省略系）&lt;/th&gt;
+&lt;th&gt;引数&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;-a&lt;/td&gt;
+&lt;td&gt;&amp;ndash;data-only&lt;/td&gt;
+&lt;td&gt;データのみをダンプし、スキーマ（データ定義）はダンプしない&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-b&lt;/td&gt;
+&lt;td&gt;&amp;ndash;blobs&lt;/td&gt;
+&lt;td&gt;ラージオブジェクトをダンプに含める。     &amp;ndash;schema、&amp;ndash;table、&amp;ndash;schema-onlyが指定された場合を除き、これがデフォルトの動作&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-c&lt;/td&gt;
+&lt;td&gt;&amp;ndash;clean&lt;/td&gt;
+&lt;td&gt;データベースオブジェクトを作成するコマンドの前に、データベースオブジェクトを整理（削除）するコマンドを書き出す。スクリプト形式の場合にのみ有効。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-C&lt;/td&gt;
+&lt;td&gt;&amp;ndash;create&lt;/td&gt;
+&lt;td&gt;初めにデータベース自体を作成するコマンドを出力し、その後、作成したデータベースに接続するコマンドを出力する。スクリプト形式の場合にのみ有効。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-f file&lt;/td&gt;
+&lt;td&gt;&amp;ndash;file=file&lt;/td&gt;
+&lt;td&gt;出力を指定のファイルに書き出す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-F format&lt;/td&gt;
+&lt;td&gt;&amp;ndash;format=format&lt;/td&gt;
+&lt;td&gt;p/plain 平文のSQLスクリプトファイルを出力&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;c/custom  pg_restoreへの入力に適したカスタム形式アーカイブを出力&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-s&lt;/td&gt;
+&lt;td&gt;&amp;ndash;schema-only&lt;/td&gt;
+&lt;td&gt;データ定義（スキーマ）のみをダンプし、データはダンプしない&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-j njobs&lt;/td&gt;
+&lt;td&gt;&amp;ndash;jobs=njobs&lt;/td&gt;
+&lt;td&gt;njobs個のテーブルを同時にダンプすることによって、並行してダンプを実行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-d dbname&lt;/td&gt;
+&lt;td&gt;&amp;ndash;dbname=dbname&lt;/td&gt;
+&lt;td&gt;接続するデータベースの名前を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-h host&lt;/td&gt;
+&lt;td&gt;&amp;ndash;host=host&lt;/td&gt;
+&lt;td&gt;サーバが稼働しているマシンのホスト名を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-p port&lt;/td&gt;
+&lt;td&gt;&amp;ndash;port=port&lt;/td&gt;
+&lt;td&gt;サーバが接続を監視するTCPポート&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-U username&lt;/td&gt;
+&lt;td&gt;&amp;ndash;username=username&lt;/td&gt;
+&lt;td&gt;接続ユーザ名を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;pg-restore&#34;&gt;pg_restore&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;引数（省略系）&lt;/th&gt;
+&lt;th&gt;引数&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;-a&lt;/td&gt;
+&lt;td&gt;&amp;ndash;data-only&lt;/td&gt;
+&lt;td&gt;データのみをダンプし、スキーマ（データ定義）はダンプしない&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-c&lt;/td&gt;
+&lt;td&gt;&amp;ndash;clean&lt;/td&gt;
+&lt;td&gt;再作成前にデータベースオブジェクトを整理（削除）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-C&lt;/td&gt;
+&lt;td&gt;&amp;ndash;create&lt;/td&gt;
+&lt;td&gt;リストア前にデータベースを作成&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-d dbname&lt;/td&gt;
+&lt;td&gt;&amp;ndash;dbname=dbname&lt;/td&gt;
+&lt;td&gt;dbnameデータベースに接続し、このデータベースに直接リストア&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-e&lt;/td&gt;
+&lt;td&gt;&amp;ndash;exit-on-error&lt;/td&gt;
+&lt;td&gt;データベースにSQLコマンドを送信中にエラーが発生した場合、処理を終了&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-F format&lt;/td&gt;
+&lt;td&gt;&amp;ndash;format=format&lt;/td&gt;
+&lt;td&gt;pg_restoreは形式を自動認識するので、このオプションは必須ではない&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;p/plain 平文のSQLスクリプトファイルを出力&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;c/custom  pg_restoreへの入力に適したカスタム形式アーカイブを出力&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-j njobs&lt;/td&gt;
+&lt;td&gt;&amp;ndash;jobs=njobs&lt;/td&gt;
+&lt;td&gt;データのロード、インデックスの作成、制約の作成部分を複数の同時実行ジョブを使用して実行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-s&lt;/td&gt;
+&lt;td&gt;&amp;ndash;schema-only&lt;/td&gt;
+&lt;td&gt;アーカイブ内にあるスキーマ項目の範囲でスキーマ（データ定義）のみをリストアし、データ（テーブルの内容）をリストアしない&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-h host&lt;/td&gt;
+&lt;td&gt;&amp;ndash;host=host&lt;/td&gt;
+&lt;td&gt;サーバが稼働しているマシンのホスト名を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-p port&lt;/td&gt;
+&lt;td&gt;&amp;ndash;port=port&lt;/td&gt;
+&lt;td&gt;サーバが接続を監視するTCPポート&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-U username&lt;/td&gt;
+&lt;td&gt;&amp;ndash;username=username&lt;/td&gt;
+&lt;td&gt;接続ユーザ名を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-v&lt;/td&gt;
+&lt;td&gt;&amp;ndash;verbose&lt;/td&gt;
+&lt;td&gt;冗長モードを指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;4&#34;&gt;4.個人的によく使うコマンド例&lt;/h4&gt;
+&lt;p&gt;AWSで使うことが多いので&lt;code&gt;-h&lt;/code&gt;オプションが必要。&lt;/p&gt;
+&lt;p&gt;LogicalReplicationTest テーブルのデータのみ pg_dump でexport(カスタムモード)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_dump -h aurorapostgresdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U &amp;lt;ユーザ名&amp;gt; -a -t LogicalReplicationTest -Fc &amp;lt;DB名&amp;gt; &amp;gt; rdb02.custom
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;p&gt;rdb02に接続してインポート前にオブジェクトを削除してインポートする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_restore -v -h aurorapostgresdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U &amp;lt;ユーザ名&amp;gt; -c -C -d &amp;lt;DB名&amp;gt; /home/ec2-user/rdb02_dump_2.custom
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;p&gt;スキーマ定義のみインポートする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_restore -v -h rdspostgresql1.xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U &amp;lt;ユーザ名&amp;gt; -s -d &amp;lt;DB名&amp;gt; /home/ec2-user/rdb02_dump_2.custom
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;p&gt;データのみインポートする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_restore -v -h aurorapostgresdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U &amp;lt;ユーザ名&amp;gt; -a -d &amp;lt;DB名&amp;gt; /home/ec2-user/rdb02_dump_2.custom
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;5&#34;&gt;5.その他&lt;/h4&gt;
+&lt;p&gt;pg_restoreでもpsqlを使ってダンプファイルをインポートした場合でも内部的にはcopyが実行されている模様。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;2019-12-01 03:47:55.874 UTC,&amp;quot;rdb02&amp;quot;,&amp;quot;rdb02&amp;quot;,17917,&amp;quot;10.0.0.170:42552&amp;quot;,5de337eb.45fd,35,&amp;quot;idle&amp;quot;,2019-12-01 03:47:55 UTC,9/118,0,LOG,00000,&amp;quot;statement: COPY public.logicalreplicationtest (a) FROM stdin;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;参考&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;pg_dump &lt;a href=&#34;https://www.postgresql.jp/document/10/html/app-pgdump.html&#34;&gt;https://www.postgresql.jp/document/10/html/app-pgdump.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;pg_restore &lt;a href=&#34;https://www.postgresql.jp/document/10/html/app-pgrestore.html&#34;&gt;https://www.postgresql.jp/document/10/html/app-pgrestore.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</title>
+      <link>https:///zatoima.github.io/oracle-mysql-postgresql-isolation-level.html</link>
+      <pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/oracle-mysql-postgresql-isolation-level.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;&lt;/h3&gt;
+&lt;p&gt;RDBMS製品のACID特性のI（Isolation）に関わるメモ&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;&lt;strong&gt;トランザクション分離レベルとは？&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;まずはトランザクション分離レベルの基本的な考え方について整理。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;serializable---&#34;&gt;&lt;strong&gt;SERIALIZABLE ( 直列化可能 )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。このような性質を直列化可能性（Serializability）と呼ぶ。SERIALIZABLEは最も強い分離レベルであり、最も安全にデータを操作できるが、相対的に性能は低い。ただし同じ結果とされる逐次実行の順はトランザクション処理のレベルでは保証されない。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;repeatable-read---&#34;&gt;&lt;strong&gt;REPEATABLE READ ( 読み取り対象のデータを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ひとつのトランザクションが実行中の間、読み取り対象のデータが途中で他のトランザクションによって変更される心配はない。同じトランザクション中では同じデータは何度読み取りしても毎回同じ値を読むことができる。
+ただし ファントム・リード(Phantom Read) と呼ばれる現象が発生する可能性がある。ファントム・リードでは、並行して動作する他のトランザクションが追加したり削除したデータが途中で見えてしまうため、処理の結果が変わってしまう。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;read-committed---&#34;&gt;&lt;strong&gt;READ COMMITTED ( 確定した最新データを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;他のトランザクションによる更新については、常にコミット済みのデータのみを読み取る。 MVCC はREAD COMMITTEDを実現する実装の一つである。
+ファントム・リード に加え、非再現リード(Non-Repeatable Read)と呼ばれる、同じトランザクション中でも同じデータを読み込むたびに値が変わってしまう現象が発生する可能性がある。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;read-uncommitted--&#34;&gt;&lt;strong&gt;READ UNCOMMITTED ( 確定していないデータまで読み取る)&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;他の処理によって行われている、書きかけのデータまで読み取る。
+PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read) と呼ばれる現象（不完全なデータや、計算途中のデータを読み取ってしまう動作）が発生する。トランザクションの並行動作によってデータを破壊する可能性は高いが、その分性能は高い。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;トランザクション分離レベル - Wikipedia &lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB&#34;&gt;https://ja.wikipedia.org/wiki/トランザクション分離レベル&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記のトランザクション分離レベルによって起こりうる Transaction Annomaly が異なる。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;dirty-read&#34;&gt;&lt;strong&gt;Dirty Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1がデータを変更し、COMMITかROLLBACKをする前に、トランザクションT2がそのデータを読む。その後T1がROLLBACKした場合、T2はCOMMITされていない＝実在しないデータを読んだことになる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125351011.png&#34; alt=&#34;image-20191118125351011&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;fuzzy-readnon-repeatable-read&#34;&gt;&lt;strong&gt;Fuzzy Read(Non-Repeatable Read)&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1がデータを読んだ後、トランザクションT2がそのデータを変更もしくは削除してCOMMITする。その後T1がデータを再度読もうとすると、データが変更されている、もしくは削除されていることが検知される。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125451710.png&#34; alt=&#34;image-20191118125451710&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;phantom-read&#34;&gt;&lt;strong&gt;Phantom Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1が、ある検索条件に基づいてデータ集合を読む。その後、トランザクションT2がその検索条件を満たすデータを作成しCOMMITする。T1が再度同じ検索条件で読み取りを行うと、最初に得られたデータ集合と異なるデータ集合が得られる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125508054.png&#34; alt=&#34;image-20191118125508054&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;lost-update&#34;&gt;&lt;strong&gt;Lost Update&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1はデータ項目を読み取り、T2はデータ項目を以前の読み取り値に基づいて更新し、T1はデータ項目を更新して以前の読み取り値に基づいてコミットする。トランザクションT2の更新がトランザクションT1に上書きされてしまうのでT2のUpdateがLostするということでLost Updateと言う。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125523779.png&#34; alt=&#34;image-20191118125523779&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;更新したはずのデータが失われてしまう現象のことで、後勝ち処理とも言うと聞いたことがある。なので、他のAnnomaly と比べて異常という感じはしない。しっかりトランザクション管理しましょうね、という話だと思っている。&lt;/p&gt;
+&lt;p&gt;具体例を記載しておく。本の在庫管理のトランザクションを想定。&lt;/p&gt;
+&lt;p&gt;①現在、在庫が90冊あるとして、100冊を下回った場合、不足分を補充するように追加注文する処理があったとする。&lt;/p&gt;
+&lt;p&gt;②【Tx2】Tx2で現在の90冊を取得した。&lt;/p&gt;
+&lt;p&gt;③【Tx1】次にTx1で同じく現在90冊ということを取得。&lt;/p&gt;
+&lt;p&gt;④【Tx1】10冊を購入処理して、在庫が100冊と更新する。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;write-skew&#34;&gt;&lt;strong&gt;Write Skew&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;T1がxとyを読み取り、次にT2がxとyを読み取りxを書き込みコミットする。 次にT1はyを書き込む。 xとyの間に制約がある場合、違反となる。 つまり、2つの並行トランザクションがそれぞれ、他方が書き込んでいるものと重複するデータセットの読み取りに基づいて書き込み内容が決まる場合(y=x+1とか)、一方が他方より先に実行された場合には発生し得ない状態を取得できる&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125542982.png&#34; alt=&#34;image-20191118125542982&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;p&gt;具体的なケースはこちら「Black and White」や「Intersecting Data」あたりのケースを見てトランザクションの動きを見るべき。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ssi - postgresql wiki  &lt;a href=&#34;https://wiki.postgresql.org/wiki/SSI&#34;&gt;https://wiki.postgresql.org/wiki/SSI&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;transaction-annomaly&#34;&gt;分離レベルと起こりうるTransaction Annomaly**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;ISOの定義上のトランザクション分離レベルで上記のこの3つのTransaction Annomalyの発生有無は下記の通りである。しかし、DBエンジンの実装上、READ   COMMITTEDだが、Fuzzy Readは発生しないとかなっているケースがあるので注意が必要。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A Critique of ANSI SQL Isolation Levels &lt;a href=&#34;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&#34;&gt;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;db&#34;&gt;各DBエンジンとトランザクション分離レベルの対応表**&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;DBエンジンで選択可能な分離レベルが異なります。DBエンジンを変更する場合はトランザクション分離レベルの理解が必要です。トランザクションで発行するSQLのタイミングによって取得されるデータが異なってきます。&lt;/p&gt;
+&lt;br/&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;isolation level&lt;/th&gt;
+&lt;th&gt;Oracle&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;th&gt;MySQL&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;SERIALIZABLE&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;REPEATABLE READ&lt;/td&gt;
+&lt;td&gt;×&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;READ COMMITTED&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;READ UNCOMMITTED&lt;/td&gt;
+&lt;td&gt;×&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: MySQL 5.6 リファレンスマニュアル :: 13.3.6 SET TRANSACTION 構文 &lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;POSTGRESQL: DOCUMENTATION: 11: 13.2. TRANSACTION ISOLATION HTTPS&lt;a href=&#34;https://www.postgresql.org/docs/11/transaction-iso.html#MVCC-ISOLEVEL-TABLE&#34;&gt;://WWW.POSTGRESQL.ORG/DOCS/11/TRANSACTION-ISO.HTML#MVCC-ISOLEVEL-TABLE&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;oracle-database&#34;&gt;Oracle Databaseの場合**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;Oracle Databaseでは、&lt;strong&gt;SERIALIZABLE&lt;/strong&gt; と &lt;strong&gt;READ COMMITTED&lt;/strong&gt; の分離レベルが用意されている。&lt;/p&gt;
+&lt;p&gt;READ COMMITEDには前提として、UNDOを使用した読取り一貫性の理解が必要。MVCC(MultiVersion Concurrency Control)という技術でありOracle Databaseは、UNDOデータを使用して一貫性を実現しています。&lt;/p&gt;
+&lt;p&gt;ユーザーがデータを変更すると、常にOracle DatabaseによってUNDOエントリが作成されて、UNDOセグメントに書き込まれる。UNDOセグメントには、未コミットのトランザクションや、最近コミットされたトランザクションによって変更されたデータの古い値が含まれている。このため、同じデータの異なる時点の複数のバージョンがデータベース内に存在することになる。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;postgresqlmysql&#34;&gt;PostgreSQL/MySQLの場合**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;すべての分離レベルの利用が可能。&lt;/p&gt;
+&lt;p&gt;実装自体は各DBエンジン自体で異なり、PostgreSQLもMySQLの&lt;code&gt;REPEATABLE READ&lt;/code&gt;を選択した場合においても、&lt;code&gt;Phantom Read&lt;/code&gt; は発生しない実装になっている模様。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;13.2. トランザクションの分離 &lt;a href=&#34;http://pgsql-jp.github.io/current/html/transaction-iso.html&#34;&gt;http://pgsql-jp.github.io/current/html/transaction-iso.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;write-skewserializable&#34;&gt;Write SkewをSERIALIZABLE分離レベルで試してみる**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;&lt;strong&gt;事前にテーブル/データ作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table mytab;
+CREATE TABLE mytab
+(
+  class int NOT NULL,
+  value int NOT NULL
+);
+INSERT INTO mytab VALUES
+(1, 10), (1, 20), (2, 100), (2, 200);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Session1&lt;/th&gt;
+&lt;th&gt;Session2&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INSERT INTO mytab VALUES(2,30);&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 2;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;INSERT INTO mytab VALUES (1, 300);&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INSERT INTO mytab VALUES (2, 330);&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;COMMIT;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT * FROM mytab;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;session1&#34;&gt;Session1**&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; select * from mytab;
+ class | value 
+-------+-------
+     1 |    10
+     1 |    20
+     2 |   100
+     2 |   200
+(4 rows)
+
+aurorapostdb=&amp;gt; 
+aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 1;
+ sum 
+-----
+  30
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES(2,30);
+INSERT 0 1
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;session2&#34;&gt;Session2**&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 2;
+ sum 
+-----
+ 300
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES (1, 300);
+INSERT 0 1
+aurorapostdb=&amp;gt; commit;
+COMMIT
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;session1-1&#34;&gt;&lt;strong&gt;Session1&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#セッション2で実行
+aurorapostdb=&amp;gt; commit;
+ERROR:  could not serialize access due to read/write dependencies among transactions
+DETAIL:  Reason code: Canceled on identification as a pivot, during commit attempt.
+HINT:  The transaction might succeed if retried.
+aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 1;
+ sum 
+-----
+ 330
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES (2, 330);
+INSERT 0 1
+aurorapostdb=&amp;gt; COMMIT;
+COMMIT
+aurorapostdb=&amp;gt; SELECT * FROM mytab;
+ class | value 
+-------+-------
+     1 |    10
+     1 |    20
+     2 |   100
+     2 |   200
+     1 |   300
+     2 |   330
+(6 rows)
+
+aurorapostdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;第18回 ロックについて &lt;a href=&#34;https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html&#34;&gt;https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SSI - PostgreSQL wiki &lt;a href=&#34;https://wiki.postgresql.org/wiki/SSI&#34;&gt;https://wiki.postgresql.org/wiki/SSI&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;postgresql isolation について - qiita &lt;a href=&#34;https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd&#34;&gt;https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;ファントムリードは起こらないのにseirializableでない、それがポスグレのrepeatable read - qiita &lt;a href=&#34;https://qiita.com/yuba/items/89496dda291edb2e558c&#34;&gt;https://qiita.com/yuba/items/89496dda291edb2e558c&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</title>
+      <link>https:///zatoima.github.io/aurora-postgresql-query-plan-management.html</link>
+      <pubDate>Wed, 13 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aurora-postgresql-query-plan-management.html</guid>
+      <description>&lt;h3 id=&#34;qpmquery-plan-management&#34;&gt;QPM(Query Plan Management)とは？&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;SQLに実行計画を記録して、その実行計画を固定化、もしくは別環境に実行計画を移行して固定化出来る機能。Oracleで言うところのSPM（SQL Plan Management）になる。Aurora(PostgreSQL)でもこの機能が使えるので実際にやってみる。&lt;/p&gt;
+&lt;h5 id=&#34;query-plan-management&#34;&gt;Query Plan Managementの制御方法&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;rds.enable_plan_management = { 0,1} #パラメータグループで設定
+
+apg_plan_mgmt.capture_plan_baselines = { manual, automatic, off }
+# automatic : 自動計画取り込み。1回以上実行されたSQLを取り込む
+# manual    : 個々のSQLを手動で実行計画を取り込む
+# off       : Query Planの取得を無効化
+
+apg_plan_mgmt.use_plan_baselines = { true, false }
+# true  : 取得したQuery Planを使用して実行計画を固定化する
+# false : 取得したQuery Planを使用しない。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;環境、及びシナリオ説明&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;開発環境から本番環境への実行計画の移行を想定。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;本番環境DB名：prod&lt;/li&gt;
+&lt;li&gt;開発環境DB名：dev&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;開発環境で実行したfull scan(seq scan)となる実行計画を本番環境に移行して非効率な実行計画を再現する。&lt;/p&gt;
+&lt;h3 id=&#34;devprod&#34;&gt;パラメータグループ変更（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;クラスターパラメータグループの &lt;code&gt;rds.enable_plan_management&lt;/code&gt; を&lt;code&gt;1&lt;/code&gt;に設定&lt;/p&gt;
+&lt;h3 id=&#34;devprod-1&#34;&gt;拡張機能の有効化（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;create extensionコマンドでapg_plan_mgmtをインストールする&lt;/p&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;\dx
+create extension apg_plan_mgmt;
+\dx
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行結果
+dev=&amp;gt; \dx
+                 List of installed extensions
+  Name   | Version |   Schema   |         Description          
+---------+---------+------------+------------------------------
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(1 row)
+dev=&amp;gt; 
+dev=&amp;gt; create extension apg_plan_mgmt;    #拡張機能を有効化
+CREATE EXTENSION
+dev=&amp;gt; \dx
+                                        List of installed extensions
+     Name      | Version |    Schema     |                            Description           
+                 
+---------------+---------+---------------+--------------------------------------------------
+-----------------
+ apg_plan_mgmt | 1.0.1   | apg_plan_mgmt | Amazon Aurora with PostgreSQL compatibility Query #★←apg_plan_mgmtが増えている
+ Plan Management
+ plpgsql       | 1.0     | pg_catalog    | PL/pgSQL procedural language
+(2 rows)
+dev=&amp;gt; 
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dba-plansdevprod&#34;&gt;dba_plans表の事前確認（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;apg_plan_mgmt.dba_plans表には当然何も格納されていない。&lt;/p&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+dev-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+dev-&amp;gt; ORDER BY sql_text, plan_created;
+ sql_hash | plan_hash | status | enabled | sql_text 
+----------+-----------+--------+---------+----------
+(0 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;devprod-2&#34;&gt;テスト用のテーブル作成（dev/prod環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;テスト用のテーブルを作成する&lt;/p&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE t1 AS
+SELECT num                         a -- 生成値
+      ,&#39;1&#39;                         b -- 定数
+      ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
+      ,current_timestamp      d 
+FROM   generate_series(1,10000) num
+;
+
+ALTER TABLE t1 ADD PRIMARY KEY(a);
+
+\d t1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-6&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; CREATE TABLE t1 AS
+dev-&amp;gt; SELECT num                         a -- 生成値
+dev-&amp;gt;       ,&#39;1&#39;                         b -- 定数
+dev-&amp;gt;       ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
+dev-&amp;gt;       ,current_timestamp      d 
+dev-&amp;gt; FROM   generate_series(1,10000) num
+dev-&amp;gt; ;
+SELECT 10000
+dev=&amp;gt; 
+dev=&amp;gt; ALTER TABLE t1 ADD PRIMARY KEY(a);
+ALTER TABLE
+dev=&amp;gt; 
+dev=&amp;gt; \d t1
+                         Table &amp;quot;public.t1&amp;quot;
+ Column |           Type           | Collation | Nullable | Default 
+--------+--------------------------+-----------+----------+---------
+ a      | integer                  |           | not null | 
+ b      | text                     |           |          | 
+ c      | text                     |           |          | 
+ d      | timestamp with time zone |           |          | 
+Indexes:
+    &amp;quot;t1_pkey&amp;quot; PRIMARY KEY, btree (a)
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sqlcapturedev&#34;&gt;SQLの実行、及び実行capture（dev環境）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;実行計画が&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLと、&lt;strong&gt;&lt;u&gt;Index Scan&lt;/u&gt;&lt;/strong&gt;になるSQLを実行。この時、&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLの実行計画だけを手動で取り込む。&lt;/p&gt;
+&lt;p&gt;この例では「Plan Hash: -52705300」が&lt;code&gt;apg_plan_mgmt.dba_plans&lt;/code&gt;表に取り込まれているのがわかる。&lt;/p&gt;
+&lt;h5 id=&#34;heading-7&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SET apg_plan_mgmt.capture_plan_baselines = manual; #実行計画の手動取り込みを有効化
+
+explain (hashes true) select count(*) from t1 where a &amp;gt; 1;
+
+SET apg_plan_mgmt.capture_plan_baselines = off;  #実行計画の手動取り込みを停止
+
+explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+
+SET apg_plan_mgmt.capture_plan_baselines = off;
+ 
+SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-8&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行ログ
+dev=&amp;gt; SET apg_plan_mgmt.capture_plan_baselines = manual;
+SET
+dev=&amp;gt; 
+dev=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 1;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Aggregate  (cost=214.00..214.01 rows=1 width=8)
+   -&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=10000 width=0)
+         Filter: (a &amp;gt; 1)
+ SQL Hash: -1895827505, Plan Hash: -52705300
+(4 rows)
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; SET apg_plan_mgmt.capture_plan_baselines = off;
+SET
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Aggregate  (cost=8.30..8.31 rows=1 width=8)
+   -&amp;gt;  Index Only Scan using t1_pkey on t1  (cost=0.29..8.30 rows=1 width=0)
+         Index Cond: (a &amp;gt; 9999)
+ Plan Hash: 1222455040
+(4 rows)
+dev=&amp;gt; 
+dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+dev-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+dev-&amp;gt; ORDER BY sql_text, plan_created;
+  sql_hash   | plan_hash |  status  | enabled |               sql_text               
+-------------+-----------+----------+---------+--------------------------------------
+ -1895827505 | -52705300 | Approved | t       | select count(*) from t1 where a &amp;gt; 1; #★←実行計画が取り込まれている
+(1 row)
+dev=&amp;gt; 
+dev=&amp;gt; 
+dev=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dev&#34;&gt;エクスポート用のテーブル作成(dev)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE plans_copy AS SELECT * FROM apg_plan_mgmt.plans;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-dumpdev&#34;&gt;pg_dumpを使用してエクスポートする(dev)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;export PGPASSWORD=postgres
+pg_dump -U postgres -h aurora-postgres-cluster-dev.cluster-xxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft dev &amp;gt; plans_copy.tar
+
+#必要に応じて不要になった中間テーブルを削除する
+--DROP TABLE plans_copy;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dbprod&#34;&gt;別DBでインポート(prod)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;pg_restore -U postgres -h aurora-postgres-cluster-prod.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft plans_copy.tar -d prod
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;prod&#34;&gt;インポート確認、及びマージ(prod)&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;このあたりのマニュアルを参考に実行計画のマージを行います。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;実行計画の維持 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;計画のエクスポートおよびインポート&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;heading-9&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+ ON CONFLICT ON CONSTRAINT plans_pkey
+ DO UPDATE SET
+ status = EXCLUDED.status,
+ enabled = EXCLUDED.enabled,
+ last_used = CASE WHEN EXCLUDED.last_used &amp;gt; plans.last_used 
+ THEN EXCLUDED.last_used ELSE plans.last_used END, 
+ estimated_startup_cost = EXCLUDED.estimated_startup_cost,
+ estimated_total_cost = EXCLUDED.estimated_total_cost,
+ planning_time_ms = EXCLUDED.planning_time_ms,
+ execution_time_ms = EXCLUDED.execution_time_ms,
+-- estimated_rows = EXCLUDED.estimated_rows,
+-- actual_rows = EXCLUDED.actual_rows,
+ total_time_benefit_ms = EXCLUDED.total_time_benefit_ms, 
+ execution_time_benefit_ms = EXCLUDED.execution_time_benefit_ms;
+ 
+#管理計画を共有メモリにリロードする
+SELECT apg_plan_mgmt.reload(); -- refresh shared memory
+DROP TABLE plans_copy;
+
+-- 確認
+SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+FROM   apg_plan_mgmt.dba_plans
+ORDER BY sql_text, plan_created;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;この時、estimated_rows、actual_rowsをコメントアウトする必要あり。実際にはない行らしい。マニュアルの誤記？&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;ERROR:  column excluded.actual_rows does not exist
+LINE 13:  actual_rows = EXCLUDED.actual_rows,
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-10&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;prod=&amp;gt; INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+prod-&amp;gt;  ON CONFLICT ON CONSTRAINT plans_pkey
+prod-&amp;gt;  DO UPDATE SET
+prod-&amp;gt;  status = EXCLUDED.status,
+prod-&amp;gt;  enabled = EXCLUDED.enabled,
+prod-&amp;gt;  last_used = CASE WHEN EXCLUDED.last_used &amp;gt; plans.last_used 
+prod-&amp;gt;  THEN EXCLUDED.last_used ELSE plans.last_used END, 
+prod-&amp;gt;  estimated_startup_cost = EXCLUDED.estimated_startup_cost,
+prod-&amp;gt;  estimated_total_cost = EXCLUDED.estimated_total_cost,
+prod-&amp;gt;  planning_time_ms = EXCLUDED.planning_time_ms,
+prod-&amp;gt;  execution_time_ms = EXCLUDED.execution_time_ms,
+prod-&amp;gt; -- estimated_rows = EXCLUDED.estimated_rows,
+prod-&amp;gt; -- actual_rows = EXCLUDED.actual_rows,
+prod-&amp;gt;  total_time_benefit_ms = EXCLUDED.total_time_benefit_ms, 
+prod-&amp;gt;  execution_time_benefit_ms = EXCLUDED.execution_time_benefit_ms;
+INSERT 0 2
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; SELECT apg_plan_mgmt.reload();
+ reload 
+--------
+      0
+(1 row)
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; DROP TABLE plans_copy;
+DROP TABLE
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+prod-&amp;gt; FROM   apg_plan_mgmt.dba_plans
+prod-&amp;gt; ORDER BY sql_text, plan_created;
+  sql_hash   | plan_hash  |   status   | enabled |                sql_text                 
+-------------+------------+------------+---------+-----------------------------------------
+ -1895827505 |  -52705300 | Approved   | t       | select count(*) from t1 where a &amp;gt; 1;
+(2 rows)
+prod=&amp;gt; 
+prod=&amp;gt; 
+prod=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql&#34;&gt;SQLの実行&lt;/h3&gt;
+&lt;p&gt;今回はindex scanとなるところをfullscanを選択させているケース。&lt;/p&gt;
+&lt;h5 id=&#34;heading-11&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- SQLのテスト
+SET apg_plan_mgmt.use_plan_baselines = true;
+explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+SET apg_plan_mgmt.use_plan_baselines = false;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-12&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;prod=&amp;gt; SET apg_plan_mgmt.use_plan_baselines = true;
+prod=&amp;gt; 
+prod=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Aggregate  (cost=189.00..189.01 rows=1 width=8)
+   -&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=1 width=0)
+         Filter: (a &amp;gt; 9999)
+ Note: An Approved plan was used instead of the minimum cost plan.
+ SQL Hash: -1895827505, Plan Hash: -52705300, Minimum Cost Plan Hash: 1222455040
+(5 rows)
+prod=&amp;gt; SET apg_plan_mgmt.use_plan_baselines = false;
+SET
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;今回の例ではwhere文でデータ取得件数を絞っているのでindex scanが実行プランとしては正しい。ただ、QPMで&lt;code&gt;select count(*) from t1 where a &amp;gt; 1;&lt;/code&gt;の実行計画が取り込まれており、この実行計画はFullscan(SeqScan)となる。敢えて非効率な実行計画を選択させたパターン。&lt;/p&gt;
+&lt;p&gt;実際にログ上にも&lt;code&gt;Note: An Approved plan was used instead of the minimum cost plan.&lt;/code&gt;と記載がありもっとコストのよい実行計画があるぞーと言っている。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;prod=&amp;gt; explain (hashes true) select count(*) from t1 where a &amp;gt; 9999;&lt;/p&gt;
+&lt;p&gt;QUERY PLAN&lt;/p&gt;
+&lt;p&gt;Aggregate  (cost=189.00..189.01 rows=1 width=8)
+-&amp;gt;  Seq Scan on t1  (cost=0.00..189.00 rows=1 width=0)
+Filter: (a &amp;gt; 9999)
+Note: An Approved plan was used instead of the minimum cost plan.
+SQL Hash: -1895827505, Plan Hash: -52705300, Minimum Cost Plan Hash: 1222455040&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-13&#34;&gt;参考&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;実行計画の維持 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Amazon Aurora PostgreSQL でのクエリ計画管理のユースケース | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/&#34;&gt;https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</title>
+      <link>https:///zatoima.github.io/aws-aurora-postgres-password.html</link>
+      <pubDate>Fri, 08 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-aurora-postgres-password.html</guid>
+      <description>&lt;p&gt;Aurora(PostgreSQL)ではなく、PostgreSQLのお話。&lt;/p&gt;
+&lt;h3 id=&#34;1-pgpass-&#34;&gt;&lt;strong&gt;方法&lt;/strong&gt;1: &amp;lsquo;.pgpass&amp;rsquo; にパスワードを記載する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;ホームディレクトリに&amp;rsquo;.pgpass&#39;ファイルを作成してこちらにパスワードを記載。&lt;/p&gt;
+&lt;h5 id=&#34;pgpass&#34;&gt;.pgpassの書式&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;ホスト名:ポート:データベース:ユーザ:パスワード
+例）192.168.1.**:5432:dbname:dbuser:password
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;pgpass-1&#34;&gt;.pgpassの作成&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi $HOME/.pgpass
+aurorapostdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com:5432:aurorapostdb:master:postgres
+
+chmod 600 $HOME/.pgpass
+
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurorapostdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+psql (10.4, server 10.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;権限を変更しない場合、WARNINGが出る。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;WARNING: password file &amp;ldquo;/home/ec2-user/.pgpass&amp;rdquo; has group or world access; permissions should be u=rw (0600) or less&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;2&#34;&gt;方法2:環境変数に記載する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export PGPASSWORD=postgres
+psql -h aurorapostdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+
+[ec2-user@donald-dev-ec2-bastin ~]$ export PGPASSWORD=postgres
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurorapostdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U master -d aurorapostdb
+psql (10.4, server 10.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;参考&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;33.14. 環境変数 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/libpq-envars.html&#34;&gt;https://www.postgresql.jp/document/10/html/libpq-envars.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;33.15. パスワードファイル &lt;a href=&#34;https://www.postgresql.jp/document/10/html/libpq-pgpass.html&#34;&gt;https://www.postgresql.jp/document/10/html/libpq-pgpass.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Aurora(PostgresSQL)のクエリログの出力方法</title>
+      <link>https:///zatoima.github.io/aws-aurora-postgres-querylog.html</link>
+      <pubDate>Mon, 04 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-aurora-postgres-querylog.html</guid>
+      <description>&lt;h3 id=&#34;1&#34;&gt;1.バージョン確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;aurorapostdb=&amp;gt; select version();
+                                   version                                   
+-----------------------------------------------------------------------------
+ PostgreSQL 10.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.9.3, 64-bit
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;2&#34;&gt;2.パラメータグループを変更&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;19.8. エラー報告とログ取得 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/runtime-config-logging.html&#34;&gt;https://www.postgresql.jp/document/10/html/runtime-config-logging.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;log_statement=all #どのSQL文をログに記録するかを制御
+log_min_duration_statement=0 #0に設定すれば、すべての文の実行時間が出力
+log_destination=csvlog #csvlogがlog_destinationに含まれる場合、ログ項目はプログラムへの読み込みが簡便な&amp;quot;カンマ区切り値&amp;quot;書式（CSV）で出力
+log_duration=1
+log_error_verbosity=verbose #ログ取得されるそれぞれのメッセージに対し、サーバログに書き込まれる詳細の量を制御
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;3aurora&#34;&gt;3.Auroraを再起動する（パラメータの反映）&lt;/h3&gt;
+&lt;hr&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;4&#34;&gt;4.パラメータ確認&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;show log_statement; 
+show log_min_duration_statement;
+show log_destination;
+show log_duration;
+show log_error_verbosity;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;5&#34;&gt;5.テスト用のクエリの実行&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;直積のSQLを実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;select count(*) from pg_tables a, pg_stats b, pg_index c, pg_locks d;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;6&#34;&gt;6.マネージメントコンソールから確認する&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;code&gt;error/postgresql.log.yyyy-mm-dd-hhmi.csv&lt;/code&gt; を確認&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191218134516337.png&#34; alt=&#34;image-20191218134516337&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>RDS(PostgreSQL)にsysbenchを実行する</title>
+      <link>https:///zatoima.github.io/aws-rds-postgresql-sysbench.html</link>
+      <pubDate>Mon, 28 Oct 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-rds-postgresql-sysbench.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;前提事項&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;既に実行するOSにsysbenchがインストールされていることを前提とします。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;EC2(Amazon Linux)にRDBMSベンチマークツールのsysbenchをインストールする - zato logger &lt;a href=&#34;https://www.zatolog.com/entry/aws-ec2-sysbench-install-howto&#34;&gt;https://www.zatolog.com/entry/aws-ec2-sysbench-install-howto&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;事前準備&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;-- 接続
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurora-postgressql-dev.cluster-xxxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postdb
+Password for user postgres: 
+psql (9.2.24, server 10.7)
+WARNING: psql version 9.2, server version 10.0.
+         Some psql features might not work.
+SSL connection (cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256)
+Type &amp;quot;help&amp;quot; for help.
+
+postdb=&amp;gt; 
+postdb=&amp;gt; 
+
+-- ユーザ作成、権限付与、データベース作成
+
+postdb=&amp;gt; CREATE USER sbtest WITH PASSWORD &#39;sbtest&#39;;
+CREATE ROLE
+postdb=&amp;gt; 
+postdb=&amp;gt; 
+postdb=&amp;gt; 
+postdb=&amp;gt; CREATE DATABASE sbtest;
+CREATE DATABASE
+postdb=&amp;gt; 
+postdb=&amp;gt; GRANT ALL PRIVILEGES ON DATABASE sbtest TO sbtest;
+GRANT
+postdb=&amp;gt; 
+postdb=&amp;gt; 
+
+-- 作成したユーザで接続確認
+[ec2-user@donald-dev-ec2-bastin ~]$ psql -h aurora-postgressql-dev.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U sbtest -d sbtest
+Password for user sbtest: 
+psql (9.2.24, server 10.7)
+WARNING: psql version 9.2, server version 10.0.
+         Some psql features might not work.
+SSL connection (cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256)
+Type &amp;quot;help&amp;quot; for help.
+
+sbtest=&amp;gt; 
+sbtest=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;測定用テーブルの作成&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;-- sysbench prepare
+
+[ec2-user@donald-dev-ec2-bastin ~]$ sysbench /usr/share/sysbench/oltp_read_write.lua --db-driver=pgsql --table-size=1000 --pgsql-host=aurora-postgressql-dev.cluster-xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --pgsql-user=sbtest --pgsql-password=sbtest --pgsql-db=sbtest --db-ps-mode=disable prepare
+sysbench 1.0.17 (using system LuaJIT 2.0.4)
+
+Creating table &#39;sbtest1&#39;...
+Inserting 1000 records into &#39;sbtest1&#39;
+Creating a secondary index on &#39;sbtest1&#39;...
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;性能測定&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;-- sysbench run
+[ec2-user@donald-dev-ec2-bastin ~]$ sysbench /usr/share/sysbench/oltp_read_write.lua --db-driver=pgsql --table-size=1000 --pgsql-db=sbtest --pgsql-host=aurora-postgressql-dev.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com --pgsql-user=sbtest --pgsql-password=sbtest --time=300 --db-ps-mode=disable --threads=16 run
+sysbench 1.0.17 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 16
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+SQL statistics:
+    queries performed:
+        read:                            61096
+        write:                           12922
+        other:                           9695
+        total:                           83713
+    transactions:                        3125   (10.40 per sec.)
+    queries:                             83713  (278.61 per sec.)
+    ignored errors:                      1239   (4.12 per sec.)
+    reconnects:                          0      (0.00 per sec.)
+
+General statistics:
+    total time:                          300.4662s
+    total number of events:              3125
+
+Latency (ms):
+         min:                                   10.53
+         avg:                                 1538.24
+         max:                                19170.98
+         95th percentile:                     6026.41
+         sum:                              4807006.80
+
+Threads fairness:
+    events (avg/stddev):           195.3125/8.45
+    execution time (avg/stddev):   300.4379/0.02
+
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>EC2上からpsqlでRDS Aurora(PostgreSQL)に接続するまで</title>
+      <link>https:///zatoima.github.io/aws-ec2-psql-install.html</link>
+      <pubDate>Thu, 17 Oct 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/aws-ec2-psql-install.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;実行コマンド&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum search postgresql
+sudo yum -y install postgresql.x86_64
+
+psql -h &amp;lt;エンドポイント&amp;gt; -U &amp;lt;ユーザ名&amp;gt; -d &amp;lt;DB名&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;os&#34;&gt;OS情報&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ uname -a
+Linux donald-dev-ec2-bastin 4.14.138-114.102.amzn2.x86_64 #1 SMP Thu Aug 15 15:29:58 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;yum-searchpostgresql-client-programs&#34;&gt;yum searchでPostgreSQL client programsを探す&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;実行結果から&lt;code&gt;postgresql.x86_64&lt;/code&gt;が&lt;code&gt;PostgreSQL client programs&lt;/code&gt;と判明しました。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ sudo yum search postgresql
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+================================================================================= N/S matched: postgresql ==================================================================================
+freeradius-postgresql.x86_64 : Postgresql support for freeradius
+pcp-pmda-postgresql.x86_64 : Performance Co-Pilot (PCP) metrics for PostgreSQL
+postgresql.x86_64 : PostgreSQL client programs
+postgresql-contrib.x86_64 : Extension modules distributed with PostgreSQL
+postgresql-devel.x86_64 : PostgreSQL development header files and libraries
+postgresql-docs.x86_64 : Extra documentation for PostgreSQL
+postgresql-jdbc.noarch : JDBC driver for PostgreSQL
+postgresql-jdbc-javadoc.noarch : API docs for postgresql-jdbc
+postgresql-libs.x86_64 : The shared libraries required for any PostgreSQL clients
+postgresql-libs.i686 : The shared libraries required for any PostgreSQL clients
+postgresql-odbc.x86_64 : PostgreSQL ODBC driver
+postgresql-plperl.x86_64 : The Perl procedural language for PostgreSQL
+postgresql-plpython.x86_64 : The Python2 procedural language for PostgreSQL
+postgresql-pltcl.x86_64 : The Tcl procedural language for PostgreSQL
+postgresql-server.x86_64 : The programs needed to create and run a PostgreSQL server
+postgresql-static.x86_64 : Statically linked PostgreSQL libraries
+postgresql-test.x86_64 : The test suite distributed with PostgreSQL
+postgresql-upgrade.x86_64 : Support for upgrading from the previous major release of PostgreSQL
+qt-postgresql.x86_64 : PostgreSQL driver for Qt&#39;s SQL classes
+qt-postgresql.i686 : PostgreSQL driver for Qt&#39;s SQL classes
+qt3-PostgreSQL.x86_64 : PostgreSQL drivers for Qt 3&#39;s SQL classes
+qt3-PostgreSQL.i686 : PostgreSQL drivers for Qt 3&#39;s SQL classes
+qt5-qtbase-postgresql.x86_64 : PostgreSQL driver for Qt5&#39;s SQL classes
+qt5-qtbase-postgresql.i686 : PostgreSQL driver for Qt5&#39;s SQL classes
+PyGreSQL.x86_64 : A Python client library for PostgreSQL
+apr-util-pgsql.x86_64 : APR utility library PostgreSQL DBD driver
+libdbi-dbd-pgsql.x86_64 : PostgreSQL plugin for libdbi
+perl-DBD-Pg.x86_64 : A PostgreSQL interface for perl
+php-pgsql.x86_64 : A PostgreSQL database module for PHP
+python-psycopg2.x86_64 : A PostgreSQL database adapter for Python
+python-psycopg2-debug.x86_64 : A PostgreSQL database adapter for Python 2 (debug build)
+python-psycopg2-doc.x86_64 : Documentation for psycopg python PostgreSQL database adapter
+redland-pgsql.x86_64 : PostgreSQL storage support for Redland
+rhdb-utils.x86_64 : Miscellaneous utilities for PostgreSQL - Red Hat Edition
+tcl-pgtcl.x86_64 : A Tcl client library for PostgreSQL
+
+  Name and summary matches only, use &amp;quot;search all&amp;quot; for everything.
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql-client-programs&#34;&gt;PostgreSQL client programsをインストール&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ sudo yum -y install postgresql.x86_64
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+amzn2-core                                                                                                                                                           | 2.4 kB  00:00:00     
+Resolving Dependencies
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+--&amp;gt; Processing Dependency: postgresql-libs(x86-64) = 9.2.24-1.amzn2.0.1 for package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+--&amp;gt; Processing Dependency: libpq.so.5()(64bit) for package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+--&amp;gt; Finished Dependency Resolution
+
+Dependencies Resolved
+
+============================================================================================================================================================================================
+ Package                                         Arch                                   Version                                            Repository                                  Size
+============================================================================================================================================================================================
+Installing:
+ postgresql                                      x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 3.0 M
+Installing for dependencies:
+ postgresql-libs                                 x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 235 k
+
+Transaction Summary
+============================================================================================================================================================================================
+Install  1 Package (+1 Dependent package)
+
+Total download size: 3.3 M
+Installed size: 17 M
+Downloading packages:
+(1/2): postgresql-libs-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                 | 235 kB  00:00:00     
+(2/2): postgresql-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                      | 3.0 MB  00:00:00     
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                                                                        15 MB/s | 3.3 MB  00:00:00     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                1/2 
+  Installing : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     2/2 
+  Verifying  : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     1/2 
+  Verifying  : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                2/2 
+
+Installed:
+  postgresql.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                                    
+
+Dependency Installed:
+  postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                               
+
+Complete!
+[ec2-user@donald-dev-ec2-bastin ~]$ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;aurorapostgresql&#34;&gt;Aurora(PostgreSQL)へ接続&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;接続時にはセキュリティグループ等でEC2上の踏み台サーバからPostgreSQLへの接続を許可が必要。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@donald-dev-ec2-bastin ~]$ psql -h &amp;lt;エンドポイント&amp;gt; -U &amp;lt;ユーザ名&amp;gt; -d &amp;lt;DB名&amp;gt;
+Password for user master: 
+psql (9.2.24, server 10.7)
+WARNING: psql version 9.2, server version 10.0.
+         Some psql features might not work.
+SSL connection (cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256)
+Type &amp;quot;help&amp;quot; for help.
+
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

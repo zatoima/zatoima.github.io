@@ -1,0 +1,1347 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>MySQL | my opnion is my own</title>
+    <link>https:///zatoima.github.io/categories/mysql/</link>
+      <atom:link href="https:///zatoima.github.io/categories/mysql/index.xml" rel="self" type="application/rss+xml" />
+    <description>MySQL</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 17 Nov 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https:///zatoima.github.io/img/icon-192.png</url>
+      <title>MySQL</title>
+      <link>https:///zatoima.github.io/categories/mysql/</link>
+    </image>
+    
+    <item>
+      <title>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</title>
+      <link>https:///zatoima.github.io/oracle-mysql-postgresql-isolation-level.html</link>
+      <pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/oracle-mysql-postgresql-isolation-level.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;&lt;/h3&gt;
+&lt;p&gt;RDBMS製品のACID特性のI（Isolation）に関わるメモ&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;&lt;strong&gt;トランザクション分離レベルとは？&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;まずはトランザクション分離レベルの基本的な考え方について整理。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;serializable---&#34;&gt;&lt;strong&gt;SERIALIZABLE ( 直列化可能 )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。このような性質を直列化可能性（Serializability）と呼ぶ。SERIALIZABLEは最も強い分離レベルであり、最も安全にデータを操作できるが、相対的に性能は低い。ただし同じ結果とされる逐次実行の順はトランザクション処理のレベルでは保証されない。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;repeatable-read---&#34;&gt;&lt;strong&gt;REPEATABLE READ ( 読み取り対象のデータを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ひとつのトランザクションが実行中の間、読み取り対象のデータが途中で他のトランザクションによって変更される心配はない。同じトランザクション中では同じデータは何度読み取りしても毎回同じ値を読むことができる。
+ただし ファントム・リード(Phantom Read) と呼ばれる現象が発生する可能性がある。ファントム・リードでは、並行して動作する他のトランザクションが追加したり削除したデータが途中で見えてしまうため、処理の結果が変わってしまう。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;read-committed---&#34;&gt;&lt;strong&gt;READ COMMITTED ( 確定した最新データを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;他のトランザクションによる更新については、常にコミット済みのデータのみを読み取る。 MVCC はREAD COMMITTEDを実現する実装の一つである。
+ファントム・リード に加え、非再現リード(Non-Repeatable Read)と呼ばれる、同じトランザクション中でも同じデータを読み込むたびに値が変わってしまう現象が発生する可能性がある。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;read-uncommitted--&#34;&gt;&lt;strong&gt;READ UNCOMMITTED ( 確定していないデータまで読み取る)&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;他の処理によって行われている、書きかけのデータまで読み取る。
+PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read) と呼ばれる現象（不完全なデータや、計算途中のデータを読み取ってしまう動作）が発生する。トランザクションの並行動作によってデータを破壊する可能性は高いが、その分性能は高い。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;トランザクション分離レベル - Wikipedia &lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB&#34;&gt;https://ja.wikipedia.org/wiki/トランザクション分離レベル&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記のトランザクション分離レベルによって起こりうる Transaction Annomaly が異なる。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;dirty-read&#34;&gt;&lt;strong&gt;Dirty Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1がデータを変更し、COMMITかROLLBACKをする前に、トランザクションT2がそのデータを読む。その後T1がROLLBACKした場合、T2はCOMMITされていない＝実在しないデータを読んだことになる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125351011.png&#34; alt=&#34;image-20191118125351011&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;fuzzy-readnon-repeatable-read&#34;&gt;&lt;strong&gt;Fuzzy Read(Non-Repeatable Read)&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1がデータを読んだ後、トランザクションT2がそのデータを変更もしくは削除してCOMMITする。その後T1がデータを再度読もうとすると、データが変更されている、もしくは削除されていることが検知される。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125451710.png&#34; alt=&#34;image-20191118125451710&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;phantom-read&#34;&gt;&lt;strong&gt;Phantom Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1が、ある検索条件に基づいてデータ集合を読む。その後、トランザクションT2がその検索条件を満たすデータを作成しCOMMITする。T1が再度同じ検索条件で読み取りを行うと、最初に得られたデータ集合と異なるデータ集合が得られる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125508054.png&#34; alt=&#34;image-20191118125508054&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;lost-update&#34;&gt;&lt;strong&gt;Lost Update&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;トランザクションT1はデータ項目を読み取り、T2はデータ項目を以前の読み取り値に基づいて更新し、T1はデータ項目を更新して以前の読み取り値に基づいてコミットする。トランザクションT2の更新がトランザクションT1に上書きされてしまうのでT2のUpdateがLostするということでLost Updateと言う。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125523779.png&#34; alt=&#34;image-20191118125523779&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;更新したはずのデータが失われてしまう現象のことで、後勝ち処理とも言うと聞いたことがある。なので、他のAnnomaly と比べて異常という感じはしない。しっかりトランザクション管理しましょうね、という話だと思っている。&lt;/p&gt;
+&lt;p&gt;具体例を記載しておく。本の在庫管理のトランザクションを想定。&lt;/p&gt;
+&lt;p&gt;①現在、在庫が90冊あるとして、100冊を下回った場合、不足分を補充するように追加注文する処理があったとする。&lt;/p&gt;
+&lt;p&gt;②【Tx2】Tx2で現在の90冊を取得した。&lt;/p&gt;
+&lt;p&gt;③【Tx1】次にTx1で同じく現在90冊ということを取得。&lt;/p&gt;
+&lt;p&gt;④【Tx1】10冊を購入処理して、在庫が100冊と更新する。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;write-skew&#34;&gt;&lt;strong&gt;Write Skew&lt;/strong&gt;&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;T1がxとyを読み取り、次にT2がxとyを読み取りxを書き込みコミットする。 次にT1はyを書き込む。 xとyの間に制約がある場合、違反となる。 つまり、2つの並行トランザクションがそれぞれ、他方が書き込んでいるものと重複するデータセットの読み取りに基づいて書き込み内容が決まる場合(y=x+1とか)、一方が他方より先に実行された場合には発生し得ない状態を取得できる&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125542982.png&#34; alt=&#34;image-20191118125542982&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;br/&gt;
+&lt;p&gt;具体的なケースはこちら「Black and White」や「Intersecting Data」あたりのケースを見てトランザクションの動きを見るべき。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ssi - postgresql wiki  &lt;a href=&#34;https://wiki.postgresql.org/wiki/SSI&#34;&gt;https://wiki.postgresql.org/wiki/SSI&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;transaction-annomaly&#34;&gt;分離レベルと起こりうるTransaction Annomaly**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;ISOの定義上のトランザクション分離レベルで上記のこの3つのTransaction Annomalyの発生有無は下記の通りである。しかし、DBエンジンの実装上、READ   COMMITTEDだが、Fuzzy Readは発生しないとかなっているケースがあるので注意が必要。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A Critique of ANSI SQL Isolation Levels &lt;a href=&#34;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&#34;&gt;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;db&#34;&gt;各DBエンジンとトランザクション分離レベルの対応表**&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;DBエンジンで選択可能な分離レベルが異なります。DBエンジンを変更する場合はトランザクション分離レベルの理解が必要です。トランザクションで発行するSQLのタイミングによって取得されるデータが異なってきます。&lt;/p&gt;
+&lt;br/&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;isolation level&lt;/th&gt;
+&lt;th&gt;Oracle&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;th&gt;MySQL&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;SERIALIZABLE&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;REPEATABLE READ&lt;/td&gt;
+&lt;td&gt;×&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;READ COMMITTED&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;td&gt;○(※デフォルト)&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;READ UNCOMMITTED&lt;/td&gt;
+&lt;td&gt;×&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;td&gt;○&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: MySQL 5.6 リファレンスマニュアル :: 13.3.6 SET TRANSACTION 構文 &lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;POSTGRESQL: DOCUMENTATION: 11: 13.2. TRANSACTION ISOLATION HTTPS&lt;a href=&#34;https://www.postgresql.org/docs/11/transaction-iso.html#MVCC-ISOLEVEL-TABLE&#34;&gt;://WWW.POSTGRESQL.ORG/DOCS/11/TRANSACTION-ISO.HTML#MVCC-ISOLEVEL-TABLE&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;oracle-database&#34;&gt;Oracle Databaseの場合**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;Oracle Databaseでは、&lt;strong&gt;SERIALIZABLE&lt;/strong&gt; と &lt;strong&gt;READ COMMITTED&lt;/strong&gt; の分離レベルが用意されている。&lt;/p&gt;
+&lt;p&gt;READ COMMITEDには前提として、UNDOを使用した読取り一貫性の理解が必要。MVCC(MultiVersion Concurrency Control)という技術でありOracle Databaseは、UNDOデータを使用して一貫性を実現しています。&lt;/p&gt;
+&lt;p&gt;ユーザーがデータを変更すると、常にOracle DatabaseによってUNDOエントリが作成されて、UNDOセグメントに書き込まれる。UNDOセグメントには、未コミットのトランザクションや、最近コミットされたトランザクションによって変更されたデータの古い値が含まれている。このため、同じデータの異なる時点の複数のバージョンがデータベース内に存在することになる。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;postgresqlmysql&#34;&gt;PostgreSQL/MySQLの場合**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;すべての分離レベルの利用が可能。&lt;/p&gt;
+&lt;p&gt;実装自体は各DBエンジン自体で異なり、PostgreSQLもMySQLの&lt;code&gt;REPEATABLE READ&lt;/code&gt;を選択した場合においても、&lt;code&gt;Phantom Read&lt;/code&gt; は発生しない実装になっている模様。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;13.2. トランザクションの分離 &lt;a href=&#34;http://pgsql-jp.github.io/current/html/transaction-iso.html&#34;&gt;http://pgsql-jp.github.io/current/html/transaction-iso.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;write-skewserializable&#34;&gt;Write SkewをSERIALIZABLE分離レベルで試してみる**&lt;/h4&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。&lt;/p&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;&lt;strong&gt;事前にテーブル/データ作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table mytab;
+CREATE TABLE mytab
+(
+  class int NOT NULL,
+  value int NOT NULL
+);
+INSERT INTO mytab VALUES
+(1, 10), (1, 20), (2, 100), (2, 200);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Session1&lt;/th&gt;
+&lt;th&gt;Session2&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INSERT INTO mytab VALUES(2,30);&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 2;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;INSERT INTO mytab VALUES (1, 300);&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT SUM(value) FROM mytab WHERE class = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INSERT INTO mytab VALUES (2, 330);&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;COMMIT;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SELECT * FROM mytab;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;session1&#34;&gt;Session1**&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; select * from mytab;
+ class | value 
+-------+-------
+     1 |    10
+     1 |    20
+     2 |   100
+     2 |   200
+(4 rows)
+
+aurorapostdb=&amp;gt; 
+aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 1;
+ sum 
+-----
+  30
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES(2,30);
+INSERT 0 1
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;session2&#34;&gt;Session2**&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 2;
+ sum 
+-----
+ 300
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES (1, 300);
+INSERT 0 1
+aurorapostdb=&amp;gt; commit;
+COMMIT
+aurorapostdb=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h4 id=&#34;session1-1&#34;&gt;&lt;strong&gt;Session1&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#セッション2で実行
+aurorapostdb=&amp;gt; commit;
+ERROR:  could not serialize access due to read/write dependencies among transactions
+DETAIL:  Reason code: Canceled on identification as a pivot, during commit attempt.
+HINT:  The transaction might succeed if retried.
+aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 1;
+ sum 
+-----
+ 330
+(1 row)
+
+aurorapostdb=&amp;gt; INSERT INTO mytab VALUES (2, 330);
+INSERT 0 1
+aurorapostdb=&amp;gt; COMMIT;
+COMMIT
+aurorapostdb=&amp;gt; SELECT * FROM mytab;
+ class | value 
+-------+-------
+     1 |    10
+     1 |    20
+     2 |   100
+     2 |   200
+     1 |   300
+     2 |   330
+(6 rows)
+
+aurorapostdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;br/&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;第18回 ロックについて &lt;a href=&#34;https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html&#34;&gt;https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SSI - PostgreSQL wiki &lt;a href=&#34;https://wiki.postgresql.org/wiki/SSI&#34;&gt;https://wiki.postgresql.org/wiki/SSI&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;postgresql isolation について - qiita &lt;a href=&#34;https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd&#34;&gt;https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;ファントムリードは起こらないのにseirializableでない、それがポスグレのrepeatable read - qiita &lt;a href=&#34;https://qiita.com/yuba/items/89496dda291edb2e558c&#34;&gt;https://qiita.com/yuba/items/89496dda291edb2e558c&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQL5.7のmy.cnfのテンプレートを作成してみた</title>
+      <link>https:///zatoima.github.io/mysql-myconf-setting-template.html</link>
+      <pubDate>Sat, 20 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-myconf-setting-template.html</guid>
+      <description>&lt;p&gt;MySQLのどのシステム変数をmy.cnfに指定するかを明示的にするためにテンプレートを作成しました。&lt;/p&gt;
+&lt;p&gt;要件や環境(メモリ値、ディレクトリ構成、ディスク性能（HDD or SSD）)に応じて変更する部分が多々ありますのでご注意ください。&lt;/p&gt;
+&lt;p&gt;※適宜追加、修正していく予定。&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;バージョン想定&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;MySQL 5.7&lt;/code&gt; を想定しています。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql&amp;gt; select version();
++------------+
+| version()  |
++------------+
+| 5.7.26-log |
++------------+
+1 row in set (0.00 sec)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;mycnf&#34;&gt;my.cnfテンプレート&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[mysqld]
+# 環境に応じてチューニングが必須
+
+# #################
+# Common
+# #################
+
+# オートコミット機能を無効化
+# init_connectで指定したSQL文はSUPER権限を持ったユーザに対しては実行されない
+init_connect=&#39;SET AUTOCOMMIT=0&#39;
+
+# パスワードのチェックを無効化する
+validate-password=OFF
+
+# バイナリログを有効化
+log-bin
+
+# サーバID
+server_id=1
+
+# データディレクトリ
+datadir=/var/lib/mysql
+
+# ソケット・ファイル
+socket=/var/lib/mysql/mysql.sock
+
+# キャラクタセットの指定
+character_set_server=utf8mb4
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+# mysqld.logファイルの指定
+log-error=/var/log/mysqld.log
+
+# mysqld.pidファイルの指定
+pid-file=/var/run/mysqld/mysqld.pid
+
+
+# #################
+# innodb
+# #################
+
+# InnoDBデータファイルのパス
+innodb_data_file_path = ibdata1:1G:autoextend
+
+# InnoDBテーブルスペース自動拡張サイズ
+innodb_autoextend_increment = 64
+
+# InnoDBのデータとインデックスをキャッシュするバッファのサイズ(推奨は物理メモリの8割)
+innodb_buffer_pool_size=300M
+
+# コミットされていないトランザクションのためのバッファのサイズ。innodb_buffer_pool_sizeの25%程度(最大でも64MB)
+# データインポート時やデータの洗替え時などは32M等に設定する
+innodb_log_buffer_size=8M
+
+# innodb_buffer_pool_sizeをいくつのインスタンスに分けるか指定。バッファサイズが大きい場合は分割することを推奨
+# innodb_buffer_pool_instances=8
+
+# InnoDBの更新ログを記録するディスク上のファイルサイズ(innodb_buffer_pool_sizeの4分の1程度)
+innodb_log_file_size=1G
+
+# データやインデックスを共有ではなくテーブル個別に保存する
+innodb_file_per_table=1
+
+# OSのキャッシュをバイパスするかどうかを制御する
+# InnoDBとOSのファイルシステムキャッシュの両方にあるという「ダブルバッファリング」を防止するためにO_DIRECTを使用する
+innodb_flush_method=O_DIRECT
+
+# バッファプール上で変更されたデータをディスクに書き出す場合に、近隣のページをまとめて1回のI/Oで書き出す仕組み(SSDの場合は無効化が推奨)
+innodb_flush_neighbors=0
+
+# 未コミットのトランザクション情報をキャッシュするメモリ上の領域。ラージトランザクションを実行してキャッシュから溢れて一時表を作成するケースにチューニングすることで有効
+binlog_cache_size=32768
+
+# 変更をREDOログに同期するタイミングを制御。ACIDが不要な場合に0 or 2を設定して高速化を図る。
+innodb_flush_log_at_trx_commit=1
+
+# ダブルライトバッファの無効化
+# データインポート時のみ指定(通常時は指定しない)
+# skip_innodb_doublewrite
+
+# InnoDBの書込み要求に使用されるバックグラウンドスレッドの数
+innodb_write_io_threads = 8
+
+# InnoDBの読取り要求に使用されるバックグラウンドスレッドの数
+innodb_read_io_threads = 8
+
+# InnoDB で使用できる全体的な I/O容量(IOPS値が妥当)。SSD、HDDで変更すべき
+innodb_io_capacity=200
+
+# innodb_io_capacity の変更に合わせて変更（設定しない場合、デフォルト値が innodb_io_capacity の 2 倍。下限2000）
+innodb_io_capacity_max=2000
+
+
+# #################
+# query cache
+# #################
+
+# クエリキャッシュのブロックサイズ
+query_cache_min_res_unit=4096
+
+# クエリキャッシュ最大サイズ
+query_cache_limit=16M
+
+# クエリキャッシュで使用するメモリサイズ
+query_cache_size=128M
+
+# クエリキャッシュのタイプ(0:off, 1:ON SELECT SQL_NO_CACHE以外, 2:DEMAND SELECT SQL_CACHEのみ)
+query_cache_type=2
+
+# #################
+# slow query log
+# #################
+
+# スロークエリの出力設定
+slow_query_log=ON
+
+# スロークエリと判定する秒数
+long_query_time=3
+
+# スロークエリログの場所(あらかじめ作成しておく必要あり)
+slow_query_log_file=/var/log/slow.log
+
+# #################
+# replication
+# #################
+
+# GTID有効
+gtid_mode=on
+
+# GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
+enforce_gtid_consistency=on
+
+# #################
+# thread buffer
+# #################
+
+# インデックス未使用でのJOIN時に使用するバッファ
+join_buffer_size=256K
+
+# フルスキャンのレコードバッファ
+read_buffer_size=1M
+
+# ソート時に使用されるバッファ
+sort_buffer_size=4M
+
+# キーを使用したソートで読み込まれた行がキャッシュされるバッファ
+read_rnd_buffer_size=2M
+
+
+# #################
+# etc
+# #################
+
+# クライアントからサーバーに送信できるパケットの最大長
+max_allowed_packet=8M
+
+# MEMORYテーブルの最大サイズ。このサイズを超えたMEMORYテーブルはディスク上に作成
+max_heap_table_size=16M
+
+# スレッド毎に作成される一時的なテーブルの最大サイズ。スレッドバッファ
+tmp_table_size=16M
+
+# スレッドキャッシュ保持最大数
+thread_cache_size=100
+
+# コネクションタイムアウト時間
+wait_timeout=30
+
+# テーブルキャッシュ値。本値を変更する際はopen_files_limitも合わせて引き上げる必要がある。
+# open_files_limitはOS側がmysqldプロセスに対して許可するファイルディスクリプタ上限を制御。
+table_open_cache=2000
+
+# テーブル定義キャッシュ。テーブル定義（.frmファイル）をキャッシュし、テーブルをオープンする際に高速化
+table_definition_cache=1400
+
+# 送受信するパケットを格納するパケットメッセージバッファサイズの初期値
+net_buffer_length=16384
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;参考&lt;/h3&gt;
+&lt;h5 id=&#34;1&#34;&gt;参考ブログ1&lt;/h5&gt;
+&lt;blockquote&gt;
+&lt;p&gt;(帰ってきた)InnoDBパフォーマンス最適化の基礎 | Yakst &lt;a href=&#34;https://yakst.com/ja/posts/65&#34;&gt;https://yakst.com/ja/posts/65&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;2&#34;&gt;参考ブログ2&lt;/h5&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQLをインストールしたら、必ず確認すべき10の設定 | Yakst &lt;a href=&#34;https://yakst.com/ja/posts/200&#34;&gt;https://yakst.com/ja/posts/200&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;3&#34;&gt;参考ブログ3&lt;/h5&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL関連のパラメータ(主にInnoDB)について - hiroi10のブログ &lt;a href=&#34;http://hiroi10.hatenablog.com/entry/20151210/1449731029&#34;&gt;http://hiroi10.hatenablog.com/entry/20151210/1449731029&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;1-1&#34;&gt;参考書籍1&lt;/h5&gt;
+&lt;p&gt;[asin:4774170208:detail]&lt;/p&gt;
+&lt;h5 id=&#34;2-1&#34;&gt;参考書籍2&lt;/h5&gt;
+&lt;p&gt;[asin:B01N0R2BL2:detail]&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLのInnoDB バッファープールのプリロード</title>
+      <link>https:///zatoima.github.io/mysql-buffer-pool-load.html</link>
+      <pubDate>Fri, 19 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-buffer-pool-load.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;MySQLのバッファープールのプリロード機能について整理する。※Oracleにはない機能なので気になった&lt;/p&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;関連するシステム変数&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql&amp;gt; select version();
++------------+
+| version()  |
++------------+
+| 5.7.26-log |
++------------+
+1 row in set (0.00 sec)
+
+mysql&amp;gt;
+
+mysql&amp;gt; show variables like &#39;innodb_buffer_pool%&#39;;
++-------------------------------------+----------------+
+| Variable_name                       | Value          |
++-------------------------------------+----------------+
+| innodb_buffer_pool_chunk_size       | 134217728      |
+| innodb_buffer_pool_dump_at_shutdown | ON             |
+| innodb_buffer_pool_dump_now         | OFF            |
+| innodb_buffer_pool_dump_pct         | 25             |
+| innodb_buffer_pool_filename         | ib_buffer_pool |
+| innodb_buffer_pool_instances        | 1              |
+| innodb_buffer_pool_load_abort       | OFF            |
+| innodb_buffer_pool_load_at_startup  | ON             |
+| innodb_buffer_pool_load_now         | OFF            |
+| innodb_buffer_pool_size             | 134217728      |
++-------------------------------------+----------------+
+10 rows in set (0.00 sec)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;innodb-buffer-pool-dump-at-shutdown&#34;&gt;innodb_buffer_pool_dump_at_shutdown&lt;/h5&gt;
+&lt;p&gt;シャットダウン時にバッファプール上のキャッシュを保持するかどうか。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_dump_at_shutdown&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_dump_at_shutdown&lt;/a&gt;
+次回再起動時のウォームアッププロセスの時間を短縮するために、MySQL サーバーのシャットダウン時に、InnoDB のバッファープールにキャッシュされるページを記録するかどうかを指定します。一般に、innodb_buffer_pool_load_at_startup と組み合わせて使用されます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;シャットダウン後に &lt;code&gt;ib_buffer_pool&lt;/code&gt; が作成されている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[mysql@awsstg-db001 mysql]$ ls -l ib_buffer_pool
+-rw-r----- 1 mysql mysql 3206 Jun 29 15:07 ib_buffer_pool
+[mysql@awsstg-db001 mysql]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;このパラメータを設定することでシャットダウンシーケンス時にはエラーログに下記のログが出力される。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;2019-06-27T07:59:52.431613Z 0 [Note] InnoDB: Starting shutdown...
+2019-06-27T07:59:52.531945Z 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2019-06-27T07:59:52.532242Z 0 [Note] InnoDB: Buffer pool(s) dump completed at 190627  7:59:52
+2019-06-27T07:59:54.242932Z 0 [Note] InnoDB: Shutdown completed; log sequence number 616413821
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;innodb-buffer-pool-load-at-startup&#34;&gt;innodb_buffer_pool_load_at_startup&lt;/h5&gt;
+&lt;p&gt;スタートアップ時に &lt;code&gt;ib_buffer_pool&lt;/code&gt; を読み込んでバッファプールにプリロードを行う。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_load_at_startup&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_load_at_startup&lt;/a&gt;
+MySQL サーバーの起動時に、以前に保持されたときと同じページをロードすることで、InnoDB のバッファープールが自動的にウォームアップされるように指定します。一般に、innodb_buffer_pool_dump_at_shutdown と組み合わせて使用されます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;innodb-buffer-pool-filename&#34;&gt;innodb_buffer_pool_filename&lt;/h5&gt;
+&lt;p&gt;記録するファイル名を指定&lt;/p&gt;
+&lt;h5 id=&#34;innodb-buffer-pool-dump-nowinnodb-buffer-pool-load-at-startup&#34;&gt;innodb_buffer_pool_dump_now/innodb_buffer_pool_load_at_startup&lt;/h5&gt;
+&lt;p&gt;シャットダウンやスタートアップ時ではなくMySQLがオンライン時に任意のタイミングで即時書き出し、及び即時読み込みを行う。&lt;/p&gt;
+&lt;h3 id=&#34;ib-buffer-pool&#34;&gt;ib_buffer_poolに保存される情報&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;必要なテーブルスペース ID&lt;/code&gt; と &lt;code&gt;ページ ID&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[mysql@awsstg-db001 mysql]$ head ib_buffer_pool
+0,890
+0,889
+0,888
+0,887
+0,886
+0,885
+0,884
+0,883
+0,882
+0,881
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;該当するページを見つけるために必要なテーブルスペース ID とページ ID だけがディスクに保存されます。この情報は、&lt;code&gt;INNODB_BUFFER_PAGE_LRU&lt;/code&gt; &lt;code&gt;INFORMATION_SCHEMA&lt;/code&gt; テーブルから取得されます。デフォルトでは、テーブルスペース ID とページ ID のデータは、&lt;code&gt;InnoDB&lt;/code&gt; データディレクトリに保存される &lt;code&gt;ib_buffer_pool&lt;/code&gt; という名前のファイル内に保存されます。このファイル名は、&lt;code&gt;innodb_buffer_pool_filename&lt;/code&gt; 構成パラメータを使用して変更できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;この情報は &lt;code&gt;INFORMATION_SCHEMA.INNODB_BUFFER_PAGE_LRU&lt;/code&gt; から取得される模様。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql&amp;gt; SELECT * FROM INFORMATION_SCHEMA.INNODB_BUFFER_PAGE_LRU LIMIT 1\G
+*************************** 1. row ***************************
+            POOL_ID: 0
+       LRU_POSITION: 0
+              SPACE: 30
+        PAGE_NUMBER: 11063
+          PAGE_TYPE: INDEX
+         FLUSH_TYPE: 0
+          FIX_COUNT: 0
+          IS_HASHED: NO
+NEWEST_MODIFICATION: 0
+OLDEST_MODIFICATION: 0
+        ACCESS_TIME: 2747830684
+         TABLE_NAME: `mydb`.`t1`
+         INDEX_NAME: PRIMARY
+     NUMBER_RECORDS: 648
+          DATA_SIZE: 14904
+    COMPRESSED_SIZE: 0
+         COMPRESSED: NO
+             IO_FIX: IO_NONE
+             IS_OLD: YES
+    FREE_PAGE_CLOCK: 0
+1 row in set (0.01 sec)
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLのバイナリログを確認してみた</title>
+      <link>https:///zatoima.github.io/mysql-binlog-show.html</link>
+      <pubDate>Thu, 18 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-binlog-show.html</guid>
+      <description>&lt;p&gt;バイナリログを確認&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;実行コマンド&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;-- login
+mysql -u myuser -pmysql
+
+-- 既存のバイナリログを確認、及びバイナリログのスイッチ
+show binary logs;
+flush binary logs;
+show binary logs;
+
+-- バイナリログを確認
+-- この時にはバイナリのログの中には何も更新情報はない
+show binlog events in &#39;awsstg-db001-bin.000011&#39;;
+
+show variables like &#39;binlog_format&#39;;
+
+use mydb;
+desc t1;
+insert into t1 values(1,&#39;1度目のInsert&#39;,&#39;testテスト&#39;,5555,now());
+
+-- バイナリログを確認
+-- 上記Insertが記録されている
+show binlog events in &#39;awsstg-db001-bin.000011&#39;;
+
+-- binlog_formatを変更した後に実行
+show variables like &#39;binlog_format&#39;;
+set session binlog_format=&#39;STATEMENT&#39;;
+show variables like &#39;binlog_format&#39;;
+
+insert into t1 values(2,&#39;2度目のInsert&#39;,&#39;testテスト&#39;,5555,now());
+
+show binlog events in &#39;awsstg-db001-bin.000011&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;実行結果&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[ec2-user@awsstg-db001 ~]$
+[ec2-user@awsstg-db001 ~]$
+[ec2-user@awsstg-db001 ~]$
+[ec2-user@awsstg-db001 ~]$ mysql -u myuser -pmysql
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 15
+Server version: 5.7.26-log MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2019, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type &#39;help;&#39; or &#39;\h&#39; for help. Type &#39;\c&#39; to clear the current input statement.
+
+mysql&amp;gt;
+mysql&amp;gt; show binary logs;
++-------------------------+-----------+
+| Log_name                | File_size |
++-------------------------+-----------+
+| awsstg-db001-bin.000001 |  42128655 |
+| awsstg-db001-bin.000002 |       217 |
+| awsstg-db001-bin.000003 |      3533 |
+| awsstg-db001-bin.000004 |       217 |
+| awsstg-db001-bin.000005 |       217 |
+| awsstg-db001-bin.000006 |      1164 |
+| awsstg-db001-bin.000007 |  84251908 |
+| awsstg-db001-bin.000008 |      1270 |
+| awsstg-db001-bin.000009 |       248 |
+| awsstg-db001-bin.000010 |       194 |
++-------------------------+-----------+
+10 rows in set (0.00 sec)
+
+mysql&amp;gt; flush binary logs;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql&amp;gt; show binary logs;
++-------------------------+-----------+
+| Log_name                | File_size |
++-------------------------+-----------+
+| awsstg-db001-bin.000001 |  42128655 |
+| awsstg-db001-bin.000002 |       217 |
+| awsstg-db001-bin.000003 |      3533 |
+| awsstg-db001-bin.000004 |       217 |
+| awsstg-db001-bin.000005 |       217 |
+| awsstg-db001-bin.000006 |      1164 |
+| awsstg-db001-bin.000007 |  84251908 |
+| awsstg-db001-bin.000008 |      1270 |
+| awsstg-db001-bin.000009 |       248 |
+| awsstg-db001-bin.000010 |       248 |
+| awsstg-db001-bin.000011 |       194 |
++-------------------------+-----------+
+11 rows in set (0.00 sec)
+
+mysql&amp;gt;
+mysql&amp;gt; show binlog events in &#39;awsstg-db001-bin.000011&#39;;
++-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+| Log_name                | Pos | Event_type     | Server_id | End_log_pos | Info                                      |
++-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+| awsstg-db001-bin.000011 |   4 | Format_desc    |         1 |         123 | Server ver: 5.7.26-log, Binlog ver: 4     |
+| awsstg-db001-bin.000011 | 123 | Previous_gtids |         1 |         194 | 86a2b2da-9683-11e9-9dd6-067b425ce144:1-72 |
++-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+2 rows in set (0.00 sec)
+
+mysql&amp;gt; show variables like &#39;binlog_format&#39;;
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| binlog_format | ROW   |
++---------------+-------+
+1 row in set (0.00 sec)
+
+mysql&amp;gt;
+mysql&amp;gt; use mydb;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql&amp;gt; desc t1
+    -&amp;gt; ;
++-------+------------------+------+-----+---------+----------------+
+| Field | Type             | Null | Key | Default | Extra          |
++-------+------------------+------+-----+---------+----------------+
+| a     | int(11)          | NO   | PRI | NULL    | auto_increment |
+| b     | varchar(10)      | YES  |     | NULL    |                |
+| c     | varchar(30)      | YES  |     | NULL    |                |
+| d     | int(10) unsigned | YES  |     | NULL    |                |
+| e     | datetime         | YES  |     | NULL    |                |
++-------+------------------+------+-----+---------+----------------+
+5 rows in set (0.00 sec)
+
+mysql&amp;gt;
+mysql&amp;gt; insert into t1 values(1,&#39;1度目のInsert&#39;,&#39;testテスト&#39;,5555,now());
+Query OK, 1 row affected (0.00 sec)
+
+mysql&amp;gt;
+mysql&amp;gt; show binlog events in &#39;awsstg-db001-bin.000011&#39;;
++-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+| Log_name                | Pos | Event_type     | Server_id | End_log_pos | Info            |
++-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+| awsstg-db001-bin.000011 |   4 | Format_desc    |         1 |         123 | Server ver: 5.7.26-log, Binlog ver: 4            |
+| awsstg-db001-bin.000011 | 123 | Previous_gtids |         1 |         194 | 86a2b2da-9683-11e9-9dd6-067b425ce144:1-72            |
+| awsstg-db001-bin.000011 | 194 | Gtid           |         1 |         259 | SET @@SESSION.GTID_NEXT= &#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39; |
+| awsstg-db001-bin.000011 | 259 | Query          |         1 |         339 | BEGIN            |
+| awsstg-db001-bin.000011 | 339 | Table_map      |         1 |         393 | table_id: 110 (mydb.t1)            |
+| awsstg-db001-bin.000011 | 393 | Write_rows     |         1 |         473 | table_id: 110 flags: STMT_END_F            |
+| awsstg-db001-bin.000011 | 473 | Xid            |         1 |         504 | COMMIT /* xid=178 */            |
++-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+7 rows in set (0.00 sec)
+
+mysql&amp;gt; show variables like &#39;binlog_format&#39;;
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| binlog_format | ROW   |
++---------------+-------+
+1 row in set (0.01 sec)
+
+mysql&amp;gt; set session binlog_format=&#39;STATEMENT&#39;;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql&amp;gt; show variables like &#39;binlog_format&#39;;
++---------------+-----------+
+| Variable_name | Value     |
++---------------+-----------+
+| binlog_format | STATEMENT |
++---------------+-----------+
+1 row in set (0.01 sec)
+
+mysql&amp;gt; insert into t1 values(2,&#39;2度目のInsert&#39;,&#39;testテスト&#39;,5555,now());
+Query OK, 1 row affected (0.00 sec)
+
+mysql&amp;gt;
+mysql&amp;gt;
+mysql&amp;gt; show binlog events in &#39;awsstg-db001-bin.000011&#39;;
++-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+| Log_name                | Pos | Event_type     | Server_id | End_log_pos | Info                            |
++-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+| awsstg-db001-bin.000011 |   4 | Format_desc    |         1 |         123 | Server ver: 5.7.26-log, Binlog ver: 4                            |
+| awsstg-db001-bin.000011 | 123 | Previous_gtids |         1 |         194 | 86a2b2da-9683-11e9-9dd6-067b425ce144:1-72                            |
+| awsstg-db001-bin.000011 | 194 | Gtid           |         1 |         259 | SET @@SESSION.GTID_NEXT= &#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39;                 |
+| awsstg-db001-bin.000011 | 259 | Query          |         1 |         339 | BEGIN                            |
+| awsstg-db001-bin.000011 | 339 | Table_map      |         1 |         393 | table_id: 110 (mydb.t1)                            |
+| awsstg-db001-bin.000011 | 393 | Write_rows     |         1 |         473 | table_id: 110 flags: STMT_END_F                            |
+| awsstg-db001-bin.000011 | 473 | Xid            |         1 |         504 | COMMIT /* xid=178 */                            |
+| awsstg-db001-bin.000011 | 504 | Gtid           |         1 |         569 | SET @@SESSION.GTID_NEXT= &#39;86a2b2da-9683-11e9-9dd6-067b425ce144:74&#39;                 |
+| awsstg-db001-bin.000011 | 569 | Query          |         1 |         656 | BEGIN                            |
+| awsstg-db001-bin.000011 | 656 | Query          |         1 |         808 | use `mydb`; insert into t1 values(2,&#39;2度目のInsert&#39;,&#39;testテスト&#39;,5555,now())       |
+| awsstg-db001-bin.000011 | 808 | Xid            |         1 |         839 | COMMIT /* xid=183 */                            |
++-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+11 rows in set (0.00 sec)
+
+mysql&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLクライアントのパスワード指定でスペースを入れてはいけない理由</title>
+      <link>https:///zatoima.github.io/mysql-password-space.html</link>
+      <pubDate>Wed, 17 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-password-space.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;パスワード指定でスペースを入れたらダメ&lt;/h3&gt;
+&lt;p&gt;MySQLにログインする場合、&lt;code&gt;mysql -u root -p&amp;lt;パスワード&amp;gt;&lt;/code&gt; というコマンドでログインすると思います。&lt;code&gt;-p&lt;/code&gt;の後ろにスペースを入れてしまい、エラー(もしくはパスワードを求められる)になるというケースが幾度となくありました。スペースを入れてはいけない理由を改めてマニュアルから確認しました。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: MySQL 5.6 リファレンスマニュアル :: 4.2.4 コマンド行でのオプションの使用 &lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/command-line-options.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/command-line-options.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;パスワードオプションは、短い形式で &lt;code&gt;-p*pass_val*&lt;/code&gt; または &lt;code&gt;-p&lt;/code&gt; としても指定できます。しかし短い形式の場合、パスワード値を指定する場合は、&lt;em&gt;間にスペースを入れずに&lt;/em&gt;オプション文字に続けなければいけません。この理由は、オプション文字にスペースが続く場合、続く引数がパスワード値なのかほかの種類の引数なのかをプログラムが判断する方法がないためです。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ここに記載がありますね。スペースを空けてしまうと指定されたパスワードが本当にパスワードなのか他の種類のオプション引数なのかを判別出来ないので厳格にスペースを許可していないとのことでした。&lt;/p&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;スペースを空けずにパスワードを指定（正しい指定方法）&lt;/h4&gt;
+&lt;p&gt;正常にログインが出来ます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[root@awsstg-db002 mysql]# mysql -u root -pmysql
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 18
+Server version: 5.7.26-log MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2019, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type &#39;help;&#39; or &#39;\h&#39; for help. Type &#39;\c&#39; to clear the current input statement.
+
+mysql&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;スペースを空けてパスワードを指定（誤った指定方法）&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;Enter password:&lt;/code&gt;とコンソールに出力されている通り、指定したはずの&lt;code&gt;mysql&lt;/code&gt;というパスワードが認識されていません。ログイン後にstatusコマンドでどこのデータベースにログインしているか確認してみると「mysql」データベースに接続されています。&lt;/p&gt;
+&lt;p&gt;パスワードを打ったと思った&lt;code&gt;mysql&lt;/code&gt;がログインするデータベース名と認識されています。&lt;/p&gt;
+&lt;p&gt;※そもそもですがパスワードにmysqlとか使うのはやめましょう。あとワーニングにも出力されていますが、ログイン時にパスワードを直書きするのもやめましょう。historyコマンドなどでパスワードがわかってしまいセキュリティ的によくありません。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;mysql: [Warning] Using a password on the command line interface can be insecure.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[root@awsstg-db002 mysql]# mysql -u root -p mysql
+Enter password:
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 15
+Server version: 5.7.26-log MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2019, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type &#39;help;&#39; or &#39;\h&#39; for help. Type &#39;\c&#39; to clear the current input statement.
+
+mysql&amp;gt; status
+--------------
+mysql  Ver 14.14 Distrib 5.7.26, for Linux (x86_64) using  EditLine wrapper
+
+Connection id:          15
+Current database:       mysql   ★←
+Current user:           root@localhost
+SSL:                    Not in use
+Current pager:          stdout
+Using outfile:          &#39;&#39;
+Using delimiter:        ;
+Server version:         5.7.26-log MySQL Community Server (GPL)
+Protocol version:       10
+Connection:             Localhost via UNIX socket
+Server characterset:    utf8mb4
+Db     characterset:    latin1
+Client characterset:    utf8mb4
+Conn.  characterset:    utf8mb4
+UNIX socket:            /var/lib/mysql/mysql.sock
+Uptime:                 1 day 5 hours 50 min 25 sec
+
+Threads: 4  Questions: 304  Slow queries: 0  Opens: 242  Flush tables: 1  Open tables: 231  Queries per second avg: 0.002
+--------------
+
+mysql&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLレプリケーション間のバージョン制限について</title>
+      <link>https:///zatoima.github.io/mysql-replication-version.html</link>
+      <pubDate>Tue, 16 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-replication-version.html</guid>
+      <description>&lt;p&gt;MySQLはレプリケーション間のバージョン制限があり、1バージョンの差異のみ可能。MySQLは論理レプリケーションにも関わらずバージョン制限があることに注意。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: MySQL 5.7 Reference Manual :: 16.4.2 Replication Compatibility Between MySQL Versions &lt;a href=&#34;https://dev.mysql.com/doc/refman/5.7/en/replication-compatibility.html&#34;&gt;https://dev.mysql.com/doc/refman/5.7/en/replication-compatibility.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;MySQL supports replication from one release series to the next higher release series. For example, you can replicate from a master running MySQL 5.6 to a slave running MySQL 5.7, from a master running MySQL 5.7 to a slave running MySQL 8.0, and so on.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;(日本語訳)&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQLは、あるリリースシリーズから次のリリースシリーズへのレプリケーションをサポートしています。たとえば、MySQL 5.6を実行しているマスターからMySQL 5.7を実行しているスレーブ、MySQL 5.7を実行しているマスターからMySQL 8.0を実行しているスレーブなどに複製できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;dboraclepostgres&#34;&gt;備考：他DB(Oracle、Postgres)のレプリケーションのバージョン制限&lt;/h3&gt;
+&lt;p&gt;Oracle DataGuard（フィジカル・スタンバイ）は同バージョン、Oracle GoldenGateはバージョン制限無し(≒Certification Matrixに依存)&lt;/p&gt;
+&lt;p&gt;PostgreSQLのストリーミングレプリケーション（物理レプリケーション）は同一バージョンのみ。ロジカルレプリケーション（論理レプリケーション）は他バージョンも可能。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLでslow_query_log_fileのファイルは事前に作成する必要あり</title>
+      <link>https:///zatoima.github.io/mysql-slow_query_log_file-error.html</link>
+      <pubDate>Wed, 03 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-slow_query_log_file-error.html</guid>
+      <description>&lt;p&gt;&lt;code&gt;slow_query_log_file&lt;/code&gt; で指定するスロークエリログファイルは事前に作成しておく必要があるという話。常識？&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;スロークエリログ関連のシステム変数&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;[mysqld]
+slow_query_log=ON
+slow_query_log_file = /var/log/slow.log
+long_query_time=0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;事前に作成しておかないとエラーが出力される。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysqld: File &#39;/var/log/slow.log&#39; not found (Errcode: 13 - Permission denied)
+2019-07-01T11:16:23.095556Z 0 [ERROR] Could not use /var/log/slow.log for logging (error 13 - Permission denied). Turning logging off for the server process. To turn it on again: fix the cause, then either restart the query logging by using &amp;quot;SET GLOBAL SLOW_QUERY_LOG=ON&amp;quot; or restart the MySQL server.
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>AWS EC2上のMySQL環境でレプリケーション構成を構築する</title>
+      <link>https:///zatoima.github.io/mysql-aws-ec2-replication.html</link>
+      <pubDate>Tue, 02 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-aws-ec2-replication.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;MySQLのレプリケーション環境をAWSのEC2を使って構築します。マスター側、及びスレーブ側どちらもEC2上に作成したMySQLになります。&lt;/p&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;前提事項&lt;/h3&gt;
+&lt;p&gt;・MySQLのマスター側、スレーブ側は構築済&lt;/p&gt;
+&lt;p&gt;・データの中身は既にマスター側、スレーブ側にて同一&lt;/p&gt;
+&lt;h3 id=&#34;ec2&#34;&gt;EC2のセキュリティリストの編集&lt;/h3&gt;
+&lt;p&gt;マスターとスレーブで通信をするのでインバウントを編集する必要があります。ここではプライベートIPを限定して許可しています。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121172723567.png&#34; alt=&#34;image-20191121172723567&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;autocnf&#34;&gt;スレーブ側のauto.cnfの削除&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;cd /var/lib/mysql
+rm -rf auto.cnf
+systemctl restart mysqld
+
+【実行結果】
+[root@awsstg-db002 mysql]# pwd
+/var/lib/mysql
+[root@awsstg-db002 mysql]# ls -l auto.cnf
+-rw-r----- 1 mysql mysql 56 Jun 24 13:25 auto.cnf
+[root@awsstg-db002 mysql]#
+[root@awsstg-db002 mysql]# rm -rf auto.cnf
+[root@awsstg-db002 mysql]#
+[root@awsstg-db002 mysql]# systemctl restart mysqld
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;mycnf&#34;&gt;マスター側のmy.cnfの編集&lt;/h3&gt;
+&lt;p&gt;下記項目をmy.cnfに追加&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#バイナリログの有効化
+log-bin
+#サーバIDの設定
+server_id=1
+# GTID有効
+gtid_mode=on
+# GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
+enforce_gtid_consistency=on
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;mycnf-1&#34;&gt;スレーブ側のmy.cnfの編集&lt;/h3&gt;
+&lt;p&gt;下記項目をmy.cnfに追加&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#バイナリログの有効化 ※スレーブ側として可動する場合は必須ではない
+log-bin
+#サーバIDの設定
+server_id=2
+# GTID有効
+gtid_mode=on
+# GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
+enforce_gtid_consistency=on
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;マスター側にてレプリケーションスレーブ用のユーザを作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;grant replication slave on *.* to &#39;repl&#39;@&#39;10.0.0.11&#39; identified by &#39;mysql&#39;;
+select Host, User from mysql.user;
+
+【出力結果】
+mysql&amp;gt; grant replication slave on *.* to &#39;repl&#39;@&#39;10.0.0.11&#39; identified by &#39;mysql&#39;
+    -&amp;gt; ;
+Query OK, 0 rows affected, 1 warning (0.01 sec)
+mysql&amp;gt; select Host, User from mysql.user;
++-----------+---------------+
+| Host      | User          |
++-----------+---------------+
+| 10.0.0.11 | repl          |
+| localhost | mysql.session |
+| localhost | mysql.sys     |
+| localhost | myuser        |
+| localhost | repl          |
+| localhost | root          |
++-----------+---------------+
+6 rows in set (0.00 sec)
+
+mysql&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;マスター側にてステータス確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;show master status;
+
+【出力結果】
+mysql&amp;gt; show master status\G
+*************************** 1. row ***************************
+             File: awsstg-db001-bin.000007
+         Position: 485
+     Binlog_Do_DB:
+ Binlog_Ignore_DB:
+Executed_Gtid_Set: 86a2b2da-9683-11e9-9dd6-067b425ce144:1-42
+1 row in set (0.00 sec)
+
+mysql&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;スレーブ側にてレプリケーションスレーブの設定と開始&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;change master to master_host = &#39;10.0.0.13&#39;,master_user = &#39;repl&#39;,master_password = &#39;mysql&#39;,master_log_file = &#39;awsstg-db001-bin.000007&#39;,master_log_pos = 485;
+
+#レプリケーションの開始
+start slave;
+
+show slave status\G
+
+【出力結果】
+
+mysql&amp;gt; change master to master_host = &#39;10.0.0.13&#39;,master_user = &#39;repl&#39;,master_password = &#39;mysql&#39;,master_log_file = &#39;awsstg-db001-bin.000007&#39;,master_log_pos = 485;
+Query OK, 0 rows affected, 2 warnings (0.01 sec)
+
+mysql&amp;gt;
+
+mysql&amp;gt; show warnings\G
+*************************** 1. row ***************************
+  Level: Note
+   Code: 1759
+Message: Sending passwords in plain text without SSL/TLS is extremely insecure.
+*************************** 2. row ***************************
+  Level: Note
+   Code: 1760
+Message: Storing MySQL user name or password information in the master info repository is not secure and is therefore not recommended. Please consider using the USER and PASSWORD connection options for START SLAVE; see the &#39;START SLAVE Syntax&#39; in the MySQL Manualfor more information.
+2 rows in set (0.00 sec)
+mysql&amp;gt; 
+mysql&amp;gt; 
+mysql&amp;gt; start slave;
+Query OK, 0 rows affected (0.00 sec)
+mysql&amp;gt; show slave status\G
+*************************** 1. row ***************************
+               Slave_IO_State: Waiting for master to send event
+                  Master_Host: 10.0.0.13
+                  Master_User: repl
+                  Master_Port: 3306
+                Connect_Retry: 60
+              Master_Log_File: awsstg-db001-bin.000007
+          Read_Master_Log_Pos: 84251854
+               Relay_Log_File: awsstg-db002-relay-bin.000004
+                Relay_Log_Pos: 84251325
+        Relay_Master_Log_File: awsstg-db001-bin.000007
+             Slave_IO_Running: Yes
+            Slave_SQL_Running: Yes
+              Replicate_Do_DB:
+          Replicate_Ignore_DB:
+           Replicate_Do_Table:
+       Replicate_Ignore_Table:
+      Replicate_Wild_Do_Table:
+  Replicate_Wild_Ignore_Table:
+                   Last_Errno: 0
+                   Last_Error:
+                 Skip_Counter: 0
+          Exec_Master_Log_Pos: 84251854
+              Relay_Log_Space: 84252123
+              Until_Condition: None
+               Until_Log_File:
+                Until_Log_Pos: 0
+           Master_SSL_Allowed: No
+           Master_SSL_CA_File:
+           Master_SSL_CA_Path:
+              Master_SSL_Cert:
+            Master_SSL_Cipher:
+               Master_SSL_Key:
+        Seconds_Behind_Master: 0
+Master_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error:
+               Last_SQL_Errno: 0
+               Last_SQL_Error:
+  Replicate_Ignore_Server_Ids:
+             Master_Server_Id: 1
+                  Master_UUID: 86a2b2da-9683-11e9-9dd6-067b425ce144
+             Master_Info_File: /var/lib/mysql/master.info
+                    SQL_Delay: 0
+          SQL_Remaining_Delay: NULL
+      Slave_SQL_Running_State: Slave has read all relay log; waiting for more updates
+           Master_Retry_Count: 86400
+                  Master_Bind:
+      Last_IO_Error_Timestamp:
+     Last_SQL_Error_Timestamp:
+               Master_SSL_Crl:
+           Master_SSL_Crlpath:
+           Retrieved_Gtid_Set: 86a2b2da-9683-11e9-9dd6-067b425ce144:43-68
+            Executed_Gtid_Set: 86a2b2da-9683-11e9-9dd6-067b425ce144:1-27:43-68
+                Auto_Position: 0
+         Replicate_Rewrite_DB:
+                 Channel_Name:
+           Master_TLS_Version:
+1 row in set (0.00 sec)
+
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLのFLUSH PRIVILEGESが必要なケース</title>
+      <link>https:///zatoima.github.io/mysql-flush-privileges.html</link>
+      <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-flush-privileges.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;MySQLで権限周りのオペレーションをする時に脳死状態で &lt;code&gt;FLUSH PRIVILEGES&lt;/code&gt;を実行しているケースがあります。（僕です。）&lt;/p&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;権限管理の概要&lt;/h3&gt;
+&lt;p&gt;権限周りの情報はuser&lt;code&gt;、&lt;/code&gt;db&lt;code&gt;、&lt;/code&gt;tables_priv&lt;code&gt;、&lt;/code&gt;columns_priv&lt;code&gt;、および &lt;/code&gt;procs_priv あたりのテーブルに保持しているようです。また、高速化のためにメモリ上のキャッシュに保持している。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/privileges-provided.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/privileges-provided.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;6.2.1 MySQL で提供される権限&lt;/p&gt;
+&lt;p&gt;アカウント権限に関する情報は、&lt;code&gt;mysql&lt;/code&gt; データベース内の &lt;code&gt;user&lt;/code&gt;、&lt;code&gt;db&lt;/code&gt;、&lt;code&gt;tables_priv&lt;/code&gt;、&lt;code&gt;columns_priv&lt;/code&gt;、および &lt;code&gt;procs_priv&lt;/code&gt; テーブルに格納されます (&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/grant-tables.html&#34;&gt;セクション6.2.2「権限システム付与テーブル」&lt;/a&gt;を参照してください)。MySQL サーバーはこれらのテーブルの内容を起動時にメモリーに読み取り、&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/privilege-changes.html&#34;&gt;セクション6.2.6「権限変更が有効化される時期」&lt;/a&gt;に示す条件でこれらを再ロードします。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;GRANT&lt;code&gt;、&lt;/code&gt;REVOKE&lt;code&gt;、&lt;/code&gt;SET PASSWORD&lt;code&gt;、&lt;/code&gt;RENAME USER で操作を行った場合は特に &lt;code&gt;FLUSH PRIVILEGES&lt;/code&gt;は不要とここに書いています。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/privilege-changes.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/privilege-changes.html&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;626-&#34;&gt;6.2.6 権限変更が有効化される時期&lt;/h3&gt;
+&lt;p&gt;ユーザーが &lt;code&gt;GRANT&lt;/code&gt;、&lt;code&gt;REVOKE&lt;/code&gt;、&lt;code&gt;SET PASSWORD&lt;/code&gt;、&lt;code&gt;RENAME USER&lt;/code&gt; などのアカウント管理ステートメントを使用して、付与テーブルを間接的に変更した場合、サーバーはそれらの変更を認識し、再びすぐに付与テーブルをメモリーにロードします。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;INSERT&lt;/code&gt;、&lt;code&gt;UPDATE&lt;/code&gt;、&lt;code&gt;DELETE&lt;/code&gt; などのステートメントを使用して、付与テーブルを直接変更する場合、サーバーを再起動するか、テーブルをリロードするようサーバーに指示するまで、変更内容は権限チェックに影響しません。付与テーブルを直接変更したが、それらをリロードし忘れた場合、サーバーを再起動するまで変更は&lt;em&gt;影響しません&lt;/em&gt;。このため、変更したのに違いが現れないことを不思議に思うことがあるかもしれません。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;実機確認&lt;/h3&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;ユーザ作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE USER &#39;mytest&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;Oracle2019%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;ユーザー一覧を表示する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT host, user FROM mysql.user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;権限付与&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;grant all on *.* to &#39;mytest&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;Oracle2019%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;権限確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;show grants for mytest@localhost;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;権限剥奪&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;revoke all on *.* from &#39;mytest&#39;@&#39;localhost&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-8&#34;&gt;ユーザ削除&lt;/h4&gt;
+&lt;h5 id=&#34;1drop-user&#34;&gt;1.)drop userを使用した場合&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;DROP USER mytest@&#39;localhost&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;drop userの場合はアカウント管理ステートメントになるのでuser関連のメモリ上の情報も同期的にflushされます。（FLUSH PRIVILEGESは不要）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;【コマンド結果】
+mysql&amp;gt; DROP USER mytest@&#39;localhost&#39;;
+Query OK, 0 rows affected (0.00 sec)
+mysql&amp;gt; show grants for mytest@localhost;
+ERROR 1141 (42000): There is no such grant defined for user &#39;mytest&#39; on host &#39;localhost&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;2mysqluserdelete&#34;&gt;2.)mysql.userからdelete文で削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;delete from mysql.user where user like &#39;mytest&#39; and host like &#39;localhost&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;drop userと異なりこちらのユーザ削除方法の場合は、メモリに権限関連の情報が残ってしまうので &lt;code&gt;FLUSH PRIVILEGES&lt;/code&gt; が必要になってくる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql&amp;gt; delete from mysql.user where user like &#39;mytest&#39; and host like &#39;localhost&#39;;
+Query OK, 1 row affected (0.00 sec)
+
+mysql&amp;gt; show grants for mytest@localhost;
++--------------------------------------------+
+| Grants for mytest@localhost                |
++--------------------------------------------+
+| GRANT USAGE ON *.* TO &#39;mytest&#39;@&#39;localhost&#39; |
++--------------------------------------------+
+1 row in set (0.00 sec)
+
+mysql&amp;gt; FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql&amp;gt; show grants for mytest@localhost;
+ERROR 1141 (42000): There is no such grant defined for user &#39;mytest&#39; on host &#39;localhost&#39;
+mysql&amp;gt;
+
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLテーブル内のデータをファイル抽出する</title>
+      <link>https:///zatoima.github.io/mysql-file-exporttable.html</link>
+      <pubDate>Fri, 28 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-file-exporttable.html</guid>
+      <description>&lt;p&gt;ファイル出力方法は大きく分けて2種類ある&lt;/p&gt;
+&lt;h3 id=&#34;uu&#34;&gt;&lt;u&gt;①リダイレクトによる出力&lt;/u&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;echo &#39;SELECT * FROM t1 &#39; | mysql -u myuser -p&amp;lt;パスワード&amp;gt; mydb &amp;gt; /tmp/t1.dmp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;uselect-into-outfile-u&#34;&gt;&lt;u&gt;②SELECT INTO OUTFILE を使用する&lt;/u&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT * FROM t1 INTO OUTFILE &#39;/var/lib/mysql-files/t1.dmp&#39; FIELDS TERMINATED BY &#39;,&#39; LINES TERMINATED BY &#39;\n&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ファイルの書き込み先はsecure_file_privで許可されたところを指定する。
+上記ディレクトリ以外を指定すると下記エラーが発生する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;ERROR 1290 (HY000): The MySQL server is running with the --secure-file-priv option so it cannot execute this statement
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql&amp;gt; SELECT @@secure_file_priv;
++-----------------------+
+| @@secure_file_priv    |
++-----------------------+
+| /var/lib/mysql-files/ |
++-----------------------+
+1 row in set (0.00 sec)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: MySQL 5.6 リファレンスマニュアル :: 13.2.9.1 SELECT &amp;hellip; INTO 構文 &lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/ja/select-into.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/ja/select-into.html&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT a,b,a+b INTO OUTFILE &#39;/tmp/result.txt&#39;
+FIELDS TERMINATED BY &#39;,&#39; OPTIONALLY ENCLOSED BY &#39;&amp;quot;&#39;
+LINES TERMINATED BY &#39;\n&#39;
+FROM test_table;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQL検証用テーブル作成（データベース作成～テストデータの準備まで）</title>
+      <link>https:///zatoima.github.io/mysql-testtable-create.html</link>
+      <pubDate>Thu, 27 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-testtable-create.html</guid>
+      <description>&lt;p&gt;データベース作成、ユーザ作成、権限付与、テーブル作成、テストデータの準備までを実施。&lt;/p&gt;
+&lt;h3 id=&#34;database&#34;&gt;database作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE DATABASE mydb;
+show databases;
+
+use mydb;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;ユーザ作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE USER &#39;myuser&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;Oracle2019%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;ユーザー一覧を表示する&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT host, user FROM mysql.user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;権限付与&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;grant all on *.* to &#39;myuser&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;Oracle2019%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;作成したユーザで接続&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;mysql -u myuser -p
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;テーブル作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE t1 (
+  a INT PRIMARY KEY AUTO_INCREMENT,
+  b VARCHAR(10),
+  c VARCHAR(30),
+  d INT UNSIGNED,
+  e DATETIME
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;テストデータの挿入&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;INSERT INTO t1 () VALUES ();
+INSERT INTO t1 (a) SELECT 0 FROM t1;
+INSERT INTO t1 (a) SELECT 0 FROM t1;
+INSERT INTO t1 (a) SELECT 0 FROM t1;
+INSERT INTO t1 (a) SELECT 0 FROM t1;
+
+UPDATE t1 SET
+  b = CONCAT(&#39;商品&#39;, a),
+  c = SUBSTRING(MD5(RAND()), 1, 30),
+  d = CEIL(RAND() * 10000),
+  e = ADDTIME(CONCAT_WS(&#39; &#39;,&#39;2014-01-01&#39; + INTERVAL RAND() * 180 DAY, &#39;00:00:00&#39;), SEC_TO_TIME(FLOOR(0 + (RAND() * 86401))));
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SQLで大量のテストデータ作成 - Qiita &lt;a href=&#34;https://qiita.com/cobot00/items/8d59e0734314a88d74c7&#34;&gt;https://qiita.com/cobot00/items/8d59e0734314a88d74c7&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MySQLのサポートプラットフォームとサポート期間</title>
+      <link>https:///zatoima.github.io/mysql-support-platform-period.html</link>
+      <pubDate>Thu, 13 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/mysql-support-platform-period.html</guid>
+      <description>&lt;h3 id=&#34;mysql&#34;&gt;MySQLのサポートプラットフォーム&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;MySQL :: Supported Platforms: MySQL Database &lt;a href=&#34;https://www.mysql.com/support/supportedplatforms/database.html&#34;&gt;https://www.mysql.com/support/supportedplatforms/database.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading&#34;&gt;サポートポリシー&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Lifetime Support Policy | Oracle Support | Oracle 日本 &lt;a href=&#34;https://www.oracle.com/jp/support/lifetime-support/&#34;&gt;https://www.oracle.com/jp/support/lifetime-support/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;サポート期間&lt;/h3&gt;
+&lt;p&gt;「&lt;strong&gt;Oracle’s MySQL Releases&lt;/strong&gt;」で検索&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Oracle Lifetime Support Policy for Technology Products Guide &lt;a href=&#34;https://www.oracle.com/us/assets/lifetime-support-technology-069183.pdf&#34;&gt;https://www.oracle.com/us/assets/lifetime-support-technology-069183.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

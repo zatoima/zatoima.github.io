@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>SQL | my opnion is my own</title>
+    <link>https:///zatoima.github.io/categories/sql/</link>
+      <atom:link href="https:///zatoima.github.io/categories/sql/index.xml" rel="self" type="application/rss+xml" />
+    <description>SQL</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 28 Feb 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https:///zatoima.github.io/img/icon-192.png</url>
+      <title>SQL</title>
+      <link>https:///zatoima.github.io/categories/sql/</link>
+    </image>
+    
+    <item>
+      <title>Oracle Databaseの表領域使用率を確認するSQL</title>
+      <link>https:///zatoima.github.io/oracle-tablespace-capacitycheck.html</link>
+      <pubDate>Thu, 28 Feb 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/oracle-tablespace-capacitycheck.html</guid>
+      <description>&lt;p&gt;&lt;strong&gt;表領域使用率を確認するSQL&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;set pages 2000 lin 2000
+col name for a15
+SELECT t.tablespace_name name
+       , t.status
+       , t.contents type
+       , t.extent_management extmgt
+       , t.allocation_type alloc
+       , t.initial_extent/1024 init_kb
+       , t.segment_space_management segmgt
+       , TO_CHAR(NVL(d.bytes - NVL(f.bytes, 0), 0)/1024/1024,
+&#39;9,999,990.9&#39;) &amp;quot;USED(MB)&amp;quot;
+       , TO_CHAR(NVL(d.bytes, 0)/1024/1024, &#39;9,999,990.9&#39;) &amp;quot;TOTAL(MB)&amp;quot;
+       , TO_CHAR(NVL(d.bytes - NVL(f.bytes, 0), 0)/(NVL(d.bytes, -1)/100),
+&#39;990.0&#39;) &amp;quot;USED(%)&amp;quot;
+    FROM dba_tablespaces t
+       , (SELECT tablespace_name, SUM(bytes) bytes FROM dba_data_files
+GROUP BY tablespace_name) d
+       , (SELECT tablespace_name, SUM(bytes) bytes FROM dba_free_space
+GROUP BY tablespace_name) f
+   WHERE t.tablespace_name = d.tablespace_name(+)
+     AND t.tablespace_name = f.tablespace_name(+)
+     AND NOT (t.extent_management = &#39;LOCAL&#39; AND t.contents = &#39;TEMPORARY&#39;)
+   UNION ALL
+SELECT t.tablespace_name name
+       , t.status
+       , t.contents type
+       , t.extent_management extmgt
+       , t.allocation_type alloc
+       , t.initial_extent/1024 init_kb
+       , t.segment_space_management segmgt
+       , TO_CHAR(NVL(f.bytes, 0)/1024/1024, &#39;9,999,990.9&#39;) &amp;quot;USED(MB)&amp;quot;
+       , TO_CHAR(NVL(d.bytes, 0)/1024/1024, &#39;9,999,990.9&#39;) &amp;quot;TOTAL(MB)&amp;quot;
+       , TO_CHAR(NVL(f.bytes/(d.bytes/100), 0), &#39;990.0&#39;) &amp;quot;USED(%)&amp;quot;
+    FROM dba_tablespaces t
+       , (SELECT tablespace_name, SUM(bytes) bytes FROM dba_temp_files
+GROUP BY tablespace_name) d
+       , (SELECT tablespace_name, SUM(bytes_cached) bytes FROM
+v$temp_extent_pool GROUP BY tablespace_name) f
+   WHERE t.tablespace_name = d.tablespace_name(+)
+     AND t.tablespace_name = f.tablespace_name(+)
+     AND t.extent_management = &#39;LOCAL&#39; AND t.contents = &#39;TEMPORARY&#39;
+   ORDER BY name
+;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;結果&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;NAME            STATUS    TYPE                  EXTMGT     ALLOC        INIT_KB SEGMGT USED(MB)     TOTAL(MB)    USED(%
+--------------- --------- --------------------- ---------- --------- ---------- ------ ------------ ------------ ------
+GG_DATA         ONLINE    PERMANENT             LOCAL      SYSTEM            64 AUTO            1.0      5,120.0    0.0
+SYSAUX          ONLINE    PERMANENT             LOCAL      SYSTEM            64 AUTO        2,400.6      2,530.0   94.9
+SYSTEM          ONLINE    PERMANENT             LOCAL      SYSTEM            64 MANUAL        897.4        900.0   99.7
+TEMP            ONLINE    TEMPORARY             LOCAL      UNIFORM         1024 MANUAL        597.0        200.0  298.5
+UNDOTBS1        ONLINE    UNDO                  LOCAL      SYSTEM            64 MANUAL         12.3        320.0    3.8
+USERS           ONLINE    PERMANENT             LOCAL      SYSTEM            64 AUTO            1.0          5.0   20.0
+
+6行が選択されました。
+
+SQL&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

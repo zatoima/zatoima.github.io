@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DMS | my opnion is my own</title>
+    <link>https:///zatoima.github.io/tags/dms/</link>
+      <atom:link href="https:///zatoima.github.io/tags/dms/index.xml" rel="self" type="application/rss+xml" />
+    <description>DMS</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 15 Nov 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>https:///zatoima.github.io/img/icon-192.png</url>
+      <title>DMS</title>
+      <link>https:///zatoima.github.io/tags/dms/</link>
+    </image>
+    
+    <item>
+      <title>OracleのパーティションテーブルをAurora(PostgreSQL)へSCT変換する場合の注意事項メモ</title>
+      <link>https:///zatoima.github.io/oracle-to-aws-sct-partition-limit.html</link>
+      <pubDate>Fri, 15 Nov 2019 00:00:00 +0000</pubDate>
+      <guid>https:///zatoima.github.io/oracle-to-aws-sct-partition-limit.html</guid>
+      <description>&lt;p&gt;こちらの記載に関する注意事項メモ。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Oracle から Amazon RDS for PostgreSQL または Amazon Aurora (PostgreSQL) への変換 - AWS Schema Conversion Tool &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/SchemaConversionTool/latest/userguide/CHAP_Source.Oracle.ToPostgreSQL.html#CHAP_Source.Oracle.ToPostgreSQL.PG10Partitioning&#34;&gt;https://docs.aws.amazon.com/ja_jp/SchemaConversionTool/latest/userguide/CHAP_Source.Oracle.ToPostgreSQL.html#CHAP_Source.Oracle.ToPostgreSQL.PG10Partitioning&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; 以下は、パーティションの PostgreSQL バージョン 10 への変換に関する既知の問題の一部です。&lt;/p&gt;
+&lt;p&gt;&amp;gt; NULL ではない列のみが列に分割することがでます。&lt;/p&gt;
+&lt;p&gt;&amp;gt; DEFAULT はパーティション値として使用できる値ではありません。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;例えば、こういうレンジ・パーティションのテーブルがあったとして、&lt;code&gt;ORDER_DATE&lt;/code&gt;をパーティション・キーとする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table TAB_RANGE_PART;
+CREATE TABLE TAB_RANGE_PART (
+    ORDER_ID        NUMBER primary key,
+    ORDER_DATE      DATE,
+    BOOK_NO         VARCHAR(20) NOT NULL,
+    BOOK_TYPE       VARCHAR(20) NOT NULL,    
+    BOOK_CNT        NUMBER    NOT NULL,
+    REMARKS         VARCHAR2(40))
+    LOGGING
+    PCTFREE    20
+    PARTITION BY RANGE (ORDER_DATE) (    
+        PARTITION TAB_RANGE_PART01    VALUES LESS THAN ( TO_DATE(&#39;20160101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART02    VALUES LESS THAN ( TO_DATE(&#39;20170101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART03    VALUES LESS THAN ( TO_DATE(&#39;20180101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART04    VALUES LESS THAN ( TO_DATE(&#39;20190101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART05    VALUES LESS THAN ( MAXVALUE ))
+    ENABLE ROW MOVEMENT;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;u&gt;&lt;strong&gt;上記のDDLでは特に&lt;code&gt;ORDER_DATE&lt;/code&gt;に制約を設定していない&lt;/u&gt;&lt;/strong&gt;ので&lt;code&gt;ORDER_DATE&lt;/code&gt;にNullが入る可能性がある。この場合、SCTで変換した場合、エラーにもならず、パーティション・テーブルとして作成されない模様。下記の制限に該当する。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&amp;gt; NULL ではない列のみが列に分割することがでます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;こうなる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121221832169.png&#34; alt=&#34;image-20191121221832169&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;既存のテーブルのパーティションキーに注意する必要あり。パーティションキーの&lt;code&gt;ORDER_DATE&lt;/code&gt;にNot Null制約を付与すればこうなる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table TAB_RANGE_PART;
+CREATE TABLE TAB_RANGE_PART (
+    ORDER_ID        NUMBER primary key,
+    ORDER_DATE      DATE NOT NULL,
+    BOOK_NO         VARCHAR(20) NOT NULL,
+    BOOK_TYPE       VARCHAR(20) NOT NULL,    
+    BOOK_CNT        NUMBER    NOT NULL,
+    REMARKS         VARCHAR2(40))
+    LOGGING
+    PCTFREE    20
+    PARTITION BY RANGE (ORDER_DATE) (    
+        PARTITION TAB_RANGE_PART01    VALUES LESS THAN ( TO_DATE(&#39;20160101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART02    VALUES LESS THAN ( TO_DATE(&#39;20170101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART03    VALUES LESS THAN ( TO_DATE(&#39;20180101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART04    VALUES LESS THAN ( TO_DATE(&#39;20190101&#39;,&#39;YYYYMMDD&#39;)),
+        PARTITION TAB_RANGE_PART05    VALUES LESS THAN ( MAXVALUE ))
+    ENABLE ROW MOVEMENT;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121221844733.png&#34; alt=&#34;image-20191121221844733&#34; style=&#34;zoom: 50%;&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
