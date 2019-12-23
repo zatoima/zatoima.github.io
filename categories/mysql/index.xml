@@ -19,24 +19,24 @@
       <guid>/oracle-mysql-postgresql-isolation-level.html</guid>
       <description>&lt;h3 id=&#34;heading&#34;&gt;&lt;/h3&gt;
 &lt;p&gt;RDBMS製品のACID特性のI（Isolation）に関わるメモ&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;heading-1&#34;&gt;&lt;strong&gt;トランザクション分離レベルとは？&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;トランザクション分離レベルとは？&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;まずはトランザクション分離レベルの基本的な考え方について整理。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;serializable---&#34;&gt;&lt;strong&gt;SERIALIZABLE ( 直列化可能 )&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;serializable---&#34;&gt;SERIALIZABLE ( 直列化可能 )&lt;/h4&gt;
 &lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。このような性質を直列化可能性（Serializability）と呼ぶ。SERIALIZABLEは最も強い分離レベルであり、最も安全にデータを操作できるが、相対的に性能は低い。ただし同じ結果とされる逐次実行の順はトランザクション処理のレベルでは保証されない。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;repeatable-read---&#34;&gt;&lt;strong&gt;REPEATABLE READ ( 読み取り対象のデータを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;repeatable-read---&#34;&gt;REPEATABLE READ ( 読み取り対象のデータを常に読み取る )&lt;/h4&gt;
 &lt;p&gt;ひとつのトランザクションが実行中の間、読み取り対象のデータが途中で他のトランザクションによって変更される心配はない。同じトランザクション中では同じデータは何度読み取りしても毎回同じ値を読むことができる。
 ただし ファントム・リード(Phantom Read) と呼ばれる現象が発生する可能性がある。ファントム・リードでは、並行して動作する他のトランザクションが追加したり削除したデータが途中で見えてしまうため、処理の結果が変わってしまう。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;read-committed---&#34;&gt;&lt;strong&gt;READ COMMITTED ( 確定した最新データを常に読み取る )&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;read-committed---&#34;&gt;READ COMMITTED ( 確定した最新データを常に読み取る )&lt;/h4&gt;
 &lt;p&gt;他のトランザクションによる更新については、常にコミット済みのデータのみを読み取る。 MVCC はREAD COMMITTEDを実現する実装の一つである。
 ファントム・リード に加え、非再現リード(Non-Repeatable Read)と呼ばれる、同じトランザクション中でも同じデータを読み込むたびに値が変わってしまう現象が発生する可能性がある。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;read-uncommitted--&#34;&gt;&lt;strong&gt;READ UNCOMMITTED ( 確定していないデータまで読み取る)&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;read-uncommitted--&#34;&gt;READ UNCOMMITTED ( 確定していないデータまで読み取る)&lt;/h4&gt;
 &lt;p&gt;他の処理によって行われている、書きかけのデータまで読み取る。
 PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read) と呼ばれる現象（不完全なデータや、計算途中のデータを読み取ってしまう動作）が発生する。トランザクションの並行動作によってデータを破壊する可能性は高いが、その分性能は高い。&lt;/p&gt;
 &lt;blockquote&gt;
@@ -44,25 +44,25 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;/blockquote&gt;
 &lt;p&gt;上記のトランザクション分離レベルによって起こりうる Transaction Annomaly が異なる。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;dirty-read&#34;&gt;&lt;strong&gt;Dirty Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;dirty-read&#34;&gt;Dirty Read&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;トランザクションT1がデータを変更し、COMMITかROLLBACKをする前に、トランザクションT2がそのデータを読む。その後T1がROLLBACKした場合、T2はCOMMITされていない＝実在しないデータを読んだことになる。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125351011.png&#34; alt=&#34;image-20191118125351011&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125351011.png&#34; alt=&#34;image-20191118125351011&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;fuzzy-readnon-repeatable-read&#34;&gt;&lt;strong&gt;Fuzzy Read(Non-Repeatable Read)&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;fuzzy-readnon-repeatable-read&#34;&gt;Fuzzy Read(Non-Repeatable Read)&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;トランザクションT1がデータを読んだ後、トランザクションT2がそのデータを変更もしくは削除してCOMMITする。その後T1がデータを再度読もうとすると、データが変更されている、もしくは削除されていることが検知される。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125451710.png&#34; alt=&#34;image-20191118125451710&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125451710.png&#34; alt=&#34;image-20191118125451710&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;phantom-read&#34;&gt;&lt;strong&gt;Phantom Read&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;phantom-read&#34;&gt;Phantom Read&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;トランザクションT1が、ある検索条件に基づいてデータ集合を読む。その後、トランザクションT2がその検索条件を満たすデータを作成しCOMMITする。T1が再度同じ検索条件で読み取りを行うと、最初に得られたデータ集合と異なるデータ集合が得られる。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125508054.png&#34; alt=&#34;image-20191118125508054&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125508054.png&#34; alt=&#34;image-20191118125508054&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;lost-update&#34;&gt;&lt;strong&gt;Lost Update&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;lost-update&#34;&gt;Lost Update&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;トランザクションT1はデータ項目を読み取り、T2はデータ項目を以前の読み取り値に基づいて更新し、T1はデータ項目を更新して以前の読み取り値に基づいてコミットする。トランザクションT2の更新がトランザクションT1に上書きされてしまうのでT2のUpdateがLostするということでLost Updateと言う。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125523779.png&#34; alt=&#34;image-20191118125523779&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125523779.png&#34; alt=&#34;image-20191118125523779&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;更新したはずのデータが失われてしまう現象のことで、後勝ち処理とも言うと聞いたことがある。なので、他のAnnomaly と比べて異常という感じはしない。しっかりトランザクション管理しましょうね、という話だと思っている。&lt;/p&gt;
 &lt;p&gt;具体例を記載しておく。本の在庫管理のトランザクションを想定。&lt;/p&gt;
 &lt;p&gt;①現在、在庫が90冊あるとして、100冊を下回った場合、不足分を補充するように追加注文する処理があったとする。&lt;/p&gt;
@@ -70,25 +70,25 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;p&gt;③【Tx1】次にTx1で同じく現在90冊ということを取得。&lt;/p&gt;
 &lt;p&gt;④【Tx1】10冊を購入処理して、在庫が100冊と更新する。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;write-skew&#34;&gt;&lt;strong&gt;Write Skew&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;write-skew&#34;&gt;Write Skew&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;T1がxとyを読み取り、次にT2がxとyを読み取りxを書き込みコミットする。 次にT1はyを書き込む。 xとyの間に制約がある場合、違反となる。 つまり、2つの並行トランザクションがそれぞれ、他方が書き込んでいるものと重複するデータセットの読み取りに基づいて書き込み内容が決まる場合(y=x+1とか)、一方が他方より先に実行された場合には発生し得ない状態を取得できる&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125542982.png&#34; alt=&#34;image-20191118125542982&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125542982.png&#34; alt=&#34;image-20191118125542982&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;br/&gt;
 &lt;p&gt;具体的なケースはこちら「Black and White」や「Intersecting Data」あたりのケースを見てトランザクションの動きを見るべき。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;ssi - postgresql wiki  &lt;a href=&#34;https://wiki.postgresql.org/wiki/SSI&#34;&gt;https://wiki.postgresql.org/wiki/SSI&lt;/a&gt;&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;transaction-annomaly&#34;&gt;分離レベルと起こりうるTransaction Annomaly**&lt;/h4&gt;
+&lt;h4 id=&#34;transaction-annomaly&#34;&gt;分離レベルと起こりうるTransaction Annomaly&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;ISOの定義上のトランザクション分離レベルで上記のこの3つのTransaction Annomalyの発生有無は下記の通りである。しかし、DBエンジンの実装上、READ   COMMITTEDだが、Fuzzy Readは発生しないとかなっているケースがあるので注意が必要。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;images/image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;A Critique of ANSI SQL Isolation Levels &lt;a href=&#34;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&#34;&gt;https://arxiv.org/ftp/cs/papers/0701/0701157.pdf&lt;/a&gt;&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;db&#34;&gt;各DBエンジンとトランザクション分離レベルの対応表**&lt;/h3&gt;
+&lt;h4 id=&#34;db&#34;&gt;各DBエンジンとトランザクション分離レベルの対応表&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;DBエンジンで選択可能な分離レベルが異なります。DBエンジンを変更する場合はトランザクション分離レベルの理解が必要です。トランザクションで発行するSQLのタイミングによって取得されるデータが異なってきます。&lt;/p&gt;
 &lt;br/&gt;
@@ -137,13 +137,13 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;/blockquote&gt;
 &lt;br/&gt;
 &lt;h3 id=&#34;heading-2&#34;&gt;&lt;/h3&gt;
-&lt;h4 id=&#34;oracle-database&#34;&gt;Oracle Databaseの場合**&lt;/h4&gt;
+&lt;h4 id=&#34;oracle-database&#34;&gt;Oracle Databaseの場合&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;Oracle Databaseでは、&lt;strong&gt;SERIALIZABLE&lt;/strong&gt; と &lt;strong&gt;READ COMMITTED&lt;/strong&gt; の分離レベルが用意されている。&lt;/p&gt;
 &lt;p&gt;READ COMMITEDには前提として、UNDOを使用した読取り一貫性の理解が必要。MVCC(MultiVersion Concurrency Control)という技術でありOracle Databaseは、UNDOデータを使用して一貫性を実現しています。&lt;/p&gt;
 &lt;p&gt;ユーザーがデータを変更すると、常にOracle DatabaseによってUNDOエントリが作成されて、UNDOセグメントに書き込まれる。UNDOセグメントには、未コミットのトランザクションや、最近コミットされたトランザクションによって変更されたデータの古い値が含まれている。このため、同じデータの異なる時点の複数のバージョンがデータベース内に存在することになる。&lt;/p&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;postgresqlmysql&#34;&gt;PostgreSQL/MySQLの場合**&lt;/h4&gt;
+&lt;h4 id=&#34;postgresqlmysql&#34;&gt;PostgreSQL/MySQLの場合&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;すべての分離レベルの利用が可能。&lt;/p&gt;
 &lt;p&gt;実装自体は各DBエンジン自体で異なり、PostgreSQLもMySQLの&lt;code&gt;REPEATABLE READ&lt;/code&gt;を選択した場合においても、&lt;code&gt;Phantom Read&lt;/code&gt; は発生しない実装になっている模様。&lt;/p&gt;
@@ -151,15 +151,26 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;p&gt;13.2. トランザクションの分離 &lt;a href=&#34;http://pgsql-jp.github.io/current/html/transaction-iso.html&#34;&gt;http://pgsql-jp.github.io/current/html/transaction-iso.html&lt;/a&gt;&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;write-skewserializable&#34;&gt;Write SkewをSERIALIZABLE分離レベルで試してみる**&lt;/h4&gt;
+&lt;h4 id=&#34;write-skewserializable&#34;&gt;Write SkewをSERIALIZABLE分離レベルで試してみる&lt;/h4&gt;
 &lt;hr&gt;
 &lt;blockquote&gt;
 &lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。&lt;/p&gt;
-&lt;br/&gt;
-&lt;h3 id=&#34;heading-3&#34;&gt;&lt;/h3&gt;
-&lt;h4 id=&#34;heading-4&#34;&gt;&lt;strong&gt;事前にテーブル/データ作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;変更方法&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;・SET文を使用した指定方法(セッション単位)
+SET default_transaction_isolation TO &#39;分離レベル&#39;;
+
+・SET文を使用した指定方法(トランザクション単位)
+SET TRANSACTION ISOLATION LEVEL 分離レベル;
+
+・トランザクションの制御コマンドを使用した指定方法(トランザクション単位)
+トランザクションの開始時に指定
+BEGIN ISOLATION LEVEL 分離レベル;
+START TRANSACTION ISOLATION LEVEL 分離レベル;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;事前にテーブル/データ作成&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table mytab;
 CREATE TABLE mytab
 (
@@ -233,7 +244,7 @@ INSERT INTO mytab VALUES
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;br/&gt;
-&lt;h4 id=&#34;session1&#34;&gt;Session1**&lt;/h4&gt;
+&lt;h4 id=&#34;session1&#34;&gt;Session1&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; select * from mytab;
  class | value 
 -------+-------
@@ -258,8 +269,8 @@ aurorapostdb=&amp;gt;
 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;heading-5&#34;&gt;&lt;/h3&gt;
-&lt;h4 id=&#34;session2&#34;&gt;Session2**&lt;/h4&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;&lt;/h3&gt;
+&lt;h4 id=&#34;session2&#34;&gt;Session2&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 BEGIN
 aurorapostdb=&amp;gt; SELECT SUM(value) FROM mytab WHERE class = 2;
@@ -308,7 +319,7 @@ aurorapostdb=&amp;gt; SELECT * FROM mytab;
 aurorapostdb=&amp;gt; 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;heading-6&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;heading-7&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
 &lt;hr&gt;
 &lt;blockquote&gt;
 &lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
