@@ -5,12 +5,126 @@
     <link>/tags/aurora/</link>
       <atom:link href="/tags/aurora/index.xml" rel="self" type="application/rss+xml" />
     <description>Aurora</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 22 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 25 Dec 2019 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Aurora</title>
       <link>/tags/aurora/</link>
     </image>
+    
+    <item>
+      <title>Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</title>
+      <link>/aws-aurora-rds-postgresql-replication.html</link>
+      <pubDate>Wed, 25 Dec 2019 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-rds-postgresql-replication.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;はじめに&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;PostgreSQL10から論理レプリケーションが使えるようになった。Auroraでもこの機能を使うことが出来るのでやってみる。基本的にここのドキュメントの通りやれば問題無し。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Aurora での PostgreSQL 論理レプリケーションの使用 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Replication.Logical.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Replication.Logical.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;環境&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;Aurora PostgreSQL 10.7 と RDS PostgreSQL 10.7 間でレプリケーション環境を構築する&lt;/p&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;マニュアル上の注意事項&lt;/h4&gt;
+&lt;hr&gt;
+&lt;ul&gt;
+&lt;li&gt;rds.logical_replication パラメータを有効にすると、DB クラスターのパフォーマンスに影響します。&lt;/li&gt;
+&lt;li&gt;PostgreSQL データベースの論理レプリケーションを実行するために、AWS ユーザーアカウントは rds_superuser ロールを必要とします。&lt;/li&gt;
+&lt;li&gt;パブリッシャーの既存の Aurora PostgreSQL DB クラスターを使用するには、エンジンバージョンが 10.6 以降であることが必要です。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;事前準備&lt;/h4&gt;
+&lt;hr&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;rds.logical_replicationを「0」から「1」に設定する&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191214172939865.png&#34; alt=&#34;image-20191214172939865&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;PostgreSQLからAurora側への通信をセキュリティグループで許可する&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191214173509701.png&#34; alt=&#34;image-20191214173509701&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;環境準備&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;レプリケーションを行うデータベースを作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE DATABASE repdb WITH OWNER postgres;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;レプリケーションを行うテーブルを用意する。PostgreSQL10時点の論理レプリケーションはDDLレプリケーションを行わないので、Publisher、及びSubscriber側で実施する必要がある。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\c repdb
+CREATE TABLE LogicalReplicationTest (a int PRIMARY KEY);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Publisher側だけにデータを投入。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;INSERT INTO LogicalReplicationTest VALUES (generate_series(1,10000));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Publisher側で&amp;quot;CREATE PUBLICATION&amp;quot;を実行。&amp;ldquo;FOR ALL TABLES&amp;quot;を指定してここではデータベース全体を行う方式を選択した。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.jp/document/10/html/sql-createpublication.html&#34;&gt;https://www.postgresql.jp/document/10/html/sql-createpublication.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;CREATE PUBLICATION
+FOR ALL TABLES
+そのパブリケーションでは、将来作成されるテーブルも含め、そのデータベース内の全テーブルについての変更を複製するものとして印をつけます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#repdbに接続
+\c repdb
+
+CREATE PUBLICATION alltables FOR ALL TABLES;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Subscriber側で&amp;quot;CREATE SUBSCRIPTION&amp;quot;を実行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#repdbに接続
+\c repdb
+
+CREATE SUBSCRIPTION auroratopostgresql CONNECTION &#39;host=aurorapostgresqlv1.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=repdb user=postgres password=postgres&#39; PUBLICATION alltables;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ログを確認すると、レプリケーションが始まっていることが確認できる。(初期同期の模様。)&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;2019-12-14 09:25:49 UTC::@:[16112]:LOG:  logical replication table synchronization worker for subscription &amp;quot;auroratopostgresql&amp;quot;, table &amp;quot;logicalreplicationtest&amp;quot; has started
+2019-12-14 09:25:49 UTC::@:[16112]:LOG:  logical replication table synchronization worker for subscription &amp;quot;auroratopostgresql&amp;quot;, table &amp;quot;logicalreplicationtest&amp;quot; has finished
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pg_subscription_relを確認することでどのテーブルが論理レプリケーション対象となっているか確認可能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM pg_subscription_rel;
+
+repdb=&amp;gt; SELECT * FROM pg_subscription_rel;
+ srsubid | srrelid | srsubstate | srsublsn 
+---------+---------+------------+----------
+   16425 |   16417 | d          | 
+(1 row)
+
+repdb=&amp;gt; select relname from pg_class where oid=16417;
+        relname         
+------------------------
+ logicalreplicationtest
+(1 row)
+
+repdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;レプリケーション設定はpg_replication_slotsビューから確認可能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; select * from pg_replication_slots;
+-[ RECORD 1 ]-------+-------------------
+slot_name           | auroratopostgresql
+plugin              | pgoutput
+slot_type           | logical
+datoid              | 24590
+database            | repdb
+temporary           | f
+active              | t
+active_pid          | 19407
+xmin                | 
+catalog_xmin        | 23236
+restart_lsn         | 0/4F8C710
+confirmed_flush_lsn | 0/4F8CAE8
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Publisher側のpg_publicationからは作成した定義情報が確認できる。データベース内のすべてのテーブルをレプリケーション対象としたので「puballtables」が「True」になっている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; select * from pg_publication;
+-[ RECORD 1 ]+----------
+pubname      | alltables
+pubowner     | 16393
+puballtables | t
+pubinsert    | t
+pubupdate    | t
+pubdelete    | t
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQL論理レプリケーションの遅延監視</title>
