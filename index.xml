@@ -5,12 +5,122 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 25 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 26 Dec 2019 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLで論理レプリケーションするテーブルを追加</title>
+      <link>/postgresql-addtable-logical-replication.html</link>
+      <pubDate>Thu, 26 Dec 2019 00:00:00 +0000</pubDate>
+      <guid>/postgresql-addtable-logical-replication.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;はじめに&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;CREATE PUBLICATIONする時に「FOR ALL TABLES」を付与するとそれ以降CREATE TABLEしたテーブルは自動的にレプリケーション対象になると思い込んでいた。初歩的なのかもしれないがこの動作を知らなかったのでメモ。&lt;/p&gt;
+&lt;p&gt;結論を書くと「FOR ALL TABLES」を付与している場合でも「ALTER SUBSCRIPTION xxxxxxx REFRESH PUBLICATION」コマンドが必要となる。&lt;/p&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;事前確認&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;Publisher側の設定確認。All tablesがTrueになっている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; \dRp+
+                Publication alltables
+  Owner   | All tables | Inserts | Updates | Deletes 
+----------+------------+---------+---------+---------
+ postgres | t          | t       | t       | t
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Subscriber側の設定確認。logicalreplicationtestが既にレプリケーション対象となっている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; SELECT
+repdb-&amp;gt;     a3.subname,
+repdb-&amp;gt;     a2.relname,
+repdb-&amp;gt;     a1.srsubstate,
+repdb-&amp;gt;     a1.srsublsn
+repdb-&amp;gt; FROM
+repdb-&amp;gt;     pg_subscription_rel AS a1
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_class AS a2 ON
+repdb-&amp;gt;     a1.srrelid = a2.oid
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_stat_subscription AS a3 ON
+repdb-&amp;gt;     a1.srsubid = a3.subid;
+      subname       |        relname         | srsubstate | srsublsn  
+--------------------+------------------------+------------+-----------
+ auroratopostgresql | logicalreplicationtest | r          | 0/1220050
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;テーブルを追加&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;Publisher側、Subscriber側でテーブルを作成する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; CREATE TABLE addtable1 (a int PRIMARY KEY);
+CREATE TABLE
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;確認する。この時点でレプリケーション対象に追加されると思っていた。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; SELECT
+repdb-&amp;gt;     a3.subname,
+repdb-&amp;gt;     a2.relname,
+repdb-&amp;gt;     a1.srsubstate,
+repdb-&amp;gt;     a1.srsublsn
+repdb-&amp;gt; FROM
+repdb-&amp;gt;     pg_subscription_rel AS a1
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_class AS a2 ON
+repdb-&amp;gt;     a1.srrelid = a2.oid
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_stat_subscription AS a3 ON
+repdb-&amp;gt;     a1.srsubid = a3.subid;
+      subname       |        relname         | srsubstate | srsublsn  
+--------------------+------------------------+------------+-----------
+ auroratopostgresql | logicalreplicationtest | r          | 0/1220050
+(1 row)
+
+repdb=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ALTER SUBSCRIPTIONでREFRESHする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; ALTER SUBSCRIPTION auroratopostgresql REFRESH PUBLICATION;
+ALTER SUBSCRIPTION
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ALTER SUBSCRIPTION &lt;a href=&#34;https://www.postgresql.jp/document/10/html/sql-altersubscription.html&#34;&gt;https://www.postgresql.jp/document/10/html/sql-altersubscription.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;REFRESH PUBLICATION&lt;/p&gt;
+&lt;p&gt;不足しているテーブル情報をパブリッシャーから取得します。 最後のREFRESH PUBLICATION、あるいはCREATE SUBSCRIPTIONの実行の後でサブスクライブ対象のパブリケーションに追加されたテーブルの複製が、これにより開始されます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ここでようやくレプリケーション対象が増えた。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;repdb=&amp;gt; SELECT
+repdb-&amp;gt;     a3.subname,
+repdb-&amp;gt;     a2.relname,
+repdb-&amp;gt;     a1.srsubstate,
+repdb-&amp;gt;     a1.srsublsn
+repdb-&amp;gt; FROM
+repdb-&amp;gt;     pg_subscription_rel AS a1
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_class AS a2 ON
+repdb-&amp;gt;     a1.srrelid = a2.oid
+repdb-&amp;gt;     LEFT OUTER JOIN
+repdb-&amp;gt;     pg_stat_subscription AS a3 ON
+repdb-&amp;gt;     a1.srsubid = a3.subid;
+      subname       |        relname         | srsubstate | srsublsn  
+--------------------+------------------------+------------+-----------
+ auroratopostgresql | logicalreplicationtest | r          | 0/1220050
+ auroratopostgresql | addtable1              | r          | 0/5030740
+(2 rows)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;まとめ&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;CREATE PUBLICATION側のマニュアルには&amp;quot;そのデータベース内の全テーブルについての変更を複製するもの&amp;quot;という記載があるのでこれからテーブル追加時に自動的にレプリケーションされるものと思い込んでいた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.jp/document/10/html/sql-createpublication.html&#34;&gt;https://www.postgresql.jp/document/10/html/sql-createpublication.html&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;CREATE PUBLICATION
+FOR ALL TABLES
+そのパブリケーションでは、将来作成されるテーブルも含め、そのデータベース内の全テーブルについての変更を複製するものとして印をつけます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;レプリケーション対象のテーブルが増えたらALTER SUBSCRIPTION xxxxxxx REFRESH PUBLICATIONコマンドを実行しようという話。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</title>
