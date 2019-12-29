@@ -5,12 +5,264 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 28 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 29 Dec 2019 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのLogical Decodingについて</title>
+      <link>/postgresql-logical-decoding.html</link>
+      <pubDate>Sun, 29 Dec 2019 00:00:00 +0000</pubDate>
+      <guid>/postgresql-logical-decoding.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;はじめに&lt;/h4&gt;
+&lt;p&gt;Logical DecodingでWALに記録されたデータベースに対するアクティビティの履歴情報を抽出、参照することが出来る。Oracle DatabaseでいうところのLogMinerに近い機能と理解。機能としてはlogminerの方が細かい内容を確認出来る。PostgreSQLではDDLの内容まではLogical Decodingの対象とできないようだ。PostgreSQL9.4から実装されたLogical Decoding機能なのでこれからに期待。&lt;/p&gt;
+&lt;p&gt;なお、論理レプリケーションで使われるCDCも本機能を基に実装されている。&lt;/p&gt;
+&lt;p&gt;マニュアルはこちら。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.jp/document/10/html/logicaldecoding.htm&#34;&gt;https://www.postgresql.jp/document/10/html/logicaldecoding.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;第48章 ロジカルデコーディング&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;設定方法&lt;/h4&gt;
+&lt;h5 id=&#34;postgresqlconf&#34;&gt;postgresql.confを変更&lt;/h5&gt;
+&lt;p&gt;wal_levelを「logical」にmax_replication_slotsを「1」以上に変更する。PostgreSQL10の場合は、max_replication_slotsはデフォルト10となっているので特に変更の必要はない。wal_levelをデフォルトからlogicalに変更すると当然WALの生成量が増える。wal_levelを変更するので再起動が必要。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;#postgresql.conf
+wal_level = logical
+max_replication_slots = 10
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;プラグインのインストール&lt;/h5&gt;
+&lt;p&gt;Logical Decodingのプラグインによって出力形式が異なる。decodeのpluginの一覧は下記のURLに記載がある。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://wiki.postgresql.org/wiki/Logical_Decoding_Plugins&#34;&gt;https://wiki.postgresql.org/wiki/Logical_Decoding_Plugins&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Logical Decoding Plugins&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ここでは、contribの中に最初から含まれている&lt;code&gt;test_decoding&lt;/code&gt;と追加のインストールは必要だが、SQL Formatベースの&lt;code&gt;decoder_raw&lt;/code&gt;をインストールしたい。&lt;/p&gt;
+&lt;h5 id=&#34;test-decoding&#34;&gt;test_decodingプラグインのインストール&lt;/h5&gt;
+&lt;p&gt;ソースのルートにcontribディレクトリがあるのでそこからmake installでインストールする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;$ cd contrib/test_decoding
+$ make
+# make insatll
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;もしくはyumでインストールする。rpmなｄのパッケージでインストールしている場合はこっち。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum install postgresql10-contrib
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;decoder-raw&#34;&gt;decoder_rawプラグインのインストール&lt;/h5&gt;
+&lt;p&gt;githubからcloneしてmake installでインストールする。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/michaelpq/pg_plugins/tree/master/decoder_raw&#34;&gt;https://github.com/michaelpq/pg_plugins/tree/master/decoder_raw&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@postdb tmp]# pwd
+/tmp
+    [root@postdb tmp]# git clone https://github.com/michaelpq/pg_plugins.git
+Cloning into &#39;pg_plugins&#39;...
+remote: Enumerating objects: 105, done.
+remote: Counting objects: 100% (105/105), done.
+remote: Compressing objects: 100% (50/50), done.
+remote: Total 1760 (delta 54), reused 90 (delta 47), pack-reused 1655
+Receiving objects: 100% (1760/1760), 345.58 KiB | 716.00 KiB/s, done.
+Resolving deltas: 100% (1125/1125), done.
+[root@postdb tmp]# cd /tmp/pg_plugins/decoder_raw
+[root@postdb decoder_raw]# 
+[root@postdb decoder_raw]# export PATH=$PATH:/usr/pgsql-10/bin
+[root@postdb decoder_raw]# make install
+gcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC -I. -I./ -I/usr/pgsql-10/include/server -I/usr/pgsql-10/include/internal  -D_GNU_SOURCE -I/usr/include/libxml2  -I/usr/include  -c -o decoder_raw.o decoder_raw.c
+gcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC -L/usr/pgsql-10/lib -Wl,--as-needed  -L/usr/lib64 -Wl,--as-needed -Wl,-rpath,&#39;/usr/pgsql-10/lib&#39;,--enable-new-dtags  -shared -o decoder_raw.so decoder_raw.o
+/bin/mkdir -p &#39;/usr/pgsql-10/lib&#39;
+/bin/install -c -m 755  decoder_raw.so &#39;/usr/pgsql-10/lib/&#39;
+[root@postdb decoder_raw]# 
+[root@postdb decoder_raw]# echo $?
+0
+[root@postdb decoder_raw]# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;makeインストール後には/usr/pgsql-10/lib配下に関連するライブラリが配置されている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-bash-4.2$ pwd
+/usr/pgsql-10/lib
+-bash-4.2$ ls -l decoder_raw*
+-rwxr-xr-x 1 root root 75304 Dec 28 11:16 decoder_raw.so
+-bash-4.2$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;ロジカルデコーディング関連の関数&lt;/h4&gt;
+&lt;p&gt;関連する関数は多くはない。この3つで十分なはず。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;pg-create-logical-replication-slot&#34;&gt;pg_create_logical_replication_slot&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_create_logical_replication_slot(slot_name name, plugin name [, temporary boolean])	
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;論理(デコード)レプリケーションスロットを作成する。&lt;/p&gt;
+&lt;p&gt;第1引数：slot_name を指定&lt;/p&gt;
+&lt;p&gt;第2引数：plugin name を指定&lt;/p&gt;
+&lt;p&gt;第3引数：trueに設定するとそのスロットは現行セッションに限定される（オプション）&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;pg-drop-replication-slot&#34;&gt;pg_drop_replication_slot&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_drop_replication_slot(slot_name name)	
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;論理(デコード)レプリケーションスロットを削除する。&lt;/p&gt;
+&lt;p&gt;第1引数：slot_name を指定&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;pg-logical-slot-get-changes&#34;&gt;pg_logical_slot_get_changes&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_logical_slot_get_changes(slot_name name, upto_lsn pg_lsn, upto_nchanges int, VARIADIC options text[])	
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;変更履歴を確認する&lt;/p&gt;
+&lt;p&gt;第1引数：slot_name を指定&lt;/p&gt;
+&lt;p&gt;第2引数：確認するLSN を指定&lt;/p&gt;
+&lt;p&gt;第3引数：何行分出力するか&lt;/p&gt;
+&lt;p&gt;第4引数：出力プラグインのオプションをkeyとvalueで指定&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;1-utest-decodingu&#34;&gt;1.) ロジカルデコーディングを行ってみる（&lt;u&gt;test_decodingプラグイン&lt;/u&gt;を使用）&lt;/h4&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;レプリケーションスロットの作成&lt;/h5&gt;
+&lt;p&gt;ロジカルデコーディングを行いたいデータベースでpg_create_logical_replication_slotを実行してレプリケーション・スロットを作成する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT * FROM pg_create_logical_replication_slot(&#39;decodeslot1&#39;, &#39;test_decoding&#39;);
+
+slot_name  |    lsn    
+-------------+-----------
+ decodeslot1 | 0/2EFFFA0
+(1 row)
+postgres=# \x
+Expanded display is on.
+postgres=# 
+postgres=# SELECT slot_name, plugin, slot_type, database, active, restart_lsn, confirmed_flush_lsn FROM pg_replication_slots;
+-[ RECORD 1 ]-------+--------------
+slot_name           | decodeslot1
+plugin              | test_decoding
+slot_type           | logical
+database            | postgres
+active              | f
+restart_lsn         | 0/2EFFF68
+confirmed_flush_lsn | 0/2EFFFA0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;変更履歴を確認&lt;/h5&gt;
+&lt;p&gt;当然現時点では特に操作を行っていないので何も出力されない。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+(0 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;ddl&#34;&gt;テーブルに対してDDLを行ってみる&lt;/h5&gt;
+&lt;p&gt;DDLでは特に内容は出力されない。BEGINとCOMMITは出力される。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# CREATE TABLE data(id serial primary key, data text);
+CREATE TABLE
+postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+    lsn    | xid  |    data     
+-----------+------+-------------
+ 0/2F20128 | 1051 | BEGIN 1051
+ 0/2F28278 | 1051 | COMMIT 1051
+(4 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;dml&#34;&gt;テーブルに対してDMLを行ってみる&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# BEGIN;
+BEGIN
+postgres=# INSERT INTO data(data) VALUES(&#39;1&#39;);
+INSERT 0 1
+postgres=# INSERT INTO data(data) VALUES(&#39;2&#39;);
+INSERT 0 1
+postgres=# COMMIT;
+COMMIT
+postgres=# 
+postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+    lsn    | xid  |                          data                           
+-----------+------+---------------------------------------------------------
+ 0/2F282F0 | 1052 | BEGIN 1052
+ 0/2F28358 | 1052 | table public.data: INSERT: id[integer]:1 data[text]:&#39;1&#39;
+ 0/2F28460 | 1052 | table public.data: INSERT: id[integer]:2 data[text]:&#39;2&#39;
+ 0/2F28510 | 1052 | COMMIT 1052
+(4 rows)
+
+postgres=# 
+postgres=# 
+postgres=# INSERT INTO data(data) VALUES(&#39;3&#39;);
+INSERT 0 1
+postgres=# 
+postgres=# SELECT * FROM pg_logical_slot_peek_changes(&#39;decodeslot1&#39;, NULL, NULL);
+    lsn    | xid  |                          data                           
+-----------+------+---------------------------------------------------------
+ 0/2F28588 | 1053 | BEGIN 1053
+ 0/2F28588 | 1053 | table public.data: INSERT: id[integer]:3 data[text]:&#39;3&#39;
+ 0/2F28638 | 1053 | COMMIT 1053
+(3 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-6&#34;&gt;レプリケーションスロットを削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM pg_drop_replication_slot(&#39;decodeslot1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;2-udecoder-rawu&#34;&gt;2.) ロジカルデコーディングを行ってみる（&lt;u&gt;decoder_rawプラグイン&lt;/u&gt;を使用）&lt;/h4&gt;
+&lt;p&gt;ロジカルデコーディングを行いたいデータベースでpg_create_logical_replication_slotを実行してレプリケーション・スロットを作成する。&lt;/p&gt;
+&lt;h5 id=&#34;heading-7&#34;&gt;レプリケーションスロットの作成&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT * FROM pg_create_logical_replication_slot(&#39;decodeslot1&#39;, &#39;decoder_raw&#39;);
+  slot_name  |    lsn    
+-------------+-----------
+ decodeslot1 | 0/2F286A8
+(1 row)
+
+postgres=# \x
+Expanded display is on.
+postgres=# SELECT slot_name, plugin, slot_type, database, active, restart_lsn, confirmed_flush_lsn FROM pg_replication_slots;
+-[ RECORD 1 ]-------+------------
+slot_name           | decodeslot1
+plugin              | decoder_raw
+slot_type           | logical
+database            | postgres
+active              | f
+restart_lsn         | 0/2F28670
+confirmed_flush_lsn | 0/2F286A8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-8&#34;&gt;変更履歴を確認&lt;/h5&gt;
+&lt;p&gt;当然現時点では特に操作を行っていないので何も出力されない。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+ lsn | xid | data 
+-----+-----+------
+(0 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;ddl-1&#34;&gt;テーブルに対してDDLを行ってみる&lt;/h5&gt;
+&lt;p&gt;DDLでは特に内容は出力されない。test_decodingと異なりBEGINとCOMMITも出力されない。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# CREATE TABLE data(id serial primary key, data text);
+CREATE TABLE
+postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+ lsn | xid | data 
+-----+-----+------
+(0 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;dml-1&#34;&gt;テーブルに対してDMLを行ってみる&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# BEGIN;
+BEGIN
+postgres=# INSERT INTO data(data) VALUES(&#39;1&#39;);
+INSERT 0 1
+postgres=# INSERT INTO data(data) VALUES(&#39;2&#39;);
+INSERT 0 1
+postgres=# COMMIT;
+COMMIT
+postgres=# SELECT * FROM pg_logical_slot_get_changes(&#39;decodeslot1&#39;, NULL, NULL);
+    lsn    | xid  |                        data                         
+-----------+------+-----------------------------------------------------
+ 0/2F554B0 | 1058 | INSERT INTO public.data (id, data) VALUES (1, &#39;1&#39;);
+ 0/2F55580 | 1058 | INSERT INTO public.data (id, data) VALUES (2, &#39;2&#39;);
+(2 rows)
+
+postgres=# INSERT INTO data(data) VALUES(&#39;3&#39;);
+INSERT 0 1
+postgres=# SELECT * FROM pg_logical_slot_peek_changes(&#39;decodeslot1&#39;, NULL, NULL);
+    lsn    | xid  |                        data                         
+-----------+------+-----------------------------------------------------
+ 0/2F55630 | 1059 | INSERT INTO public.data (id, data) VALUES (3, &#39;3&#39;);
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-9&#34;&gt;レプリケーションスロットを削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM pg_drop_replication_slot(&#39;decodeslot1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-10&#34;&gt;&lt;/h4&gt;
+</description>
+    </item>
     
     <item>
       <title>EC2(Amazon Linux2)にPostgreSQLをインストールする</title>
@@ -241,6 +493,145 @@ postgres (PostgreSQL) 10.11
 ec2-user❌1000:1000:EC2 Default User:/home/ec2-user:/bin/bash
 postgres❌26:26:PostgreSQL Server:/var/lib/pgsql:/bin/bash
 [ec2-user@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;postgresql10-contribとpostgresql10-develも合わせてインストールする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@postdb ~]# yum install postgresql10-devel
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+105 packages excluded due to repository priority protections
+Resolving Dependencies
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql10-devel.x86_64 0:10.11-2PGDG.rhel7 will be installed
+--&amp;gt; Processing Dependency: libicu-devel for package: postgresql10-devel-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Running transaction check
+---&amp;gt; Package libicu-devel.x86_64 0:50.1.2-17.amzn2 will be installed
+--&amp;gt; Finished Dependency Resolution
+
+Dependencies Resolved
+
+============================================================================================
+ Package                   Arch          Version                    Repository         Size
+============================================================================================
+Installing:
+ postgresql10-devel        x86_64        10.11-2PGDG.rhel7          pgdg10            2.0 M
+Installing for dependencies:
+ libicu-devel              x86_64        50.1.2-17.amzn2            amzn2-core        702 k
+
+Transaction Summary
+============================================================================================
+Install  1 Package (+1 Dependent package)
+
+Total download size: 2.7 M
+Installed size: 13 M
+Is this ok [y/d/N]: n
+Exiting on user command
+Your transaction was saved, rerun it with:
+ yum load-transaction /tmp/yum_save_tx.2019-12-28.11-00.54JiTC.yumtx
+[root@postdb ~]# 
+[root@postdb ~]# yum install postgresql10-contrib
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+105 packages excluded due to repository priority protections
+Resolving Dependencies
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql10-contrib.x86_64 0:10.11-2PGDG.rhel7 will be installed
+--&amp;gt; Processing Dependency: libxslt.so.1(LIBXML2_1.0.22)(64bit) for package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Processing Dependency: libxslt.so.1(LIBXML2_1.0.18)(64bit) for package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Processing Dependency: libxslt.so.1(LIBXML2_1.0.11)(64bit) for package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Processing Dependency: libxslt.so.1()(64bit) for package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Running transaction check
+---&amp;gt; Package libxslt.x86_64 0:1.1.28-5.amzn2.0.2 will be installed
+--&amp;gt; Finished Dependency Resolution
+
+Dependencies Resolved
+
+============================================================================================
+ Package                    Arch         Version                     Repository        Size
+============================================================================================
+Installing:
+ postgresql10-contrib       x86_64       10.11-2PGDG.rhel7           pgdg10           587 k
+Installing for dependencies:
+ libxslt                    x86_64       1.1.28-5.amzn2.0.2          amzn2-core       243 k
+
+Transaction Summary
+============================================================================================
+Install  1 Package (+1 Dependent package)
+
+Total download size: 830 k
+Installed size: 2.5 M
+Is this ok [y/d/N]: y
+Downloading packages:
+(1/2): libxslt-1.1.28-5.amzn2.0.2.x86_64.rpm                         | 243 kB  00:00:00     
+(2/2): postgresql10-contrib-10.11-2PGDG.rhel7.x86_64.rpm             | 587 kB  00:00:02     
+--------------------------------------------------------------------------------------------
+Total                                                       281 kB/s | 830 kB  00:00:02     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : libxslt-1.1.28-5.amzn2.0.2.x86_64                                        1/2 
+  Installing : postgresql10-contrib-10.11-2PGDG.rhel7.x86_64                            2/2 
+  Verifying  : libxslt-1.1.28-5.amzn2.0.2.x86_64                                        1/2 
+  Verifying  : postgresql10-contrib-10.11-2PGDG.rhel7.x86_64                            2/2 
+
+Installed:
+  postgresql10-contrib.x86_64 0:10.11-2PGDG.rhel7                                           
+
+Dependency Installed:
+  libxslt.x86_64 0:1.1.28-5.amzn2.0.2                                                       
+
+Complete!
+[root@postdb ~]# 
+[root@postdb ~]# yum install postgresql10-devel
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+amzn2-core                                                           | 2.4 kB  00:00:00     
+105 packages excluded due to repository priority protections
+Resolving Dependencies
+--&amp;gt; Running transaction check
+---&amp;gt; Package postgresql10-devel.x86_64 0:10.11-2PGDG.rhel7 will be installed
+--&amp;gt; Processing Dependency: libicu-devel for package: postgresql10-devel-10.11-2PGDG.rhel7.x86_64
+--&amp;gt; Running transaction check
+---&amp;gt; Package libicu-devel.x86_64 0:50.1.2-17.amzn2 will be installed
+--&amp;gt; Finished Dependency Resolution
+
+Dependencies Resolved
+
+============================================================================================
+ Package                   Arch          Version                    Repository         Size
+============================================================================================
+Installing:
+ postgresql10-devel        x86_64        10.11-2PGDG.rhel7          pgdg10            2.0 M
+Installing for dependencies:
+ libicu-devel              x86_64        50.1.2-17.amzn2            amzn2-core        702 k
+
+Transaction Summary
+============================================================================================
+Install  1 Package (+1 Dependent package)
+
+Total download size: 2.7 M
+Installed size: 13 M
+Is this ok [y/d/N]: y
+Downloading packages:
+(1/2): libicu-devel-50.1.2-17.amzn2.x86_64.rpm                       | 702 kB  00:00:00     
+(2/2): postgresql10-devel-10.11-2PGDG.rhel7.x86_64.rpm               | 2.0 MB  00:00:02     
+--------------------------------------------------------------------------------------------
+Total                                                       1.3 MB/s | 2.7 MB  00:00:02     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : libicu-devel-50.1.2-17.amzn2.x86_64                                      1/2 
+  Installing : postgresql10-devel-10.11-2PGDG.rhel7.x86_64                              2/2 
+  Verifying  : libicu-devel-50.1.2-17.amzn2.x86_64                                      1/2 
+  Verifying  : postgresql10-devel-10.11-2PGDG.rhel7.x86_64                              2/2 
+
+Installed:
+  postgresql10-devel.x86_64 0:10.11-2PGDG.rhel7                                             
+
+Dependency Installed:
+  libicu-devel.x86_64 0:50.1.2-17.amzn2                                                     
+
+Complete!
+[root@postdb ~]# 
+
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;DBの初期化を行う。rootで実施。&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@postdb ~]# /usr/pgsql-10/bin/postgresql-10-setup initdb
