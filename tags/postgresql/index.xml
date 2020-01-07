@@ -5,12 +5,74 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 29 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 07 Jan 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのログ分析ツール pgBadgerを試す</title>
+      <link>/postgresql-pgbadger-test.html</link>
+      <pubDate>Tue, 07 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pgbadger-test.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;はじめに&lt;/h4&gt;
+&lt;p&gt;pgBadgerはPostgreSQLのログファイルを解析しレポートを出力するツール。このツールはログを基に分析を行うが、SQL、待機イベント、IO統計、エラー統計、SQLヒストグラム、ロック、Vaccum統計などを多くのワークロードが確認できる。&lt;/p&gt;
+&lt;p&gt;まず始めにサンプルのレポートを見たい場合は&lt;a href=&#34;http://pgbadger.darold.net/samplev7.html&#34;&gt;こちら&lt;/a&gt;。予想していたよりもグラフィカルに確認できた。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191230111341458.png&#34; alt=&#34;image-20191230111341458&#34; style=&#34;zoom: 50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;Githubのリポジトリとreadmeはこちら。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;darold/pgbadger: A fast PostgreSQL Log Analyzer &lt;a href=&#34;https://github.com/darold/pgbadger&#34;&gt;https://github.com/darold/pgbadger&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;pgBadgerをEC2インストールすればログを静的に解析できるという点でRDSやAuroraのPostgreSQL互換を対象に実行できるようなので確認してみる。(なお、pgbadgerの実行はEC2上にインストールしたPostgreSQL10.11で実行)&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ネイティブツールと外部ツールに基づいた Amazon RDS PostgreSQL のクエリの最適化とチューニング | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/optimizing-and-tuning-queries-in-amazon-rds-postgresql-based-on-native-and-external-tools/&#34;&gt;https://aws.amazon.com/jp/blogs/news/optimizing-and-tuning-queries-in-amazon-rds-postgresql-based-on-native-and-external-tools/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;pgbadgerpostgresconf&#34;&gt;pgBadgerの設定とpostgres.confの設定&lt;/h4&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;インストール&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@postdb ~]$ sudo yum install pgbadger
+[ec2-user@postdb ~]$ which pgbadger
+/usr/bin/pgbadger
+[ec2-user@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;postgresconf&#34;&gt;postgres.conf&lt;/h5&gt;
+&lt;p&gt;ログに関するパラメータを修正する。デフォルトより多くの情報を出すことになるので注意。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;log_filename = &#39;postgresql-%Y-%m-%d.log&#39;
+#指定時間以上のクエリのテキストと実行時間をログに残す。0の場合すべてのクエリが対象になる絞りたい場合は要調整
+log_min_duration_statement = 0
+log_line_prefix = &#39;%t [%p]: [%l-1] user=%u, db=%d&#39;
+# チェックポイントの実行のlogging
+log_checkpoints = on
+# クライアントの接続のlogging
+log_connections = on
+# クライアントの切断のlogging
+log_disconnections = on
+# deadlock_timeout で指定した時間（デフォルト1秒）以上のロック待ちをログに残す
+log_lock_waits = on
+#指定したサイズ以上の一時ファイルが作成された場合ログに記録
+log_temp_files = 0
+lc_messages = &#39;C&#39;
+log_autovacuum_min_duration = 0
+log_error_verbosity = default
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;実行コマンド&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;/usr/bin/pgbadger -f &#39;%t [%p]: [%l-1] user=%u, db=%d&#39; -I -q /var/lib/pgsql/10/data/log/postgresql-2019-12-30.log -O /var/lib/pgsql/pgbadger/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;取得できる情報&lt;/h4&gt;
+&lt;p&gt;時間帯別統計や待機が多いSQLクエリ、実行回数の多いクエリ、平均実行時間が長いクエリランキングなどが確認できる。サンプルのレポートを見たい場合は&lt;a href=&#34;http://pgbadger.darold.net/samplev7.html&#34;&gt;こちら&lt;/a&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/darold/pgbadger#FEATURE&#34;&gt;https://github.com/darold/pgbadger#FEATURE&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191230104954911.png&#34; alt=&#34;image-20191230104954911&#34; style=&#34;zoom: 67%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;その他の機能&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;自動増分レポートモード（incrementalオプションを指定してcron実行）&lt;/li&gt;
+&lt;li&gt;月次レポート&lt;/li&gt;
+&lt;li&gt;並列処理&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのLogical Decodingについて</title>
