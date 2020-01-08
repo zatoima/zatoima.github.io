@@ -5,12 +5,179 @@
     <link>/tags/rds/</link>
       <atom:link href="/tags/rds/index.xml" rel="self" type="application/rss+xml" />
     <description>RDS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 25 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 08 Jan 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>RDS</title>
       <link>/tags/rds/</link>
     </image>
+    
+    <item>
+      <title>RDS(Oracle)にData Pumpでインポートする</title>
+      <link>/aws-rds-oracle-datapump-import.html</link>
+      <pubDate>Wed, 08 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-rds-oracle-datapump-import.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;注意事項の確認&lt;/h4&gt;
+&lt;p&gt;まず始めにマニュアルを眺めてみる。データベース全体のインポートはサポートされておらず、スキーマ単位、テーブル単位でインポートを行う必要があるようだ。Amazon RDS for Oracle では、管理ユーザー &lt;code&gt;SYS&lt;/code&gt; または &lt;code&gt;SYSDBA&lt;/code&gt; へのアクセスは許可されていないため、&lt;code&gt;full&lt;/code&gt; モードでインポートしたり、Oracle 管理のコンポーネントのスキーマをインポートしたりすると、Oracle データディレクトリが損傷し、データベースの安定性に影響を及ぼす可能性があります。とのこと。早くて便利なトランスポータブル表領域もサポートされていないことに注意。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;h4 id=&#34;amazon-rds--oracle----amazon-relational-database-service-httpsdocsawsamazoncomja-jpamazonrdslatestuserguideoracleproceduralimportinghtmlhttpsdocsawsamazoncomja-jpamazonrdslatestuserguideoracleproceduralimportinghtml&#34;&gt;Amazon RDS での Oracle へのデータのインポート - Amazon Relational Database Service &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html&lt;/a&gt;&lt;/h4&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;特定のスキーマやオブジェクトをインポートするには、&lt;code&gt;schema&lt;/code&gt; または &lt;code&gt;table&lt;/code&gt; モードでインポートを実行します。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;インポートするスキーマをアプリケーションに必要なスキーマに制限します。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;full&lt;/code&gt; モードではインポートしないでください。&lt;/p&gt;
+&lt;p&gt;Amazon RDS for Oracle では、管理ユーザー &lt;code&gt;SYS&lt;/code&gt; または &lt;code&gt;SYSDBA&lt;/code&gt; へのアクセスは許可されていないため、&lt;code&gt;full&lt;/code&gt; モードでインポートしたり、Oracle 管理のコンポーネントのスキーマをインポートしたりすると、Oracle データディレクトリが損傷し、データベースの安定性に影響を及ぼす可能性があります。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;大量のデータをロードする場合は、ダンプファイルをターゲットの Amazon RDS for Oracle DB インスタンスに転送し、インスタンスの DB スナップショットを作成後、インポートをテストして、問題なく完了したことを確認します。データベースコンポーネントが無効の場合は、DB インスタンスを削除後、DB スナップショットから再作成します。復元された DB インスタンスには、DB スナップショットの作成時に DB インスタンス上でステージングされたダンプファイルがすべて含まれています。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Oracle Data Pump エクスポートパラメータ (&lt;code&gt;TRANSPORT_TABLESPACES&lt;/code&gt;、&lt;code&gt;TRANSPORTABLE&lt;/code&gt;、&lt;code&gt;TRANSPORT_FULL_CHECK&lt;/code&gt;) を使用して作成されたダンプファイルはインポートしないでください。Amazon RDS for Oracle DB インスタンスでは、このようなダンプファイルのインポートはサポートされていません。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Data PumpのダンプファイルをRDS内の DATA_PUMP_DIR （ディレクトリ・オブジェクト）に転送するので、一時的にRDS内の必要とされるストレージ量が多く必要なので特に注意が必要。&lt;code&gt;Storage Full&lt;/code&gt;にならないように注意が必要。インポート後も自動的に削除されるわけではないため、必要に応じてUTL_FILE.FREMOVEを使用した削除が必要。&lt;/p&gt;
+&lt;h4 id=&#34;data-pump&#34;&gt;Data Pumpの手法&lt;/h4&gt;
+&lt;p&gt;Data Pumpでインポートする場合は、下記2つの方法がある。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.S3&#34;&gt;Oracle Data Pump と Amazon S3 バケットを使用したデータのインポート&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.DBLink&#34;&gt;Oracle Data Pump とデータベースリンクを使用したデータのインポート&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;s3&#34;&gt;S3バケットを経由したデータのインポートについて&lt;/h4&gt;
+&lt;h5 id=&#34;rdsoracle&#34;&gt;オプショングループを作成して既存のRDS(Oracle)にアタッチする&lt;/h5&gt;
+&lt;p&gt;オプショングループを選択&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191125112739510.png&#34; alt=&#34;image-20191125112739510&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;オプショングループの作成を行う&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191125112822681.png&#34; alt=&#34;image-20191125112822681&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;名前、説明、エンジン、メジャーエンジンのバージョンを選択する&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191125112906562.png&#34; alt=&#34;image-20191125112906562&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;グループ作成後に、オプションを追加する&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191125113235954.png&#34; alt=&#34;image-20191125113235954&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;「oracle-s3-integration」をオプションとして選択する。「すぐに適用」を「はい」にする。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191125113256635.png&#34; alt=&#34;image-20191125113256635&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;「データベースの設定」に「オプショングループ」の指定欄があるのでさきほど作成したオプショングループを指定する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20191206095407730.png&#34; alt=&#34;image-20191206095407730&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h5 id=&#34;iamrds&#34;&gt;必要なポリシー、IAMロールを作成してRDSインスタンスにアタッチする。&lt;/h5&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon S3 の統合 - Amazon Relational Database Service &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;表領域の拡張&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;ALTER tablespace USERS resize 30G;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;インポートするユーザに権限を付与&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;DROP USER &amp;quot;DPUSR&amp;quot; CASCADE;
+CREATE USER &amp;quot;DPUSR&amp;quot; identified BY &amp;quot;oracle&amp;quot;;
+
+ALTER USER &amp;quot;DPUSR&amp;quot; QUOTA UNLIMITED ON USERS;
+
+GRANT DBA to &amp;quot;DPUSR&amp;quot;;
+GRANT CREATE SESSION TO &amp;quot;DPUSR&amp;quot;;
+GRANT &amp;quot;RESOURCE&amp;quot; TO &amp;quot;DPUSR&amp;quot;;
+GRANT UNLIMITED TABLESPACE TO &amp;quot;DPUSR&amp;quot;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;s3data-pump&#34;&gt;S3からData Pumpのダンプファイルの転送、及びインポート&lt;/h5&gt;
+&lt;p&gt;事前にディレクトリオブジェクトを確認する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;set pages 2000 lin 2000
+col filename for a30
+col FILESIZE for 99999999999
+alter session set nls_date_format=&#39;YYYY/MM/DD HH24:MI:SS&#39;;
+select * from table (rdsadmin.rds_file_util.listdir(p_directory =&amp;gt; &#39;BDUMP&#39;));
+select * from table (rdsadmin.rds_file_util.listdir(p_directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;s3のバケットを指定して&lt;code&gt;DATA_PUMP_DIR&lt;/code&gt;にダウンロードする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select rdsadmin.rdsadmin_s3_tasks.download_from_s3(p_bucket_name =&amp;gt; &#39;pluto-dev-s3-test&#39;, p_directory_name =&amp;gt; &#39;DATA_PUMP_DIR&#39;) AS TASK_ID FROM DUAL;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;必要に応じてログを確認する。&lt;code&gt;rdsadmin.rdsadmin_s3_tasks.download_from_s3&lt;/code&gt;を実行したタイミングでタスクIDがコンソール上に出力されるのでそちらを確認して、rdsadmin.rds_file_util.read_text_fileの引数に指定する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select text from table(rdsadmin.rds_file_util.read_text_file(&#39;BDUMP&#39;,&#39;dbtask-1574174424228-1248.log&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;DATA_PUMP_DIR配下にdmpファイルが配置されていることが確認できる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select * from table (rdsadmin.rds_file_util.listdir(p_directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;));
+
+FILENAME		       TYPE	      FILESIZE MTIME
+------------------------------ ---------- ------------ -------------------
+datapump/		       directory	  4096 2019/12/06 01:02:22
+datapump_meta.dmp 	       file	       8237056 2019/12/06 01:02:22
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;dbms_datapumpプロシージャを使用してインポートする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;DECLARE
+    hdnl NUMBER;
+BEGIN
+    hdnl := dbms_datapump.open (operation =&amp;gt; &#39;IMPORT&#39;, job_mode =&amp;gt; &#39;FULL&#39;, version =&amp;gt; &#39;COMPATIBLE&#39;);
+    DBMS_DATAPUMP.ADD_FILE( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;import.log&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_log_file);
+    DBMS_DATAPUMP.ADD_FILE( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;expdat.dmp&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_dump_file);
+    DBMS_DATAPUMP.START_JOB(handle =&amp;gt; hdnl);
+end;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;データベースリンクを経由したデータのインポートについて&lt;/h4&gt;
+&lt;p&gt;データベースリンクを作成する。Data Pumpのダンプファイルを転送する転送元で実施する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop database link ora121;
+create database link ora121 connect to master identified by &amp;quot;Oracle2019%&amp;quot; using &#39;(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=ora121rds.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=ora121)))&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ダンプファイルを転送する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;BEGIN
+DBMS_FILE_TRANSFER.PUT_FILE(
+    source_directory_object       =&amp;gt; &#39;DP_DIR&#39;,
+    source_file_name              =&amp;gt; &#39;expdat.dmp&#39;,
+    destination_directory_object  =&amp;gt; &#39;DATA_PUMP_DIR&#39;,
+    destination_file_name         =&amp;gt; &#39;expdat.dmp&#39;,
+    destination_database          =&amp;gt; &#39;ora121&#39;
+);
+END;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;転送されているか確認する。RDS側で確認。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;set pages 2000 lin 2000
+col filename for a30
+col FILESIZE for 99999999999
+alter session set nls_date_format=&#39;YYYY/MM/DD HH24:MI:SS&#39;;
+select * from table (rdsadmin.rds_file_util.listdir(p_directory =&amp;gt; &#39;BDUMP&#39;));
+select * from table (rdsadmin.rds_file_util.listdir(p_directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;インポートする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;DECLARE
+hdnl NUMBER;
+BEGIN
+    hdnl := DBMS_DATAPUMP.open( operation =&amp;gt; &#39;IMPORT&#39;, job_mode =&amp;gt; &#39;SCHEMA&#39;, job_name=&amp;gt;null);
+    DBMS_DATAPUMP.ADD_FILE( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;expdat.dmp&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_dump_file);
+    DBMS_DATAPUMP.add_file( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;imp.log&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_log_file);
+    DBMS_DATAPUMP.METADATA_FILTER(hdnl,&#39;SCHEMA_EXPR&#39;,&#39;IN (&#39;&#39;HR&#39;&#39;)&#39;);
+    DBMS_DATAPUMP.start_job(hdnl);
+END;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;必要に応じてログを確認する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT TEXT FROM TABLE(RDSADMIN.RDS_FILE_UTIL.READ_TEXT_FILE(&#39;DATA_PUMP_DIR&#39;,&#39;imp.log&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ログの削除方法&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;EXEC UTL_FILE.FREMOVE(&#39;DATA_PUMP_DIR&#39;,&#39;imp.log&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;dbms_datapumpプロシージャを使用してインポートする&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;DECLARE
+    hdnl NUMBER;
+BEGIN
+    hdnl := dbms_datapump.open (operation =&amp;gt; &#39;IMPORT&#39;, job_mode =&amp;gt; &#39;FULL&#39;, version =&amp;gt; &#39;COMPATIBLE&#39;);
+    DBMS_DATAPUMP.ADD_FILE( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;import.log&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_log_file);
+    DBMS_DATAPUMP.ADD_FILE( handle =&amp;gt; hdnl, filename =&amp;gt; &#39;expdat.dmp&#39;, directory =&amp;gt; &#39;DATA_PUMP_DIR&#39;, filetype =&amp;gt; dbms_datapump.ku$_file_type_dump_file);
+    DBMS_DATAPUMP.START_JOB(handle =&amp;gt; hdnl);
+end;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;その他&lt;/h4&gt;
+&lt;p&gt;下記にはPerlスクリプトを使って、DATA_PUMP_DIRに転送する方法がある。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://d0.awsstatic.com/whitepapers/strategies-for-migrating-oracle-database-to-aws.pdf&#34;&gt;Strategies for Migrating Oracle Databases to AWS&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;​	Data Migration Using Oracle Data Pump -  Next Steps for a Database on Amazon RDS&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[AWS] Data Pump のダンプファイルをRDS for Oracle インスタンスへ転送する ｜ Developers.IO &lt;a href=&#34;https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/&#34;&gt;https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</title>
