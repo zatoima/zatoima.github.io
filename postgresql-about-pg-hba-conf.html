@@ -27,7 +27,7 @@
   <meta name="description" content=" ">
 
   
-  <link rel="alternate" hreflang="ja" href="/aws-aurora-postgres-querylog.html">
+  <link rel="alternate" hreflang="ja" href="/postgresql-about-pg-hba-conf.html">
 
   
 
@@ -130,7 +130,7 @@
   <link rel="icon" type="image/png" href="/img/icon-32.png">
   <link rel="apple-touch-icon" type="image/png" href="/img/icon-192.png">
 
-  <link rel="canonical" href="/aws-aurora-postgres-querylog.html">
+  <link rel="canonical" href="/postgresql-about-pg-hba-conf.html">
 
   
   
@@ -143,15 +143,15 @@
   <meta property="twitter:card" content="summary">
   
   <meta property="og:site_name" content="my opinion is my own">
-  <meta property="og:url" content="/aws-aurora-postgres-querylog.html">
-  <meta property="og:title" content="Aurora(PostgresSQL)のクエリログの出力方法 | my opinion is my own">
+  <meta property="og:url" content="/postgresql-about-pg-hba-conf.html">
+  <meta property="og:title" content="PostgreSQLのpg_hba.confのメモ | my opinion is my own">
   <meta property="og:description" content=" "><meta property="og:image" content="img/icon-192.png">
   <meta property="twitter:image" content="img/icon-192.png"><meta property="og:locale" content="ja">
   
     
-      <meta property="article:published_time" content="2019-11-04T00:00:00&#43;00:00">
+      <meta property="article:published_time" content="2019-08-27T00:00:00&#43;00:00">
     
-    <meta property="article:modified_time" content="2019-11-04T00:00:00&#43;00:00">
+    <meta property="article:modified_time" content="2019-08-27T00:00:00&#43;00:00">
   
 
   
@@ -177,12 +177,12 @@
   "@type": "BlogPosting",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "/aws-aurora-postgres-querylog.html"
+    "@id": "/postgresql-about-pg-hba-conf.html"
   },
-  "headline": "Aurora(PostgresSQL)のクエリログの出力方法",
+  "headline": "PostgreSQLのpg_hba.confのメモ",
   
-  "datePublished": "2019-11-04T00:00:00Z",
-  "dateModified": "2019-11-04T00:00:00Z",
+  "datePublished": "2019-08-27T00:00:00Z",
+  "dateModified": "2019-08-27T00:00:00Z",
   
   "author": {
     "@type": "Person",
@@ -215,7 +215,7 @@
 
 
 
-  <title>Aurora(PostgresSQL)のクエリログの出力方法 | my opinion is my own</title>
+  <title>PostgreSQLのpg_hba.confのメモ | my opinion is my own</title>
 
 </head>
 
@@ -420,7 +420,7 @@
   
   
 <div class="article-container pt-3">
-  <h1>Aurora(PostgresSQL)のクエリログの出力方法</h1>
+  <h1>PostgreSQLのpg_hba.confのメモ</h1>
 
   
 
@@ -439,7 +439,7 @@
     
       
     
-    2019/11/04
+    2019/08/27
   </span>
   
 
@@ -460,7 +460,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-categories">
-    <i class="fas fa-folder mr-1"></i><a href="/categories/aurora/">Aurora</a>, <a href="/categories/rds/">RDS</a>, <a href="/categories/postgresql/">PostgreSQL</a></span>
+    <i class="fas fa-folder mr-1"></i><a href="/categories/postgresql/">PostgreSQL</a></span>
   
 
 </div>
@@ -488,46 +488,66 @@
   <div class="article-container">
 
     <div class="article-style">
-      <h3 id="1">1.バージョン確認</h3>
-<hr>
-<pre><code class="language-mysql">aurorapostdb=&gt; select version();
-                                   version                                   
------------------------------------------------------------------------------
- PostgreSQL 10.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.9.3, 64-bit
-(1 row)
+      <h3 id="pg-hbaconf">「pg_hba.conf」ファイルの書式</h3>
+<pre><code>パターン1 : local データベース名 ユーザ名 認証方式
+パターン2 : host データベース名 ユーザ名 IPアドレス サブネットマスク 認証方式
+パターン3 : host データベース名 ユーザ名 CIDRアドレス 認証方式
 </code></pre>
-<h3 id="2">2.パラメータグループを変更</h3>
-<hr>
-<blockquote>
-<p>19.8. エラー報告とログ取得 <a href="https://www.postgresql.jp/document/10/html/runtime-config-logging.html">https://www.postgresql.jp/document/10/html/runtime-config-logging.html</a></p>
-</blockquote>
-<br/>
-<pre><code class="language-mysql">log_statement=all #どのSQL文をログに記録するかを制御
-log_min_duration_statement=0 #0に設定すれば、すべての文の実行時間が出力
-log_destination=csvlog #csvlogがlog_destinationに含まれる場合、ログ項目はプログラムへの読み込みが簡便な&quot;カンマ区切り値&quot;書式（CSV）で出力
-log_duration=1
-log_error_verbosity=verbose #ログ取得されるそれぞれのメッセージに対し、サーバログに書き込まれる詳細の量を制御
-</code></pre>
-<h3 id="3aurora">3.Auroraを再起動する（パラメータの反映）</h3>
-<hr>
-<br/>
-<h3 id="4">4.パラメータ確認</h3>
-<hr>
-<pre><code class="language-mysql">show log_statement; 
-show log_min_duration_statement;
-show log_destination;
-show log_duration;
-show log_error_verbosity;
-</code></pre>
-<h3 id="5">5.テスト用のクエリの実行</h3>
-<hr>
-<p>直積のSQLを実行</p>
-<pre><code class="language-mysql">select count(*) from pg_tables a, pg_stats b, pg_index c, pg_locks d;
-</code></pre>
-<h3 id="6">6.マネージメントコンソールから確認する</h3>
-<hr>
-<p><code>error/postgresql.log.yyyy-mm-dd-hhmi.csv</code> を確認</p>
-<p><img src="image-20191218134516337.png" alt="image-20191218134516337" style="zoom:50%;" /></p>
+<h5 id="heading">接続方式</h5>
+<p>クライアントが認証する接続方式を指定</p>
+<table>
+<thead>
+<tr>
+<th>接続方式</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>host</td>
+<td>TCP/IP接続</td>
+</tr>
+<tr>
+<td>local</td>
+<td>UNIXドメイン接続</td>
+</tr>
+</tbody>
+</table>
+<h5 id="db">DB名</h5>
+<p>接続先のデータベース名を指定。複数を指定する場合はカンマ区切り。allは全てのデータベースが対象。</p>
+<h5 id="heading-1">ユーザ名</h5>
+<p>接続するユーザ名を指定。複数を指定する場合はカンマ区切り。allは全てのユーザが対象。</p>
+<h5 id="ip">IPアドレスとサブネット</h5>
+<p>接続方式が「host」の場合のみ。クライアントのIPアドレスの範囲を指定する。</p>
+<h5 id="heading-2">クライアント認証の設定例</h5>
+<table>
+<thead>
+<tr>
+<th>認証方式</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trust</td>
+<td>常に許可</td>
+</tr>
+<tr>
+<td>reject</td>
+<td>常に拒否</td>
+</tr>
+<tr>
+<td>md5</td>
+<td>MD5で暗号化されたパスワード認証を行う</td>
+</tr>
+<tr>
+<td>password</td>
+<td>暗号化されていない平文でのパスワード認証を行う</td>
+</tr>
+</tbody>
+</table>
+<h3 id="heading-3">その他</h3>
+<p>クライアント認証の判定はレコードの上から順に行われ、一致していればその行で指定されている方式で認証する。認証ができれば接続が許可され、認証できなければ接続は拒否される。認証に成功もしくは失敗した場合、次に続くレコードは確認しない。</p>
 
     </div>
 
@@ -538,10 +558,6 @@ show log_error_verbosity;
 
 
 <div class="article-tags">
-  
-  <a class="badge badge-light" href="/tags/aurora/">Aurora</a>
-  
-  <a class="badge badge-light" href="/tags/rds/">RDS</a>
   
   <a class="badge badge-light" href="/tags/postgresql/">PostgreSQL</a>
   
@@ -560,7 +576,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=/aws-aurora-postgres-querylog.html&amp;text=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=/postgresql-about-pg-hba-conf.html&amp;text=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -573,7 +589,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=/aws-aurora-postgres-querylog.html&amp;t=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=/postgresql-about-pg-hba-conf.html&amp;t=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -586,7 +602,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="mailto:?subject=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95&amp;body=/aws-aurora-postgres-querylog.html" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2&amp;body=/postgresql-about-pg-hba-conf.html" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -599,7 +615,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=/aws-aurora-postgres-querylog.html&amp;title=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=/postgresql-about-pg-hba-conf.html&amp;title=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -612,7 +628,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="https://web.whatsapp.com/send?text=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95%20/aws-aurora-postgres-querylog.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="https://web.whatsapp.com/send?text=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2%20/postgresql-about-pg-hba-conf.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -625,7 +641,7 @@ show log_error_verbosity;
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=/aws-aurora-postgres-querylog.html&amp;title=Aurora%28PostgresSQL%29%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%83%ad%e3%82%b0%e3%81%ae%e5%87%ba%e5%8a%9b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=/postgresql-about-pg-hba-conf.html&amp;title=PostgreSQL%e3%81%aepg_hba.conf%e3%81%ae%e3%83%a1%e3%83%a2" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
@@ -662,23 +678,6 @@ show log_error_verbosity;
 
 
   
-  
-  <div class="article-widget content-widget-hr">
-    <h3>Related</h3>
-    <ul>
-      
-      <li><a href="/aws-ec2-psql-install.html">EC2上からpsqlでRDS Aurora(PostgreSQL)に接続するまで</a></li>
-      
-      <li><a href="/aws-rds-postgresql-sysbench.html">RDS(PostgreSQL)にsysbenchを実行する</a></li>
-      
-      <li><a href="/aws-awscli-rds-descrive-db-snapshot.html">aws rds describe-db-snapshotsの結果をcsvとして出力</a></li>
-      
-      <li><a href="/postgresql-about-pg-hba-conf.html">PostgreSQLのpg_hba.confのメモ</a></li>
-      
-      <li><a href="/aws-rds-stop-cautions.html">AWS RDSインスタンスを停止する際の注意事項</a></li>
-      
-    </ul>
-  </div>
   
 
 
