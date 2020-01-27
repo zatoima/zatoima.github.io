@@ -506,38 +506,38 @@
 </blockquote>
 <h3 id="flush-privileges">FLUSH PRIVILEGESが不要なケース</h3>
 <h4 id="heading-2">ユーザ作成</h4>
-<pre><code class="language-mysql">CREATE USER 'mytest'@'localhost' IDENTIFIED BY 'Oracle2019%';
+<pre><code class="language-sql">CREATE USER 'mytest'@'localhost' IDENTIFIED BY 'Oracle2019%';
 </code></pre>
 <h4 id="heading-3">ユーザー一覧を表示する</h4>
-<pre><code class="language-mysql">SELECT host, user FROM mysql.user;
+<pre><code class="language-sql">SELECT host, user FROM mysql.user;
 </code></pre>
 <h4 id="heading-4">権限付与</h4>
-<pre><code class="language-mysql">grant all on *.* to 'mytest'@'localhost' IDENTIFIED BY 'Oracle2019%';
+<pre><code class="language-sql">grant all on *.* to 'mytest'@'localhost' IDENTIFIED BY 'Oracle2019%';
 </code></pre>
 <h4 id="heading-5">権限確認</h4>
-<pre><code class="language-mysql">show grants for mytest@localhost;
+<pre><code class="language-sql">show grants for mytest@localhost;
 </code></pre>
 <h4 id="heading-6">権限剥奪</h4>
-<pre><code class="language-mysql">revoke all on *.* from 'mytest'@'localhost';
+<pre><code class="language-sql">revoke all on *.* from 'mytest'@'localhost';
 </code></pre>
 <h3 id="flush-privileges-1">FLUSH PRIVILEGESが必要なケース</h3>
 <h4 id="heading-7">ユーザ削除</h4>
 <p>一方、<code>INSERT</code>、<code>UPDATE</code>、<code>DELETE</code> などのステートメントを使用して、付与テーブルを直接変更する場合、サーバーを再起動するか、テーブルをリロードするようサーバーに指示するまで、変更内容は権限チェックに影響しません。と記載があるので、deleteでmysql.userを直接メンテナンスする場合の挙動とDROP USERした場合の挙動を実機で確認してみる。</p>
 <h5 id="1drop-user">1.)drop userを使用した場合</h5>
-<pre><code class="language-mysql">DROP USER mytest@'localhost';
+<pre><code class="language-sql">DROP USER mytest@'localhost';
 </code></pre>
 <p>drop userの場合はアカウント管理ステートメントになるのでuser関連のメモリ上の情報も同期的にflushされる。（FLUSH PRIVILEGESは不要）</p>
-<pre><code class="language-mysql">【コマンド結果】
+<pre><code class="language-sql">【コマンド結果】
 mysql&gt; DROP USER mytest@'localhost';
 Query OK, 0 rows affected (0.00 sec)
 mysql&gt; show grants for mytest@localhost;
 ERROR 1141 (42000): There is no such grant defined for user 'mytest' on host 'localhost'
 </code></pre>
 <h5 id="2mysqluserdelete">2.)mysql.userからdelete文で削除</h5>
-<pre><code class="language-mysql">delete from mysql.user where user like 'mytest' and host like 'localhost';
+<pre><code class="language-sql">delete from mysql.user where user like 'mytest' and host like 'localhost';
 </code></pre>
 <p>drop userと異なりこちらのユーザ削除方法の場合は、メモリに権限関連の情報が残ってしまうので <code>FLUSH PRIVILEGES</code> が必要になってくる。</p>
-<pre><code class="language-mysql">mysql&gt; delete from mysql.user where user like 'mytest' and host like 'localhost';
+<pre><code class="language-sql">mysql&gt; delete from mysql.user where user like 'mytest' and host like 'localhost';
 Query OK, 1 row affected (0.00 sec)
 
 mysql&gt; show grants for mytest@localhost; #mytestユーザの情報が残っている。
