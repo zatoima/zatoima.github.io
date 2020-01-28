@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>SPARQL | my opinion is my own</title>
+    <link>/categories/sparql/</link>
+      <atom:link href="/categories/sparql/index.xml" rel="self" type="application/rss+xml" />
+    <description>SPARQL</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 28 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>img/icon-192.png</url>
+      <title>SPARQL</title>
+      <link>/categories/sparql/</link>
+    </image>
+    
+    <item>
+      <title>Amazon Neptuneのインスタンス作成からデータロード、クエリ実行までやってみる</title>
+      <link>/aws-neptune-create-instance-execute-query-try.html</link>
+      <pubDate>Tue, 28 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-neptune-create-instance-execute-query-try.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;AWSの完全マネージド型のグラフデータベースサービスであるNeptuneを触ってみようと思う。インスタンス作成から&lt;code&gt;RDF&lt;/code&gt;のデータロード、及び&lt;code&gt;SPARQL&lt;/code&gt;を使用して単純なクエリ発行までやってみる。&lt;/p&gt;
+&lt;p&gt;グラフデータベースとは？Amazon Neptuneとは？については別記事でまとめたい。&lt;/p&gt;
+&lt;p&gt;下記stepで実施する。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;インスタンスの作成&lt;/li&gt;
+&lt;li&gt;IAMロール作成、ロールのNeptuneへのアタッチ、S3VPCエンドポイントの設定&lt;/li&gt;
+&lt;li&gt;S3からデータのロード&lt;/li&gt;
+&lt;li&gt;RDF4J コンソール、HTTP REST エンドポイントを使用してロードしたデータの確認&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;前提条件&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;VPCやS3の事前作成&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;インスタンスの作成&lt;/h3&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;「データベースの作成」を選択&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128161750382.png&#34; alt=&#34;image-20200128161750382&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;db&#34;&gt;「DB詳細の指定」を入力。&lt;/h4&gt;
+&lt;p&gt;今回は現時点の最新のバージョンである「Neptune 1.0.2.1.R4」を指定。インスタンス作成後のMulti-AZへの変更は現段階では出来ないので必要に応じてこのタイミングで選択する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128161848792.png&#34; alt=&#34;image-20200128161848792&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;続きを入力。&lt;/h4&gt;
+&lt;p&gt;RDSやAuroraと同じような入力項目。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128162140347.png&#34; alt=&#34;image-20200128162140347&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128162149794.png&#34; alt=&#34;image-20200128162149794&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128162200135.png&#34; alt=&#34;image-20200128162200135&#34;&gt;&lt;/p&gt;
+&lt;p&gt;「データベースの作成」ボタンをクリック後に作成が始まるので少々待つ。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128162219388.png&#34; alt=&#34;image-20200128162219388&#34;&gt;&lt;/p&gt;
+&lt;p&gt;大体5分～10分くらいで作成は完了した。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128162946898.png&#34; alt=&#34;image-20200128162946898&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;iams3vpc&#34;&gt;「IAMロールとS3VPCエンドポイントの設定」&lt;/h3&gt;
+&lt;p&gt;データロードのための下準備としてIAMロールとS3 VPCエンドポイントの設定を行う。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;前提条件: IAM ロールと Amazon S3 アクセス - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-IAM.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-IAM.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;IAMの画面から「ロールの作成」を選択&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163143004.png&#34; alt=&#34;image-20200128163143004&#34;&gt;&lt;/p&gt;
+&lt;p&gt;S3を選択&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163255012.png&#34; alt=&#34;image-20200128163255012&#34;&gt;&lt;/p&gt;
+&lt;p&gt;「&lt;code&gt;AmazonS3ReadOnlyAccess&lt;/code&gt;」を選択してポリシーをアタッチする。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128171213697.png&#34; alt=&#34;image-20200128171213697&#34;&gt;&lt;/p&gt;
+&lt;p&gt;必要に応じて&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163425236.png&#34; alt=&#34;image-20200128163425236&#34;&gt;&lt;/p&gt;
+&lt;p&gt;ロール名は「NeptuneLoadFromS3」とした。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163502048.png&#34; alt=&#34;image-20200128163502048&#34;&gt;&lt;/p&gt;
+&lt;p&gt;作成したロールの画面に移動する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163556778.png&#34; alt=&#34;image-20200128163556778&#34;&gt;&lt;/p&gt;
+&lt;p&gt;「信頼関係」-「信頼関係の編集」へと移動して下記を上書きして貼り付ける。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163702608.png&#34; alt=&#34;image-20200128163702608&#34;&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+  &amp;quot;Version&amp;quot;: &amp;quot;2012-10-17&amp;quot;,
+  &amp;quot;Statement&amp;quot;: [
+    {
+      &amp;quot;Sid&amp;quot;: &amp;quot;&amp;quot;,
+      &amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+      &amp;quot;Principal&amp;quot;: {
+        &amp;quot;Service&amp;quot;: [
+          &amp;quot;rds.amazonaws.com&amp;quot;
+        ]
+      },
+      &amp;quot;Action&amp;quot;: &amp;quot;sts:AssumeRole&amp;quot;
+    }
+  ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163744771.png&#34; alt=&#34;image-20200128163744771&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;amazon-neptune--iam-&#34;&gt;「Amazon Neptune クラスターに IAM ロール」を追加する&lt;/h3&gt;
+&lt;p&gt;Neptuneのクラスタに移動して「IAMロールの管理」を選択。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163850955.png&#34; alt=&#34;image-20200128163850955&#34;&gt;&lt;/p&gt;
+&lt;p&gt;先程作成したIAMロール(&lt;code&gt;NeptuneLoadFromS3&lt;/code&gt;)を追加する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163932718.png&#34; alt=&#34;image-20200128163932718&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;s3-vpc&#34;&gt;S3 VPCエンドポイントを作成&lt;/h3&gt;
+&lt;p&gt;S3からNeptuneにロードする際にVPCエンドポイントが必要なのでVPCエンドポイントを設定する。&lt;/p&gt;
+&lt;p&gt;エンドポイントの作成画面で「com.amazonaws.ap-northeast-1.s3」を選択する。（今回はTokyoリージョンなので&lt;code&gt;ap-northeast-1&lt;/code&gt;だが、他リージョンの場合はリージョン名が異なる。）&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128164302433.png&#34; alt=&#34;image-20200128164302433&#34;&gt;&lt;/p&gt;
+&lt;p&gt;VPCやルートテーブルを指定する&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128164436298.png&#34; alt=&#34;image-20200128164436298&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;s3neptune&#34;&gt;S3からNeptuneへのデータのロード&lt;/h3&gt;
+&lt;p&gt;ここまででS3からNeptuneへロードする準備が出来た。ロードするデータは &lt;a href=&#34;http://rdf.geospecies.org&#34;&gt;http://rdf.geospecies.org&lt;/a&gt; のデータを使用することにする。rdfxml形式のRDFデータのサンプルをS3の所定のバケットにアップロード&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin nep-tool]$ curl -O http://rdf.geospecies.org/geospecies.rdf.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100 8891k  100 8891k    0     0  3405k      0  0:00:02  0:00:02 --:--:-- 3404k
+[ec2-user@bastin nep-tool]$ 
+[ec2-user@bastin nep-tool]$ ls -l geospecies.rdf.gz
+-rw-rw-r-- 1 ec2-user ec2-user 9105109 Jan 28 08:16 geospecies.rdf.gz
+[ec2-user@bastin nep-tool]$ aws s3 cp geospecies.rdf.gz s3://nep-s3-xxxx/
+upload: ./geospecies.rdf.gz to s3://nep-s3-xxxx/geospecies.rdf.gz 
+[ec2-user@bastin nep-tool]$   
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記コマンドでデータをロードする。&lt;code&gt;エンドポイント&lt;/code&gt;、&lt;code&gt;source&lt;/code&gt;、&lt;code&gt;format&lt;/code&gt;、&lt;code&gt;iamRoleArn&lt;/code&gt;を必要に応じて変更が必要。&lt;/p&gt;
+&lt;p&gt;RDFの場合のformatは他にも&lt;code&gt;turtle&lt;/code&gt;や&lt;code&gt;ntriples&lt;/code&gt;なども選択可能。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ロードデータ形式 - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-format.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-format.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -X POST \
+    -H &#39;Content-Type: application/json&#39; \
+    https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader -d &#39;
+    {
+      &amp;quot;source&amp;quot; : &amp;quot;s3://nep-s3-xxxx/geospecies.rdf.gz&amp;quot;, 
+      &amp;quot;format&amp;quot; : &amp;quot;rdfxml&amp;quot;,
+      &amp;quot;iamRoleArn&amp;quot; : &amp;quot;arn:aws:iam::xxxxxxxxx:role/NeptuneLoadFromS3&amp;quot;,
+      &amp;quot;region&amp;quot; : &amp;quot;ap-northeast-1&amp;quot;,
+      &amp;quot;failOnError&amp;quot; : &amp;quot;FALSE&amp;quot;,
+      &amp;quot;parallelism&amp;quot; : &amp;quot;HIGH&amp;quot;
+    }&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行後、下記が表示される。状況確認に&lt;code&gt;loadId&lt;/code&gt;が必要なので控えておく。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;loadId&amp;quot; : &amp;quot;eff1268f-17ab-473a-b845-c2d91a317c01&amp;quot;
+    }
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;データロードのステータス確認。先程取得した&lt;code&gt;loadId&lt;/code&gt;を指定する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -G &#39;https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/eff1268f-17ab-473a-b845-c2d91a317c01&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;進行中の出力&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;[ec2-user@bastin nep-tool]$ curl -G &#39;https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/eff1268f-17ab-473a-b845-c2d91a317c01&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_IN_PROGRESS&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://nep-s3-xxxx/geospecies.rdf.gz&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_IN_PROGRESS&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 148,
+            &amp;quot;startTime&amp;quot; : 1580199498,
+            &amp;quot;totalRecords&amp;quot; : 2130000,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;ロード完了の出力&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;[ec2-user@bastin nep-tool]$ curl -G &#39;https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/eff1268f-17ab-473a-b845-c2d91a317c01&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_COMPLETED&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://nep-s3-xxxx/geospecies.rdf.gz&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_COMPLETED&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 149,
+            &amp;quot;startTime&amp;quot; : 1580199498,
+            &amp;quot;totalRecords&amp;quot; : 2201532,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;各フィールドの説明は下記の通り。今回の例では「&lt;strong&gt;&lt;u&gt;2,201,532&lt;/u&gt;&lt;/strong&gt;」行のロードに「&lt;strong&gt;&lt;u&gt;149&lt;/u&gt;&lt;/strong&gt;」秒掛かっていることがわかる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Neptune Loader Get-Status API - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/load-api-reference-status.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/load-api-reference-status.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;フィールド&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;fullUri&lt;/td&gt;
+&lt;td&gt;ロードされる 1 つ以上のファイルの URI。形式: s3://bucket/key&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;runNumber&lt;/td&gt;
+&lt;td&gt;このロードまたはフィードの実行数。これは、ロードが再開されると増加します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;retryNumber&lt;/td&gt;
+&lt;td&gt;このロードまたはフィードの再試行回数。これは、ローダーがフィードまたはロードを自動的に再試行するときに増加されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;status&lt;/td&gt;
+&lt;td&gt;ロードあるいはフィードの返されたステータス。LOAD_COMPLETED はロードが問題なく成功したことを示します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;totalTimeSpent&lt;/td&gt;
+&lt;td&gt;ロードまたはフィードのデータの解析や挿入に費やした時間 (秒単位)。これには、ソースファイルのリストを取得するのに費やされた時間は含まれません。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;totalRecords&lt;/td&gt;
+&lt;td&gt;ロードされた、またはロードしようとした全レコード。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;totalDuplicates&lt;/td&gt;
+&lt;td&gt;発生した重複レコードの数。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;parsingErrors&lt;/td&gt;
+&lt;td&gt;発生した解析エラーの数。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;datatypeMismatchErrors&lt;/td&gt;
+&lt;td&gt;指定されたデータとデータ型が一致しないレコードの数。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;insertErrors&lt;/td&gt;
+&lt;td&gt;エラーのために挿入できなかったレコードの数。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;neptune&#34;&gt;Neptuneへのクエリ発行&lt;/h3&gt;
+&lt;p&gt;データロードまで出来たのでクエリを発行する。&lt;/p&gt;
+&lt;h4 id=&#34;http-rest-&#34;&gt;HTTP REST エンドポイントを使用する場合&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;HTTP REST エンドポイントを使用して Neptune DB インスタンスに接続する - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/access-graph-sparql-http-rest.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/access-graph-sparql-http-rest.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -X POST --data-binary &#39;query=select ?s ?p ?o where {?s ?p ?o} limit 10&#39; https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-6&#34;&gt;実行結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;[ec2-user@bastin nep-tool]$ curl -X POST --data-binary &#39;query=select ?s ?p ?o where {?s ?p ?o} limit 10&#39; https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+{
+  &amp;quot;head&amp;quot; : {
+    &amp;quot;vars&amp;quot; : [ &amp;quot;s&amp;quot;, &amp;quot;p&amp;quot;, &amp;quot;o&amp;quot; ]
+  },
+  &amp;quot;results&amp;quot; : {
+    &amp;quot;bindings&amp;quot; : [ {
+      &amp;quot;s&amp;quot; : {
+        &amp;quot;type&amp;quot; : &amp;quot;uri&amp;quot;,
+        &amp;quot;value&amp;quot; : &amp;quot;http://lod.geospecies.org/ses/uRtpv&amp;quot;
+      },
+      &amp;quot;p&amp;quot; : {
+        &amp;quot;type&amp;quot; : &amp;quot;uri&amp;quot;,
+        &amp;quot;value&amp;quot; : &amp;quot;http://rdf.geospecies.org/ont/geospecies#isUnexpectedIn&amp;quot;
+      },
+      &amp;quot;o&amp;quot; : {
+        &amp;quot;type&amp;quot; : &amp;quot;uri&amp;quot;,
+        &amp;quot;value&amp;quot; : &amp;quot;http://sws.geonames.org/5001836/&amp;quot;
+      }
+～省略～
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;rdf4j-&#34;&gt;RDF4J コンソールを使用する場合&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;RDF4J コンソールを使用して Neptune DB インスタンスに接続する - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/access-graph-sparql-rdf4j-console.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/access-graph-sparql-rdf4j-console.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://rdf4j.org/download/&#34;&gt;RDF4J のサイト&lt;/a&gt;からRDF4J SDKをダウンロード&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128173450786.png&#34; alt=&#34;image-20200128173450786&#34;&gt;&lt;/p&gt;
+&lt;p&gt;特定のEC2にダウンロードしたzipファイルをアップロードする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin nep-tool]$ ls -l
+total 104740
+-rw-r--r-- 1 ec2-user ec2-user 98147430 Jan 25 06:16 eclipse-rdf4j-3.0.4-sdk.zip
+-rw-rw-r-- 1 ec2-user ec2-user  9105109 Jan 28 08:16 geospecies.rdf.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;zipファイルをunzip後に、bin配下に存在する &lt;code&gt;console.sh&lt;/code&gt;を実行する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin nep-tool]$ ./eclipse-rdf4j-3.0.4/bin/console.sh
+08:37:35.639 [main] DEBUG org.eclipse.rdf4j.common.platform.PlatformFactory - os.name = linux
+08:37:35.652 [main] DEBUG org.eclipse.rdf4j.common.platform.PlatformFactory - Detected Posix platform
+Connected to default data directory
+RDF4J Console 3.0.4+47737c0
+
+3.0.4+47737c0
+Type &#39;help&#39; for help.
+&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Neptune DB インスタンス に SPARQL リポジトリを作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;create sparql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記情報の入力を求められるので入力する。未確認だがリードレプリカを作った場合はここの「SPARQL クエリのエンドポイント」と「SPARQL 更新エンドポイント」をマスタとリードレプリカに分けるべきなのではないかと推測。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;変数名&lt;/th&gt;
+&lt;th&gt;値&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;SPARQL クエリのエンドポイント&lt;/td&gt;
+&lt;td&gt;https://your-neptune-endpoint:port/sparql&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SPARQL 更新エンドポイント&lt;/td&gt;
+&lt;td&gt;https://your-neptune-endpoint:port/sparql&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ローカルリポジトリ ID [endpoint@localhost]&lt;/td&gt;
+&lt;td&gt;neptune&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;リポジトリタイトル [SPARQL エンドポイントリポジトリ  @localhost]&lt;/td&gt;
+&lt;td&gt;Neptune  DB instance&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;&amp;gt; create sparql
+Please specify values for the following variables:
+SPARQL query endpoint: https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+SPARQL update endpoint: https://neptest.xxxxxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+Local repository ID [endpoint@localhost]: neptune
+Repository title [SPARQL endpoint repository @localhost]: Neptune DB instance
+
+Repository created
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Neptune インスタンスに接続する。接続後はプロンプトにローカルリポジトリ IDが表示される。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;gt; open neptune
+Opened repository &#39;neptune&#39;
+neptune&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;HTTP REST エンドポイントを使用して実行した場合と同様のクエリを実行してみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;neptune&amp;gt; sparql select ?s ?p ?o where {?s ?p ?o} limit 10
+Evaluating SPARQL query...
++------------------------+------------------------+------------------------+
+| s                      | p                      | o                      |
++------------------------+------------------------+------------------------+
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#hasScientificNameAuthorship&amp;gt;| &amp;quot;(LeConte, 1866)&amp;quot;^^xsd:string|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#hasScientificName&amp;gt;| &amp;quot;Iphthiminus opacus (LeConte, 1866)&amp;quot;^^xsd:string|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isExpectedIn&amp;gt;| &amp;lt;http://sws.geonames.org/6255149/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isExpectedIn&amp;gt;| &amp;lt;http://sws.geonames.org/5279468/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#hasNomenclaturalCode&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#NomenclaturalCode_ICZN&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isUnknownAboutIn&amp;gt;| &amp;lt;http://sws.geonames.org/4862182/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isUnknownAboutIn&amp;gt;| &amp;lt;http://sws.geonames.org/5037779/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isUnknownAboutIn&amp;gt;| &amp;lt;http://sws.geonames.org/5001836/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#isUnknownAboutIn&amp;gt;| &amp;lt;http://sws.geonames.org/2635167/&amp;gt;|
+| &amp;lt;http://lod.geospecies.org/ses/zJIK4&amp;gt;| &amp;lt;http://rdf.geospecies.org/ont/geospecies#hasSubfamilyName&amp;gt;| &amp;quot;Coelometopinae&amp;quot;^^xsd:string|
++------------------------+------------------------+------------------------+
+10 result(s) (1268 ms)
+neptune&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
