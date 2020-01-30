@@ -5,7 +5,7 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 28 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 30 Jan 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
@@ -13,12 +13,191 @@
     </image>
     
     <item>
+      <title>PostgreSQLのpg_stat_statementsのインストール、設定方法</title>
+      <link>/postgresql-pg-stat-statements-install.html</link>
+      <pubDate>Thu, 30 Jan 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pg-stat-statements-install.html</guid>
+      <description>&lt;p&gt;contrib拡張モジュールの中にpg_stat_statementsが含まれており、このモジュールをインストールし設定することで下記のようなSQLを特定することが出来る。Oracle Databaseのv$sqlのような使い方が出来る。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;実行されたSQL&lt;/li&gt;
+&lt;li&gt;実行時間が長いSQL&lt;/li&gt;
+&lt;li&gt;実行回数が多いSQL&lt;/li&gt;
+&lt;li&gt;キャッシュヒット率が低いSQL&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;heading&#34;&gt;バージョン&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-bash-4.2$ psql
+psql (10.11)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=# select version();
+                                                 version                                                  
+----------------------------------------------------------------------------------------------------------
+ PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;前提条件&lt;/h3&gt;
+&lt;h4 id=&#34;postgresql-contrib&#34;&gt;postgresql-contribがインストールされていること&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-bash-4.2$ rpm -qa | grep contrib
+postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;ライブラリの確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-bash-4.2$ pg_config --libdir
+/usr/pgsql-10/lib
+-bash-4.2$ find /usr/pgsql-10/lib -name pg_stat_statements.so
+/usr/pgsql-10/lib/pg_stat_statements.so
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-stat-statements&#34;&gt;pg_stat_statementsの設定方法&lt;/h3&gt;
+&lt;p&gt;前提条件としてpostgresql-contrib パッケージ（pg_stat_statementsモジュールの中に含まれる）がインストールされていることが必要。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi /var/lib/pgsql/10/data/postgresql.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記パラメータを修正する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;shared_preload_libraries = &#39;pg_stat_statements&#39;
+pg_stat_statements.max = 1000
+pg_stat_statements.track = top
+pg_stat_statements.save = on
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;※custom_variable_classesの設定は不要。9.2のバージョンまで必要だった。&lt;/p&gt;
+&lt;p&gt;各パラメータの説明は下記の通り。調整すべきはpg_stat_statements.maxで保存/格納するSQL数を増やす減らすのと、pg_stat_statements.trackで再帰的なSQLも含めて保存するかどうか。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;パラメータ&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;shared_preload_libraries&lt;/td&gt;
+&lt;td&gt;サーバが稼働する時点で事前に読み込まれなければならない1つ以上の共有ライブラリを指定。今回の場合はpg_stat_statementsライブラリ（/usr/pgsql-10/lib/pg_stat_statements.so）を読みこむ必要があるのでpg_stat_statementsを指定。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_stat_statements.max&lt;/td&gt;
+&lt;td&gt;デフォルトは1000のSQLが記録される。記録されるSQL文の最大数を指定する。これを超えて異なるSQL文を検出した場合は、最も実行回数の低いSQL文の情報が切り捨てられる。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_stat_statements.track&lt;/td&gt;
+&lt;td&gt;どのSQL文をモジュールによって計測するかを制御          top：（直接クライアントによって発行された）最上層のSQL文を記録（デフォルト）     all：（関数の中から呼び出された文などの）入れ子になった文も記録     none：文に関する統計情報収集を無効&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_stat_statements.track_utility&lt;/td&gt;
+&lt;td&gt;このモジュールがユーティリティコマンドを記録するかどうかを指定。  ユーティリティコマンドとは、 SELECT、INSERT、UPDATEおよびDELETE以外のすべて。 デフォルトはon。  この設定はスーパーユーザのみが変更可。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_stat_statements.save&lt;/td&gt;
+&lt;td&gt;サーバを終了させる際に文の統計情報を保存するかどうかを指定。  offの場合、統計情報は終了時に保存されず、サーバ開始時に再読み込みもされない。 デフォルト値はon&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;パラメータ設定後にはサーバ再起動が必要。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;/usr/pgsql-10/bin/pg_ctl stop --pgdata=/var/lib/pgsql/10/data
+/usr/pgsql-10/bin/pg_ctl start --pgdata=/var/lib/pgsql/10/data
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-stat-statements-1&#34;&gt;pg_stat_statementsの有効化&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=&amp;gt; \dx
+                 List of installed extensions
+  Name   | Version |   Schema   |         Description          
+---------+---------+------------+------------------------------
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(1 row)
+
+postgres=&amp;gt; CREATE EXTENSION pg_stat_statements;
+CREATE EXTENSION
+postgres=&amp;gt; \dx
+                                     List of installed extensions
+        Name        | Version |   Schema   |                        Description                        
+--------------------+---------+------------+-----------------------------------------------------------
+ pg_stat_statements | 1.6     | public     | track execution statistics of all SQL statements executed
+ plpgsql            | 1.0     | pg_catalog | PL/pgSQL procedural language
+(2 rows)
+postgres=&amp;gt; 
+pgtest=&amp;gt; SELECT * FROM pg_available_extensions WHERE name = &#39;pg_stat_statements&#39;;
+        name        | default_version | installed_version |                          comment                          
+--------------------+-----------------+-------------------+-----------------------------------------------------------
+ pg_stat_statements | 1.6             | 1.6               | track execution statistics of all SQL statements executed
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;パラメータ値の確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;select name, setting, unit from pg_settings where name like &#39;pg_stat_statements%&#39;;
+
+postgres=&amp;gt; select name, setting, unit from pg_settings where name like &#39;pg_stat_statements%&#39;;
+               name               | setting | unit 
+----------------------------------+---------+------
+ pg_stat_statements.max           | 5000    | 
+ pg_stat_statements.save          | on      | 
+ pg_stat_statements.track         | top     | 
+ pg_stat_statements.track_utility | on      | 
+(4 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-stat-statements-2&#34;&gt;pg_stat_statementsを実際に使ってみる&lt;/h3&gt;
+&lt;h5 id=&#34;pg-stat-statements-reset&#34;&gt;pg_stat_statements_reset()関数を使用してリセットする&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# SELECT pg_stat_statements_reset();
+ pg_stat_statements_reset 
+--------------------------
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;pgbench&#34;&gt;pgbenchでサンプルクエリを実行&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-bash-4.2$ pgbench -i postgres
+NOTICE:  table &amp;quot;pgbench_history&amp;quot; does not exist, skipping
+NOTICE:  table &amp;quot;pgbench_tellers&amp;quot; does not exist, skipping
+NOTICE:  table &amp;quot;pgbench_accounts&amp;quot; does not exist, skipping
+NOTICE:  table &amp;quot;pgbench_branches&amp;quot; does not exist, skipping
+creating tables...
+100000 of 100000 tuples (100%) done (elapsed 0.10 s, remaining 0.00 s)
+vacuum...
+set primary keys...
+done.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;結果確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# SELECT query, calls, total_time, rows, 100.0 * shared_blks_hit /
+postgres-#                nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
+postgres-#           FROM pg_stat_statements ORDER BY total_time DESC LIMIT 5;
+-[ RECORD 1 ]---------------------------------------------------
+query       | copy pgbench_accounts from stdin
+calls       | 1
+total_time  | 107.231306
+rows        | 100000
+hit_percent | 0.36452004860267314702
+-[ RECORD 2 ]---------------------------------------------------
+query       | alter table pgbench_accounts add primary key (aid)
+calls       | 1
+total_time  | 57.199683
+rows        | 0
+hit_percent | 99.9425947187141217
+-[ RECORD 3 ]---------------------------------------------------
+query       | vacuum analyze pgbench_accounts
+calls       | 1
+total_time  | 41.366501
+rows        | 0
+hit_percent | 99.9199679871948780
+-[ RECORD 4 ]---------------------------------------------------
+query       | vacuum analyze pgbench_branches
+calls       | 1
+total_time  | 13.070895
+rows        | 0
+hit_percent | 93.0107526881720430
+-[ RECORD 5 ]---------------------------------------------------
+query       | alter table pgbench_branches add primary key (bid)
+calls       | 1
+total_time  | 1.957248
+rows        | 0
+hit_percent | 86.6197183098591549
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;補足&lt;/h3&gt;
+&lt;p&gt;RDSやAuroraの場合は、ライブラリやパラメータの設定は特に不要で、&lt;code&gt;CREATE EXTENSION pg_stat_statements;&lt;/code&gt;を実行するだけで良い。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; パフォーマンスメトリクス – pg_stat_statements モジュールは、デフォルトで shared_preload_libraries に含まれています。そのため、作成後すぐにインスタンスを再起動する必要はありません。ただし、この機能を使用する場合は、ステートメント CREATE EXTENSION pg_stat_statements; を実行する必要があります。また、詳細なデータを pg_stat_statements に追加できるように、track_io_timing はデフォルトで有効になっています。&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Amazon Neptuneのインスタンス作成からデータロード、クエリ実行までやってみる</title>
       <link>/aws-neptune-create-instance-execute-query-try.html</link>
       <pubDate>Tue, 28 Jan 2020 00:00:00 +0000</pubDate>
       <guid>/aws-neptune-create-instance-execute-query-try.html</guid>
       <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
-&lt;p&gt;AWSの完全マネージド型のグラフデータベースサービスであるNeptuneを触ってみようと思う。インスタンス作成から&lt;code&gt;RDF&lt;/code&gt;のデータロード、及び&lt;code&gt;SPARQL&lt;/code&gt;を使用して単純なクエリ発行までやってみる。&lt;/p&gt;
+&lt;p&gt;AWSの完全マネージド型のグラフデータベースサービスであるNeptuneを触ってみようと思う。インスタンス作成から&lt;code&gt;RDF&lt;/code&gt;形式のデータロード、及び&lt;code&gt;SPARQL&lt;/code&gt;を使用して単純なクエリ発行までやってみる。&lt;/p&gt;
 &lt;p&gt;グラフデータベースとは？Amazon Neptuneとは？については別記事でまとめたい。&lt;/p&gt;
 &lt;p&gt;下記stepで実施する。&lt;/p&gt;
 &lt;ol&gt;
