@@ -5,12 +5,170 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 28 Jan 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 10 Feb 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>EC2上でnetkeiba-scraperを使ってJRAのレース情報を取得</title>
+      <link>/ec2-netkeiba-scraper.html</link>
+      <pubDate>Mon, 10 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/ec2-netkeiba-scraper.html</guid>
+      <description>&lt;h2 id=&#34;heading&#34;&gt;はじめに&lt;/h2&gt;
+&lt;p&gt;EC2上でnetkeiba-scraperを使ってレース情報を取得する。今回このツールを使いたかった理由は情報取得なのでrace.dbに格納するところまでをやります。&lt;/p&gt;
+&lt;h2 id=&#34;heading-1&#34;&gt;バージョン情報&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@scraperv2 ~]$ cat /etc/os-release
+NAME=&amp;quot;Amazon Linux&amp;quot;
+VERSION=&amp;quot;2&amp;quot;
+ID=&amp;quot;amzn&amp;quot;
+ID_LIKE=&amp;quot;centos rhel fedora&amp;quot;
+VERSION_ID=&amp;quot;2&amp;quot;
+PRETTY_NAME=&amp;quot;Amazon Linux 2&amp;quot;
+ANSI_COLOR=&amp;quot;0;33&amp;quot;
+CPE_NAME=&amp;quot;cpe:2.3⭕amazon:amazon_linux:2&amp;quot;
+HOME_URL=&amp;quot;https://amazonlinux.com/&amp;quot;
+[ec2-user@scraperv2 ~]$ ec2-metadata -t
+instance-type: m5.large
+[ec2-user@scraperv2 ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;heading-2&#34;&gt;事前準備&lt;/h2&gt;
+&lt;h3 id=&#34;javagit&#34;&gt;javaとgitのインストール&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;sudo yum -y install java git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;javaはAmazon LinuxなこともあってオープンJDK完全互換のCorrettoがインストールされています。&lt;/p&gt;
+&lt;h3 id=&#34;sbt&#34;&gt;sbtのインストール&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
+sudo yum -y install sbt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;sbt Reference Manual — Linux への sbt のインストール &lt;a href=&#34;https://www.scala-sbt.org/1.x/docs/ja/Installing-sbt-on-Linux.html&#34;&gt;https://www.scala-sbt.org/1.x/docs/ja/Installing-sbt-on-Linux.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;scala&#34;&gt;scalaのインストール&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.scala-lang.org/download/&#34;&gt;公式サイト&lt;/a&gt;からダウンロード。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;wget https://downloads.lightbend.com/scala/2.13.1/scala-2.13.1.rpm
+sudo rpm -ivh scala-2.13.1.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;netkeiba-scraper&#34;&gt;netkeiba-scraperのダウンロード、設定変更&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;git clone https://github.com/stockedge/netkeiba-scraper.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;設定変更&lt;/h3&gt;
+&lt;h4 id=&#34;netkeiba-scrapersrcmainscalanetkeiba-scrapermainscala&#34;&gt;./netkeiba-scraper/src/main/scala/netkeiba-scraper/Main.scalaの修正&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;http -&amp;gt; httpsに変更&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ログインURLの変更 : driver.get(&amp;ldquo;&lt;a href=&#34;https://regist.netkeiba.com/account/?pid=login%22&#34;&gt;https://regist.netkeiba.com/account/?pid=login&amp;quot;&lt;/a&gt;)&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;収集期間の変更&lt;/p&gt;
+&lt;p&gt;デフォルトの10年の情報を収集しようとすると全体で数日、いや1週間近く掛かるので1年に変更&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;修正前&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;//過去10年分のURLを収集する
+RaceListScraper.scrape(period = 12 * 10)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;修正後&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;//過去1年分のURLを収集する
+RaceListScraper.scrape(period = 12 * 1)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;netkeiba-scraperbuildsbt&#34;&gt;./netkeiba-scraper/build.sbtを下記の通り修正&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;libraryDependencies += &amp;quot;org.xerial&amp;quot; % &amp;quot;sqlite-jdbc&amp;quot; % &amp;quot;3.7.2&amp;quot;
+libraryDependencies += &amp;quot;joda-time&amp;quot; % &amp;quot;joda-time&amp;quot; % &amp;quot;2.3&amp;quot;
+libraryDependencies += &amp;quot;org.joda&amp;quot; % &amp;quot;joda-convert&amp;quot; % &amp;quot;1.6&amp;quot;
+libraryDependencies += &amp;quot;commons-io&amp;quot; % &amp;quot;commons-io&amp;quot; % &amp;quot;2.4&amp;quot;
+libraryDependencies += &amp;quot;nu.validator.htmlparser&amp;quot; % &amp;quot;htmlparser&amp;quot; % &amp;quot;1.4&amp;quot;
+libraryDependencies += &amp;quot;org.seleniumhq.selenium&amp;quot; % &amp;quot;selenium-java&amp;quot; % &amp;quot;2.41.0&amp;quot;
+libraryDependencies += &amp;quot;commons-lang&amp;quot; % &amp;quot;commons-lang&amp;quot; % &amp;quot;2.6&amp;quot;
+libraryDependencies += &amp;quot;org.scala-lang.modules&amp;quot; %% &amp;quot;scala-xml&amp;quot; % &amp;quot;1.0.6&amp;quot;
+libraryDependencies ++= Seq(
+  &amp;quot;org.scalikejdbc&amp;quot; %% &amp;quot;scalikejdbc&amp;quot;               % &amp;quot;2.5.2&amp;quot;,
+  &amp;quot;com.h2database&amp;quot;  %  &amp;quot;h2&amp;quot;                        % &amp;quot;1.4.196&amp;quot;,
+  &amp;quot;ch.qos.logback&amp;quot;  %  &amp;quot;logback-classic&amp;quot;           % &amp;quot;1.2.3&amp;quot;
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参照：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;scalikejdbc/scalikejdbc: A tidy SQL-based DB access library for Scala developers. This library naturally wraps JDBC APIs and provides you easy-to-use APIs. &lt;a href=&#34;https://github.com/scalikejdbc/scalikejdbc&#34;&gt;https://github.com/scalikejdbc/scalikejdbc&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Maven Repository: org.scala-lang.modules » scala-xml &lt;a href=&#34;https://mvnrepository.com/artifact/org.scala-lang.modules/scala-xml_2.11&#34;&gt;https://mvnrepository.com/artifact/org.scala-lang.modules/scala-xml_2.11&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;netkeiba-scraper-1&#34;&gt;netkeiba-scraperの実行&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;cd /home/ec2-user/netkeiba-scraper
+sbt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;run-collecturl&#34;&gt;run collecturl&lt;/h3&gt;
+&lt;p&gt;レース結果が載っているURLを収集して「race_list.txt」に保存&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sbt:netkeiba-scraper&amp;gt; run collecturl
+[info] Updating 
+https://repo1.maven.org/maven2/org/scalikejdbc/scalikejdbc_2.12/2.5.2/scalikejdbc_2.12-2.5.2.pom
+  100.0% [##########] 3.0 KiB (6.5 KiB / s)
+https://repo1.maven.org/maven2/com/h2database/h2/1.4.196/h2-1.4.196.pom
+～中略～
+8: collecting URLs from https://db.netkeiba.com/?pid=race_top&amp;amp;date=20190504
+9: collecting URLs from https://db.netkeiba.com/?pid=race_top&amp;amp;date=20190406
+10: collecting URLs from https://db.netkeiba.com/?pid=race_top&amp;amp;date=20190302
+11: collecting URLs from https://db.netkeiba.com/?pid=race_top&amp;amp;date=20190202
+[success] Total time: 163 s (02:43), completed Feb 10, 2020, 2:28:33 AM
+sbt:netkeiba-scraper&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;run-scrapehtml&#34;&gt;run scrapehtml&lt;/h3&gt;
+&lt;p&gt;レース結果のHTMLをスクレイピングしてhtmlフォルダに保存&lt;/p&gt;
+&lt;p&gt;※稼働確認のために&lt;code&gt;race_url.txt&lt;/code&gt;の中身を1行（1レース分）を対象にしました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sbt:netkeiba-scraper&amp;gt; run scrapehtml
+[info] running Main scrapehtml
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by net.sourceforge.htmlunit.corejs.javascript.NativeArray (file:/tmp/sbt_e627d576/target/8fadc32b/11102a7b/htmlunit-core-js-2.13.jar) to field java.util.Arrays$LegacyMergeSort.userRequested
+WARNING: Please consider reporting this to the maintainers of net.sourceforge.htmlunit.corejs.javascript.NativeArray
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+1:downloading https://db.netkeiba.com/race/202005010101
+[success] Total time: 7 s, completed Feb 10, 2020, 2:33:39 AM
+sbt:netkeiba-scraper&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ここまで完了するとhtmlフォルダにダウンロードしてきたhtmlファイルが格納されています。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@scraperv2 html]$ pwd
+/home/ec2-user/netkeiba-scraper/html
+[ec2-user@scraperv2 html]$ ls -l
+total 108
+-rw-rw-r-- 1 ec2-user ec2-user 107109 Feb 10 02:33 202005010101.html
+[ec2-user@scraperv2 html]$ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;run-extract&#34;&gt;run extract&lt;/h3&gt;
+&lt;p&gt;HTMLからレース結果を抜き出しSQLiteに保存&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sbt:netkeiba-scraper&amp;gt; run extract
+[info] running Main extract
+02:35:20.126 [run-main-2] DEBUG scalikejdbc.ConnectionPool$ - Registered connection pool : ConnectionPool(url:jdbc:sqlite:race.db, user:null) using factory : &amp;lt;default&amp;gt;
+02:35:20.130 [run-main-2] DEBUG scalikejdbc.ConnectionPool$ - Registered singleton connection pool : ConnectionPool(url:jdbc:sqlite:race.db, user:null)
+～中略～
+[success] Total time: 1 s, completed Feb 10, 2020, 2:35:20 AM
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;racedb&#34;&gt;race.dbに格納されるデータについて&lt;/h2&gt;
+&lt;p&gt;作成されるrace.dbの中にTableは4つ存在していました。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;feature&lt;/li&gt;
+&lt;li&gt;payoff&lt;/li&gt;
+&lt;li&gt;race_info&lt;/li&gt;
+&lt;li&gt;race_result&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;なお、sqlite_sequenceというテーブルもありますが、AUTOINCREMENTの情報を sqlite_sequence というテーブルで管理しているので上記の4つがメイン。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200210112812362.png&#34; alt=&#34;image-20200210112812362&#34; style=&#34;zoom:67%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;payoff&#34;&gt;payoff&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200210112902818.png&#34; alt=&#34;image-20200210112902818&#34; style=&#34;zoom:67%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;race-info&#34;&gt;race_info&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200210112942523.png&#34; alt=&#34;image-20200210112942523&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;race-result&#34;&gt;race_result&lt;/h3&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200210112958994.png&#34; alt=&#34;image-20200210112958994&#34;&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Amazon Neptuneのインスタンス作成からデータロード、クエリ実行までやってみる</title>
