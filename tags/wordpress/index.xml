@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>WordPress | my opinion is my own</title>
+    <link>/tags/wordpress/</link>
+      <atom:link href="/tags/wordpress/index.xml" rel="self" type="application/rss+xml" />
+    <description>WordPress</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 13 Feb 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>img/icon-192.png</url>
+      <title>WordPress</title>
+      <link>/tags/wordpress/</link>
+    </image>
+    
+    <item>
+      <title>1つのEC2インスタンス上に複数のWordPressをホストする方法</title>
+      <link>/wordpress-ec2-multipul-host.html</link>
+      <pubDate>Thu, 13 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/wordpress-ec2-multipul-host.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;t2.microインスタンス上に複数WordPressをホストしたいと思ったことがあった。あまりネット上でググったところ情報が無かったのでメモしとおきます。&lt;/p&gt;
+&lt;p&gt;理由としては&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;各サイトPV数もなく重要度も高くなく負荷も高くないので、可能な限りt2.microの無料枠の中で運用したい&lt;/li&gt;
+&lt;li&gt;WordPressごとにEC2インスタンス立てるのは費用の観点からよろしくない。(t2.microインスタンスといえど)&lt;/li&gt;
+&lt;li&gt;複数インスタンスの管理がめんどくさい&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;です。&lt;/p&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;やり方&lt;/h3&gt;
+&lt;p&gt;いくつか方法はありそうでした。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;WordPress側のマルチサイト機能&lt;/li&gt;
+&lt;li&gt;Apache（Webサーバ）とDBを複数立てる&lt;/li&gt;
+&lt;li&gt;ApacheのVirtualHost機能を使用&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;1-wordpress&#34;&gt;1. WordPress側のマルチサイト機能&lt;/h4&gt;
+&lt;p&gt;1.のWordPress側のマルチサイト機能はサブディレクトリとサブドメイン形式しか選べず、「複数ドメインを一つのWordPress上で運用」するのは出来ないみたいです。（知らないだけかもしれない）&lt;/p&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;サブディレクトリ形式&lt;/h5&gt;
+&lt;p&gt;&lt;a href=&#34;http://example.com/blog1/&#34;&gt;http://example.com/blog1/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://example.com/blog2/&#34;&gt;http://example.com/blog2/&lt;/a&gt;&lt;/p&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;サブドメイン形式&lt;/h5&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog1.example.com/&#34;&gt;http://blog1.example.com/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog2.example.com/&#34;&gt;http://blog2.example.com/&lt;/a&gt;&lt;/p&gt;
+&lt;h4 id=&#34;2apachewebdb&#34;&gt;2.Apache（Webサーバ）とDBを複数立てる&lt;/h4&gt;
+&lt;p&gt;2.はt2.microで運用する上で限られたリソース食いそうなので出来ればやりたくなかった。&lt;/p&gt;
+&lt;p&gt;当初は下記の通りApache自体を複数に分けてリッスンポートも分けて…とする必要があるのかな、と思っていたのですが、3.のVirtualHost機能を使えばアクセス先のURLごとに制御が可能でした。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200209154737219.png&#34; alt=&#34;image-20200209154737219&#34;  /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;3apachevirtualhost&#34;&gt;3.ApacheのVirtualHost機能を使用&lt;/h4&gt;
+&lt;p&gt;結果、3.のデータベース層とApacheのVirtualHost機能を使うこと出来ました。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200209154507432.png&#34; alt=&#34;image-20200209154507432&#34;  /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;設定方法&lt;/h3&gt;
+&lt;h4 id=&#34;mysql&#34;&gt;MySQL上にデータベースを追加する&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;create database wp2;
+
+grant all privileges on `wp2`.* to &#39;wp2&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;xxxxxxxx&#39;;
+show grants for wp2@localhost;
+SELECT host, user FROM mysql.user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apache&#34;&gt;Apacheのディレクトリを作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;mkdir -p /var/www/html1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apache-1&#34;&gt;Apacheのマルチサイト設定&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;vi /etc/httpd/conf/httpd.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記設定を追加する。&lt;/p&gt;
+&lt;p&gt;ServerNameに記載している&lt;code&gt;example1.com&lt;/code&gt;にアクセスした人は&lt;code&gt;/var/www/html/&lt;/code&gt;のページが表示され、&lt;code&gt;example2.com&lt;/code&gt;にアクセスした人は&lt;code&gt;/var/www/html1/&lt;/code&gt;のページが表示されるようになります。なお、Apacheのバージョンは2.4です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;VirtualHost *:80&amp;gt;
+  DocumentRoot /var/www/html/
+  ServerName example1.com:80
+&amp;lt;/VirtualHost&amp;gt;
+
+&amp;lt;VirtualHost *:80&amp;gt;
+  DocumentRoot /var/www/html1/
+  ServerName example2.com:80
+&amp;lt;/VirtualHost&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以降は通常のWordPressのインストールと同様なので割愛します。&lt;/p&gt;
+&lt;h2 id=&#34;heading-5&#34;&gt;最後に&lt;/h2&gt;
+&lt;p&gt;ApacheとMySQLを共有しているので何かトラブルがあった場合は仲良く一緒に影響を受けてしまうので重要度が高まってきたら別インスタンスを立ててホストするなど検討が必要だと思います。&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
