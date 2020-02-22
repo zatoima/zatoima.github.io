@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DBPedia | my opinion is my own</title>
+    <link>/tags/dbpedia/</link>
+      <atom:link href="/tags/dbpedia/index.xml" rel="self" type="application/rss+xml" />
+    <description>DBPedia</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 22 Feb 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>img/icon-192.png</url>
+      <title>DBPedia</title>
+      <link>/tags/dbpedia/</link>
+    </image>
+    
+    <item>
+      <title>日本語版DBPediaで有馬記念の勝ち馬からサラブレッドの始祖を辿る</title>
+      <link>/sparql-graph-thoroughbred-search.html</link>
+      <pubDate>Sat, 22 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/sparql-graph-thoroughbred-search.html</guid>
+      <description>&lt;h2 id=&#34;heading&#34;&gt;はじめに&lt;/h2&gt;
+&lt;p&gt;DBpediaはWikipediaから情報を抽出してLOD (Linked Open Data)として公開するコミュニティプロジェクトで、英語版と日本語版があります。日本語版は&lt;code&gt;ja.wikipedia.org&lt;/code&gt;からデータを抽出しています。抽出したデータは構造化データ(RDF)として格納されています。RDFストアに対してはSPARQLというクエリ言語で情報を取得することが出来ます。今回は日本語版のDBpediaで情報を取得したいと思います。&lt;/p&gt;
+&lt;h2 id=&#34;sparql&#34;&gt;SPARQLエンドポイント&lt;/h2&gt;
+&lt;p&gt;DBpediaのエンドポイントはこちらになります。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Virtuoso SPARQL Query Editor &lt;a href=&#34;http://ja.dbpedia.org/sparql&#34;&gt;http://ja.dbpedia.org/sparql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;heading-1&#34;&gt;有馬記念の勝ち馬に関する情報&lt;/h2&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;プロパティを調べる&lt;/h3&gt;
+&lt;p&gt;勝ち馬を軸にまずはどんなプロパティを持っているかどうかを調べてみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?p {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    ?p ?o .
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142308680.png&#34; alt=&#34;image-20200222142308680&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;サンプルを確認&lt;/h3&gt;
+&lt;p&gt;勝ち馬を軸にまずはどんなプロパティを持っているかのサンプル値を出力する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select ?p (SAMPLE(?o) AS ?sample_value)
+WHERE {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    ?p ?o .
+} order by (?p)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142141557.png&#34; alt=&#34;image-20200222142141557&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;血統を辿る&lt;/h3&gt;
+&lt;p&gt;次に父の父の父の父・・・・・という感じで血統を調べていき、どこまで辿れるかやってみます。&lt;/p&gt;
+&lt;p&gt;RDBMSに格納されているデータで同じように特定の馬の父の父の父とした場合、同じテーブルに格納されている値をサブクエリ(副問合せ)で結合して取得すると思いますが、おそらく数世代先の馬を調べる時に性能限界が来ると思います。&lt;/p&gt;
+&lt;p&gt;一方、RDFストアやSPARQLクエリは関係性を抽出することに優れた言語のため、特にリレーション抽出対象が増えたとしてもクエリの性能に影響を与えません。&lt;/p&gt;
+&lt;p&gt;ちなみに競馬で走る馬はサラブレッドと呼ばれますが、血統を辿ると全て3頭の馬(ダーレーアラビアン、ゴドルフィンアラビアン、バイアリーターク)にさかのぼると言います。&lt;strong&gt;&lt;u&gt;WikipediaやDBPediaのデータが正しければ&lt;/u&gt;&lt;/strong&gt;おそらくこの3頭のどれかには辿り付くはずです。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;3大始祖と世界の血統：サラブレッド講座　JRA &lt;a href=&#34;http://www.jra.go.jp/kouza/thoroughbred/founder/&#34;&gt;http://www.jra.go.jp/kouza/thoroughbred/founder/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;1&#34;&gt;第1世代&lt;/h4&gt;
+&lt;p&gt;まずは勝ち馬の父を調べてみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?parent_f_name (count(?parent_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142450812.png&#34; alt=&#34;image-20200222142450812&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;2&#34;&gt;第2世代&lt;/h4&gt;
+&lt;p&gt;勝ち馬の父の父を調べてみる&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?parent_f_f_name (count(?parent_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222144157168.png&#34; alt=&#34;image-20200222144157168&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;18&#34;&gt;第18世代&lt;/h4&gt;
+&lt;p&gt;一気に飛んで第18世代です。こんな感じでどこまで辿れるか試してみます。&lt;code&gt;ホエルボーン&lt;/code&gt;は&lt;code&gt;1807年-1831年&lt;/code&gt;のイギリス馬です。現時点で&lt;code&gt;18世代&lt;/code&gt;遡っています。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222144259529.png&#34; alt=&#34;image-20200222144259529&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;19&#34;&gt;第19世代&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;
+select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222145756017.png&#34; alt=&#34;image-20200222145756017&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;21&#34;&gt;第21世代&lt;/h4&gt;
+&lt;p&gt;21世代まで遡ってみると、ワクシーという一頭に絞られてしまいました。ホエールボーンの父がワクシーです。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222150544445.png&#34; alt=&#34;image-20200222150544445&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;22&#34;&gt;第22世代&lt;/h4&gt;
+&lt;p&gt;このワクシーの親を調べようとしたら出てきませんでした。DBPediaのデータを見れないので正確ではないかもしれませんが、&lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%9B%E3%82%A8%E3%83%BC%E3%83%AB%E3%83%9C%E3%83%BC%E3%83%B3&#34;&gt;ホエールボーン&lt;/a&gt;の父が「&lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%AF%E3%82%AF%E3%82%B7%E3%83%BC&#34;&gt;ワクシー&lt;/a&gt;」なのですが、実際のWikipediaのページは「https://ja.wikipedia.org/wiki/ワキシー」となっています。「ワクシー」と「ワキシー」でURIが異なるためこれ以上辿れないのだと推測します。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222150814920.png&#34; alt=&#34;image-20200222150814920&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;終わりに&lt;/h3&gt;
+&lt;p&gt;次は英語版でやります。&lt;/p&gt;
+&lt;p&gt;今回は全て父を辿りましたが、他のプロパティを組み合わせて分析したいなと思いました。競馬の分析用途に自前のRDFストアを構築するということもやってみたいと思いました。&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
