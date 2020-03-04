@@ -5,12 +5,217 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 03 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 04 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのpgstattupleのインストールと使用方法</title>
+      <link>/postgresql-how-to-install-and-use-pgstattuple/</link>
+      <pubDate>Wed, 04 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-how-to-install-and-use-pgstattuple/</guid>
+      <description>&lt;p&gt;pgstattupleでタプルレベルの統計情報を確認することが出来ます。タプル総数、テーブルの大きさ、デットタプルの総数や空き容量を知ることが出来ます。&lt;/p&gt;
+&lt;h2 id=&#34;heading&#34;&gt;バージョン情報&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgbench=# select version();
+                                                 version                                                  
+----------------------------------------------------------------------------------------------------------
+ PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;heading-1&#34;&gt;インストール&lt;/h2&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgbench=# CREATE EXTENSION pgstattuple;
+CREATE EXTENSION
+pgbench=# \dx
+                   List of installed extensions
+    Name     | Version |   Schema   |         Description          
+-------------+---------+------------+------------------------------
+ pgstattuple | 1.5     | public     | show tuple-level statistics
+ plpgsql     | 1.0     | pg_catalog | PL/pgSQL procedural language
+(2 rows)
+
+pgbench=# 
+pgbench=# 
+pgbench=# \dx+
+  Objects in extension &amp;quot;pgstattuple&amp;quot;
+          Object description           
+---------------------------------------
+ function pg_relpages(regclass)
+ function pg_relpages(text)
+ function pgstatginindex(regclass)
+ function pgstathashindex(regclass)
+ function pgstatindex(regclass)
+ function pgstatindex(text)
+ function pgstattuple_approx(regclass)
+ function pgstattuple(regclass)
+ function pgstattuple(text)
+(9 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pgstattupleはcontribモジュールの一つなので必要に応じてcontribのインストールも実施が必要です。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install postgresql10-devel postgresql10-contrib
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;heading-2&#34;&gt;使用方法&lt;/h2&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;特定テーブルの情報取得&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgbench=# \dt
+              List of relations
+ Schema |       Name       | Type  |  Owner   
+--------+------------------+-------+----------
+ public | pgbench_accounts | table | postgres
+ public | pgbench_branches | table | postgres
+ public | pgbench_history  | table | postgres
+ public | pgbench_tellers  | table | postgres
+(4 rows)
+
+pgbench=# SELECT * FROM pgstattuple(&#39;pgbench_accounts&#39;);
+ table_len | tuple_count | tuple_len | tuple_percent | dead_tuple_count | dead_tuple_len | dead_tuple_percent | free_space | free_percent 
+-----------+-------------+-----------+---------------+------------------+----------------+--------------------+------------+--------------
+  14712832 |      100000 |  12100000 |         82.24 |             3488 |         422048 |               2.87 |     569468 |         3.87
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;各列の説明&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;列&lt;/th&gt;
+&lt;th&gt;型&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;table_len&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;リレーションのバイト単位の物理長&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;tuple_count&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;有効なタプル数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;tuple_len&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;有効なタプルの物理長（バイト単位）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;tuple_percent&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;float8&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;有効タプルの割合&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;dead_tuple_count&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;無効なタプル数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;dead_tuple_len&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;バイト単位の総不要タプル長&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;dead_tuple_percent&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;float8&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;不要タプルの割合&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;free_space&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;バイト単位の総空き領域&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;free_percent&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;float8&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;空き領域の割合&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;特定インデックスの情報取得&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgbench=# \di
+                          List of relations
+ Schema |         Name          | Type  |  Owner   |      Table       
+--------+-----------------------+-------+----------+------------------
+ public | pgbench_accounts_pkey | index | postgres | pgbench_accounts
+ public | pgbench_branches_pkey | index | postgres | pgbench_branches
+ public | pgbench_tellers_pkey  | index | postgres | pgbench_tellers
+(3 rows)
+
+pgbench=# SELECT * FROM pgstatindex(&#39;pgbench_accounts_pkey&#39;);
+ version | tree_level | index_size | root_block_no | internal_pages | leaf_pages | empty_pages | deleted_pages | avg_leaf_density | leaf_fragmentation 
+---------+------------+------------+---------------+----------------+------------+-------------+---------------+------------------+--------------------
+       2 |          1 |    2260992 |             3 |              1 |        274 |           0 |             0 |            94.57 |                  0
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;列&lt;/th&gt;
+&lt;th&gt;型&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;version&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;integer&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;B-treeバージョン番号&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;tree_level&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;integer&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;ルートページのツリーレベル&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;index_size&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;インデックス内の総ページ数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;root_block_no&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;ルートブロックの場所&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;internal_pages&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&amp;ldquo;内部&amp;rdquo;（上位レベル）ページ数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;leaf_pages&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;リーフページ数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;empty_pages&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;空ページ数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;deleted_pages&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;bigint&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;削除ページ数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;avg_leaf_density&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;float8&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;リーフページの平均密度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;leaf_fragmentation&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;float8&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;リーフページの断片化&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;その他&lt;/h3&gt;
+&lt;p&gt;pgstattuple、pgstatindexは常に全件走査(Full Scan)を実行してテーブル、インデックスの情報を収集するためタイミングには注意が必要。全件走査(Full Scan)を避けたい場合はpgstattuple_approx関数を使う手もある。&lt;/p&gt;
+&lt;h3 id=&#34;heading-7&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;F.31. pgstattuple &lt;a href=&#34;https://www.postgresql.jp/document/10/html/pgstattuple.html&#34;&gt;https://www.postgresql.jp/document/10/html/pgstattuple.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのauto_explainで特定クエリの実行計画を出力する</title>
