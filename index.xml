@@ -5,12 +5,101 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 11 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 12 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLの実行中のSQLをキャンセルする</title>
+      <link>/postgresql-sql-statement-cancell.html</link>
+      <pubDate>Thu, 12 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-sql-statement-cancell.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;長時間掛かるクエリ実行&lt;/h3&gt;
+&lt;p&gt;直積結合して件数カウント。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select count(*) from t1,t2,t3,t4,t5;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql&#34;&gt;実行中のSQLの確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# select pid,query_start,state,query from pg_stat_activity order by query_start asc limit 5;
+ pid  |          query_start          | state  |                                           query                                            
+------+-------------------------------+--------+---------------------------------------------------------------------------------------
+ 2567 | 2020-03-03 03:39:22.744191+00 | active | select count(*) from t1,t2,t3,t4,t5;
+ 2863 | 2020-03-03 03:44:25.423124+00 | active | select pid,query_start,state,query from pg_stat_activity order by query_start asc limit 5;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql-1&#34;&gt;実行中のSQLのキャンセル&lt;/h3&gt;
+&lt;p&gt;下記の関数でキャンセル可能。pg_cancel_backendはSIGINT。pg_terminate_backendはSIGTERMのシグナルをサーバ側に送る模様。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;9.26. システム管理関数 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL-TABLE&#34;&gt;https://www.postgresql.jp/document/10/html/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL-TABLE&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;名前&lt;/th&gt;
+&lt;th&gt;戻り型&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_cancel_backend(&lt;em&gt;pid&lt;/em&gt; int)&lt;/td&gt;
+&lt;td&gt;boolean&lt;/td&gt;
+&lt;td&gt;バックエンドの現在の問い合わせを取り消す。  関数を呼ぶユーザが取り消す対象のバックエンドのロールのメンバーであるとき、あるいはpg_signal_backendの権限を与えられているときも実行できます。 ただし、スーパーユーザのバックエンドはスーパーユーザのみが取り消せます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pg_terminate_backend(&lt;em&gt;pid&lt;/em&gt; int)&lt;/td&gt;
+&lt;td&gt;boolean&lt;/td&gt;
+&lt;td&gt;バックエンドを終了する。  関数を呼ぶユーザが終了対象のバックエンドのロールのメンバーであるとき、あるいはpg_signal_backendの権限を与えられているときも実行できます。 ただし、スーパーユーザのバックエンドはスーパーユーザのみが終了できます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h5 id=&#34;pg-cancel-backend&#34;&gt;pg_cancel_backend関数&lt;/h5&gt;
+&lt;p&gt;バックエンドの現在の問い合わせを取り消す。実行した場合、SQL実行はキャンセルするが、接続したまま。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;select pg_cancel_backend(2567);
+
+postgres=# select pg_cancel_backend(2567);
+ pg_cancel_backend 
+-------------------
+ t
+(1 row)
+
+-- terminal
+postgres=# select count(*) from t1,t2,t3,t4,t5;
+
+ERROR:  canceling statement due to user request
+
+-- log
+[2020-03-03 03:52:20 UTC]postgres postgres 2567[27] ERROR:  canceling statement due to user request
+[2020-03-03 03:52:20 UTC]postgres postgres 2567[28] STATEMENT:  select count(*) from t1,t2,t3,t4,t5;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;pg-terminate-backend&#34;&gt;pg_terminate_backend関数&lt;/h5&gt;
+&lt;p&gt;pg_terminate_backendは接続自体を切断され、その後に再接続がされる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;select pg_terminate_backend(2567);
+
+postgres=# select pg_terminate_backend(2567);
+ pg_terminate_backend 
+----------------------
+ t
+(1 row)
+
+-- terminal
+postgres=# select count(*) from t1,t2,t3,t4,t5;
+FATAL:  terminating connection due to administrator command
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+The connection to the server was lost. Attempting reset: Succeeded.
+
+-- log
+[2020-03-03 03:54:14 UTC]postgres postgres 2567[29] FATAL:  terminating connection due to administrator command
+[2020-03-03 03:54:14 UTC]postgres postgres 2567[30] STATEMENT:  select count(*) from t1,t2,t3,t4,t5;
+[2020-03-03 03:54:14 UTC]postgres postgres 2567[31] LOG:  disconnection: session time: 0:33:20.877 user=postgres database=postgres host=[local]
+[2020-03-03 03:54:14 UTC][unknown] [unknown] 2918[1] LOG:  connection received: host=[local]
+[2020-03-03 03:54:14 UTC]postgres postgres 2918[2] LOG:  connection authorized: user=postgres database=postgres
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響</title>
