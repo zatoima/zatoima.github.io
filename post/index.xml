@@ -5,12 +5,43 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 12 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 13 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのcheckpoint_completion_targetについてメモ</title>
+      <link>/postgresql-about-checkpoint_completion_target.html</link>
+      <pubDate>Fri, 13 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-about-checkpoint_completion_target.html</guid>
+      <description>&lt;p&gt;PostgreSQLの&lt;code&gt;checkpoint_completion_target&lt;/code&gt;についてメモ。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;19.5. ログ先行書き込み（WAL） &lt;a href=&#34;https://www.postgresql.jp/document/10/html/runtime-config-wal.html#GUC-CHECKPOINT-TIMEOUT&#34;&gt;https://www.postgresql.jp/document/10/html/runtime-config-wal.html#GUC-CHECKPOINT-TIMEOUT&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;checkpoint_completion_target&lt;/p&gt;
+&lt;p&gt;チェックポイントの完了目標をチェックポイント間の総時間の割合として指定します。 デフォルトは0.5です。 このパラメータはpostgresql.confファイル、または、サーバのコマンドラインでのみ設定可能です。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# show checkpoint_completion_target;
+ checkpoint_completion_target 
+------------------------------
+ 0.5
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;一方、&lt;code&gt;checkpoint_timeout&lt;/code&gt;というパラメータがありデフォルトでは5分が設定されている。自動的WALチェックポイント間の最大間隔を秒単位で指定できるパラメータである。&lt;/p&gt;
+&lt;p&gt;このcheckpoint_completion_targetはcheckpoint_timeoutで設定された&amp;quot;割合&amp;quot;の時間を使ってcheckpointをしていくという動きをして負荷を分散する。あくまで目安程度となるらしい。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# show checkpoint_timeout;
+ checkpoint_timeout 
+--------------------
+ 5min
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;デフォルトの通り、&lt;code&gt;checkpoint_timeout&lt;/code&gt;が5分で&lt;code&gt;checkpoint_completion_target&lt;/code&gt;が0.5の場合は約2.5分（あくまで目安）掛けてダーティーページをディスクに書き込んでいくという処理となる。&lt;/p&gt;
+&lt;p&gt;つまり、checkpoint_completion_targetを低くした場合はcheckpointでダーティーページをディクスに書き込む際の負荷が高くなることが予想され、checkpoint_completion_targetを高くした場合(=時間を掛ける)は、クラッシュリカバリ時に処理をするWALファイルが増える。&lt;/p&gt;
+&lt;p&gt;更新が多くcheckpointの負荷が気になる場合はcheckpoint_completion_targetをデフォルトの0.5から「0.6~0.9」に引き上げることを考慮。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLの実行中のSQLをキャンセルする</title>
