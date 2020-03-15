@@ -5,12 +5,77 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 13 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 15 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのHugePagesの設定</title>
+      <link>/postgresql-hugepages-setting.html</link>
+      <pubDate>Sun, 15 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-hugepages-setting.html</guid>
+      <description>&lt;p&gt;メモリはpagesとよばれるブロック単位で管理されており、x86 アーキテクチャのデフォルトページサイズは 4096 バイト。HugePage は、それよりも大きなページサイズ (デフォルトで 2 MB) で管理する機能であるためshared_buffersの値が大きい場合に、huge pagesを使用するとオーバーヘッドが減少するというのが概要。&lt;/p&gt;
+&lt;h4 id=&#34;heading&#34;&gt;事前確認&lt;/h4&gt;
+&lt;p&gt;カーネルでHugePagesがサポートされているかどうかを確認。&lt;/p&gt;
+&lt;p&gt;※&lt;code&gt;CONFIG_HUGETLBFS&lt;/code&gt;および&lt;code&gt;CONFIG_HUGETLB_PAGE&lt;/code&gt;構成オプションを使用してLinuxカーネルを構築&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; grep Huge /proc/meminfo
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;PostgreSQLの場合は、下記マニュアルに従いhugepages数を見積もる。Oracleみたくhugepages_settings.sh的なものはない。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;18.4. カーネルリソースの管理 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/kernel-resources.html#LINUX-HUGE-PAGES&#34;&gt;https://www.postgresql.jp/document/10/html/kernel-resources.html#LINUX-HUGE-PAGES&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;hugepages&#34;&gt;必要なHugePages数の見積もり方法&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postdb ~]$ head -1 $PGDATA/postmaster.pid
+5811
+[postgres@postdb ~]# grep ^VmPeak /proc/5811/status
+VmPeak:	 5565496 kB
+[postgres@postdb ~]# grep ^Hugepagesize /proc/meminfo
+Hugepagesize:       2048 kB
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上記より、&lt;code&gt;5565496kb/2048kb&lt;/code&gt; = &lt;code&gt;2,717.52734375‬&lt;/code&gt;となり、2718のhugepagesが必要と判断できる。&lt;/p&gt;
+&lt;h5 id=&#34;os&#34;&gt;OS側の設定&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sysctl -w vm.nr_hugepages=2718
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;再起動後にもこの数値を使用するように/etc/sysctl.confに設定して永続化する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cat &amp;quot;vm.nr_hugepages=2718&amp;quot; &amp;gt;&amp;gt; /etc/sysctl.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;hugepages-1&#34;&gt;hugepagesの割当の確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;grep Huge /proc/meminfo
+
+[postgres@postdb ~]$ grep Huge /proc/meminfo
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+HugePages_Total:    2718
+HugePages_Free:     2638
+HugePages_Rsvd:     2511
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;dbpostgresqlconf&#34;&gt;DB側にてパラメータセット（postgresql.conf）&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;huge_pages=on
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;念のためにパラメータ確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postdb data]$ psql
+psql (10.11)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=# 
+postgres=# show huge_pages;
+ huge_pages 
+------------
+ on
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;18.4. カーネルリソースの管理 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/kernel-resources.html#LINUX-HUGE-PAGES&#34;&gt;https://www.postgresql.jp/document/10/html/kernel-resources.html#LINUX-HUGE-PAGES&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのcheckpoint_completion_targetについてメモ</title>
