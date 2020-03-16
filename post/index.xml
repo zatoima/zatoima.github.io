@@ -5,12 +5,153 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 15 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 16 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</title>
+      <link>/postgresql-auto-vacuum-parameter-timing.html</link>
+      <pubDate>Mon, 16 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-auto-vacuum-parameter-timing.html</guid>
+      <description>&lt;h3 id=&#34;auto-vacuum&#34;&gt;Auto Vacuumの概要&lt;/h3&gt;
+&lt;p&gt;デフォルトでonになっているAuto Vacuum。Vacuumと同時にAnalyzeも実施してくれます。マニュアル的にはAuto Vacuumが推奨です。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;24.1. 定常的なバキューム作業 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/routine-vacuuming.html&#34;&gt;https://www.postgresql.jp/document/10/html/routine-vacuuming.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;auto--vacuum&#34;&gt;Auto  Vacuumの実行タイミング&lt;/h3&gt;
+&lt;p&gt;バキュームの実行タイミングは&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;UPDATE+DELETE回数 = 閾値 &amp;lt; autovacuum_vacuum_threshold（デフォルト 50）+ autovacuum_vacuum_scale_factor(デフォルト0.2)  × pg_class.reltuples&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;一方、Analyzeの実行タイミングは&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;UPDATE+DELETE+INSERT回数 = 閾値 &amp;lt; autovacuum_analyze_threshold（デフォルト 50）+ autovacuum_analyze_scale_factor(デフォルト0.1)  × pg_class.reltuples&lt;/code&gt;となる。&lt;/p&gt;
+&lt;p&gt;※pg_class.reltuplesはテーブル内の行数。 VACUUM、ANALYZE、CREATE INDEXなどの一部のDDLコマンドで更新される。&lt;/p&gt;
+&lt;h3 id=&#34;auto--vacuum-1&#34;&gt;Auto  Vacuumのパラメータについて&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;パラメータ&lt;/th&gt;
+&lt;th&gt;分類&lt;/th&gt;
+&lt;th&gt;デフォルト&lt;/th&gt;
+&lt;th&gt;パラメータ説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;on&lt;/td&gt;
+&lt;td&gt;自動バキュームを行うかどうか&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;log_autovaccum_min_duration&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;-1&lt;/td&gt;
+&lt;td&gt;指定した時間（ミリ秒）以上に処理を行った場合にログを出力する。デフォルトでは無効&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum_max_workers&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;自動バキュームの同時実行ワーカーの最大数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovaccum_naptime&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;1min&lt;/td&gt;
+&lt;td&gt;自動バキュームの必要性を確認する期間&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum_vacuum_threshold&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;td&gt;VACUUMを起動するために必要な、更新もしくは削除されたタプルの最小数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum_vacuum_scale_factor&lt;/td&gt;
+&lt;td&gt;VACUUM&lt;/td&gt;
+&lt;td&gt;0.2&lt;/td&gt;
+&lt;td&gt;VACUUMを起動するか否かを決定するときに、autovacuum_vacuum_thresholdに足し算するテーブル容量の割合を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum_analyze_threshold&lt;/td&gt;
+&lt;td&gt;ANALYZE&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;td&gt;ANALYZEを起動するために必要な、更新もしくは削除されたタプルの最小数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;autovacuum_analyze_scale_factor&lt;/td&gt;
+&lt;td&gt;ANALYZE&lt;/td&gt;
+&lt;td&gt;0.1&lt;/td&gt;
+&lt;td&gt;ANALYZEを起動するか否かを決定するときに、autovacuum_vacuum_thresholdに足し算するテーブル容量の割合を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;heading&#34;&gt;実行履歴の確認方法&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\x
+SELECT
+    schemaname,
+    relname,
+    last_vacuum,
+    last_autovacuum,
+    last_analyze,
+    last_autoanalyze,
+    vacuum_count,
+    autovacuum_count,
+    autoanalyze_count
+FROM
+    pg_stat_user_tables;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;実行結果&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-[ RECORD 1 ]-----+------------------------------
+schemaname        | public
+relname           | pgbench_tellers
+last_vacuum       | 2020-02-29 07:29:38.682063+00
+last_autovacuum   | 2020-02-29 05:40:58.708216+00
+last_analyze      | 2020-02-29 07:29:38.682594+00
+last_autoanalyze  | 2020-02-29 05:40:58.708747+00
+vacuum_count      | 8
+autovacuum_count  | 28
+autoanalyze_count | 27
+-[ RECORD 2 ]-----+------------------------------
+schemaname        | public
+relname           | pgbench_history
+last_vacuum       | 2020-02-29 07:29:38.73807+00
+last_autovacuum   | 
+last_analyze      | 2020-02-29 07:29:38.747484+00
+last_autoanalyze  | 2020-02-29 05:40:58.744441+00
+vacuum_count      | 3
+autovacuum_count  | 0
+autoanalyze_count | 20
+-[ RECORD 3 ]-----+------------------------------
+schemaname        | public
+relname           | pgbench_branches
+last_vacuum       | 2020-02-29 07:29:38.683765+00
+last_autovacuum   | 2020-02-29 05:40:58.721649+00
+last_analyze      | 2020-02-29 07:29:38.683963+00
+last_autoanalyze  | 2020-02-29 05:40:58.72242+00
+vacuum_count      | 8
+autovacuum_count  | 28
+autoanalyze_count | 27
+-[ RECORD 4 ]-----+------------------------------
+schemaname        | public
+relname           | pgbench_accounts
+last_vacuum       | 2020-02-29 07:29:38.69804+00
+last_autovacuum   | 
+last_analyze      | 2020-02-29 07:29:38.734999+00
+last_autoanalyze  | 2020-02-27 13:24:59.247779+00
+vacuum_count      | 3
+autovacuum_count  | 0
+autoanalyze_count | 25
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参考&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;19.10. 自動Vacuum作業 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html&#34;&gt;https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのHugePagesの設定</title>
