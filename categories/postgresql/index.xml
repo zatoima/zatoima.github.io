@@ -5,12 +5,182 @@
     <link>/categories/postgresql/</link>
       <atom:link href="/categories/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 16 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 17 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/categories/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLの全文検索エンジンであるpg_trgmを使ってみる</title>
+      <link>/postgresql-pg_trgm-about.html</link>
+      <pubDate>Tue, 17 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pg_trgm-about.html</guid>
+      <description>&lt;p&gt;PostgreSQLでIndexを利用した「中間一致検索」を行うケース。通常のB-Treeインデックスの場合、中間一致検索時は使用できない。pg_trgmというPostgreSQLの全文検索エンジンを使用することによって中間一致検索を手軽に行うことが出来る。pg_bigmやPGroongaもあるが、今回はcontribに含まれているpg_trgmを試してみる。&lt;/p&gt;
+&lt;h4 id=&#34;heading&#34;&gt;バージョン&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;postgres=# select version();
+                                                 version                                                  
+----------------------------------------------------------------------------------------------------------
+ PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;pg-trgm&#34;&gt;pg_trgmの有効化&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# CREATE EXTENSION pg_trgm;
+CREATE EXTENSION
+postgres=# \dx
+                                    List of installed extensions
+  Name   | Version |   Schema   |                            Description                            
+---------+---------+------------+-------------------------------------------------------------------
+ pg_trgm | 1.3     | public     | text similarity measurement and index searching based on trigrams
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(2 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;1&#34;&gt;テストデータを適当に作る（1億件のテキストデータ）&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE t1 AS
+SELECT to_char(num,&#39;FM0000000000000000&#39;) textdata
+FROM   generate_series(1,10000000) num
+;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;検索対象のテキストデータを挿入&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;insert into t1 values(&#39;test1test2test3&#39;);
+insert into t1 values(&#39;メロスは激怒した。必ず、かの 邪智暴虐 （ じゃちぼうぎゃく ） の王を除かなければならぬと決意した。&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ここまでで1億2件のデータがテーブルに格納されている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select count(*) from t1;
+
+postgres=# select count(*) from t1;
+   count   
+-----------
+ 100000002
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;test2&#34;&gt;&amp;ldquo;test2&amp;quot;が含まれる中間検索&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;explain analyze select * from t1 where textdata like &#39;%test2%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;explain-analyze&#34;&gt;explain analyze結果&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;Execution time: 10061.160 ms&lt;/code&gt;ほど時間が掛かっている。約10秒。テーブルのフルスキャンとなるので遅い。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# explain analyze select * from t1 where textdata like &#39;%test2%&#39;;
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..1159776.58 rows=10000 width=17) (actual time=10059.633..10061.097 rows=1 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   -&amp;gt;  Parallel Seq Scan on t1  (cost=0.00..1157776.58 rows=4167 width=17) (actual time=10053.097..10053.098 rows=0 loops=3)
+         Filter: (textdata ~~ &#39;%test2%&#39;::text)
+         Rows Removed by Filter: 33333334
+ Planning time: 0.938 ms
+ Execution time: 10061.160 ms
+(8 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;&amp;ldquo;&amp;ldquo;邪智暴虐&amp;quot;&amp;ldquo;が含まれる中間検索&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;explain analyze select * from t1 where textdata like &#39;%邪智暴虐%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;explain-analyze-1&#34;&gt;explain analyze結果&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;Execution time: 9982.465 ms&lt;/code&gt;ほど時間が掛かっている。こちらも同じく約10秒。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# explain analyze select * from t1 where textdata like &#39;%邪智暴虐%&#39;;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..1159776.58 rows=10000 width=17) (actual time=9982.347..9982.403 rows=1 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   -&amp;gt;  Parallel Seq Scan on t1  (cost=0.00..1157776.58 rows=4167 width=17) (actual time=9977.282..9977.282 rows=0 loops=3)
+         Filter: (textdata ~~ &#39;%邪智暴虐%&#39;::text)
+         Rows Removed by Filter: 33333334
+ Planning time: 0.052 ms
+ Execution time: 9982.465 ms
+(8 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;全文検索用のインデックスの作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create index pg_trgm_idx on t1 USING gin(textdata gin_trgm_ops);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;作成完了まで約300秒掛かっている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[2020-03-16 21:27:36 JST]postgres postgres 4539[53] LOG:  statement: create index pg_trgm_idx on t1 USING gin(textdata gin_trgm_ops);
+[2020-03-16 21:32:39 JST]postgres postgres 4539[54] LOG:  duration: 303535.309 ms
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;テーブルのサイズは約5217.8MB=約5GB程度。インデックスのサイズは約1,461MB=約1GB。全文検索用のインデックスの場合はテーブルサイズ＜インデックスサイズとなると思ってた。テスト用データが原因かもしれない。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    objectname,
+    TO_CHAR(pg_relation_size(objectname::regclass),&#39;999,999,999,999&#39;) AS bytes
+FROM
+    (
+    SELECT
+        tablename AS objectname
+    FROM
+        pg_tables
+    WHERE
+        schemaname = &#39;public&#39;
+    UNION
+    SELECT
+        indexname AS objectname
+    FROM
+        pg_indexes
+    WHERE
+        schemaname = &#39;public&#39;
+    ) AS objectlist
+ORDER BY
+    bytes DESC;
+    
+ objectname  |      bytes       
+-------------+------------------
+ t1          |    5,217,837,056
+ pg_trgm_idx |    1,461,542,912
+(2 rows)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;test2-1&#34;&gt;test2が含まれる中間検索&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;explain analyze select * from t1 where textdata like &#39;%test2%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;explain-analyze-2&#34;&gt;explain analyze結果&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;Execution time: 10061.160 ms&lt;/code&gt;ほど時間が掛かっていた検索が&lt;code&gt;0.090 ms&lt;/code&gt;で完了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# explain analyze select * from t1 where textdata like &#39;%test2%&#39;;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on t1  (cost=285.50..36386.84 rows=10000 width=17) (actual time=0.021..0.022 rows=1 loops=1)
+   Recheck Cond: (textdata ~~ &#39;%test2%&#39;::text)
+   Heap Blocks: exact=1
+   -&amp;gt;  Bitmap Index Scan on pg_trgm_idx  (cost=0.00..283.00 rows=10000 width=0) (actual time=0.016..0.016 rows=1 loops=1)
+         Index Cond: (textdata ~~ &#39;%test2%&#39;::text)
+ Planning time: 1.148 ms
+ Execution time: 0.090 ms
+(7 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;邪智暴虐が含まれる中間検索&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;explain analyze select * from t1 where textdata like &#39;%邪智暴虐%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;explain-analyze-3&#34;&gt;explain analyze結果&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;Execution time: 9982.465 ms&lt;/code&gt;ほど時間が掛かっていた検索が&lt;code&gt;0.044 ms&lt;/code&gt;で完了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# explain analyze select * from t1 where textdata like &#39;%邪智暴虐%&#39;;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on t1  (cost=217.50..36318.84 rows=10000 width=17) (actual time=0.022..0.022 rows=1 loops=1)
+   Recheck Cond: (textdata ~~ &#39;%邪智暴虐%&#39;::text)
+   Heap Blocks: exact=1
+   -&amp;gt;  Bitmap Index Scan on pg_trgm_idx  (cost=0.00..215.00 rows=10000 width=0) (actual time=0.017..0.017 rows=1 loops=1)
+         Index Cond: (textdata ~~ &#39;%邪智暴虐%&#39;::text)
+ Planning time: 0.107 ms
+ Execution time: 0.044 ms
+(7 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;なお、トライグラム（tri-gram）の性質上、致し方ないが、2文字以下の検索は激遅になるので注意。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# explain analyze select * from t1 where textdata like &#39;%邪智%&#39;;
+                                                                 QUERY PLAN                                                                  
+------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on t1  (cost=758005.50..794106.84 rows=10000 width=17) (actual time=169524.760..169524.761 rows=1 loops=1)
+   Recheck Cond: (textdata ~~ &#39;%邪智%&#39;::text)
+   Rows Removed by Index Recheck: 100000001
+   Heap Blocks: exact=636943
+   -&amp;gt;  Bitmap Index Scan on pg_trgm_idx  (cost=0.00..758003.00 rows=10000 width=0) (actual time=26370.882..26370.882 rows=100000002 loops=1)
+         Index Cond: (textdata ~~ &#39;%邪智%&#39;::text)
+ Planning time: 0.261 ms
+ Execution time: 169524.849 ms
+(8 rows)
+
+postgres=# 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Recheckの動作やトライグラムの場合のインデックスのデータの保管の仕方をまとめたい。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</title>
@@ -674,7 +844,21 @@ es_fdw,prefix,sslinfo,tablefunc,test_parser,tsearch2,tsm_system_rows,tsm_system_
 &lt;p&gt;もしくは&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws rds describe-engine-default-cluster-parameters --db-parameter-group-family aurora-postgresql10
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;でrds.extensionsを確認する。&lt;/p&gt;
+&lt;p&gt;もしくは&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;select * FROM pg_available_extensions order by 1;
+
+postgres=&amp;gt; select * FROM pg_available_extensions order by 1;
+             name             | default_version | installed_version |                                                       comment                                                       
+------------------------------+-----------------+-------------------+---------------------------------------------------------------------------------------------------------------------
+ address_standardizer         | 2.4.4           |                   | Used to parse an address into constituent elements. Generally used to support geocoding address normalization step.
+ address_standardizer_data_us | 2.4.4           |                   | Address Standardizer US dataset example
+ amcheck                      | 1.0             |                   | functions for verifying relation integrity
+ apg_plan_mgmt                | 1.0.1           |                   | Amazon Aurora with PostgreSQL compatibility Query Plan Management
+ aurora_stat_utils            | 1.0             |                   | Statistics utility functions
+ aws_commons                  | 1.0             |                   | Common data types across AWS services
+ aws_s3                       | 1.0             |                   | AWS S3 extension for importing data from S3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;でrds.extensionsを確認する。pg_available_extensionsが一番見やすいかもしれない。&lt;/p&gt;
 &lt;h4 id=&#34;heading-2&#34;&gt;対応している拡張機能一覧&lt;/h4&gt;
 &lt;hr&gt;
 &lt;table&gt;
