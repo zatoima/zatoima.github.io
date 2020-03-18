@@ -444,7 +444,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    3 min read
+    4 min read
   </span>
   
 
@@ -646,6 +646,54 @@ postgres=#
 
 </code></pre>
 <p>Recheckの動作やトライグラムの場合のインデックスのデータの保管の仕方をまとめたい。</p>
+<h3 id="heading-4">追記</h3>
+<p>データを青空文庫のテキストデータに変更してみたらこうなった。想定通り、テーブルサイズよりインデックスサイズの方が大きくなった。</p>
+<pre><code class="language-sql">postgres=# SELECT * FROM pgstattuple('aozoradata');
+-[ RECORD 1 ]------+----------
+table_len          | 807690240
+tuple_count        | 3533485
+tuple_len          | 774167704
+tuple_percent      | 95.85
+dead_tuple_count   | 0
+dead_tuple_len     | 0
+dead_tuple_percent | 0
+free_space         | 3066496
+free_percent       | 0.38
+
+postgres=# \d aozoradata
+                            Table &quot;public.aozoradata&quot;
+ Column |  Type   | Collation | Nullable |                Default                 
+--------+---------+-----------+----------+----------------------------------------
+ id     | integer |           | not null | nextval('aozoradata_id_seq'::regclass)
+ data   | text    |           | not null | 
+</code></pre>
+<pre><code class="language-sql">postgres=# SELECT
+postgres-#     objectname,
+postgres-#     TO_CHAR(pg_relation_size(objectname::regclass),'999,999,999,999') AS bytes
+postgres-# FROM
+postgres-#     (
+postgres(#     SELECT
+postgres(#         tablename AS objectname
+postgres(#     FROM
+postgres(#         pg_tables
+postgres(#     WHERE
+postgres(#         schemaname = 'public'
+postgres(#     UNION
+postgres(#     SELECT
+postgres(#         indexname AS objectname
+postgres(#     FROM
+postgres(#         pg_indexes
+postgres(#     WHERE
+postgres(#         schemaname = 'public'
+postgres(#     ) AS objectlist
+postgres-# ORDER BY
+postgres-#     bytes DESC;
+   objectname   |      bytes       
+----------------+------------------
+ aozoradata     |      807,690,240
+ aozoradata_idx |    1,156,775,936
+(2 rows)
+</code></pre>
 
     </div>
 

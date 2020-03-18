@@ -179,6 +179,54 @@ postgres=#
 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Recheckの動作やトライグラムの場合のインデックスのデータの保管の仕方をまとめたい。&lt;/p&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;追記&lt;/h3&gt;
+&lt;p&gt;データを青空文庫のテキストデータに変更してみたらこうなった。想定通り、テーブルサイズよりインデックスサイズの方が大きくなった。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT * FROM pgstattuple(&#39;aozoradata&#39;);
+-[ RECORD 1 ]------+----------
+table_len          | 807690240
+tuple_count        | 3533485
+tuple_len          | 774167704
+tuple_percent      | 95.85
+dead_tuple_count   | 0
+dead_tuple_len     | 0
+dead_tuple_percent | 0
+free_space         | 3066496
+free_percent       | 0.38
+
+postgres=# \d aozoradata
+                            Table &amp;quot;public.aozoradata&amp;quot;
+ Column |  Type   | Collation | Nullable |                Default                 
+--------+---------+-----------+----------+----------------------------------------
+ id     | integer |           | not null | nextval(&#39;aozoradata_id_seq&#39;::regclass)
+ data   | text    |           | not null | 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT
+postgres-#     objectname,
+postgres-#     TO_CHAR(pg_relation_size(objectname::regclass),&#39;999,999,999,999&#39;) AS bytes
+postgres-# FROM
+postgres-#     (
+postgres(#     SELECT
+postgres(#         tablename AS objectname
+postgres(#     FROM
+postgres(#         pg_tables
+postgres(#     WHERE
+postgres(#         schemaname = &#39;public&#39;
+postgres(#     UNION
+postgres(#     SELECT
+postgres(#         indexname AS objectname
+postgres(#     FROM
+postgres(#         pg_indexes
+postgres(#     WHERE
+postgres(#         schemaname = &#39;public&#39;
+postgres(#     ) AS objectlist
+postgres-# ORDER BY
+postgres-#     bytes DESC;
+   objectname   |      bytes       
+----------------+------------------
+ aozoradata     |      807,690,240
+ aozoradata_idx |    1,156,775,936
+(2 rows)
+&lt;/code&gt;&lt;/pre&gt;
 </description>
     </item>
     
