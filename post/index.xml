@@ -5,12 +5,81 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 24 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 25 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>RDS/Auroraのログ・ファイルをawscliから取得・確認する</title>
+      <link>/aws-aurora-rds-log-file-get.html</link>
+      <pubDate>Wed, 25 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-rds-log-file-get.html</guid>
+      <description>&lt;p&gt;マネージメントコンソールから確認するのが面倒な時にCLIから実行するのを想定しています。&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;事前準備&lt;/h3&gt;
+&lt;p&gt;jqコマンドを使って整形するので事前にインストールする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install jq
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;ログ・ファイルの取得方法&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws rds describe-db-instances | jq &#39;.DBInstances[].DBInstanceIdentifier&#39;
+aws rds describe-db-log-files --db-instance-identifier aurorapostgresqlv1-instance-1
+aws rds download-db-log-file-portion --db-instance-identifier aurorapostgresqlv1-instance-1 --log-file-name &amp;quot;error/postgres.log&amp;quot; --output text
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;実行例&lt;/h3&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;取得対象のインスタンス名を取得&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws rds describe-db-instances | jq &#39;.DBInstances[].DBInstanceIdentifier&#39;
+&amp;quot;aurorapostgresqlv1-instance-1&amp;quot;
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;出力されているログ・ファイルの取得&lt;/h5&gt;
+&lt;p&gt;最新のファイルかどうかは&lt;code&gt;LastWritten&lt;/code&gt;から確認可能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws rds describe-db-log-files --db-instance-identifier aurorapostgresqlv1-instance-1
+{
+    &amp;quot;DescribeDBLogFiles&amp;quot;: [
+        {
+            &amp;quot;LastWritten&amp;quot;: 1582951862000, 
+            &amp;quot;LogFileName&amp;quot;: &amp;quot;error/postgres.log&amp;quot;, 
+            &amp;quot;Size&amp;quot;: 1380
+        }, 
+        {
+            &amp;quot;LastWritten&amp;quot;: 1582951868000, 
+            &amp;quot;LogFileName&amp;quot;: &amp;quot;error/postgresql.log.2020-02-29-0451&amp;quot;, 
+            &amp;quot;Size&amp;quot;: 891
+        }, 
+        {
+            &amp;quot;LastWritten&amp;quot;: 1582952400000, 
+            &amp;quot;LogFileName&amp;quot;: &amp;quot;error/postgresql.log.2020-02-29-0500&amp;quot;, 
+            &amp;quot;Size&amp;quot;: 0
+        }, 
+        {
+            &amp;quot;LastWritten&amp;quot;: 1582956000000, 
+            &amp;quot;LogFileName&amp;quot;: &amp;quot;error/postgresql.log.2020-02-29-0600&amp;quot;, 
+            &amp;quot;Size&amp;quot;: 0
+        }
+    ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;ログ・ファイルを出力&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws rds download-db-log-file-portion --db-instance-identifier aurorapostgresqlv1-instance-1 --log-file-name &amp;quot;error/postgres.log&amp;quot; --output text
+2020-02-29 04:51:01.093 GMT [5665] LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2020-02-29 04:51:01 UTC::@:[5665]:WARNING:  unrecognized configuration parameter &amp;quot;rds.custom_dns_resolution&amp;quot;
+2020-02-29 04:51:01 UTC::@:[5665]:WARNING:  unrecognized configuration parameter &amp;quot;rds.enable_plan_management&amp;quot;
+2020-02-29 04:51:01 UTC::@:[5665]:LOG:  database system is shut down
+Postgres Shared Memory Value: 11132993536 bytes
+2020-02-29 04:51:02.647 GMT [5783] LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2020-02-29 04:51:02 UTC::@:[5783]:WARNING:  unrecognized configuration parameter &amp;quot;rds.custom_dns_resolution&amp;quot;
+2020-02-29 04:51:02 UTC::@:[5783]:WARNING:  unrecognized configuration parameter &amp;quot;rds.enable_plan_management&amp;quot;
+2020-02-29 04:51:02 UTC::@:[5783]:LOG:  listening on IPv4 address &amp;quot;0.0.0.0&amp;quot;, port 5432
+2020-02-29 04:51:02 UTC::@:[5783]:LOG:  listening on IPv6 address &amp;quot;::&amp;quot;, port 5432
+2020-02-29 04:51:02 UTC::@:[5783]:LOG:  listening on Unix socket &amp;quot;/tmp/.s.PGSQL.5432&amp;quot;
+2020-02-29 04:51:02 UTC::@:[5783]:LOG:  could not write pg_stat_statement file &amp;quot;pg_stat_tmp/pgss_query_texts.stat&amp;quot;: No such file or directory
+2020-02-29 04:51:02 UTC::@:[5783]:LOG:  redirecting log output to logging collector process
+2020-02-29 04:51:02 UTC::@:[5783]:HINT:  Future log output will appear in directory &amp;quot;/rdsdbdata/log/error&amp;quot;.
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>tweepyを使用したtwitter apiの操作</title>
