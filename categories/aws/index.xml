@@ -5,12 +5,152 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 25 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 27 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>Amazon NeptuneのRDFデータをExportする</title>
+      <link>/aws-neptune-export-rdf-data.html</link>
+      <pubDate>Fri, 27 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-neptune-export-rdf-data.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;awslabsに用意されているNeptune用のツールを使用してRDFデータをTurtleへエクスポートしてみる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;amazon-neptune-tools/neptune-export at master · awslabs/amazon-neptune-tools &lt;a href=&#34;https://github.com/awslabs/amazon-neptune-tools/tree/master/neptune-export&#34;&gt;https://github.com/awslabs/amazon-neptune-tools/tree/master/neptune-export&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;詳細な使用方法について&lt;code&gt;readme.md&lt;/code&gt;をご参照ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;amazon-neptune-tools/readme.md at master · awslabs/amazon-neptune-tools &lt;a href=&#34;https://github.com/awslabs/amazon-neptune-tools/blob/master/neptune-export/readme.md&#34;&gt;https://github.com/awslabs/amazon-neptune-tools/blob/master/neptune-export/readme.md&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;awslabs/amazon-neptune-tools &lt;a href=&#34;https://github.com/awslabs/amazon-neptune-tools/blob/master/neptune-export/docs/export-rdf.md&#34;&gt;https://github.com/awslabs/amazon-neptune-tools/blob/master/neptune-export/docs/export-rdf.md&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;注意点&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;Exporting an RDF Graph&lt;/code&gt; については &lt;code&gt;At present neptune-export supports exporting an RDF dataset to Turtle with a single-threaded long-running query.&lt;/code&gt;と記載があります。データ容量とか関わってきますが、シングルスレッドで動作する関係上長時間のエクスポートとなる可能性があります。実行時間や実行対象のインスタンスの負荷状況については留意する必要があると思います。クローンで別インスタンスを立てる、Read Replica側を使うなどの考慮は必要かと。&lt;/p&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;環境確認&lt;/h3&gt;
+&lt;p&gt;実際に実行してみます。検証のためにデータを最小限にしています。ロードされているデータは下記の通りです。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT *
+WHERE {
+  ?s ?p ?o .
+}
+LIMIT 100
+OFFSET 0 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200321142521673.png&#34; alt=&#34;image-20200321142521673&#34; style=&#34;zoom:67%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;実行&lt;/h3&gt;
+&lt;p&gt;outputのディレクトリの作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mkdir -p /home/ec2-user/output
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;awslabsからneptune-exportツールのダウンロード&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#sudo yum -y install git
+git clone https://github.com/awslabs/amazon-neptune-tools.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Mavenのインストール&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sudo wget http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo
+sudo sed -i s/\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo
+sudo yum install -y apache-maven
+mvn --version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;jarファイルのbuildを実行する&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd /home/ec2-user/amazon-neptune-tools/neptune-export
+mvn clean install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;targetディレクトリ配下にneptune-export.jarがビルドされる&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin neptune-export]$ ls -l target
+total 62712
+drwxrwxr-x 4 ec2-user ec2-user       28 Feb 24 05:13 classes
+drwxrwxr-x 3 ec2-user ec2-user       25 Feb 24 05:13 generated-sources
+drwxrwxr-x 3 ec2-user ec2-user       30 Feb 24 05:13 generated-test-sources
+drwxrwxr-x 2 ec2-user ec2-user       28 Feb 24 05:13 maven-archiver
+drwxrwxr-x 3 ec2-user ec2-user       35 Feb 24 05:13 maven-status
+-rw-rw-r-- 1 ec2-user ec2-user   202719 Feb 24 05:13 neptune-export-1.0-SNAPSHOT.jar
+-rw-rw-r-- 1 ec2-user ec2-user 64006996 Feb 24 05:14 neptune-export.jar
+drwxrwxr-x 2 ec2-user ec2-user     4096 Feb 24 05:13 surefire-reports
+drwxrwxr-x 3 ec2-user ec2-user       17 Feb 24 05:13 test-classes
+[ec2-user@bastin neptune-export]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;neptune-exportsh&#34;&gt;neptune-export.shの実行&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /home/ec2-user/amazon-neptune-tools/neptune-export
+sh ./bin/neptune-export.sh export-rdf -e neptestdb.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com -d /home/ec2-user/output
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;※bin配下ではなく、一つ上のneptune-exportで実行する必要がある。neptune-export.jarを検索した上で変数に格納しているため。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;jar=$(find . -name neptune-export.jar)
+java -jar ${jar} &amp;quot;$@&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;※neptuneのインスタンス名を指定しますが、「https」は抜いてください。怒られます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;Completed export-rdf in 0 seconds
+An error occurred while exporting from Neptune:
+java.lang.RuntimeException: org.eclipse.rdf4j.query.QueryEvaluationException: https: Name or service not known
+	at com.amazonaws.services.neptune.rdf.NeptuneSparqlClient.executeQuery(NeptuneSparqlClient.java:166)
+	at com.amazonaws.services.neptune.rdf.io.ExportRdfGraphJob.execute(ExportRdfGraphJob.java:31)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行後は&lt;code&gt;output&lt;/code&gt;ディレクトリ配下にttlが出力されています。トリプルは一致していますね。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /home/ec2-user/output/1584768727668/statements
+[ec2-user@bastin statements]$ cat statements-0.ttl 
+
+&amp;lt;http://aws.amazon.com/neptune/a&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Satomi_Ishihara&amp;gt; .
+&amp;lt;http://aws.amazon.com/neptune/b&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Haruka_Ayase&amp;gt; .
+&amp;lt;http://aws.amazon.com/neptune/c&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Honda_Tsubasa&amp;gt; .
+&amp;lt;http://aws.amazon.com/neptune/d&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Haruka_Ayase&amp;gt; .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;出力可能なフォーマット「turtle（デフォルト）」「nquads」「json(neptuneStreamsJson)」となります。&lt;/p&gt;
+&lt;p&gt;json(neptuneStreamsJson)の場合はこうなりました。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin neptune-export]$ sh ./bin/neptune-export.sh export-rdf --format neptuneStreamsJson -e neptestdb.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com -d /home/ec2-user/output
+Creating statement files
+
+/home/ec2-user/output/1584769323164
+
+[ec2-user@bastin statements]$ cat statements-0.json | jq
+{
+  &amp;quot;eventId&amp;quot;: {
+    &amp;quot;commitNum&amp;quot;: -1,
+    &amp;quot;opNum&amp;quot;: 0
+  },
+  &amp;quot;data&amp;quot;: {
+    &amp;quot;stmt&amp;quot;: &amp;quot;&amp;lt;http://aws.amazon.com/neptune/a&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Satomi_Ishihara&amp;gt; .&amp;quot;
+  },
+  &amp;quot;op&amp;quot;: &amp;quot;ADD&amp;quot;
+}
+{
+  &amp;quot;eventId&amp;quot;: {
+    &amp;quot;commitNum&amp;quot;: -1,
+    &amp;quot;opNum&amp;quot;: 0
+  },
+  &amp;quot;data&amp;quot;: {
+    &amp;quot;stmt&amp;quot;: &amp;quot;&amp;lt;http://aws.amazon.com/neptune/b&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Haruka_Ayase&amp;gt; .&amp;quot;
+  },
+  &amp;quot;op&amp;quot;: &amp;quot;ADD&amp;quot;
+}
+{
+  &amp;quot;eventId&amp;quot;: {
+    &amp;quot;commitNum&amp;quot;: -1,
+    &amp;quot;opNum&amp;quot;: 0
+  },
+  &amp;quot;data&amp;quot;: {
+    &amp;quot;stmt&amp;quot;: &amp;quot;&amp;lt;http://aws.amazon.com/neptune/c&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Honda_Tsubasa&amp;gt; .&amp;quot;
+  },
+  &amp;quot;op&amp;quot;: &amp;quot;ADD&amp;quot;
+}
+{
+  &amp;quot;eventId&amp;quot;: {
+    &amp;quot;commitNum&amp;quot;: -1,
+    &amp;quot;opNum&amp;quot;: 0
+  },
+  &amp;quot;data&amp;quot;: {
+    &amp;quot;stmt&amp;quot;: &amp;quot;&amp;lt;http://aws.amazon.com/neptune/d&amp;gt; &amp;lt;http://xmlns.com/foaf/0.1/interest&amp;gt; &amp;lt;http://dbpedia.org/resource/Haruka_Ayase&amp;gt; .&amp;quot;
+  },
+  &amp;quot;op&amp;quot;: &amp;quot;ADD&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;余談&lt;/h3&gt;
+&lt;p&gt;最初はエラーが発生して正常完了出来なかったのですが、Stack Overflowに投稿したら修正してくれました。助かりました。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;amazon web services - regarding about export of neptune data - Stack Overflow &lt;a href=&#34;https://stackoverflow.com/questions/60429428/regarding-about-export-of-neptune-data&#34;&gt;https://stackoverflow.com/questions/60429428/regarding-about-export-of-neptune-data&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>RDS/Auroraのログ・ファイルをawscliから取得・確認する</title>
