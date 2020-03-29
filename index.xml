@@ -5,12 +5,58 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 27 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 29 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について</title>
+      <link>/postgresql-pg-stat-statements-install.html</link>
+      <pubDate>Sun, 29 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pg-stat-statements-install.html</guid>
+      <description>&lt;p&gt;いくつか気付きがあったのでメモ。superuserではない一般ユーザでpg_stat_statementsを参照した場合に&lt;code&gt;insufficient privilege&lt;/code&gt;という出力があったことに気が付いた。&lt;/p&gt;
+&lt;p&gt;例えば&lt;strong&gt;&lt;u&gt;testAユーザで実行したクエリ&lt;/u&gt;&lt;/strong&gt;を&lt;strong&gt;&lt;u&gt;testAユーザで&lt;/u&gt;&lt;/strong&gt;pg_stat_statementsから確認しようとした場合、下記出力となる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgtest=&amp;gt; \c - testa
+You are now connected to database &amp;quot;pgtest&amp;quot; as user &amp;quot;testa&amp;quot;.
+pgtest=&amp;gt; \x
+Expanded display is off.
+pgtest=&amp;gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total_time DESC LIMIT 20;
+                                                     query                                                     
+---------------------------------------------------------------------------------------------------------------
+ create table userA.pgtesttbl(id numeric primary key, name varchar)                                            
+ CREATE SCHEMA userA AUTHORIZATION userA                                                                       
+ SELECT query, calls, total_time, rows FROM pg_stat_statements WHERE dbid=$1 ORDER BY total_time DESC LIMIT $2 
+ insert into userA.pgtesttbl values($1,$2)                                                                     
+ select oid,datname from pg_database                                                                           
+(5 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;一方、&lt;strong&gt;&lt;u&gt;別ユーザ(testB)&lt;/u&gt;&lt;/strong&gt;からこのクエリを取得しようとすると、&lt;code&gt;insufficient privilege&lt;/code&gt;と出力される。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pgtest=&amp;gt; \c - testb
+You are now connected to database &amp;quot;pgtest&amp;quot; as user &amp;quot;testb&amp;quot;.
+pgtest=&amp;gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total_time DESC LIMIT 20;
+          query           | calls | total_time | rows 
+--------------------------+-------+------------+------
+ &amp;lt;insufficient privilege&amp;gt; |     1 |   5.340486 |    0
+ &amp;lt;insufficient privilege&amp;gt; |     1 |    0.45077 |    0
+ &amp;lt;insufficient privilege&amp;gt; |     3 |   0.288345 |   10
+ &amp;lt;insufficient privilege&amp;gt; |     1 |   0.106162 |    1
+ &amp;lt;insufficient privilege&amp;gt; |     1 |   0.016645 |    4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Oracleと違い、PostgreSQLはシステムカタログ（稼働統計ビュー含む）に対する細かい権限制御が出来ない一方、こういった実行したユーザ以外にはクエリを見せないような実装になっていることを知った。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;F.30. pg_stat_statements &lt;a href=&#34;https://www.postgresql.jp/document/10/html/pgstatstatements.html&#34;&gt;https://www.postgresql.jp/document/10/html/pgstatstatements.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;セキュリティ上の理由から、スーパーユーザと&lt;code&gt;pg_read_all_stats&lt;/code&gt;ロールのメンバだけが、他のユーザによって実行されたSQLテキストや問い合わせの&lt;code&gt;queryid&lt;/code&gt;を見ることができます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記のマニュアルにも特定のロールがないと他のユーザによって実行されたSQLテキストは見れないよ、と記載がある。pg_monitorにpg_read_all_statsも内包されているのでスーパーユーザかpg_read_all_statsかpg_monitorさえあれば全てのテキストを見れる。監視用のユーザを作成する際には注意。&lt;/p&gt;
+&lt;p&gt;ロールについてはこちらに詳しく書いてあったので合わせてどうぞ。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;監視用デフォルトロール - Qiita &lt;a href=&#34;https://qiita.com/nuko_yokohama/items/6debdd3291c8f27d1da8&#34;&gt;https://qiita.com/nuko_yokohama/items/6debdd3291c8f27d1da8&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Amazon NeptuneのRDFデータをExportする</title>
