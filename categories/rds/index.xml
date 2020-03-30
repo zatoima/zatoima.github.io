@@ -632,7 +632,7 @@ ERROR:  permission denied for relation pg_replication_origin_status
 &lt;hr&gt;
 &lt;p&gt;SQLに実行計画を記録して、その実行計画を固定化、もしくは別環境に実行計画を移行して固定化出来る機能。Oracleで言うところのSPM（SQL Plan Management）になる。Aurora(PostgreSQL)でもこの機能が使えるので実際にやってみる。&lt;/p&gt;
 &lt;h5 id=&#34;query-plan-management&#34;&gt;Query Plan Managementの制御方法&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;rds.enable_plan_management = { 0,1} #パラメータグループで設定
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;rds.enable_plan_management = { 0,1} #パラメータグループで設定
 
 apg_plan_mgmt.capture_plan_baselines = { manual, automatic, off }
 # automatic : 自動計画取り込み。1回以上実行されたSQLを取り込む
@@ -658,12 +658,12 @@ apg_plan_mgmt.use_plan_baselines = { true, false }
 &lt;hr&gt;
 &lt;p&gt;create extensionコマンドでapg_plan_mgmtをインストールする&lt;/p&gt;
 &lt;h5 id=&#34;heading-1&#34;&gt;コマンド&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;\dx
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\dx
 create extension apg_plan_mgmt;
 \dx
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h5 id=&#34;heading-2&#34;&gt;実行結果&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行結果
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#実行結果
 dev=&amp;gt; \dx
                  List of installed extensions
   Name   | Version |   Schema   |         Description          
@@ -690,12 +690,12 @@ dev=&amp;gt;
 &lt;hr&gt;
 &lt;p&gt;apg_plan_mgmt.dba_plans表には当然何も格納されていない。&lt;/p&gt;
 &lt;h5 id=&#34;heading-3&#34;&gt;コマンド&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
 FROM   apg_plan_mgmt.dba_plans
 ORDER BY sql_text, plan_created;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h5 id=&#34;heading-4&#34;&gt;実行結果&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;dev=&amp;gt; SELECT sql_hash, plan_hash, status, enabled, sql_text::varchar(100)
 dev-&amp;gt; FROM   apg_plan_mgmt.dba_plans
 dev-&amp;gt; ORDER BY sql_text, plan_created;
  sql_hash | plan_hash | status | enabled | sql_text 
@@ -706,7 +706,7 @@ dev-&amp;gt; ORDER BY sql_text, plan_created;
 &lt;hr&gt;
 &lt;p&gt;テスト用のテーブルを作成する&lt;/p&gt;
 &lt;h5 id=&#34;heading-5&#34;&gt;コマンド&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE t1 AS
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE t1 AS
 SELECT num                         a -- 生成値
       ,&#39;1&#39;                         b -- 定数
       ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
@@ -719,7 +719,7 @@ ALTER TABLE t1 ADD PRIMARY KEY(a);
 \d t1
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h5 id=&#34;heading-6&#34;&gt;実行結果&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;dev=&amp;gt; CREATE TABLE t1 AS
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;dev=&amp;gt; CREATE TABLE t1 AS
 dev-&amp;gt; SELECT num                         a -- 生成値
 dev-&amp;gt;       ,&#39;1&#39;                         b -- 定数
 dev-&amp;gt;       ,to_char(num,&#39;FM00000&#39;)      c -- 生成値を利用（IDなどの文字列）
@@ -748,7 +748,7 @@ dev=&amp;gt;
 &lt;p&gt;実行計画が&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLと、&lt;strong&gt;&lt;u&gt;Index Scan&lt;/u&gt;&lt;/strong&gt;になるSQLを実行。この時、&lt;strong&gt;&lt;u&gt;full scan(seq scan)&lt;/u&gt;&lt;/strong&gt;になるSQLの実行計画だけを手動で取り込む。&lt;/p&gt;
 &lt;p&gt;この例では「Plan Hash: -52705300」が&lt;code&gt;apg_plan_mgmt.dba_plans&lt;/code&gt;表に取り込まれているのがわかる。&lt;/p&gt;
 &lt;h5 id=&#34;heading-7&#34;&gt;コマンド&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;SET apg_plan_mgmt.capture_plan_baselines = manual; #実行計画の手動取り込みを有効化
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SET apg_plan_mgmt.capture_plan_baselines = manual; #実行計画の手動取り込みを有効化
 
 explain (hashes true) select count(*) from t1 where a &amp;gt; 1;
 
@@ -763,7 +763,7 @@ FROM   apg_plan_mgmt.dba_plans
 ORDER BY sql_text, plan_created;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h5 id=&#34;heading-8&#34;&gt;実行結果&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;#実行ログ
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;#実行ログ
 dev=&amp;gt; SET apg_plan_mgmt.capture_plan_baselines = manual;
 SET
 dev=&amp;gt; 
@@ -804,11 +804,11 @@ dev=&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id=&#34;dev&#34;&gt;エクスポート用のテーブル作成(dev)&lt;/h3&gt;
 &lt;hr&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;CREATE TABLE plans_copy AS SELECT * FROM apg_plan_mgmt.plans;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE plans_copy AS SELECT * FROM apg_plan_mgmt.plans;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id=&#34;pg-dumpdev&#34;&gt;pg_dumpを使用してエクスポートする(dev)&lt;/h3&gt;
 &lt;hr&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;export PGPASSWORD=postgres
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;export PGPASSWORD=postgres
 pg_dump -U postgres -h aurora-postgres-cluster-dev.cluster-xxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft dev &amp;gt; plans_copy.tar
 
 #必要に応じて不要になった中間テーブルを削除する
@@ -816,7 +816,7 @@ pg_dump -U postgres -h aurora-postgres-cluster-dev.cluster-xxxxxxxx.ap-northeast
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id=&#34;dbprod&#34;&gt;別DBでインポート(prod)&lt;/h3&gt;
 &lt;hr&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;pg_restore -U postgres -h aurora-postgres-cluster-prod.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft plans_copy.tar -d prod
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_restore -U postgres -h aurora-postgres-cluster-prod.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -t plans_copy -Ft plans_copy.tar -d prod
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id=&#34;prod&#34;&gt;インポート確認、及びマージ(prod)&lt;/h3&gt;
 &lt;hr&gt;
@@ -828,7 +828,7 @@ pg_dump -U postgres -h aurora-postgres-cluster-dev.cluster-xxxxxxxx.ap-northeast
 &lt;/blockquote&gt;
 &lt;/blockquote&gt;
 &lt;h5 id=&#34;heading-9&#34;&gt;コマンド&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
  ON CONFLICT ON CONSTRAINT plans_pkey
  DO UPDATE SET
  status = EXCLUDED.status,
@@ -854,11 +854,11 @@ FROM   apg_plan_mgmt.dba_plans
 ORDER BY sql_text, plan_created;
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;この時、estimated_rows、actual_rowsをコメントアウトする必要あり。実際にはない行らしい。マニュアルの誤記？&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;ERROR:  column excluded.actual_rows does not exist
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;ERROR:  column excluded.actual_rows does not exist
 LINE 13:  actual_rows = EXCLUDED.actual_rows,
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h5 id=&#34;heading-10&#34;&gt;実行結果&lt;/h5&gt;
-&lt;pre&gt;&lt;code class=&#34;language-mysql&#34;&gt;prod=&amp;gt; INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;prod=&amp;gt; INSERT INTO apg_plan_mgmt.plans SELECT * FROM plans_copy
 prod-&amp;gt;  ON CONFLICT ON CONSTRAINT plans_pkey
 prod-&amp;gt;  DO UPDATE SET
 prod-&amp;gt;  status = EXCLUDED.status,
