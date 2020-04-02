@@ -5,12 +5,74 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 29 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 31 Mar 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLでfunctionの定義を確認する方法</title>
+      <link>/postgresql-function-describe-get.html</link>
+      <pubDate>Tue, 31 Mar 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-function-describe-get.html</guid>
+      <description>&lt;h4 id=&#34;function&#34;&gt;チェック対象の関数(function)&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;DROP FUNCTION IF EXISTS years_ago(INTEGER);
+
+CREATE OR REPLACE FUNCTION years_ago(INTEGER)
+RETURNS INTEGER AS $$
+  SELECT (extract(year from current_date)::INTEGER - first_appeared)
+  FROM programming
+  WHERE id = $1;
+$$ LANGUAGE sql;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;1--pg-proc--prosrc&#34;&gt;方法1 : pg_proc の prosrcを使用&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT proname, prosrc FROM pg_proc WHERE proname = &#39;years_ago&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT proname, prosrc FROM pg_proc WHERE proname = &#39;years_ago&#39;;
+  proname  |                                prosrc                                
+-----------+----------------------------------------------------------------------
+ years_ago |                                                                     +
+           |   SELECT (extract(year from current_date)::INTEGER - first_appeared)+
+           |   FROM programming                                                  +
+           |   WHERE id = $1;                                                    +
+           | 
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;2--pg-get-functiondef&#34;&gt;方法2 : pg_get_functiondefと組み合わせて使用する&lt;/h4&gt;
+&lt;p&gt;CREATE OR REPLACE FUNCTIONやその他の構文も合わせて出力してくれるので他環境に実行したい時とかに便利。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT pg_get_functiondef((SELECT oid FROM pg_proc WHERE proname = &#39;years_ago&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT pg_get_functiondef((SELECT oid FROM pg_proc WHERE proname = &#39;years_ago&#39;));
+                          pg_get_functiondef                          
+----------------------------------------------------------------------
+ CREATE OR REPLACE FUNCTION public.years_ago(integer)                +
+  RETURNS integer                                                    +
+  LANGUAGE sql                                                       +
+ AS $function$                                                       +
+   SELECT (extract(year from current_date)::INTEGER - first_appeared)+
+   FROM programming                                                  +
+   WHERE id = $1;                                                    +
+ $function$                                                          +
+ 
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;3--information-schema-&#34;&gt;方法3 : information_schema を使用する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT routine_definition FROM information_schema.routines WHERE routine_name = &#39;years_ago&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# SELECT routine_definition FROM information_schema.routines WHERE routine_name = &#39;years_ago&#39;;
+                          routine_definition                          
+----------------------------------------------------------------------
+                                                                     +
+   SELECT (extract(year from current_date)::INTEGER - first_appeared)+
+   FROM programming                                                  +
+   WHERE id = $1;                                                    +
+ 
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について</title>
