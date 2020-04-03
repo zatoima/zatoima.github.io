@@ -5,12 +5,215 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 31 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 03 Apr 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>Debug対応のPostgreSQL10をソースコードからビルドしてgdbを使用する</title>
+      <link>/postgresql-gdb-postgresql-install.html</link>
+      <pubDate>Fri, 03 Apr 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-gdb-postgresql-install.html</guid>
+      <description>&lt;p&gt;PostgreSQL10.7を前提としています。&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;事前確認&lt;/h3&gt;
+&lt;h4 id=&#34;gnu-make&#34;&gt;GNU makeのバージョン&lt;/h4&gt;
+&lt;p&gt;3.80以上であることを確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;make --version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;gcc&#34;&gt;gccのインストール&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install gcc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;readline-devel&#34;&gt;readline-develパッケージ&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install readline-devel
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;zlib-devel&#34;&gt;zlib-develパッケージ&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install zlib-devel
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;os&#34;&gt;OSユーザ作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;groupadd -g 1101 postgres
+useradd -u 1101 -g postgres -G postgres -d /var/lib/pgsql postgres
+passwd postgres
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;権限変更&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;chown -R postgres:postgres /var/lib/pgsql
+chmod -R 755 /var/lib/pgsql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;環境変数に下記を追加&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export PGDATA=/var/lib/pgsql/10/data
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql&#34;&gt;PostgreSQLインストール&lt;/h3&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;ソースダウンロード&amp;amp;解凍&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;su - postgres
+wget https://ftp.postgresql.org/pub/source/v10.7/postgresql-10.7.tar.gz
+tar xvfz postgresql-10.7.tar.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;ビルド&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd $HOME/postgresql-10.7
+./configure  --enable-debug --prefix=/var/lib/pgsql/10
+make
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;All of PostgreSQL successfully made. Ready to install.&lt;/code&gt;が出力される。&lt;/p&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;インストール&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;make install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;PostgreSQL installation complete.&lt;/code&gt;が出力される。&lt;/p&gt;
+&lt;h3 id=&#34;postgresql-1&#34;&gt;PostgreSQL初期化&lt;/h3&gt;
+&lt;h4 id=&#34;db&#34;&gt;DBの初期化&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mkdir -p /var/lib/pgsql/10/data
+export PGDATA=/var/lib/pgsql/10/data
+whoami
+$HOME/10/bin/initdb --pgdata=$PGDATA
+$HOME/10/bin/pg_ctl start
+$HOME/10/bin/pg_ctl status
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;接続、バージョン確認&lt;/h4&gt;
+&lt;p&gt;環境変数やPATHの設定を行い、接続を行う。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postpub ~]$ psql
+psql (10.7)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=# select version();
+                                                version                                     
+            
+--------------------------------------------------------------------------------------------
+------------
+ PostgreSQL 10.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 7.3.1 20180712 (Red Hat 7.3.1
+-6), 64-bit
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;gdb&#34;&gt;gdb&lt;/h4&gt;
+&lt;p&gt;本題のgdbを使ってみる。まずは接続中のPIDを確認する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# select pg_backend_pid();
+ pg_backend_pid 
+----------------
+          12072
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;当然、psコマンドからも確認が出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@postpub ~]$ ps -ef | grep 12072 | grep -v grep
+postgres 12072 11888  0 03:42 ?        00:00:00 postgres: postgres postgres [local] idle
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;gdb-1&#34;&gt;gdbのインストール&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install gdb
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@postpub ~]$ gdb -version
+GNU gdb (GDB) Red Hat Enterprise Linux 8.0.1-30.amzn2.0.3
+Copyright (C) 2017 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &amp;lt;http://gnu.org/licenses/gpl.html&amp;gt;
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type &amp;quot;show copying&amp;quot;
+and &amp;quot;show warranty&amp;quot; for details.
+This GDB was configured as &amp;quot;x86_64-redhat-linux-gnu&amp;quot;.
+Type &amp;quot;show configuration&amp;quot; for configuration details.
+For bug reporting instructions, please see:
+&amp;lt;http://www.gnu.org/software/gdb/bugs/&amp;gt;.
+Find the GDB manual and other documentation resources online at:
+&amp;lt;http://www.gnu.org/software/gdb/documentation/&amp;gt;.
+For help, type &amp;quot;help&amp;quot;.
+Type &amp;quot;apropos word&amp;quot; to search for commands related to &amp;quot;word&amp;quot;.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;プロセス番号をattachする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;gdb /var/lib/pgsql/10/bin/postgres 12072
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postpub bin]$ gdb /var/lib/pgsql/10/bin/postgres 12072
+GNU gdb (GDB) Red Hat Enterprise Linux 8.0.1-30.amzn2.0.3
+Copyright (C) 2017 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &amp;lt;http://gnu.org/licenses/gpl.html&amp;gt;
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type &amp;quot;show copying&amp;quot;
+and &amp;quot;show warranty&amp;quot; for details.
+This GDB was configured as &amp;quot;x86_64-redhat-linux-gnu&amp;quot;.
+Type &amp;quot;show configuration&amp;quot; for configuration details.
+For bug reporting instructions, please see:
+&amp;lt;http://www.gnu.org/software/gdb/bugs/&amp;gt;.
+Find the GDB manual and other documentation resources online at:
+&amp;lt;http://www.gnu.org/software/gdb/documentation/&amp;gt;.
+For help, type &amp;quot;help&amp;quot;.
+Type &amp;quot;apropos word&amp;quot; to search for commands related to &amp;quot;word&amp;quot;...
+Reading symbols from /var/lib/pgsql/10/bin/postgres...done.
+Attaching to program: /var/lib/pgsql/10/bin/postgres, process 12072
+Reading symbols from /lib64/libpthread.so.0...(no debugging symbols found)...done.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library &amp;quot;/lib64/libthread_db.so.1&amp;quot;.
+Reading symbols from /lib64/librt.so.1...(no debugging symbols found)...done.
+Reading symbols from /lib64/libdl.so.2...(no debugging symbols found)...done.
+Reading symbols from /lib64/libm.so.6...(no debugging symbols found)...done.
+Reading symbols from /lib64/libc.so.6...(no debugging symbols found)...done.
+Reading symbols from /lib64/ld-linux-x86-64.so.2...(no debugging symbols found)...done.
+Reading symbols from /lib64/libnss_files.so.2...(no debugging symbols found)...done.
+0x00007f0812262f90 in epoll_pwait () from /lib64/libc.so.6
+Missing separate debuginfos, use: debuginfo-install glibc-2.26-34.amzn2.x86_64
+(gdb) 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;psql側で下記SQLを実行してみる。gdbで解析中は実行がstopする。（この言い方は正しくないかもしれない。）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# select 1;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;bt-back-trace--&#34;&gt;bt (back trace) : バックトレース（関数呼出の履歴）を表示&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;(gdb) bt
+#0  0x00007f0812262f90 in epoll_pwait () from /lib64/libc.so.6
+#1  0x00000000006c34ba in WaitEventSetWaitBlock (nevents=1, 
+    occurred_events=0x7ffd9a72e630, cur_timeout=-1, set=0x2483798)
+    at latch.c:1048
+#2  WaitEventSetWait (set=0x2483798, timeout=timeout@entry=-1, 
+    occurred_events=occurred_events@entry=0x7ffd9a72e630, 
+    nevents=nevents@entry=1, wait_event_info=wait_event_info@entry=100663296)
+    at latch.c:1000
+#3  0x0000000000603388 in secure_read (port=0x24aa550, 
+    ptr=0xc55e80 &amp;lt;PqRecvBuffer&amp;gt;, len=8192) at be-secure.c:169
+#4  0x000000000060b888 in pq_recvbuf () at pqcomm.c:963
+#5  0x000000000060c54b in pq_getbyte () at pqcomm.c:1006
+#6  0x00000000006e16dd in SocketBackend (inBuf=0x7ffd9a72e770) at postgres.c:328
+#7  ReadCommand (inBuf=0x7ffd9a72e770) at postgres.c:501
+#8  PostgresMain (argc=&amp;lt;optimized out&amp;gt;, argv=argv@entry=0x24aff30, 
+    dbname=&amp;lt;optimized out&amp;gt;, username=&amp;lt;optimized out&amp;gt;) at postgres.c:4059
+#9  0x0000000000479d43 in BackendRun (port=0x24aa550) at postmaster.c:4405
+#10 BackendStartup (port=0x24aa550) at postmaster.c:4077
+#11 ServerLoop () at postmaster.c:1755
+#12 0x000000000068045c in PostmasterMain (argc=argc@entry=1, 
+    argv=argv@entry=0x2482be0) at postmaster.c:1363
+#13 0x000000000047b309 in main (argc=1, argv=0x2482be0) at main.c:228
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;l-list--&#34;&gt;l (list) : ソースコードの確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;(gdb) list
+47	const char *progname;
+48	
+49	
+50	static void startup_hacks(const char *progname);
+51	static void init_locale(const char *categoryname, int category, const char *locale);
+52	static void help(const char *progname);
+53	static void check_root(const char *progname);
+54	
+55	
+56	/*
+(gdb) 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;b-break----&#34;&gt;b (break 関数名) :  プログラムを止めたい場所を指定&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;(gdb) l
+64	 *		&#39;nil&#39; if the constant qualification is not satisfied.
+65	 * ----------------------------------------------------------------
+66	 */
+67	static TupleTableSlot *
+68	ExecResult(PlanState *pstate)
+69	{
+70		ResultState *node = castNode(ResultState, pstate);
+71		TupleTableSlot *outerTupleSlot;
+72		PlanState  *outerPlan;
+73		ExprContext *econtext;
+(gdb) 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;もう少し勉強してみます。&lt;/p&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;参考&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;第16章 ソースコードからインストール &lt;a href=&#34;https://www.postgresql.jp/document/11/html/installation.html&#34;&gt;https://www.postgresql.jp/document/11/html/installation.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;PostgreSQL の構造とソースツリー（３） | Let&#39;s Postgres &lt;a href=&#34;https://lets.postgresql.jp/node/167&#34;&gt;https://lets.postgresql.jp/node/167&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;目的別ガイド：内部解析編 | Let&#39;s Postgres &lt;a href=&#34;https://lets.postgresql.jp/node/10&#34;&gt;https://lets.postgresql.jp/node/10&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLでfunctionの定義を確認する方法</title>
