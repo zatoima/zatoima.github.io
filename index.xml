@@ -5,12 +5,113 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 03 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 04 Apr 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>青空文庫のテキストデータをPostgreSQLに投入する</title>
+      <link>/postgresql-aozora-date-insert.html</link>
+      <pubDate>Sat, 04 Apr 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-aozora-date-insert.html</guid>
+      <description>&lt;p&gt;このサイトを参考にさせて頂きました。SQL文作成のところが私の環境では動かなかったので別の方法に変えました。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;青空文庫のデータでテキストマイニング（の準備） | ACALL BLOG &lt;a href=&#34;https://blog.acall.jp/2019/11/aozorabunko-textmining/&#34;&gt;https://blog.acall.jp/2019/11/aozorabunko-textmining/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;日本語の大容量のテキストデータが欲しかっただけで、綺麗に整形しておりませんのでご注意ください。&lt;/p&gt;
+&lt;h5 id=&#34;clone&#34;&gt;青空文庫のリポジトリからclone&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#sudo yum -y install git
+git clone --depth 1 https://github.com/aozorabunko/aozorabunko.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;nkf&#34;&gt;nkfのインストール&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/n/nkf-2.1.3-5.el7.x86_64.rpm
+sudo rpm -ivh nkf-2.1.3-5.el7.x86_64.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading&#34;&gt;テキストファイルのマージ&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd aozorabunko-master
+mdkir text
+find cards -name &#39;*.zip&#39; -exec cp {} text \;
+cd text
+unzip &#39;*.zip&#39;
+mkdir matome
+cp *.txt matome
+cd matome
+find . -name &amp;quot;*.txt&amp;quot; -exec cat {} &amp;gt;&amp;gt;matome.txt +
+nkf -w --overwrite matome.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;sql&#34;&gt;テキストファイルから実行用のSQLを作成&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#テキストファイル内のシングルクォートを削除。シングルクォートがあると区切り文字を誤って判断してしまうため。
+sed -e &amp;quot;s/&#39;/ /g&amp;quot; matome.txt &amp;gt; matome1.sql
+
+sed &amp;quot;s/^/insert into aozoradata (data) values (&#39;/g&amp;quot; matome1.sql &amp;gt; matome2.sql
+sed &amp;quot;s/$/&#39;);/g&amp;quot; matome2.sql &amp;gt; matome3.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;postgresql&#34;&gt;PostgreSQL側の準備&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE aozoradata(
+id serial not null,
+data text not null
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;sql-&#34;&gt;SQLファイルの実行 #時間が凄く掛かります。&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;psql -d postgres -U postgres -f matome3.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;行数は&lt;code&gt;3533485件&lt;/code&gt;となります。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;postgres=# \d+ aozoradata;
+                                                Table &amp;quot;public.aozoradata&amp;quot;
+ Column |  Type   | Collation | Nullable |                Default                 | Storage  | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------+----------+--------------+-------------
+ id     | integer |           | not null | nextval(&#39;aozoradata_id_seq&#39;::regclass) | plain    |              | 
+ data   | text    |           | not null |                                        | extended |              | 
+Indexes:
+    &amp;quot;aozoradata_idx&amp;quot; gin (data gin_trgm_ops)
+
+postgres=# select count(*) from aozoradata;
+  count  
+---------
+ 3533485
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pgstattupleで確認してみるとこんな感じに。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;postgres=# SELECT * FROM pgstattuple(&#39;aozoradata&#39;);
+-[ RECORD 1 ]------+----------
+table_len          | 807690240
+tuple_count        | 3533485
+tuple_len          | 774167704
+tuple_percent      | 95.85
+dead_tuple_count   | 0
+dead_tuple_len     | 0
+dead_tuple_percent | 0
+free_space         | 3066496
+free_percent       | 0.38
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;統計情報(pg_stats)から確認。avg_widthが&lt;code&gt;190&lt;/code&gt;で意外と小さく感じた。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=# select schemaname,tablename,attname,null_frac,avg_width,n_distinct,correlation from pg_stats where tablename=&#39;aozoradata&#39;;
+-[ RECORD 1 ]------------
+schemaname  | public
+tablename   | aozoradata
+attname     | id
+null_frac   | 0
+avg_width   | 4
+n_distinct  | -1
+correlation | 0.999998
+-[ RECORD 2 ]------------
+schemaname  | public
+tablename   | aozoradata
+attname     | data
+null_frac   | 0
+avg_width   | 190
+n_distinct  | 114652
+correlation | -0.00665814
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;青空文庫側の注釈や空行、ハイフン区切りが多く残っているので必要に応じて削除する必要があると思いますのでその場合は参考URLの中段以降をどうぞ。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;青空文庫のデータでテキストマイニング（の準備） | ACALL BLOG &lt;a href=&#34;https://blog.acall.jp/2019/11/aozorabunko-textmining/&#34;&gt;https://blog.acall.jp/2019/11/aozorabunko-textmining/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Debug対応のPostgreSQL10をソースコードからビルドしてgdbを使用する</title>
