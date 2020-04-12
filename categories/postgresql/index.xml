@@ -5,12 +5,104 @@
     <link>/categories/postgresql/</link>
       <atom:link href="/categories/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 04 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 12 Apr 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/categories/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う</title>
+      <link>/postgresql-pg_basebackup-backup-recovery.html</link>
+      <pubDate>Sun, 12 Apr 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pg_basebackup-backup-recovery.html</guid>
+      <description>&lt;p&gt;pg_basebackupを使ったPostgreSQLの基本的なバックアップ/リカバリを実施する。&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;バックアップ&lt;/h3&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;バックアップディレクトリの作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mkdir $HOME/pg_basebackup_dir
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;環境変数の設定&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export BACKUP_DIR=/var/lib/pgsql/pg_basebackup_dir
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;pg-basebackup&#34;&gt;pg_basebackupでのバックアップ&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_basebackup -D $BACKUP_DIR -F t -z
+ls -l $BACKUP_DIR
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;今回は フォーマットでtarファイルを指定してしており、かつtarファイル出力のデフォルトの圧縮レベルによるgzip圧縮を有効にしている。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;pg_basebackup &lt;a href=&#34;https://www.postgresql.jp/document/10/html/app-pgbasebackup.html&#34;&gt;https://www.postgresql.jp/document/10/html/app-pgbasebackup.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;データ損失&lt;/h3&gt;
+&lt;h4 id=&#34;db&#34;&gt;DB停止&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_ctl stop
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;データ削除&lt;/h4&gt;
+&lt;p&gt;物理的にデータを損失させる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;rm -r /var/lib/pgsql/10/data/*
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;リカバリ&lt;/h3&gt;
+&lt;p&gt;ここからがリカバリ。&lt;/p&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;バックアップデータの展開&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /var/lib/pgsql/10/data
+tar xvfz $BACKUP_DIR/base.tar.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;pg-wal&#34;&gt;pg_walの削除&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;rm -rf /var/lib/pgsql/10/data/pg_wal/*
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;wal&#34;&gt;バックアップしたwalファイルの解凍&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /var/lib/pgsql/10/data/pg_wal
+tar xvfz $BACKUP_DIR/pg_wal.tar.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;wal-1&#34;&gt;バックアップしたwalファイルの解凍&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /var/lib/pgsql/10/data/pg_wal
+tar xvfz $BACKUP_DIR/pg_wal.tar.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;recoveryconf&#34;&gt;recovery.confファイルの作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /var/lib/pgsql/10/data/
+vi /var/lib/pgsql/10/data/recovery.conf
+
+restore_command = &#39;cp /var/lib/pgsql/10/data/pg_wal/%f %p&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;デフォルトではリカバリ可能な最新時点までリカバリされるが、PITRなど時間を明示的に指定したい場合は下記マニュアルを参考にしつつ&lt;code&gt;recovery_target_name&lt;/code&gt;や&lt;code&gt;recovery_target_lsn&lt;/code&gt;を設定する。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;27.2. リカバリ対象の設定 &lt;a href=&#34;https://www.postgresql.jp/document/10/html/recovery-target-settings.html&#34;&gt;https://www.postgresql.jp/document/10/html/recovery-target-settings.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;db-1&#34;&gt;DB起動&lt;/h4&gt;
+&lt;p&gt;通常のコマンドと同様にスタートする。この時recovery.confを参照してリカバリを行う。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;pg_ctl start
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;リカバリ時のログ出力&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[2020-03-04 13:34:00 UTC]  18052[1] LOG:  database system was interrupted; last known up at 2020-03-04 13:31:23 UTC
+[2020-03-04 13:34:00 UTC]  18052[2] LOG:  starting archive recovery
+[2020-03-04 13:34:00 UTC]  18052[3] LOG:  restored log file &amp;quot;00000002.history&amp;quot; from archive
+[2020-03-04 13:34:00 UTC]  18052[4] LOG:  restored log file &amp;quot;000000020000000000000050&amp;quot; from archive
+[2020-03-04 13:34:00 UTC]  18052[5] LOG:  redo starts at 0/50000028
+[2020-03-04 13:34:00 UTC]  18052[6] LOG:  consistent recovery state reached at 0/500000F8
+[2020-03-04 13:34:00 UTC]  18050[6] LOG:  database system is ready to accept read only connections
+cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/000000020000000000000051’: No such file or directory
+[2020-03-04 13:34:00 UTC]  18052[7] LOG:  redo done at 0/500000F8
+[2020-03-04 13:34:00 UTC]  18052[8] LOG:  restored log file &amp;quot;000000020000000000000050&amp;quot; from archive
+cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/00000003.history’: No such file or directory
+[2020-03-04 13:34:00 UTC]  18052[9] LOG:  selected new timeline ID: 3
+[2020-03-04 13:34:01 UTC]  18052[10] LOG:  archive recovery complete
+[2020-03-04 13:34:01 UTC]  18052[11] LOG:  restored log file &amp;quot;00000002.history&amp;quot; from archive
+[2020-03-04 13:34:01 UTC]  18055[1] LOG:  checkpoint starting: end-of-recovery immediate wait
+[2020-03-04 13:34:01 UTC]  18055[2] LOG:  checkpoint complete: wrote 0 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.000 s, sync=0.000 s, total=0.004 s; sync files=0, longest=0.000 s, average=0.000 s; distance=16384 kB, estimate=16384 kB
+[2020-03-04 13:34:01 UTC]  18050[7] LOG:  database system is ready to accept connections
+cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+[2020-03-04 13:34:01 UTC]  18064[1] LOG:  archive command failed with exit code 1
+[2020-03-04 13:34:01 UTC]  18064[2] DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+[2020-03-04 13:34:02 UTC]  18064[3] LOG:  archive command failed with exit code 1
+[2020-03-04 13:34:02 UTC]  18064[4] DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+[2020-03-04 13:34:03 UTC]  18064[5] LOG:  archive command failed with exit code 1
+[2020-03-04 13:34:03 UTC]  18064[6] DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+[2020-03-04 13:34:03 UTC]  18064[7] WARNING:  archiving write-ahead log file &amp;quot;00000003.history&amp;quot; failed too many times, will try again later
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>青空文庫のテキストデータをPostgreSQLに投入する</title>
