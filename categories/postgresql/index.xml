@@ -5,12 +5,110 @@
     <link>/categories/postgresql/</link>
       <atom:link href="/categories/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 25 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 02 May 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/categories/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQL上のnumeric型とint型の性能差</title>
+      <link>/postgresql-compare-performance-numeric-integer.html</link>
+      <pubDate>Sat, 02 May 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-compare-performance-numeric-integer.html</guid>
+      <description>&lt;p&gt;PostgreSQLのマニュアルを見ていたらこんな記載が。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;8.1. 数値データ型 &lt;a href=&#34;https://www.postgresql.jp/document/11/html/datatype-numeric.html&#34;&gt;https://www.postgresql.jp/document/11/html/datatype-numeric.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;numericの値に対する計算は整数型、もしくは次節で説明する浮動小数点データ型に比較し非常に遅くなります。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;どのくらいの差が生じるのか気になったので実機で確認してみた。&lt;/p&gt;
+&lt;h4 id=&#34;numeric&#34;&gt;numericのテーブル作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE t1(id numeric primary key,num text,data numeric,date timestamp with time zone);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; \d t1;
+                         Table &amp;quot;public.t1&amp;quot;
+ Column |           Type           | Collation | Nullable | Default 
+--------+--------------------------+-----------+----------+---------
+ id     | numeric                  |           | not null | 
+ num    | text                     |           |          | 
+ data   | numeric                  |           |          | 
+ date   | timestamp with time zone |           |          | 
+Indexes:
+    &amp;quot;t1_pkey&amp;quot; PRIMARY KEY, btree (id)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;integer&#34;&gt;integerのテーブル作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE t1(id numeric primary key,num text,data integer,date timestamp with time zone);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=# \d t1;
+                         Table &amp;quot;public.t1&amp;quot;
+ Column |           Type           | Collation | Nullable | Default 
+--------+--------------------------+-----------+----------+---------
+ id     | numeric                  |           | not null | 
+ num    | text                     |           |          | 
+ data   | integer                  |           |          | 
+ date   | timestamp with time zone |           |          | 
+Indexes:
+    &amp;quot;t1_pkey&amp;quot; PRIMARY KEY, btree (id)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;5000&#34;&gt;データの大量生成(5000万件)&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;truncate table t1;
+insert into t1
+SELECT num                         a 
+      ,&#39;1&#39;                         b
+      ,floor(random() * 1000000)   c
+      ,current_timestamp           d 
+FROM   generate_series(1,50000000) num
+;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;余計な負荷が掛からないようにtimingで計測する。パラレルクエリで走らないようにパラメータを調整する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\timing
+SET max_parallel_workers_per_gather TO 0;
+
+SELECT SUM(data) FROM t1;
+SELECT AVG(data) FROM t1;
+SELECT STDDEV(data) FROM t1;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;キャッシュの影響を受けないように、念の為PostgreSQLの再起動とファイルシステム側のキャッシュのクリアをしている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;pg_ctl stop
+sudo &amp;quot;echo 3 &amp;gt; /proc/sys/vm/drop_caches&amp;quot;
+pg_ctl start
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading&#34;&gt;結果&lt;/h4&gt;
+&lt;p&gt;回数が少ないので何とも言えないがこんな結果に。データ型の検討時には注意をしよう。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;numeric&lt;/th&gt;
+&lt;th&gt;integer&lt;/th&gt;
+&lt;th&gt;性能差&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;SUM&lt;/td&gt;
+&lt;td&gt;9403.565&lt;/td&gt;
+&lt;td&gt;8508.652&lt;/td&gt;
+&lt;td&gt;0.904833&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AVG&lt;/td&gt;
+&lt;td&gt;8590.127&lt;/td&gt;
+&lt;td&gt;8886.078&lt;/td&gt;
+&lt;td&gt;1.034452&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;STDDEV&lt;/td&gt;
+&lt;td&gt;12419.859&lt;/td&gt;
+&lt;td&gt;8325.705&lt;/td&gt;
+&lt;td&gt;0.670354&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQL でリードレプリカかプライマリか見分ける方法</title>
