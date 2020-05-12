@@ -5,12 +5,328 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 10 May 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 12 May 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>Neptuneへのバルクロード実行時に圧縮ファイルを使用する</title>
+      <link>/aws-neptune-bulkload-from-s3-gzip.html</link>
+      <pubDate>Tue, 12 May 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-neptune-bulkload-from-s3-gzip.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;目的&lt;/h3&gt;
+&lt;p&gt;gzip形式の圧縮ファイルをサポートしているとあったので、単純な興味からS3からのNeptuneへのバルクロードの時間比較をしてみた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ロードデータ形式 - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-format.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/bulk-load-tutorial-format.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Neptune は、gzip 形式の単一ファイルの圧縮をサポートしています。ファイル名には .gz 拡張子を付ける必要があり、UTF-8 形式でエンコードされた単一のテキストファイルを含む必要があります。複数のファイルをロードできますが、それぞれは個別の .gz ファイル (非圧縮のテキストファイル) に含まれている必要があります。アーカイブファイル (例: .tar、.tar.gz、および .tgz) はサポートされていません。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ちなみに、Redshiftへのロード時の圧縮ファイルと非圧縮ファイルの差異はこんな感じらしい。（この記事を見てNeptuneではどうなのか？が気になった。）&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;【新機能】Redshift COPY/UNLOADのBZIP2ファイル対応を試してみました | Developers.IO &lt;a href=&#34;https://dev.classmethod.jp/articles/amazon-redshift-bzip2-support/#toc-4&#34;&gt;https://dev.classmethod.jp/articles/amazon-redshift-bzip2-support/#toc-4&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;前提&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;db.r5.4xlarge&lt;/code&gt;で実行。&lt;code&gt;parallelism&lt;/code&gt; ではHIGHを指定。特に指定しなくてもデフォルトはHIGHで動作する。HIGHの場合のCPU使用率は80％～100％で推移をしていた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/load-api-reference-load.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/load-api-reference-load.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; Neptune ローダーのリクエストパラメータ&lt;/p&gt;
+&lt;p&gt;LOW – 使用されるスレッドの数は、コア数を 8 で割った値です。&lt;/p&gt;
+&lt;p&gt;MEDIUM – 使用されるスレッドの数は、コア数を 2 で割った値です。&lt;/p&gt;
+&lt;p&gt;HIGH – 使用されるスレッドの数は、コア数と同じです。&lt;/p&gt;
+&lt;p&gt;OVERSUBSCRIBE – 使用されるスレッドの数は、コア数に 2 を乗算した値です。この値を使用する場合、バルクローダーは利用可能なすべてのリソースを消費します。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;結果&lt;/h3&gt;
+&lt;p&gt;トリプル数が1000万件だと有意な差異が無かった。一方1億トリプルの場合はデータロード時間に150秒の差異が出た。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;パラレリズム&lt;/th&gt;
+&lt;th&gt;圧縮&lt;/th&gt;
+&lt;th&gt;データロード&lt;/th&gt;
+&lt;th&gt;データ削除(drop all)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1000万トリプル&lt;/td&gt;
+&lt;td&gt;HIGH&lt;/td&gt;
+&lt;td&gt;非圧縮&lt;/td&gt;
+&lt;td&gt;139秒&lt;/td&gt;
+&lt;td&gt;420秒&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1000万トリプル&lt;/td&gt;
+&lt;td&gt;HIGH&lt;/td&gt;
+&lt;td&gt;圧縮&lt;/td&gt;
+&lt;td&gt;140秒&lt;/td&gt;
+&lt;td&gt;417秒&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1億トリプル&lt;/td&gt;
+&lt;td&gt;HIGH&lt;/td&gt;
+&lt;td&gt;非圧縮&lt;/td&gt;
+&lt;td&gt;1169秒&lt;/td&gt;
+&lt;td&gt;4866秒&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1億トリプル&lt;/td&gt;
+&lt;td&gt;HIGH&lt;/td&gt;
+&lt;td&gt;圧縮&lt;/td&gt;
+&lt;td&gt;1303秒&lt;/td&gt;
+&lt;td&gt;4844秒&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;CPU使用率は&lt;code&gt;parallelism&lt;/code&gt; をHIGHで実行していることもあって、ロード実行時はは80％～100％の間で推移していた。データ削除は&lt;code&gt;drop all&lt;/code&gt;で実行したが、こちらの場合はシングルスレッドでdropしているためか約20％で推移をしていた。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200504213906083.png&#34; alt=&#34;image-20200504213906083&#34; style=&#34;zoom: 67%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;なお、ロード時間を短くするためには下記のベストプラクティスのページにもある通り、一時的にスケールアップした上でロードするのが良い。その分パラレル化されてロード時間が短くなる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon Neptune の基本的な運用についてのガイドライン - Amazon Neptune &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/best-practices-general-basic.html#best-practices-loader-tempinstance&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/best-practices-general-basic.html#best-practices-loader-tempinstance&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;一時的に大きなインスタンスを使用してロード時間を短縮&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;実行時のコマンドと結果&lt;/h3&gt;
+&lt;p&gt;以下は実行した際のコマンドと実行結果を参考までに。&lt;/p&gt;
+&lt;h4 id=&#34;1000&#34;&gt;1000万件のトリプル（非圧縮）&lt;/h4&gt;
+&lt;h5 id=&#34;s3&#34;&gt;S3からのバルクロード&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST \
+    -H &#39;Content-Type: application/json&#39; \
+    https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader -d &#39;
+    {
+      &amp;quot;source&amp;quot; : &amp;quot;s3://xxxxxxxxxx/non-compression/rdf-test.nq&amp;quot;, 
+      &amp;quot;format&amp;quot; : &amp;quot;nquads&amp;quot;,
+      &amp;quot;iamRoleArn&amp;quot; : &amp;quot;arn:aws:iam::xxxxxxxxxx:role/NeptuneLoadFromS3&amp;quot;,
+      &amp;quot;region&amp;quot; : &amp;quot;ap-northeast-1&amp;quot;,
+      &amp;quot;failOnError&amp;quot; : &amp;quot;FALSE&amp;quot;,
+      &amp;quot;parallelism&amp;quot; : &amp;quot;HIGH&amp;quot;
+    }&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;s3-1&#34;&gt;S3からのバルクロードのステータス確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -G &#39;https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/4b197f60-9239-4ab3-8b21-6a320930df51&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_COMPLETED&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://xxxxxxxxxx/non-compression/rdf-test.nq&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_COMPLETED&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 139,
+            &amp;quot;startTime&amp;quot; : 1588592100,
+            &amp;quot;totalRecords&amp;quot; : 10000000,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;データ削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST --data-binary &#39;update=drop all&#39; https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+[
+{
+    &amp;quot;type&amp;quot; : &amp;quot;UpdateEvent&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 420916,
+    &amp;quot;elapsedMillis&amp;quot; : 420915,
+    &amp;quot;connFlush&amp;quot; : 0,
+    &amp;quot;batchResolve&amp;quot; : 0,
+    &amp;quot;whereClause&amp;quot; : 0,
+    &amp;quot;deleteClause&amp;quot; : 0,
+    &amp;quot;insertClause&amp;quot; : 0
+},
+{
+    &amp;quot;type&amp;quot; : &amp;quot;Commit&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 421169
+}
+]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;1000-1&#34;&gt;1000万件のトリプル（圧縮）&lt;/h4&gt;
+&lt;h5 id=&#34;s3-2&#34;&gt;S3からのバルクロード&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST \
+    -H &#39;Content-Type: application/json&#39; \
+    https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader -d &#39;
+    {
+      &amp;quot;source&amp;quot; : &amp;quot;s3://xxxxxxxxxx/compression/rdf-test.nq.gz&amp;quot;, 
+      &amp;quot;format&amp;quot; : &amp;quot;nquads&amp;quot;,
+      &amp;quot;iamRoleArn&amp;quot; : &amp;quot;arn:aws:iam::xxxxxxxxxx:role/NeptuneLoadFromS3&amp;quot;,
+      &amp;quot;region&amp;quot; : &amp;quot;ap-northeast-1&amp;quot;,
+      &amp;quot;failOnError&amp;quot; : &amp;quot;FALSE&amp;quot;,
+      &amp;quot;parallelism&amp;quot; : &amp;quot;HIGH&amp;quot;
+    }&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;s3-3&#34;&gt;S3からのバルクロードのステータス確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -G &#39;https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/f1e8303c-077b-44f8-a6f2-c1b65a6f61e6&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_COMPLETED&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://xxxxxxxxxx/compression/rdf-test.nq.gz&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_COMPLETED&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 140,
+            &amp;quot;startTime&amp;quot; : 1588592750,
+            &amp;quot;totalRecords&amp;quot; : 10000000,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;データ削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST --data-binary &#39;update=drop all&#39; https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+[
+{
+    &amp;quot;type&amp;quot; : &amp;quot;UpdateEvent&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 417666,
+    &amp;quot;elapsedMillis&amp;quot; : 417665,
+    &amp;quot;connFlush&amp;quot; : 0,
+    &amp;quot;batchResolve&amp;quot; : 0,
+    &amp;quot;whereClause&amp;quot; : 0,
+    &amp;quot;deleteClause&amp;quot; : 0,
+    &amp;quot;insertClause&amp;quot; : 0
+},
+{
+    &amp;quot;type&amp;quot; : &amp;quot;Commit&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 417913
+}
+]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;1&#34;&gt;1億件のトリプル（非圧縮）&lt;/h4&gt;
+&lt;h5 id=&#34;s3-4&#34;&gt;S3からのバルクロード&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST \
+    -H &#39;Content-Type: application/json&#39; \
+    https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader -d &#39;
+    {
+      &amp;quot;source&amp;quot; : &amp;quot;s3://xxxxxxxxxx/non-compression/neptune-load.nq&amp;quot;, 
+      &amp;quot;format&amp;quot; : &amp;quot;nquads&amp;quot;,
+      &amp;quot;iamRoleArn&amp;quot; : &amp;quot;arn:aws:iam::xxxxxxxxxx:role/NeptuneLoadFromS3&amp;quot;,
+      &amp;quot;region&amp;quot; : &amp;quot;ap-northeast-1&amp;quot;,
+      &amp;quot;failOnError&amp;quot; : &amp;quot;FALSE&amp;quot;,
+      &amp;quot;parallelism&amp;quot; : &amp;quot;HIGH&amp;quot;
+    }&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;s3-5&#34;&gt;S3からのバルクロードのステータス確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -G &#39;https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/56d84748-5b1c-4ff6-945c-15899da10c62&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_COMPLETED&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://xxxxxxxxxx/non-compression/neptune-load.nq&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_COMPLETED&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 1169,
+            &amp;quot;startTime&amp;quot; : 1588594197,
+            &amp;quot;totalRecords&amp;quot; : 100000000,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-6&#34;&gt;データ削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST --data-binary &#39;update=drop all&#39; https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+[
+{
+    &amp;quot;type&amp;quot; : &amp;quot;UpdateEvent&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 4866624,
+    &amp;quot;elapsedMillis&amp;quot; : 4866623,
+    &amp;quot;connFlush&amp;quot; : 0,
+    &amp;quot;batchResolve&amp;quot; : 0,
+    &amp;quot;whereClause&amp;quot; : 0,
+    &amp;quot;deleteClause&amp;quot; : 0,
+    &amp;quot;insertClause&amp;quot; : 0
+},
+{
+    &amp;quot;type&amp;quot; : &amp;quot;Commit&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 4871394
+}
+]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;1-1&#34;&gt;1億件のトリプル（圧縮）&lt;/h4&gt;
+&lt;h5 id=&#34;s3-6&#34;&gt;S3からのバルクロード&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST \
+    -H &#39;Content-Type: application/json&#39; \
+    https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader -d &#39;
+    {
+      &amp;quot;source&amp;quot; : &amp;quot;s3://xxxxxxxxxx/compression/neptune-load.nq.gz&amp;quot;, 
+      &amp;quot;format&amp;quot; : &amp;quot;nquads&amp;quot;,
+      &amp;quot;iamRoleArn&amp;quot; : &amp;quot;arn:aws:iam::xxxxxxxxxx:role/NeptuneLoadFromS3&amp;quot;,
+      &amp;quot;region&amp;quot; : &amp;quot;ap-northeast-1&amp;quot;,
+      &amp;quot;failOnError&amp;quot; : &amp;quot;FALSE&amp;quot;,
+      &amp;quot;parallelism&amp;quot; : &amp;quot;HIGH&amp;quot;
+    }&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;s3-7&#34;&gt;S3からのバルクロードのステータス確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -G &#39;https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/loader/b7e34c0c-bf49-42d6-885b-34e58fed19c0&#39;
+{
+    &amp;quot;status&amp;quot; : &amp;quot;200 OK&amp;quot;,
+    &amp;quot;payload&amp;quot; : {
+        &amp;quot;feedCount&amp;quot; : [
+            {
+                &amp;quot;LOAD_COMPLETED&amp;quot; : 1
+            }
+        ],
+        &amp;quot;overallStatus&amp;quot; : {
+            &amp;quot;fullUri&amp;quot; : &amp;quot;s3://xxxxxxxxxx/compression/neptune-load.nq.gz&amp;quot;,
+            &amp;quot;runNumber&amp;quot; : 1,
+            &amp;quot;retryNumber&amp;quot; : 0,
+            &amp;quot;status&amp;quot; : &amp;quot;LOAD_COMPLETED&amp;quot;,
+            &amp;quot;totalTimeSpent&amp;quot; : 1303,
+            &amp;quot;startTime&amp;quot; : 1588600418,
+            &amp;quot;totalRecords&amp;quot; : 100000000,
+            &amp;quot;totalDuplicates&amp;quot; : 0,
+            &amp;quot;parsingErrors&amp;quot; : 0,
+            &amp;quot;datatypeMismatchErrors&amp;quot; : 0,
+            &amp;quot;insertErrors&amp;quot; : 0
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-7&#34;&gt;データ削除&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;curl -X POST --data-binary &#39;update=drop all&#39; https://xxxxxxxxx.xxxxxxxxx.ap-northeast-1.neptune.amazonaws.com:8182/sparql
+[
+{
+    &amp;quot;type&amp;quot; : &amp;quot;UpdateEvent&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 4844456,
+    &amp;quot;elapsedMillis&amp;quot; : 4844455,
+    &amp;quot;connFlush&amp;quot; : 0,
+    &amp;quot;batchResolve&amp;quot; : 0,
+    &amp;quot;whereClause&amp;quot; : 0,
+    &amp;quot;deleteClause&amp;quot; : 0,
+    &amp;quot;insertClause&amp;quot; : 0
+},
+{
+    &amp;quot;type&amp;quot; : &amp;quot;Commit&amp;quot;,
+    &amp;quot;totalElapsedMillis&amp;quot; : 4848418
+}
+]
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Amazon CloudWatchのメトリクスをCSVで出力する</title>
