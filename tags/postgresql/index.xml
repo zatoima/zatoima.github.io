@@ -5,12 +5,122 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 02 May 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 14 May 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</title>
+      <link>/aws-ec2-postgresql-pgcli-install-howto.html</link>
+      <pubDate>Thu, 14 May 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-ec2-postgresql-pgcli-install-howto.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;pgcliを使用してRDSやAuroraに接続したいので踏み台サーバへのEC2へインストールする。&lt;/p&gt;
+&lt;p&gt;pgcliはオートコンプリートと構文強調表示を備えたPostgres CLI。pipで簡単にインストール出来るかと思いきや意外とハマったのでメモしておく。&lt;/p&gt;
+&lt;p&gt;開発元は下記。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;dbcli/pgcli: Postgres CLI with autocompletion and syntax highlighting &lt;a href=&#34;https://github.com/dbcli/pgcli&#34;&gt;https://github.com/dbcli/pgcli&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;こちらの導入することで、下記のようにサジェストやハイライトシンタックスが出来るようになる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;pgcli-1589339370146.gif&#34; alt=&#34;screenshots / pgcli.gif&#34; style=&#34;zoom: 80%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;インストール手順&lt;/h3&gt;
+&lt;p&gt;githubやその他の導入ブログを見る限りpythonさえ入っていれば大丈夫なようだったが、下記ライブラリやパッケージが必要なことに注意が必要。&lt;/p&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;事前準備&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum install -y python3
+sudo pip3 install psycopg2-binary
+sudo yum -y install postgresql-devel
+sudo yum -y install gcc
+sudo yum -y install python3-devel.x86_64
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;インストール&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo pip3 install -U pgcli
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;接続&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ pgcli -h rdspgsqlv1.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postgres
+Server: PostgreSQL 10.7
+Version: 3.0.0
+Chat: https://gitter.im/dbcli/pgcli
+Home: http://pgcli.com
+postgres@rdspgsqlv1:postgres&amp;gt;  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;画面イメージ&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513144938779.png&#34; alt=&#34;image-20200513144938779&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;以下はエラーの内容とエラー対応のメモ。エラー②とエラー③についてはローカルにPostgreSQLがインストールされている環境であれば既にインストールされているはずなのでエラーは起きないと思われる。&lt;/p&gt;
+&lt;h3 id=&#34;python&#34;&gt;Python環境のインストール&lt;/h3&gt;
+&lt;p&gt;pip は Python 3.4 以降では Python 本体に同梱されるようなっているのでpip3の個別のインストールは不要。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum install -y python3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;psycopg2&#34;&gt;エラー①：psycopg2のエラー&lt;/h3&gt;
+&lt;p&gt;この状態でpgcliをインストールしてみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo pip3 install -U pgcli
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記のエラーが発生する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;Command &amp;quot;python setup.py egg_info&amp;quot; failed with error code 1 in /tmp/pip-build-2mywyxn1/psycopg2/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;psycopg2-binary&lt;/code&gt; をyumでインストールする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo pip3 install psycopg2-binary
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-config&#34;&gt;エラー②：pg_configのエラー&lt;/h3&gt;
+&lt;p&gt;次に実行すると&lt;code&gt;pg_config&lt;/code&gt;に関連するエラーが発生&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;Error: pg_config executable not found.
+
+pg_config is required to build psycopg2 from source.  Please add the directory
+containing pg_config to the $PATH or specify the full executable path with the
+option:
+
+    python setup.py build_ext --pg-config /path/to/pg_config build ...
+
+or with the pg_config option in &#39;setup.cfg&#39;.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;postgresql-devel&lt;/code&gt;の中にpg_configが含まれているのでインストール。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install postgresql-devel
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;gcc&#34;&gt;エラー③：gccのエラー&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;gcc&lt;/code&gt;が見つからずにエラー。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;unable to execute &#39;gcc&#39;: No such file or directory
+
+It appears you are missing some prerequisite to build the package from source.
+
+You may install a binary package by installing &#39;psycopg2-binary&#39; from PyPI.
+If you want to install psycopg2 from source, please install the packages
+required for the build and try again.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;gcc&lt;/code&gt;をインストール&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install gcc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;python-1&#34;&gt;エラー④：python系のエラー&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;./psycopg/psycopg.h:35:10: fatal error: Python.h: No such file or directory
+ #include &amp;lt;Python.h&amp;gt;
+          ^~~~~~~~~~
+compilation terminated.
+
+It appears you are missing some prerequisite to build the package from source.
+
+You may install a binary package by installing &#39;psycopg2-binary&#39; from PyPI.
+If you want to install psycopg2 from source, please install the packages
+required for the build and try again.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;python3-devel.x86_64&lt;/code&gt;をインストール&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install python3-devel.x86_64
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pgcli&#34;&gt;pgcliのインストール&lt;/h3&gt;
+&lt;p&gt;ここまでインストールしてようやく&lt;code&gt;pgcli&lt;/code&gt;のインストールが完了した。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastinv1 ~]$ sudo pip3 install -U pgcli
+WARNING: Running pip install with root privileges is generally not a good idea. Try `pip3 install --user` instead.
+Collecting pgcli
+
+～中略～
+
+Running setup.py install for psycopg2 ... done
+  Running setup.py install for setproctitle ... done
+Successfully installed cli-helpers-1.2.1 click-7.1.2 humanize-2.4.0 pgcli-3.0.0 pgspecial-1.11.10 prompt-toolkit-3.0.5 psycopg2-2.8.5 setproctitle-1.1.10 tabulate-0.8.7 terminaltables-3.1.0 wcwidth-0.1.9
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQL上のnumeric型とint型の性能差</title>
