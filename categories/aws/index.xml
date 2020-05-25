@@ -5,12 +5,120 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 23 May 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 25 May 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</title>
+      <link>/aws-aurora-rds-s3-import.html</link>
+      <pubDate>Mon, 25 May 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-rds-s3-import.html</guid>
+      <description>&lt;p&gt;事前設定のIAMロールの設定から実際のRDS(PostgreSQL)に対してCSVファイルのロードを行う。RDSとAuroraで手順に関しては大きく差異はないが、Amazon S3 から Aurora PostgreSQL にインポートするには、データベースで PostgreSQL バージョン 10.7 以降を実行している必要がある。&lt;/p&gt;
+&lt;p&gt;詳細の手順や制限事項等は下記マニュアルを参照。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;PostgreSQL 互換で Amazon Aurora にデータを移行する - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;iam&#34;&gt;IAMロールの設定&lt;/h3&gt;
+&lt;p&gt;データロードのための下準備としてIAMロールの設定を行う。&lt;/p&gt;
+&lt;p&gt;IAMの画面から「ロールの作成」を選択&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513164944959.png&#34; alt=&#34;image-20200513164944959&#34;&gt;&lt;/p&gt;
+&lt;p&gt;S3を選択&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163255012.png&#34; alt=&#34;image-20200128163255012&#34;&gt;&lt;/p&gt;
+&lt;p&gt;「&lt;code&gt;AmazonS3ReadOnlyAccess&lt;/code&gt;」を選択してポリシーをアタッチする。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513165046884.png&#34; alt=&#34;image-20200513165046884&#34;&gt;&lt;/p&gt;
+&lt;p&gt;必要に応じてタグを設定。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163425236.png&#34; alt=&#34;image-20200128163425236&#34;&gt;&lt;/p&gt;
+&lt;p&gt;ロール名は「importfroms3」とした。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513165137293.png&#34; alt=&#34;image-20200513165137293&#34;&gt;&lt;/p&gt;
+&lt;p&gt;作成したロールの画面に移動する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513165231849.png&#34; alt=&#34;image-20200513165231849&#34;&gt;&lt;/p&gt;
+&lt;p&gt;「信頼関係」-「信頼関係の編集」へと移動して下記を上書きして貼り付ける。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163702608.png&#34; alt=&#34;image-20200128163702608&#34;&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+  &amp;quot;Version&amp;quot;: &amp;quot;2012-10-17&amp;quot;,
+  &amp;quot;Statement&amp;quot;: [
+    {
+      &amp;quot;Sid&amp;quot;: &amp;quot;&amp;quot;,
+      &amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+      &amp;quot;Principal&amp;quot;: {
+        &amp;quot;Service&amp;quot;: [
+          &amp;quot;rds.amazonaws.com&amp;quot;
+        ]
+      },
+      &amp;quot;Action&amp;quot;: &amp;quot;sts:AssumeRole&amp;quot;
+    }
+  ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200128163744771.png&#34; alt=&#34;image-20200128163744771&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;amazon-neptune--iam-&#34;&gt;「Amazon Neptune クラスターに IAM ロール」を追加する&lt;/h3&gt;
+&lt;p&gt;Neptuneのクラスタに移動して「IAMロールの管理」を選択。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513165739916.png&#34; alt=&#34;image-20200513165739916&#34;&gt;&lt;/p&gt;
+&lt;p&gt;IAMロールの管理のところにて先程作成した「importfroms3」ロールを追加する。機能は「s3import」を指定。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513165428474.png&#34; alt=&#34;image-20200513165428474&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200513170011219.png&#34; alt=&#34;image-20200513170011219&#34;&gt;&lt;/p&gt;
+&lt;p&gt;ここまでで事前設定が終わりとなる。&lt;/p&gt;
+&lt;p&gt;実際のインポート自体はCLI上でコマンドで実施するが、まずは&lt;code&gt;aws_s3&lt;/code&gt;を有効化する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CREATE EXTENSION aws_s3 CASCADE;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading&#34;&gt;インポートコマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code&gt;SELECT aws_s3.table_import_from_s3(
+ &#39;aozora_kaiseki&#39;,
+ &#39;&#39;,
+ &#39;(format csv)&#39;,
+ &#39;nep-s3-bk&#39;,
+ &#39;utf8_all.csv&#39;,
+ &#39;ap-northeast-1&#39;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;関数の引数は下記の通り。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;PostgreSQL 互換で Amazon Aurora にデータを移行する - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import.FileFormats&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import.FileFormats&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;aws_s3.table_import_from_s3 関数を使用して Amazon S3 データをインポートする&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;dbname=&amp;gt; SELECT aws_s3.table_import_from_s3(
+ &#39;テーブル名&#39;,
+ &#39;カラムリスト&#39;, -- 空文字(&#39;&#39;)の場合は、テーブルのカラムと一致
+ &#39;PostgreSQL COPYの引数・フォーマット&#39;,
+ &#39;S3バケット名&#39;,
+ &#39;S3キー&#39;,
+ &#39;S3リージョン&#39;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;約10GB相当のデータを約4分でインポートすることが出来た。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;postgres@rdspgsqlv1:postgres&amp;gt; SELECT aws_s3.table_import_from_s3( 
+  &#39;aozora_kaiseki&#39;, 
+  &#39;&#39;, 
+  &#39;(format csv)&#39;, 
+  &#39;nep-s3-bk&#39;, 
+  &#39;utf8_all.csv&#39;, 
+  &#39;ap-northeast-1&#39; 
+  );                                                                                                                                                                                   
++--------------------------------------------------------------------------------------------------+
+| table_import_from_s3                                                                             |
+|--------------------------------------------------------------------------------------------------|
+| 87701673 rows imported into relation &amp;quot;aozora_kaiseki&amp;quot; from file utf8_all.csv of 6539180310 bytes |
++--------------------------------------------------------------------------------------------------+
+SELECT 1
+Time: 272.534s (4 minutes), executed in: 272.522s (4 minutes)
+postgres@rdspgsqlv1:postgres&amp;gt;  
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;psqlのコピーコマンドを使ったCSVインポートと比較してみたが、特に時間としては変わらなかった。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;■CSVインポート(COPYコマンド)	
+[ec2-user@bastin ~]$ time psql -h rdspgsqlv1.xxxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &amp;quot;COPY aozora_kaiseki(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&amp;quot; &amp;lt; /home/ec2-user/utf8_all.csv	
+COPY 87701673	
+	
+real	4m20.753s
+user	0m19.471s
+sys	0m6.427s
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>指定したRDS／AuroraのログをCLIで一括ダウンロードする</title>
