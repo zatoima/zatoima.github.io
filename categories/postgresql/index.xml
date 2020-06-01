@@ -5,12 +5,128 @@
     <link>/categories/postgresql/</link>
       <atom:link href="/categories/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 29 May 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 01 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/categories/postgresql/</link>
     </image>
+    
+    <item>
+      <title>OracleとPostgreSQLのシーケンスキャッシュの動作差異</title>
+      <link>/oracle-postgresql-sequence-cache-incompatible.html</link>
+      <pubDate>Mon, 01 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-sequence-cache-incompatible.html</guid>
+      <description>&lt;p&gt;OracleとPostgreSQLのシーケンスキャッシュを使用した場合の動作差異についてメモ。&lt;/p&gt;
+&lt;h3 id=&#34;heading&#34;&gt;シーケンスの作成&lt;/h3&gt;
+&lt;p&gt;OracleとPostgreSQL両方ともシーケンスの始まりを「1」、キャッシュを「20」と設定。&lt;/p&gt;
+&lt;h5 id=&#34;oracle&#34;&gt;Oracle&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop sequence oraseq1;
+create sequence oraseq1 start with 1 increment by 1 cache 20;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop sequence pgsqlseq1;
+create sequence pgsqlseq1 start with 1 increment by 1 cache 20;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;oracle-1&#34;&gt;Oracle環境での動作&lt;/h3&gt;
+&lt;h5 id=&#34;session-a&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;結果は当然シーケンス値は「1」となる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-b&#34;&gt;Session B&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;別セッションでシーケンスを取得する場合、Oracleではnextvalもcurrvalが「2」となる。※ここの動作がOracleとPostgreSQLが異なる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-a-1&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql-1&#34;&gt;PostgreSQL環境での動作&lt;/h3&gt;
+&lt;h5 id=&#34;session-a-2&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 1         |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-b-1&#34;&gt;Session B&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 21        |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-a-3&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 2         |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;結果&lt;/h3&gt;
+&lt;h4 id=&#34;start-1cache--20nextval&#34;&gt;start 1、cache  20のシーケンスでnextvalを実行した場合のシーケンス値について&lt;/h4&gt;
+&lt;p&gt;こうなる。※OracleはOrderオプション指定無しを前提&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;実行順序&lt;/th&gt;
+&lt;th&gt;セッション&lt;/th&gt;
+&lt;th&gt;Oracle&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session A&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session B&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session A&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;最後に&lt;/h3&gt;
+&lt;p&gt;Oracleでは特定事象が起きないとシーケンスは飛び番にはならないと思っているが、PostgreSQLは安易に起こりうる。一意を保証という点では良いかもしれない。そもそもキャッシュしている時点で連番になることを保証するのは難しいはず。Oracleのインスタンス障害や共有プールからのエージアウト等があった場合にはキャッシュ分は飛ぶので。&lt;/p&gt;
+&lt;p&gt;PostgreSQLでシーケンスをキャッシュすると、複数セッションからシーケンスを取る場合に連番とはならないので注意が必要。連番を保証したい場合は、シーケンスのキャッシュ値を「1」にするか、SERIALデータ型を使うか、になると考えられる。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</title>
