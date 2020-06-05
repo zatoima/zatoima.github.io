@@ -5,12 +5,85 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 02 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 05 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</title>
+      <link>/aws-aurora-bytea-insert-binary-data.html</link>
+      <pubDate>Fri, 05 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-bytea-insert-binary-data.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;はじめに&lt;/h4&gt;
+&lt;p&gt;バイナリデータの操作をpsqlから実施しようとする機会はあまりないと思うが、Aurora/RDSでは &lt;code&gt;pg_read_binary_file&lt;/code&gt;ファンクションが&lt;code&gt;permission denied for function pg_read_binary_file&lt;/code&gt;が使用できない。理由として&lt;code&gt;pg_read_binary_file&lt;/code&gt;ファンクションの所有者がrdsadminというログイン不可なユーザとなっているため使用することが出来ない。また、pg_read_binary_fileはサーバサイドのファンクションなので、psqlでログインしている状態でEC2上(Bastin)のファイルをbytea列にINSERTということは不可となる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; create table test01(id serial primary key,data bytea);                                                                       CREATE TABLE
+
+postgres&amp;gt; insert into test01 (data) values (pg_read_binary_file(&#39;/home/ec2-user/test.pdf&#39;));
+permission denied for function pg_read_binary_file
+
+postgres&amp;gt; SELECT proacl FROM pg_proc WHERE proname=&#39;pg_read_binary_file&#39;;                   
++-----------------------+
+| proacl                |
+|-----------------------|
+| {rdsadmin=X/rdsadmin} |
+| {rdsadmin=X/rdsadmin} |
+| {rdsadmin=X/rdsadmin} |
++-----------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;pythonpsycopg2aurora-postgresql&#34;&gt;Pythonのpsycopg2を使ってAurora PostgreSQLにデータをインサートするサンプルスクリプト&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;aws-overview.pdf&lt;/code&gt;という&lt;a href=&#34;https://d1.awsstatic.com/whitepapers/aws-overview.pdf&#34;&gt;ファイル&lt;/a&gt;をDBに格納することとします。&lt;/p&gt;
+&lt;p&gt;python実行と同じディレクトリに&lt;code&gt;test.pdf&lt;/code&gt;を配置して実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import psycopg2
+import psycopg2.extras
+
+conn = psycopg2.connect(&amp;quot;host=aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&amp;quot;)
+
+cur = conn.cursor()
+img = open(&#39;aws-overview.pdf&#39;, &#39;rb&#39;).read()
+
+cur.execute(&amp;quot;create table ins_bytea(id serial,pdfdata bytea)&amp;quot;)
+
+cur.execute(&amp;quot;INSERT INTO ins_bytea (pdfdata) values (%s)&amp;quot;, 
+    (psycopg2.Binary(img),))
+
+conn.commit()
+cur.close()
+conn.close()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;結果&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200605162336658.png&#34; alt=&#34;image-20200605162336658&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;格納されたバイナリデータを取り出す方法&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;aws-overview_export.pdf&lt;/code&gt;というファイル名で抽出。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import psycopg2
+import psycopg2.extras
+
+conn = psycopg2.connect(&amp;quot;host=aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&amp;quot;)
+
+cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+cur.execute(&amp;quot;SELECT pdfdata FROM ins_bytea;&amp;quot;)
+
+row = cur.fetchone()
+pic = row[&#39;pdfdata&#39;]
+
+f = open(&#39;aws-overview_export.pdf&#39;, &#39;wb&#39;)
+f.write(pic)
+f.close()
+cur.close()
+conn.close()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;特に差分も無し。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ diff aws-overview.pdf aws-overview_export.pdf 
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;参考&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;PythonからPostgreSQLに接続する方法 | アシスト &lt;a href=&#34;https://www.ashisuto.co.jp/db_blog/article/20160308_postgresql_with_python.html&#34;&gt;https://www.ashisuto.co.jp/db_blog/article/20160308_postgresql_with_python.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>OracleとPostgreSQLのトランザクション差異について整理する</title>
@@ -11131,11 +11204,9 @@ PLUGINS = [&#39;i18n_subsites&#39;,&#39;tag_cloud&#39;,&#39;sitemap&#39;,&#39;se
       <link>/oracle-mysql-postgresql-isolation-level.html</link>
       <pubDate>Sun, 17 Nov 2019 00:00:00 +0000</pubDate>
       <guid>/oracle-mysql-postgresql-isolation-level.html</guid>
-      <description>&lt;h3 id=&#34;heading&#34;&gt;&lt;/h3&gt;
-&lt;p&gt;RDBMS製品のACID特性のI（Isolation）に関わるメモ&lt;/p&gt;
+      <description>&lt;p&gt;RDBMS製品のACID特性のI（Isolation）に関わるメモ&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;image-20191118125604554.png&#34; alt=&#34;image-20191118125604554&#34; style=&#34;zoom:75%;&#34; /&gt;&lt;/p&gt;
-&lt;br/&gt;
-&lt;h4 id=&#34;heading-1&#34;&gt;トランザクション分離レベルとは？&lt;/h4&gt;
+&lt;h4 id=&#34;heading&#34;&gt;トランザクション分離レベルとは？&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;まずはトランザクション分離レベルの基本的な考え方について整理。&lt;/p&gt;
 &lt;br/&gt;
@@ -11250,7 +11321,6 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;p&gt;POSTGRESQL: DOCUMENTATION: 11: 13.2. TRANSACTION ISOLATION HTTPS&lt;a href=&#34;https://www.postgresql.org/docs/11/transaction-iso.html#MVCC-ISOLEVEL-TABLE&#34;&gt;://WWW.POSTGRESQL.ORG/DOCS/11/TRANSACTION-ISO.HTML#MVCC-ISOLEVEL-TABLE&lt;/a&gt;&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;heading-2&#34;&gt;&lt;/h3&gt;
 &lt;h4 id=&#34;oracle-database&#34;&gt;Oracle Databaseの場合&lt;/h4&gt;
 &lt;hr&gt;
 &lt;p&gt;Oracle Databaseでは、&lt;strong&gt;SERIALIZABLE&lt;/strong&gt; と &lt;strong&gt;READ COMMITTED&lt;/strong&gt; の分離レベルが用意されている。&lt;/p&gt;
@@ -11271,7 +11341,7 @@ PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read
 &lt;p&gt;複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。&lt;/p&gt;
-&lt;h4 id=&#34;heading-3&#34;&gt;変更方法&lt;/h4&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;変更方法&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;・SET文を使用した指定方法(セッション単位)
 SET default_transaction_isolation TO &#39;分離レベル&#39;;
 
@@ -11283,8 +11353,7 @@ SET TRANSACTION ISOLATION LEVEL 分離レベル;
 BEGIN ISOLATION LEVEL 分離レベル;
 START TRANSACTION ISOLATION LEVEL 分離レベル;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;h3 id=&#34;heading-4&#34;&gt;&lt;/h3&gt;
-&lt;h4 id=&#34;heading-5&#34;&gt;事前にテーブル/データ作成&lt;/h4&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;事前にテーブル/データ作成&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table mytab;
 CREATE TABLE mytab
 (
@@ -11383,7 +11452,6 @@ aurorapostdb=&amp;gt;
 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;heading-6&#34;&gt;&lt;/h3&gt;
 &lt;h4 id=&#34;session2&#34;&gt;Session2&lt;/h4&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aurorapostdb=&amp;gt; BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 BEGIN
@@ -11433,7 +11501,13 @@ aurorapostdb=&amp;gt; SELECT * FROM mytab;
 aurorapostdb=&amp;gt; 
 &lt;/code&gt;&lt;/pre&gt;
 &lt;br/&gt;
-&lt;h3 id=&#34;heading-7&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;OracleとPostgreSQLのトランザクションの差異について&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;OracleとPostgreSQLは同じRead Committedだが、トランザクションによっては違う結果になることを整理してみた&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;OracleとPostgreSQLのトランザクション差異について整理する | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/oracle-postgresql-transaction-different.html&#34;&gt;https://zatoima.github.io/oracle-postgresql-transaction-different.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;&lt;strong&gt;参照先、参考資料&lt;/strong&gt;&lt;/h3&gt;
 &lt;hr&gt;
 &lt;blockquote&gt;
 &lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
