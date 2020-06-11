@@ -5,12 +5,109 @@
     <link>/tags/aws/</link>
       <atom:link href="/tags/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 05 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 11 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/tags/aws/</link>
     </image>
+    
+    <item>
+      <title>EC2からEFSをマウントして使ってみる</title>
+      <link>/aws-efs-ec2-mount.html</link>
+      <pubDate>Thu, 11 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-efs-ec2-mount.html</guid>
+      <description>&lt;p&gt;既にマネージメントコンソール側にEFSを作成しているとして、、、、、&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200611131402235.png&#34; alt=&#34;image-20200611131402235&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;amazon-efs-utils&#34;&gt;amazon-efs-utilsのインストール&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum -y install amazon-efs-utils
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;マウント用のディレクトリ作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo mkdir /mnt/efs
+sudo chown ec2-user:ec2-user /mnt/efs
+sudo mount -t efs fs-xxxxx:/ /mnt/efs
+echo $?
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ファイルシステムIDを&lt;code&gt;fs-xxxxx&lt;/code&gt;に指定&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200502143317622.png&#34; alt=&#34;image-20200502143317622&#34;&gt;&lt;/p&gt;
+&lt;p&gt;dfで確認してEFSがマウント出来ていることを確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ df -h
+Filesystem                                      Size  Used Avail Use% Mounted on
+devtmpfs                                        475M     0  475M   0% /dev
+tmpfs                                           492M     0  492M   0% /dev/shm
+tmpfs                                           492M  436K  492M   1% /run
+tmpfs                                           492M     0  492M   0% /sys/fs/cgroup
+/dev/xvda1                                       20G  6.5G   14G  33% /
+tmpfs                                            99M     0   99M   0% /run/user/1000
+fs-xxxxxx.efs.ap-northeast-1.amazonaws.com:/  8.0E     0  8.0E   0% /mnt/efs
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;再起動時にマウントするために/etc/fstabに追加&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;fs-xxxxx:/ /mnt/efs efs defaults,_netdev 0 0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dd&#34;&gt;性能簡易測定(ddコマンド)&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin efs]$ dd if=/dev/zero of=/mnt/efs/write.txt ibs=4k obs=4k count=2048
+2048+0 records in
+2048+0 records out
+8388608 bytes (8.4 MB) copied, 1.34538 s, 6.2 MB/s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;fio&#34;&gt;fioコマンド&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum install -y fio
+fio --version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;block-size--4k&#34;&gt;block size が 4kの場合&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-- sequencial read
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=read -bs=4k -size=2G -numjobs=64 -runtime=10 -group_reporting -name=file1
+-- ramdom read
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=randread -bs=4k -size=2G -numjobs=64 -runtime=10 -group_reporting -name=file1
+-- sequencial write
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=write -bs=4k -size=2G -numjobs=64 -runtime=10 -group_reporting -name=file1
+-- ramdom write
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=randwrite -bs=4k -size=2G -numjobs=64 -runtime=10 -group_reporting -name=file1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#sequencial read
+read : io=151396KB, bw=15114KB/s, iops=3778, runt= 10017msec
+#ramdom read
+read : io=427984KB, bw=42739KB/s, iops=10684, runt= 10014msec
+#sequencial write
+write: io=9192.0KB, bw=912516B/s, iops=222, runt= 10315msec
+#ramdom write
+write: io=9848.0KB, bw=980300B/s, iops=239, runt= 10287msec
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;block-size--32m&#34;&gt;block size が 32mの場合&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-- sequencial read
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=read -bs=32m -size=2G -numjobs=16 -runtime=10 -group_reporting -name=file1
+-- ramdom read
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=randread -bs=32m -size=2G -numjobs=16 -runtime=10 -group_reporting -name=file1
+-- sequencial write
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=write -bs=32m -size=2G -numjobs=16 -runtime=10 -group_reporting -name=file1
+-- ramdom write
+fio -filename=/mnt/efs/fio_test -direct=1 -rw=randwrite -bs=32m -size=2G -numjobs=16 -runtime=10 -group_reporting -name=file1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-2&#34;&gt;結果&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#sequencial read
+read : io=1536.0MB, bw=109990KB/s, iops=3, runt= 14300msec
+#ramdom read
+read : io=1504.0MB, bw=110196KB/s, iops=3, runt= 13976msec
+#sequencial write
+write: io=1504.0MB, bw=108404KB/s, iops=3, runt= 14207msec
+#ramdom write
+write: io=1472.0MB, bw=109808KB/s, iops=3, runt= 13727msec
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;その他&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ nslookup fs-xxxxxx.efs.ap-northeast-1.amazonaws.com
+Server:		10.0.0.2
+Address:	10.0.0.2#53
+
+Non-authoritative answer:
+Name:	fs-xxxxxxx.efs.ap-northeast-1.amazonaws.com
+Address: 10.0.2.177
+
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</title>
