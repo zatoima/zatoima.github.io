@@ -5,12 +5,82 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 11 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 13 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</title>
+      <link>/oracle-plsql-blob-insert.html</link>
+      <pubDate>Sat, 13 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-plsql-blob-insert.html</guid>
+      <description>&lt;h4 id=&#34;heading&#34;&gt;ディレクトリ作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mkdir -p /home/oracle/lobdir
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;テスト用のファイル作成&lt;/h4&gt;
+&lt;p&gt;バイナリデータというわけではないが、適当なファイルを作成する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;dd if=/dev/zero of=/home/oracle/oradir/10M.dummy bs=1M count=10
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;ディレクトリオブジェクトの作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop directory oradir;
+CREATE DIRECTORY ORADIR AS &#39;/home/oracle/oradir&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;primary-key&#34;&gt;シーケンス作成(Primary key用)&lt;/h4&gt;
+&lt;p&gt;primary keyとして使用するため、シーケンスを作成。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop sequence oraseq1;
+create sequence oraseq1 start with 1 increment by 1 cache 20;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;テーブル作成&lt;/h4&gt;
+&lt;p&gt;primary keyであるid、ファイル名を挿入するname、BLOBのサイズを格納するlobsize、blobデータを格納するblobdataで構成。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table BLOB_TBL;
+CREATE TABLE BLOB_TBL (
+    id number,
+    name VARCHAR2(100),
+    lobsize VARCHAR2(100),
+    blobdata BLOB,
+    CONSTRAINT BLOB_TBL_PK PRIMARY KEY (id)
+)
+LOB (blobdata) STORE AS BASICFILE;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;プロシージャ作成&lt;/h4&gt;
+&lt;p&gt;BLOBのサイズをカラムに挿入することで各ファイルのサイズがわかるようにした。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop PROCEDURE LOAD_BLOB_TBL;
+CREATE PROCEDURE LOAD_BLOB_TBL(filename VARCHAR2) AS
+    bfileloc BFILE;
+    blobloc BLOB;
+BEGIN
+    bfileloc := BFILENAME(&#39;ORADIR&#39;, filename);
+
+    INSERT INTO BLOB_TBL VALUES(oraseq1.nextval,filename, DBMS_LOB.GETLENGTH(bfileloc), EMPTY_BLOB())
+        RETURN blobdata INTO blobloc;
+
+    DBMS_LOB.FILEOPEN(bfileloc, DBMS_LOB.FILE_READONLY);
+    DBMS_LOB.LOADFROMFILE(blobloc, bfileloc, DBMS_LOB.GETLENGTH(bfileloc));
+    DBMS_LOB.FILECLOSE(bfileloc);
+    COMMIT;
+
+    dbms_output.put_line ( &#39;Blob Size : &#39; || DBMS_LOB.GETLENGTH(bfileloc) || &#39; Bytes&#39; );
+END;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;プロシージャテスト&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;EXEC LOAD_BLOB_TBL(&#39;10M.dummy&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;結果確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;set pages 2000 lin 2000
+col name for a20
+col lobsize for a20
+select * from blob_tbl;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;参考&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ファイルをBLOBとしてテーブルに読み込む - とあるSIerの憂鬱 &lt;a href=&#34;https://incarose86.hatenadiary.org/entry/20140720/1405875714&#34;&gt;https://incarose86.hatenadiary.org/entry/20140720/1405875714&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>EC2からEFSをマウントして使ってみる</title>
