@@ -5,12 +5,275 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 13 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 15 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う</title>
+      <link>/postgresql-pg_rman-backup-recovery.html</link>
+      <pubDate>Mon, 15 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/postgresql-pg_rman-backup-recovery.html</guid>
+      <description>&lt;h3 id=&#34;pg-rman&#34;&gt;pg_rmanの概要&lt;/h3&gt;
+&lt;p&gt;pg_rmanの手順メモ。rmanと名前についている通り、Oracle の Recovery Managerを意識した機能です。標準機能では使用できない増分バックアップが出来ることでバックアップの短縮に繋がるはず。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;全体バックアップに加え、増分バックアップが可能&lt;/li&gt;
+&lt;li&gt;バックアップの圧縮が可能&lt;/li&gt;
+&lt;li&gt;バックアップの世代管理やバックアップ一覧を表示できる&lt;/li&gt;
+&lt;li&gt;バックアップの対象はデータベースクラスタの他にアーカイブログ、サーバログが含めることができる&lt;/li&gt;
+&lt;li&gt;タイムライン指定、リカバリしたい日付時刻指定が可能&lt;/li&gt;
+&lt;li&gt;データベースクラスタ外のテーブルスペースを含めたバックアップが可能&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;pg-rman-1&#34;&gt;pg_rmanのインストール&lt;/h3&gt;
+&lt;p&gt;下記のgithubのリポジトリから最新のバージョンをインストールします。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Releases · ossc-db/pg_rman &lt;a href=&#34;https://github.com/ossc-db/pg_rman/releases&#34;&gt;https://github.com/ossc-db/pg_rman/releases&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo wget https://github.com/ossc-db/pg_rman/releases/download/V1.3.9/pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
+sudo rpm -ivh pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postdb ~]$ pg_rman --help
+pg_rman manage backup/recovery of PostgreSQL database.
+
+Usage:
+  pg_rman OPTION init
+  pg_rman OPTION backup
+  pg_rman OPTION restore
+  pg_rman OPTION show [DATE]
+  pg_rman OPTION show detail [DATE]
+  pg_rman OPTION validate [DATE]
+  pg_rman OPTION delete DATE
+  pg_rman OPTION purge
+
+Common Options:
+  -D, --pgdata=PATH         location of the database storage area
+  -A, --arclog-path=PATH    location of archive WAL storage area
+  -S, --srvlog-path=PATH    location of server log storage area
+  -B, --backup-path=PATH    location of the backup storage area
+  -c, --check               show what would have been done
+  -v, --verbose             show what detail messages
+  -P, --progress            show progress of processed files
+
+Backup options:
+  -b, --backup-mode=MODE    full, incremental, or archive
+  -s, --with-serverlog      also backup server log files
+  -Z, --compress-data       compress data backup with zlib
+  -C, --smooth-checkpoint   do smooth checkpoint before backup
+  -F, --full-backup-on-error   switch to full backup mode
+                               if pg_rman cannot find validate full backup
+                               on current timeline
+      NOTE: this option is only used in --backup-mode=incremental or archive.
+  --keep-data-generations=NUM keep NUM generations of full data backup
+  --keep-data-days=NUM        keep enough data backup to recover to N days ago
+  --keep-arclog-files=NUM   keep NUM of archived WAL
+  --keep-arclog-days=DAY    keep archived WAL modified in DAY days
+  --keep-srvlog-files=NUM   keep NUM of serverlogs
+  --keep-srvlog-days=DAY    keep serverlog modified in DAY days
+  --standby-host=HOSTNAME   standby host when taking backup from standby
+  --standby-port=PORT       standby port when taking backup from standby
+
+Restore options:
+  --recovery-target-time    time stamp up to which recovery will proceed
+  --recovery-target-xid     transaction ID up to which recovery will proceed
+  --recovery-target-inclusive whether we stop just after the recovery target
+  --recovery-target-timeline  recovering into a particular timeline
+  --hard-copy                 copying archivelog not symbolic link
+
+Catalog options:
+  -a, --show-all            show deleted backup too
+
+Delete options:
+  -f, --force               forcibly delete backup older than given DATE
+
+Connection options:
+  -d, --dbname=DBNAME       database to connect
+  -h, --host=HOSTNAME       database server host or socket directory
+  -p, --port=PORT           database server port
+  -U, --username=USERNAME   user name to connect as
+  -w, --no-password         never prompt for password
+  -W, --password            force password prompt
+
+Generic options:
+  -q, --quiet               don&#39;t show any INFO or DEBUG messages
+  --debug                   show DEBUG messages
+  --help                    show this help, then exit
+  --version                 output version information, then exit
+
+Read the website for details. &amp;lt;http://github.com/ossc-db/pg_rman&amp;gt;
+Report bugs to &amp;lt;http://github.com/ossc-db/pg_rman/issues&amp;gt;.
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresqlconf&#34;&gt;postgresql.confの設定&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;archive_mode = on
+archive_command = &#39;cp %p /var/lib/pgsql/10/data/pg_wal/archive/%f&#39;
+wal_level = archive
+log_directory = &#39;pg_log&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;環境変数編集&lt;/h3&gt;
+&lt;p&gt;BACKUP_PATHを下記の通りとします。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ export BACKUP_PATH=/var/lib/pgsql/pg_rman_backup
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-1&#34;&gt;バックアップカタログの初期化&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_rman init
+INFO: ARCLOG_PATH is set to &#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;
+INFO: SRVLOG_PATH is set to &#39;/var/lib/pgsql/10/data/log&#39;
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;フルバックアップの取得&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[postgres@postdb ~]$ pg_rman init
+INFO: ARCLOG_PATH is set to &#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;
+INFO: SRVLOG_PATH is set to &#39;/var/lib/pgsql/10/data/log&#39;
+[postgres@postdb ~]$ 
+[postgres@postdb ~]$ 
+[postgres@postdb ~]$ pg_rman backup --backup-mode=full
+INFO: copying database files
+INFO: copying archived WAL files
+INFO: backup complete
+INFO: Please execute &#39;pg_rman validate&#39; to verify the files are correctly copied.
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-3&#34;&gt;バックアップの検証&lt;/h3&gt;
+&lt;p&gt;validateを実施しないとリストア出来ない。バックアップ後すぐに実施するのが良さそう。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_rman validate
+INFO: validate: &amp;quot;2020-03-04 12:55:57&amp;quot; backup and archive log files by CRC
+INFO: backup &amp;quot;2020-03-04 12:55:57&amp;quot; is valid
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-4&#34;&gt;バックアップ後のディレクトリ状態&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;cd /var/lib/pgsql/pg_rman_backup
+ls -l
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-5&#34;&gt;増分バックアップの実施&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_rman backup --backup-mode=incremental --with-serverlog
+INFO: copying database files
+INFO: copying archived WAL files
+INFO: copying server log files
+INFO: backup complete
+INFO: Please execute &#39;pg_rman validate&#39; to verify the files are correctly copied.
+[postgres@postdb ~]$ pg_rman validate
+INFO: validate: &amp;quot;2020-03-04 12:58:38&amp;quot; backup, archive log files and server log files by CRC
+INFO: backup &amp;quot;2020-03-04 12:58:38&amp;quot; is valid
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;バックアップ後のディレクトリ状態&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;cd /var/lib/pgsql/pg_rman_backup
+ls -l
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-7&#34;&gt;バックアップの表示&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_rman show
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status 
+=====================================================================
+2020-03-04 12:58:38  2020-03-04 12:58:41  INCR    42MB     1  OK
+2020-03-04 12:55:57  2020-03-04 12:56:15  FULL  1078MB     1  OK
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;db&#34;&gt;リストア前のDBの停止&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_ctl stop
+waiting for server to shut down.... done
+server stopped
+[postgres@postdb ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;db-1&#34;&gt;DBの破壊&lt;/h3&gt;
+&lt;p&gt;雑にDBを破損させました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb base]$ pwd
+/var/lib/pgsql/10/data/base
+[postgres@postdb base]$ ls -l
+total 0
+[postgres@postdb base]$ 
+[postgres@postdb base]$ psql
+psql: FATAL:  database &amp;quot;postgres&amp;quot; does not exist
+DETAIL:  The database subdirectory &amp;quot;base/13865&amp;quot; is missing.
+[postgres@postdb base]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-8&#34;&gt;前回バックアップ時点の最新までリストア&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb ~]$ pg_rman restore
+INFO: the recovery target timeline ID is not given
+INFO: use timeline ID of current database cluster as recovery target: 1
+INFO: calculating timeline branches to be used to recovery target point
+INFO: searching latest full backup which can be used as restore start point
+INFO: found the full backup can be used as base in recovery: &amp;quot;2020-03-04 12:55:57&amp;quot;
+INFO: copying online WAL files and server log files
+INFO: clearing restore destination
+INFO: validate: &amp;quot;2020-03-04 12:55:57&amp;quot; backup and archive log files by SIZE
+INFO: backup &amp;quot;2020-03-04 12:55:57&amp;quot; is valid
+INFO: restoring database files from the full mode backup &amp;quot;2020-03-04 12:55:57&amp;quot;
+INFO: searching incremental backup to be restored
+INFO: validate: &amp;quot;2020-03-04 12:58:38&amp;quot; backup, archive log files and server log files by SIZE
+INFO: backup &amp;quot;2020-03-04 12:58:38&amp;quot; is valid
+INFO: restoring database files from the incremental mode backup &amp;quot;2020-03-04 12:58:38&amp;quot;
+INFO: searching backup which contained archived WAL files to be restored
+INFO: backup &amp;quot;2020-03-04 12:58:38&amp;quot; is valid
+INFO: restoring WAL files from backup &amp;quot;2020-03-04 12:58:38&amp;quot;
+INFO: restoring online WAL files and server log files
+INFO: generating recovery.conf
+INFO: restore complete
+HINT: Recovery will start automatically when the PostgreSQL server is started.
+[postgres@postdb ~]$ 
+[postgres@postdb ~]$ pg_ctl status
+pg_ctl: no server running
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pg_ctl start時のログ・ファイルを確認したところリカバリ処理が走っている。&lt;code&gt;2020-03-04 12:58:40.102645+00&lt;/code&gt;時点まで戻ったことが確認出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb log]$ cat postgresql-20200304.log 
+[2020-03-04 13:05:24 UTC]  17807[1] LOG:  database system was interrupted; last known up at 2020-03-04 12:58:38 UTC
+[2020-03-04 13:05:24 UTC]  17807[2] LOG:  starting archive recovery
+[2020-03-04 13:05:24 UTC]  17807[3] LOG:  restored log file &amp;quot;000000010000000000000047&amp;quot; from archive
+[2020-03-04 13:05:24 UTC]  17807[4] LOG:  redo starts at 0/47000028
+[2020-03-04 13:05:24 UTC]  17807[5] LOG:  consistent recovery state reached at 0/470000F8
+[2020-03-04 13:05:24 UTC]  17805[6] LOG:  database system is ready to accept read only connections
+[2020-03-04 13:05:24 UTC]  17807[6] LOG:  restored log file &amp;quot;000000010000000000000048&amp;quot; from archive
+[2020-03-04 13:05:25 UTC]  17807[7] LOG:  restored log file &amp;quot;000000010000000000000049&amp;quot; from archive
+[2020-03-04 13:05:25 UTC]  17807[8] LOG:  restored log file &amp;quot;00000001000000000000004A&amp;quot; from archive
+cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/archive/00000001000000000000004B’: No such file or directory
+[2020-03-04 13:05:25 UTC]  17807[9] LOG:  invalid record length at 0/4B000098: wanted 24, got 0
+[2020-03-04 13:05:25 UTC]  17807[10] LOG:  redo done at 0/4B000028
+[2020-03-04 13:05:25 UTC]  17807[11] LOG:  last completed transaction was at log time 2020-03-04 12:58:40.102645+00
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;物理ファイルもリストアされている。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[postgres@postdb base]$ pwd
+/var/lib/pgsql/10/data/base
+[postgres@postdb base]$ ls -l
+total 60
+drwx------ 2 postgres postgres 8192 Mar  4 13:03 1
+drwx------ 2 postgres postgres 8192 Mar  4 13:03 13864
+drwx------ 2 postgres postgres 8192 Mar  4 13:03 13865
+drwx------ 2 postgres postgres 8192 Mar  4 13:03 16392
+drwx------ 2 postgres postgres 8192 Mar  4 13:03 16456
+[postgres@postdb base]$ find . | more
+.
+./1
+./1/18121
+./1/18121_fsm
+./1/18121_vm
+./1/18124
+./1/18124_fsm
+./1/18124_vm
+./1/18126
+./1/18127
+./1/18128
+./1/18128_fsm
+./1/18128_vm
+./1/18131
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pitr&#34;&gt;PITR&lt;/h3&gt;
+&lt;p&gt;特定時点まで戻す場合は下記を実行する、&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pg_rman restore --recovery-target-time &#39;2020-03-04 22:00:00&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg-rman-2&#34;&gt;pg_rmanのコマンド・オプション&lt;/h3&gt;
+&lt;h5 id=&#34;usage&#34;&gt;Usage&lt;/h5&gt;
+&lt;blockquote&gt;
+&lt;p&gt;pg_rman &lt;a href=&#34;https://ossc-db.github.io/pg_rman/index-ja.html&#34;&gt;https://ossc-db.github.io/pg_rman/index-ja.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading-9&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;pg_rman (PostgreSQL のバックアップ/リストア管理ツール) &lt;a href=&#34;https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/&#34;&gt;https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</title>
