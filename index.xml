@@ -5,12 +5,79 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 21 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 24 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>OracleとPostgreSQLのchar、varcharのバイトと文字数の違い</title>
+      <link>/oracle-postgresql-char-varchar-byte.html</link>
+      <pubDate>Wed, 24 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-char-varchar-byte.html</guid>
+      <description>&lt;p&gt;charとvarcharの引数指定はOracleはバイト数である一方PostgreSQLは文字数となる。UTF8環境のOracleでchar(10)とした場合は3文字しか格納出来ない。一方、PostgreSQLでchar(10)と設定した場合は、10文字格納出来る。&lt;/p&gt;
+&lt;p&gt;ora2pgやSCT(schema conversion tool)ではこの非互換は変換されないので注意が必要。&lt;/p&gt;
+&lt;h4 id=&#34;oraclepostgresql&#34;&gt;Oracle/PostgreSQL共通&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create table chartest(a char(10));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h4&gt;
+&lt;p&gt;char(10)の列に全角10文字を格納し、長さとバイト数を確認。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; insert into chartest values(&#39;１２３４５６７８９あ&#39;);                                                                                                                              
+INSERT 0 1
+Time: 0.004s
+postgres&amp;gt; SELECT LENGTH(a) from chartest;                                                                                                                                                   
++----------+
+| length   |
+|----------|
+| 10       |
++----------+
+SELECT 1
+Time: 0.017s
+postgres&amp;gt; SELECT OCTET_LENGTH(a) from chartest;                                                                                                                                             
++----------------+
+| octet_length   |
+|----------------|
+| 30             |
++----------------+
+SELECT 1
+Time: 0.017s
+#文字数オーバーなパターン
+postgres&amp;gt; insert into chartest values(&#39;１２３４５６７８９あい&#39;);                                                                                                                            
+value too long for type character(10)
+
+Time: 0.004s
+postgres&amp;gt;  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;oracle&#34;&gt;Oracle&lt;/h4&gt;
+&lt;p&gt;同様に10バイト分のデータを入れて確認。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; insert into chartest values(&#39;１２３&#39;);
+
+1 row inserted.
+
+SQL&amp;gt; SELECT LENGTHB(a) from chartest;
+   LENGTHB(A) 
+_____________ 
+           10 
+
+
+SQL&amp;gt; SELECT LENGTH(a) from chartest;
+   LENGTH(A) 
+____________ 
+           4 
+
+
+SQL&amp;gt; insert into chartest values(&#39;１２３４&#39;);
+
+Error starting at line : 1 in command -
+insert into chartest values(&#39;１２３４&#39;)
+Error report -
+ORA-12899: value too large for column &amp;quot;ADMIN&amp;quot;.&amp;quot;CHARTEST&amp;quot;.&amp;quot;A&amp;quot; (actual: 12, maximum: 10)
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>ora2pgを使用したOracleからPostgreSQLへの変換結果</title>
