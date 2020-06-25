@@ -5,12 +5,115 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 21 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 25 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>Systems Managerのparameter storeを使用してAurora PostgreSQLのパスワードを管理</title>
+      <link>/aws-aurora-postgresql-parameter-store-connect.html</link>
+      <pubDate>Thu, 25 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgresql-parameter-store-connect.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;事前準備&lt;/h3&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;はじめに&lt;/h4&gt;
+&lt;p&gt;Aurora PostgreSQL側にユーザ名&lt;code&gt;testuser&lt;/code&gt;、パスワード&lt;code&gt;p@sstest&lt;/code&gt;で作成。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CREATE ROLE testuser WITH LOGIN PASSWORD &#39;p@sstest&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;psqlでログインする場合には環境変数に設定して下記のように接続。パスワードをどこかに持つ必要があってセキュアな状態とは言えない。。。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ export PGUSER=testuser
+[ec2-user@bastin ~]$ export PGPASSWORD=p@sstest
+[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+postgres=&amp;gt; \conninfo
+You are connected to database &amp;quot;postgres&amp;quot; as user &amp;quot;testuser&amp;quot; on host &amp;quot;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&amp;quot; at port &amp;quot;5432&amp;quot;.
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;systems-manager&#34;&gt;Systems Managerにパラメータを格納&lt;/h4&gt;
+&lt;p&gt;2つのパラメータを格納してみる。useridは&lt;code&gt;平文(String)&lt;/code&gt;でpasswordは&lt;code&gt;SecureString&lt;/code&gt;で格納。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;aws ssm put-parameter --name &#39;pgsql.connect.userid&#39; --type &#39;String&#39; --value &#39;testuser&#39;
+aws ssm put-parameter --name &#39;pgsql.connect.password&#39; --type &#39;SecureString&#39; --value &#39;p@sstest&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;パラメータを取得してみる。&lt;code&gt;pgsql.connect.userid&lt;/code&gt;を取得する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.userid&#39;
+{
+    &amp;quot;InvalidParameters&amp;quot;: [], 
+    &amp;quot;Parameters&amp;quot;: [
+        {
+            &amp;quot;Name&amp;quot;: &amp;quot;pgsql.connect.userid&amp;quot;, 
+            &amp;quot;DataType&amp;quot;: &amp;quot;text&amp;quot;, 
+            &amp;quot;LastModifiedDate&amp;quot;: 1592740003.175, 
+            &amp;quot;Value&amp;quot;: &amp;quot;testuser&amp;quot;, 
+            &amp;quot;Version&amp;quot;: 1, 
+            &amp;quot;Type&amp;quot;: &amp;quot;String&amp;quot;, 
+            &amp;quot;ARN&amp;quot;: &amp;quot;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.userid&amp;quot;
+        }
+    ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;次に&lt;code&gt;pgsql.connect.password&lt;/code&gt;を取得。&lt;code&gt;SecureString&lt;/code&gt;で格納したパラメータについては&lt;code&gt;--with-decryption&lt;/code&gt;を付与してコマンドを実行する必要がある。このオプションがないと暗号化された状態でvalueが出力される。（内部的にはKMSが使用されており、KMSの使用権限を持っていなければ復号化が出来ない。）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39;
+{
+    &amp;quot;InvalidParameters&amp;quot;: [], 
+    &amp;quot;Parameters&amp;quot;: [
+        {
+            &amp;quot;Name&amp;quot;: &amp;quot;pgsql.connect.password&amp;quot;, 
+            &amp;quot;DataType&amp;quot;: &amp;quot;text&amp;quot;, 
+            &amp;quot;LastModifiedDate&amp;quot;: 1592740007.647, 
+            &amp;quot;Value&amp;quot;: &amp;quot;AQICAHimGbBDsXKAeEMDoI4Kw/rpZAgukrSwYmqXyAKBupBtkwFYzzG2rJ2dnIePkkrTPZdsAAAAZjBkBgkqhkiG9w0BBwagVzBVAgEAMFAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMoiJHw/NeYmZj35gYAgEQgCNgQlRcIz7EgkLxyHV4weHFwONVhdTI9m3OilaP2ikVHLbqQg==&amp;quot;, 
+            &amp;quot;Version&amp;quot;: 1, 
+            &amp;quot;Type&amp;quot;: &amp;quot;SecureString&amp;quot;, 
+            &amp;quot;ARN&amp;quot;: &amp;quot;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&amp;quot;
+        }
+    ]
+}
+[ec2-user@bastin ~]$ 
+[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39; --with-decryption
+{
+    &amp;quot;InvalidParameters&amp;quot;: [], 
+    &amp;quot;Parameters&amp;quot;: [
+        {
+            &amp;quot;Name&amp;quot;: &amp;quot;pgsql.connect.password&amp;quot;, 
+            &amp;quot;DataType&amp;quot;: &amp;quot;text&amp;quot;, 
+            &amp;quot;LastModifiedDate&amp;quot;: 1592740007.647, 
+            &amp;quot;Value&amp;quot;: &amp;quot;p@sstest&amp;quot;, 
+            &amp;quot;Version&amp;quot;: 1, 
+            &amp;quot;Type&amp;quot;: &amp;quot;SecureString&amp;quot;, 
+            &amp;quot;ARN&amp;quot;: &amp;quot;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&amp;quot;
+        }
+    ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;aurorapostgresql&#34;&gt;Aurora(PostgreSQL)へ接続&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;aws ssm get-parameters&lt;/code&gt;コマンドを使用することでパスワードを直書きするというセキュリティ的なリスクが無くなる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ export PGUSER=$(aws ssm get-parameters --name &#39;pgsql.connect.userid&#39; | jq -r &#39;.Parameters[].Value&#39;)
+[ec2-user@bastin ~]$ export PGPASSWORD=$(aws ssm get-parameters --name &#39;pgsql.connect.password&#39; --with-decryption | jq -r &#39;.Parameters[].Value&#39;)
+[ec2-user@bastin ~]$ 
+[ec2-user@bastin ~]$ echo $PGUSER
+testuser
+[ec2-user@bastin ~]$ echo $PGPASSWORD
+p@sstest
+[ec2-user@bastin ~]$ 
+[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=&amp;gt; \conninfo
+You are connected to database &amp;quot;postgres&amp;quot; as user &amp;quot;testuser&amp;quot; on host &amp;quot;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&amp;quot; at port &amp;quot;5432&amp;quot;.
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+postgres=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;次は同じような使い方が出来る&lt;code&gt;AWS Secrets Manager&lt;/code&gt;を触ってみる。&lt;/p&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;その他参考情報&lt;/h4&gt;
+&lt;p&gt;任意のパラメータを格納できる EC2 Systems Manager「パラメータストア」を試したら便利だった - kakakakakku blog &lt;a href=&#34;https://kakakakakku.hatenablog.com/entry/2017/06/10/181603&#34;&gt;https://kakakakakku.hatenablog.com/entry/2017/06/10/181603&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;AWSのParameter StoreとSecrets Manager、結局どちらを使えばいいのか？比較 - Qiita &lt;a href=&#34;https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5&#34;&gt;https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>ora2pgを使用したOracleからPostgreSQLへの変換結果</title>
