@@ -5,12 +5,116 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 25 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 28 Jun 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>IAM認証を使用したAurora(PostgreSQL)への接続</title>
+      <link>/aws-aurora-postgresql-iam-connect.html</link>
+      <pubDate>Sun, 28 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgresql-iam-connect.html</guid>
+      <description>&lt;h3 id=&#34;iam&#34;&gt;IAMデータベース認証の有効化&lt;/h3&gt;
+&lt;p&gt;マネージメントコンソール、もしくは下記コマンドで有効化する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws rds modify-db-cluster --db-cluster-identifier aurorapgsqlv1 --apply-immediately --enable-iam-database-authentication
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;iam-1&#34;&gt;IAMデータベース認証が有効になっているか確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query &#39;DBClusters[].[IAMDatabaseAuthenticationEnabled]&#39; --output table
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;iampostgresql&#34;&gt;IAMデータベース認証用のPostgreSQLユーザを作成&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;rds_iam&lt;/code&gt;は固定。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE USER iam_user WITH LOGIN;
+grant rds_iam to iam_user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;iam-2&#34;&gt;IAMポリシーを作成&lt;/h3&gt;
+&lt;p&gt;AWS CLIから作成するので&lt;code&gt;iam_rds_connect.json&lt;/code&gt;を作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cat &amp;lt;&amp;lt; EOF &amp;gt; iam_rds_connect.json  
+{
+   &amp;quot;Version&amp;quot;: &amp;quot;2012-10-17&amp;quot;,
+   &amp;quot;Statement&amp;quot;: [
+      {
+         &amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+         &amp;quot;Action&amp;quot;: [
+             &amp;quot;rds-db:connect&amp;quot;
+         ],
+         &amp;quot;Resource&amp;quot;: [
+             &amp;quot;arn:aws:rds-db:ap-northeast-1:xxxxxxxxxxx:dbuser:cluster-ALPQLYUXTQZEQ7M7F5UBRC7WTU/iam_user&amp;quot;
+         ]
+      }
+   ]
+}
+EOF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;Resource&lt;/code&gt;箇所でリージョン、アカウントID、クラスタID、PostgreSQLのユーザ名を指定。&lt;/p&gt;
+&lt;p&gt;クラスタIDは下記CLIで確認が可能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query &amp;quot;DBClusters[0].[DbClusterResourceId]&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;iam-3&#34;&gt;IAMポリシーを作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
+{
+    &amp;quot;Policy&amp;quot;: {
+        &amp;quot;PolicyName&amp;quot;: &amp;quot;iam_rds_connect&amp;quot;, 
+        &amp;quot;PermissionsBoundaryUsageCount&amp;quot;: 0, 
+        &amp;quot;CreateDate&amp;quot;: &amp;quot;2020-06-21T10:50:56Z&amp;quot;, 
+        &amp;quot;AttachmentCount&amp;quot;: 0, 
+        &amp;quot;IsAttachable&amp;quot;: true, 
+        &amp;quot;PolicyId&amp;quot;: &amp;quot;ANPAR23YLZYEHAKGAXPDT&amp;quot;, 
+        &amp;quot;DefaultVersionId&amp;quot;: &amp;quot;v1&amp;quot;, 
+        &amp;quot;Path&amp;quot;: &amp;quot;/&amp;quot;, 
+        &amp;quot;Arn&amp;quot;: &amp;quot;arn:aws:iam::xxxxxxxxxxx:policy/iam_rds_connect&amp;quot;, 
+        &amp;quot;UpdateDate&amp;quot;: &amp;quot;2020-06-21T10:50:56Z&amp;quot;
+    }
+}
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;IAMユーザが&lt;code&gt;AdministratorAccess&lt;/code&gt;のように強い権限を所持していたらここまででOKで、権限を絞っているのであれば&lt;code&gt;IAM ユーザーまたはロールへの IAM ポリシーのアタッチ&lt;/code&gt;が必要となる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;IAM データベースアクセス用の IAM ポリシーの作成と使用 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;iamaurora-postgresql&#34;&gt;IAMデータベースを使用したAurora PostgreSQLへの接続&lt;/h3&gt;
+&lt;p&gt;認証情報は &lt;code&gt;aws rds generate-db-auth-token&lt;/code&gt;で取得可能。PostgreSQLへの接続時には環境変数のPGPASSWORDに変数として入れる。認証トークンは数百の文字で構成されて長いので、コピペしてログインよりもこちらの方法の方がスマート。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export PGPASSWORD=`aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port 5432 --username iam_user`
+psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading&#34;&gt;成功パターン&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ export PGPASSWORD=`aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port 5432 --username iam_user`
+[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=&amp;gt; select version();
+                                   version                                   
+-----------------------------------------------------------------------------
+ PostgreSQL 11.7 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.9.3, 64-bit
+(1 row)
+
+postgres=&amp;gt; select aurora_version();
+ aurora_version 
+----------------
+ 3.2.1
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;失敗パターン&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+psql: FATAL:  password authentication failed for user &amp;quot;iam_user&amp;quot;
+FATAL:  password authentication failed for user &amp;quot;iam_user&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;最後に&lt;/h3&gt;
+&lt;p&gt;RDS(Aurora含む)への接続時の認証は他にもSystems Manager パラメータストアやSecrets Manager等、色々あってどれを使うべきか迷う、、。IAM認証に関してその他の注意事項等はマニュアルを参照。&lt;code&gt;データベースクラスターの 1 秒あたりの最大接続数は、クラスタータイプとワークロードに応じて制限される場合があります。&lt;/code&gt;と記載あるのが個人的には気になるところ。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;IAM データベース認証の MySQL の制限事項
+IAM データベース認証の PostgreSQL の制限事項&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Systems Managerのparameter storeを使用してAurora PostgreSQLのパスワードを管理</title>
