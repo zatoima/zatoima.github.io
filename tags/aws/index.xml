@@ -5,12 +5,99 @@
     <link>/tags/aws/</link>
       <atom:link href="/tags/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 28 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 02 Jul 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/tags/aws/</link>
     </image>
+    
+    <item>
+      <title>Aurora（PostgreSQL）へのSSL接続について</title>
+      <link>/aws-aurora-postgresql-ssl-connect.html</link>
+      <pubDate>Thu, 02 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgresql-ssl-connect.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;事前準備&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Security.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Security.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SSL 接続ステータスを調べる&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;heading-1&#34;&gt;拡張機能のインストール&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create extension sslinfo;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;ssl&#34;&gt;SSLの使用有無の確認&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select ssl_is_used();
+select ssl_cipher();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;ssl-1&#34;&gt;SSL無しで接続&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ export PGSSLMODE=disable
+[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postgres
+psql (11.5, server 11.7)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=&amp;gt; select ssl_is_used();
+ ssl_is_used 
+-------------
+ f
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;ssl-2&#34;&gt;SSL有りで接続&lt;/h3&gt;
+&lt;p&gt;RDSは作成時にSSL証明書が自動的に用意されており、RDSへの接続は基本的にSSLが有効化されている。ログインプロンプトでもSSLが使用されていることが確認可能。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postgres
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+postgres=&amp;gt; select ssl_is_used();
+ ssl_is_used 
+-------------
+ t
+(1 row)
+
+postgres=&amp;gt; select ssl_cipher();
+         ssl_cipher          
+-----------------------------
+ ECDHE-RSA-AES256-GCM-SHA384
+(1 row)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;SSL接続を有効化したい場合は&lt;code&gt;rds.force_ssl&lt;/code&gt;を「0」から「1」に変更する。&lt;/p&gt;
+&lt;h3 id=&#34;heading-2&#34;&gt;なりすまし防止、改ざん防止のために証明書を検証&lt;/h3&gt;
+&lt;p&gt;ルート証明書を取得してなりすまし防止、改ざん防止のための検証を行う必要がある。検証を行う意味としては下記を参照。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SSLって何？意味や仕組みをわかりやすく解説！ | さくらのSSL &lt;a href=&#34;https://ssl.sakura.ad.jp/column/ssl/&#34;&gt;https://ssl.sakura.ad.jp/column/ssl/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;改ざん防止となりすましの防止については、SSLサーバー証明書の「認証局」という組織の存在が重要になります。暗号化自体は認証局が無くても実現可能ですが、認証局はサーバーでもパソコンでもない第三者機関であり、「○○.jpを名乗るこのサイトは本当に○○.jpですよ」と保証してくれる組織です。&lt;/p&gt;
+&lt;p&gt;認証局が発行する「ルート証明書」というものはパソコンやスマートフォン内に保存され、サーバーから送られてくるSSLサーバー証明書と中間CA証明書が、本当にルート証明書と関連付けられた証明書（認証局が発行した証明書）であるかを検証します。ルート証明書はパソコン本体に入っており、悪意のある第三者が改ざんすることは難しいため、このような仕組みになっています。当然、不正なルート証明書をインストールして不正なSSLサーバー証明書を正当化しようとする悪意のある攻撃も存在します。&lt;/p&gt;
+&lt;p&gt;証明書の種類によっては「○○.jpとは、株式会社○○が運営しているサイトですよ」と運営組織を保証してくれる場合もあります（OV/EV認証）。銀行のホームページにアクセスして鍵アイコンをクリックすると会社名が表示されるのはEV証明書という特殊なSSLサーバー証明書を利用しているからです。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h5 id=&#34;heading-3&#34;&gt;ルート証明書を取得&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem
+psql &amp;quot;host=aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com sslmode=verify-full sslrootcert=rds-combined-ca-bundle.pem user=postgres dbname=postgres&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-4&#34;&gt;検証成功時&lt;/h5&gt;
+&lt;p&gt;&lt;code&gt;psql&lt;/code&gt;の引数として&lt;code&gt;sslrootcert&lt;/code&gt;,&lt;code&gt;sslmode&lt;/code&gt;を指定している。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ psql &amp;quot;host=aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com sslmode=verify-full sslrootcert=rds-combined-ca-bundle.pem user=postgres dbname=postgres&amp;quot;
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記の様に環境変数に設定することでも問題無し。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;export PGSSLMODE=verify-full
+export PGSSLROOTCERT=rds-combined-ca-bundle.pem
+psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postgres
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;heading-5&#34;&gt;検証失敗時&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ psql &amp;quot;host=aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com sslmode=verify-full sslrootcert=dummy.pem user=postgres dbname=postgres&amp;quot;
+psql: could not read root certificate file &amp;quot;dummy.pem&amp;quot;: no SSL error reported
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading-6&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon Aurora PostgreSQL でのセキュリティ - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Security.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Security.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SSL/TLS 証明書の更新 - Amazon Aurora &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.SSL-certificate-rotation.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.SSL-certificate-rotation.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>IAM認証を使用したAurora(PostgreSQL)への接続</title>
