@@ -5,12 +5,155 @@
     <link>/tags/db-migration/</link>
       <atom:link href="/tags/db-migration/index.xml" rel="self" type="application/rss+xml" />
     <description>DB Migration</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 24 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 06 Jul 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>DB Migration</title>
       <link>/tags/db-migration/</link>
     </image>
+    
+    <item>
+      <title>ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施</title>
+      <link>/oracle-postgresql-ora2pg-migration.html</link>
+      <pubDate>Mon, 06 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-ora2pg-migration.html</guid>
+      <description>&lt;p&gt;ora2pgのセットアップ、変換作業の実施。インストール手順は&lt;a href=&#34;http://ora2pg.darold.net/documentation.html&#34;&gt;ora2pgのサイト&lt;/a&gt;を参照。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;instant-client-package&#34;&gt;Instant Client Packageのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Instant Clientのrpmダウンロードは&lt;a href=&#34;https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html&#34;&gt;Oracle社のサイト&lt;/a&gt;から。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sudo rpm -ivh oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-devel-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-jdbc-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-sqlplus-19.6.0.0.0-1.x86_64.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;heading&#34;&gt;環境変数の設定&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;vi .bash_profile
+
+↓下記を追記
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;source .bash_profile
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;dbdoracle&#34;&gt;DBD::Oracleのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;sudo su -
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+
+yum -y install perl-CPAN
+yum -y install libyaml-devel
+yum -y install gcc
+
+perl -MCPAN -e shell #全てEnter
+perl -MCPAN -e &#39;install DBI&#39;
+perl -MCPAN -e &#39;install DBD::Oracle&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pg&#34;&gt;ora2pgのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;sudo su - ec2-user
+sudo yum -y install git
+git clone https://github.com/darold/ora2pg.git
+cd ./ora2pg
+perl Makefile.PL
+make &amp;amp;&amp;amp; make install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ora2pgのインストール自体は以上で終了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pg-1&#34;&gt;ora2pgの初期セッティング&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;mkdir ora2pg
+ora2pg --project_base ~/ora2pg --init_project migration_test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pgconf&#34;&gt;ora2pg.confの設定&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;./config配下にora2pg.confが作成されているのでこのファイルを修正する。細かい挙動を制御するパラメータもあるが割愛。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vi ./config/ora2pg.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;# Set Oracle database connection (datasource, user, password)
+ORACLE_DSN	dbi:Oracle:host=xxxxxxxxxxxxx;sid=ora19db;port=1521
+ORACLE_USER	ikotest
+ORACLE_PWD	oracle
+
+# Oracle schema/owner to use
+SCHEMA	ikotest
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;export&#34;&gt;スキーマ定義の全体export実施&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;./export_schema.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行後は「reports」、「schema」配下を重点的に確認&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;├── config
+│   └── ora2pg.conf
+├── CONSTRAINTS_output.sql
+├── data
+├── export_schema.sh
+├── import_all.sh
+├── INDEXES_output.sql
+├── reports
+│   ├── columns.txt
+│   ├── report.html
+│   └── tables.txt
+├── schema
+│   ├── dblinks
+│   ├── directories
+│   ├── functions
+│   ├── grants
+│   ├── mviews
+│   ├── packages
+│   ├── partitions
+│   ├── procedures
+│   ├── sequences
+│   ├── synonyms
+│   │   └── synonym.sql
+│   ├── tables
+│   │   ├── CONSTRAINTS_table.sql
+│   │   ├── INDEXES_table.sql
+│   │   └── table.sql
+│   ├── tablespaces
+│   ├── triggers
+│   ├── types
+│   └── views
+└── sources
+    ├── functions
+    ├── mviews
+    ├── packages
+    ├── partitions
+    ├── procedures
+    ├── triggers
+    ├── types
+    └── views
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;sql&#34;&gt;SQL変換&lt;/h5&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;ora2pg -c config/ora2pg.conf -i input.sql -o output.sql -t QUERY
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>OracleとPostgreSQLのchar、varcharのバイトと文字数の違い</title>
