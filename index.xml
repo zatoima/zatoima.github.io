@@ -5,12 +5,127 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sat, 25 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 27 Jul 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>SPARQLクエリ集メモ</title>
+      <link>/sparql-query-note.html</link>
+      <pubDate>Mon, 27 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/sparql-query-note.html</guid>
+      <description>&lt;p&gt;初見のSPARQLエンドポイントに向けて実行するSPARQLクエリをメモ。DBPediaのSPARQLエンドポイントでお試しください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://ja.dbpedia.org/sparql&#34;&gt;http://ja.dbpedia.org/sparql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;heading&#34;&gt;エンドポイントにどんなトリプルがあるのか&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT *
+WHERE {
+  ?s ?p ?o .
+}
+LIMIT 100
+OFFSET 0 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;エンドポイントのトリプル数&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (COUNT(*) AS ?count)
+WHERE {
+  ?s ?p ?o .
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;型の確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?type WHERE {
+  ?s a ?type
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;どのようなプロパティがあるかを確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?p WHERE {
+  ?s a &amp;lt;http://dbpedia.org/ontology/Anime&amp;gt; ;
+    ?p ?o.
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;名前付きグラフも合算してトリプル数を検索する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (COUNT(*) AS ?count)
+WHERE {
+  { 
+    ?s ?p ?o .
+  } UNION {
+    GRAPH ?g { 
+      ?s ?p ?o .
+    } 
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;名前付きグラフの一覧を取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?g
+WHERE {
+  GRAPH ?g { 
+    ?s ?p ?o . 
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;名前付きグラフ毎の件数を集計&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT ?g count(?g) WHERE {GRAPH ?g {?s ?p ?o}} GROUP BY ?g
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;名前付きグラフのデータを検索&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * WHERE { GRAPH &amp;lt;あるグラフ&amp;gt; {?s ?p ?o }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-8&#34;&gt;プロパティの一覧を取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?p
+WHERE {
+  ?s ?p ?o .
+}
+LIMIT 100
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-9&#34;&gt;プロパティの一覧を使用頻度順に取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT ?p (COUNT(?p) AS ?count)
+WHERE {
+  ?s ?p ?o .
+} 
+GROUP BY ?p
+ORDER BY DESC(?count)
+LIMIT 100
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-10&#34;&gt;主語あたりの平均プロパティ数&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (AVG(?count) AS ?average)
+WHERE {
+  SELECT ?s (COUNT(?p) as ?count)
+  WHERE {
+    ?s ?p ?o .
+  } 
+  GROUP BY ?s
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-11&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（主語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?s),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-12&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（述語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?p),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-13&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（目的語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?o),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-14&#34;&gt;&lt;strong&gt;グラフ&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH &amp;lt;グラフ&amp;gt; {?s ?p ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-15&#34;&gt;&lt;strong&gt;主語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {&amp;lt;主語&amp;gt; ?p ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-16&#34;&gt;&lt;strong&gt;述語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {?s &amp;lt;述語&amp;gt; ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-17&#34;&gt;&lt;strong&gt;目的語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {?s ?p &#39;目的語&#39;}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参考サイト：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;よく使うSPARQLサンプル集 - Qiita &lt;a href=&#34;https://qiita.com/hodade/items/30158fba9e943132023f&#34;&gt;https://qiita.com/hodade/items/30158fba9e943132023f&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SPARQL入門 &lt;a href=&#34;http://www.aise.ics.saitama-u.ac.jp/~gotoh/IntroSPARQL.html&#34;&gt;http://www.aise.ics.saitama-u.ac.jp/~gotoh/IntroSPARQL.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Amazon Elasticsearch Serviceでindex.max_result_windowの値を変更</title>
