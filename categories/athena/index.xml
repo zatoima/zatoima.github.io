@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Athena | my opinion is my own</title>
+    <link>/categories/athena/</link>
+      <atom:link href="/categories/athena/index.xml" rel="self" type="application/rss+xml" />
+    <description>Athena</description>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 02 Sep 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>img/icon-192.png</url>
+      <title>Athena</title>
+      <link>/categories/athena/</link>
+    </image>
+    
+    <item>
+      <title>ALB(Application Load Balancer)のログをAthenaで分析</title>
+      <link>/aws-athena-alb-log-analitics.html</link>
+      <pubDate>Wed, 02 Sep 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-athena-alb-log-analitics.html</guid>
+      <description>&lt;h3 id=&#34;elb&#34;&gt;ELBのログの有効化&lt;/h3&gt;
+&lt;p&gt;属性の「属性の編集」からアクセスログを有効化。しばらく放置するとS3の指定したバケットにELBにログが蓄積されていく。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200902205725025.png&#34; alt=&#34;image-20200902205725025&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200902205749483.png&#34; alt=&#34;image-20200902205749483&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;athena&#34;&gt;Athena&lt;/h3&gt;
+&lt;h4 id=&#34;athena-1&#34;&gt;Athenaでデータベース作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create database alb_db
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;athena-2&#34;&gt;Athenaでテーブル作成&lt;/h4&gt;
+&lt;p&gt;LOCATIONに指定するパスはELBアクセスログの設定した時に指定したBucketとpathとなる。このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE EXTERNAL TABLE IF NOT EXISTS alb_logs (
+            type string,
+            time string,
+            elb string,
+            client_ip string,
+            client_port int,
+            target_ip string,
+            target_port int,
+            request_processing_time double,
+            target_processing_time double,
+            response_processing_time double,
+            elb_status_code string,
+            target_status_code string,
+            received_bytes bigint,
+            sent_bytes bigint,
+            request_verb string,
+            request_url string,
+            request_proto string,
+            user_agent string,
+            ssl_cipher string,
+            ssl_protocol string,
+            target_group_arn string,
+            trace_id string,
+            domain_name string,
+            chosen_cert_arn string,
+            matched_rule_priority string,
+            request_creation_time string,
+            actions_executed string,
+            redirect_url string,
+            lambda_error_reason string,
+            target_port_list string,
+            target_status_code_list string,
+            new_field string
+            )
+            ROW FORMAT SERDE &#39;org.apache.hadoop.hive.serde2.RegexSerDe&#39;
+            WITH SERDEPROPERTIES (
+            &#39;serialization.format&#39; = &#39;1&#39;,
+            &#39;input.regex&#39; = 
+        &#39;([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) ([-.0-9]*) ([-.0-9]*) ([-.0-9]*) (|[-0-9]*) (-|[-0-9]*) ([-0-9]*) ([-0-9]*) \&amp;quot;([^ ]*) ([^ ]*) (- |[^ ]*)\&amp;quot; \&amp;quot;([^\&amp;quot;]*)\&amp;quot; ([A-Z0-9-]+) ([A-Za-z0-9.-]*) ([^ ]*) \&amp;quot;([^\&amp;quot;]*)\&amp;quot; \&amp;quot;([^\&amp;quot;]*)\&amp;quot; \&amp;quot;([^\&amp;quot;]*)\&amp;quot; ([-.0-9]*) ([^ ]*) \&amp;quot;([^\&amp;quot;]*)\&amp;quot; \&amp;quot;([^\&amp;quot;]*)\&amp;quot; \&amp;quot;([^ ]*)\&amp;quot; \&amp;quot;([^\s]+)\&amp;quot; \&amp;quot;([^\s]+)\&amp;quot;(.*)&#39;)
+            LOCATION &#39;s3://&amp;lt;Bucket name&amp;gt;/AWSLogs/&amp;lt;Account ID&amp;gt;/elasticloadbalancing/ap-northeast-1/&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。作成後のテーブル↓&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200902210737819.png&#34; alt=&#34;image-20200902210737819&#34;&gt;&lt;/p&gt;
+&lt;p&gt;各列の説明は下記を参照。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th align=&#34;left&#34;&gt;Field&lt;/th&gt;
+&lt;th align=&#34;left&#34;&gt;説明:&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;type&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;リクエストまたは接続のタイプ。有効な値は次のとおりです (その他の値は無視してください)。&lt;code&gt;http&lt;/code&gt; — HTTP&lt;code&gt;https&lt;/code&gt; — HTTP over SSL/TLS&lt;code&gt;h2&lt;/code&gt; — HTTP/2 over SSL/TLS&lt;code&gt;ws&lt;/code&gt; — WebSockets&lt;code&gt;wss&lt;/code&gt; — WebSockets over SSL/TLS&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;time&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーがクライアントに対してレスポンスを生成した時刻 (ISO 8601 形式)。WebSocket の場合、これは接続を閉じる時間です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;elb&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーのリソース ID。アクセスログエントリを解析する場合、リソース ID にはスラッシュ (/) を含めることができます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;client:port&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;リクエストを送信したクライアントの IP アドレスとポート。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;target:port&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;このリクエストを処理したターゲットの IP アドレスとポート。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;request_processing_time&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーがリクエストを受け取った時点からターゲットに送信するまでの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;target_processing_time&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーがターゲットにリクエストを送信した時点から、そのターゲットが応答ヘッダーの送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;response_processing_time&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーがターゲットから応答ヘッダーを受け取った時点から、クライアントへの応答の送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。これには、ロードバランサーでの待機時間と、ロードバランサーからクライアントへの接続の取得時間の両方が含まれます。ロードバランサーがリクエストをターゲットに送信できない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;elb_status_code&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーからの応答のステータスコード。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;target_status_code&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ターゲットから応答のステータスコード。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;received_bytes&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;クライアント (リクエスタ) から受け取ったリクエストのサイズ (バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントから受信した合計バイト数です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;sent_bytes&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;クライアント (リクエスタ) に返される応答のサイズ(バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントに送信した合計バイト数です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;request&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;クライアントからのリクエスト行。二重引用符で囲まれ、次の形式でログされます。HTTP メソッド + プロトコル://host:port/uri + HTTP バージョン。ロードバランサーは、リクエスト URI を記録するときに、クライアントから送信された URL をそのまま保持します。アクセスログファイルのコンテンツタイプは設定されません。このフィールドを処理するときは、クライアントが URL を送信した方法を考慮してください。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;user_agent&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;リクエスト元のクライアントを特定する User-Agent 文字列 (二重引用符で囲まれます)。この文字列は、1 つ以上の製品 ID (製品[/バージョン]) から構成されます。文字列が 8 KB より長い場合は切り捨てられます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;ssl_cipher&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;[HTTPS リスナー] SSL 暗号。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;ssl_protocol&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;[HTTPS リスナー] SSL プロトコル。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;target_group_arn&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ターゲットグループの Amazon リソースネーム (ARN)。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;trace_id&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;&lt;strong&gt;X-Amzn-Trace-Id&lt;/strong&gt; ヘッダーのコンテンツ (二重引用符で囲まれます)。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;lt;domain_name&amp;gt;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;[HTTPS リスナー] TLS ハンドシェイク中にクライアントから提供される SNI ドメイン (二重引用符で囲まれます)。クライアントが SNI をサポートしない場合、あるいはドメインが証明書と一致せず、デフォルトの証明書がクライアントに提示された場合、この値は - となります。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;chosen_cert_arn&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;[HTTPS リスナー] クライアントに提示される証明書の ARN (二重引用符で囲まれます)。セッションが再利用される場合、この値は &lt;code&gt;session-reused&lt;/code&gt; に設定されます。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;matched_rule_priority&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;リクエストに一致したルールの優先度の値。ルールが一致した場合、この値は 1～50,000 になります。一致するルールがなく、デフォルトのアクションが実行された場合、この値は 0 に設定されます。ルールの評価中にエラーが発生した場合は、-1 に設定されます。その他のエラーの場合は、- に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;request_creation_time&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ロードバランサーがクライアントからリクエストを受け取った時刻 (ISO 8601 形式)。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;actions_executed&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;リクエストの処理時に実行されるアクション (二重引用符で囲まれます)。この値は、「&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#actions-taken&#34;&gt;Actions taken&lt;/a&gt;」で説明されている値を含めることができるカンマ区切りリストです。形式が正しくないリクエストなどでアクションが実行されない場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;redirect_url&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;HTTP レスポンスのロケーションヘッダーのリダイレクトターゲットの URL (二重引用文字で囲む)。リダイレクトアクションが実行されなかった場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;error_reason&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;エラー理由コード (二重引用符で囲まれます)。リクエストが失敗した場合、これは「&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#error-reason-codes&#34;&gt;Error reason codes&lt;/a&gt;」で説明されているいずれかのエラーコードになります。実行されたアクションが認証アクションを含まない、またはターゲットが Lambda 関数ではない場合、この値は - に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;target:port_list&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;このリクエストを処理したターゲットの IP アドレスとポートのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target:port フィールドと一致します。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td align=&#34;left&#34;&gt;&amp;ldquo;target_status_code_list&amp;rdquo;&lt;/td&gt;
+&lt;td align=&#34;left&#34;&gt;ターゲットの応答からのステータスコードのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target_status_code フィールドと一致します。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;クエリサンプル例はこちら。外向けに公開しているELBの場合、怪しげのアタックがたくさん来ていることがわかると思います。&lt;/p&gt;
+&lt;h5 id=&#34;-100-&#34;&gt;最初の 100 個のアクセスログエントリを新しい順に表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT *
+FROM alb_logs
+ORDER by time ASC
+LIMIT 100;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;alb--ip--alb-&#34;&gt;ALB にアクセスしたすべてのクライアント IP アドレスと、それらが ALB にアクセスした回数を一覧表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT distinct client_ip, count() as count from alb_logs
+GROUP by client_ip
+ORDER by count() DESC;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;-alb---&#34;&gt;リクエスト/レスポンスのペアで ALB を通過しているデータの平均量 (キロバイト) を一覧表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (avg(sent_bytes)/1000.0 + avg(received_bytes)/1000.0)
+as prewarm_kilobytes from alb_logs;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;-url-&#34;&gt;指定された URL を訪問した回数をクライアント別、降順に一覧表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT client_ip, elb, request_url, count(*) as count from alb_logs
+GROUP by client_ip, elb, request_url
+ORDER by count DESC;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;firefox--10--url-&#34;&gt;Firefox ユーザーが最も頻繁にアクセスした上位 10 個の URL を一覧表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT request_url, user_agent, count(*) as count
+FROM alb_logs
+WHERE user_agent LIKE &#39;%Firefox%&#39;
+GROUP by request_url, user_agent
+ORDER by count(*) DESC
+LIMIT 10;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;alb---&#34;&gt;ALB へのリクエストで送信したデータ量 (メガバイト) で、クライアント別、降順で一覧表示&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT client_ip, sum(received_bytes/1000000.0) as client_datareceived_megabytes
+FROM alb_logs
+GROUP by client_ip
+ORDER by client_datareceived_megabytes DESC;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Athena を使用してロードバランサーのアクセスログを分析する &lt;a href=&#34;https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/&#34;&gt;https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
