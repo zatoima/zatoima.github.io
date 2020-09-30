@@ -5,12 +5,114 @@
     <link>/categories/ec2/</link>
       <atom:link href="/categories/ec2/index.xml" rel="self" type="application/rss+xml" />
     <description>EC2</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 31 Aug 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 30 Sep 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>EC2</title>
       <link>/categories/ec2/</link>
     </image>
+    
+    <item>
+      <title>EC2のハイパースレッディングを無効化する方法</title>
+      <link>/aws-ec2-cpu-hyper-threading.html</link>
+      <pubDate>Wed, 30 Sep 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-ec2-cpu-hyper-threading.html</guid>
+      <description>&lt;p&gt;lscpuで確認した場合にハイパースレッディングが有効な場合は、&lt;code&gt;Thread(s) per core&lt;/code&gt;が&lt;code&gt;2&lt;/code&gt;となる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@ip-10-0-1-47 ~]$ lscpu
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                2
+On-line CPU(s) list:   0,1
+Thread(s) per core:    2
+Core(s) per socket:    1
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz
+Stepping:              7
+CPU MHz:               2499.998
+BogoMIPS:              4999.99
+Hypervisor vendor:     KVM
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              36608K
+NUMA node0 CPU(s):     0,1
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 ida arat pku ospke
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;cpuinfo&lt;/code&gt;を確認するとこのような表示。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@ip-10-0-1-47 ~]$ cat /proc/cpuinfo | grep -e &#39;core id&#39; -e processor
+processor : 0
+core id  : 0
+processor : 1
+core id  : 0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;1&#34;&gt;ハイパースレッディングを無効化する方法1&lt;/h3&gt;
+&lt;p&gt;下記コマンドを実行するこの環境の場合、&lt;code&gt;cpu0&lt;/code&gt;と&lt;code&gt;cpu1&lt;/code&gt;があって、&lt;code&gt;CPU1&lt;/code&gt;の方を無力化する。この場合、ハイパースレッディングは無効化されるが、再起動した場合には元に戻ってしまう。再起動時に同じコマンドを叩くということも選択肢となるが、スクリプトを作るなど多少の面倒くささが残る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo su -
+echo 0 &amp;gt; /sys/devices/system/cpu/cpu1/online
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;2&#34;&gt;ハイパースレッディングを無効化する方法2&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;CPU オプションの最適化 - Amazon Elastic Compute Cloud &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/instance-optimize-cpu.html#instance-cpu-options-rules&#34;&gt;https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/instance-optimize-cpu.html#instance-cpu-options-rules&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記マニュアルにある通り、インスタンスの作成時にのみCPUオプションを選択出来るようになっている。この機能を使用可能なインスタンスタイプの場合は、インスタンス作成時にこんな選択画面が表示される。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200919224823587.png&#34; alt=&#34;image-20200919224823587&#34;&gt;&lt;/p&gt;
+&lt;p&gt;ここのコアごとのスレッドを&lt;code&gt;1&lt;/code&gt;にすることでハイパースレッディングを無効化することも出来る。AWS CLIで指定することも可能で、その場合は次の通り&lt;code&gt;--cpu-options&lt;/code&gt;を指定する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;aws ec2 run-instances --image-id ami-xxxxxxxx --instance-type m5.large --cpu-options &amp;quot;CoreCount=1,ThreadsPerCore=1&amp;quot; --key-name keypair
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;起動後に設定を確認する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws ec2 describe-instances --instance-ids i-01842d7da54e0c630 --query &amp;quot;Reservations[].Instances[].CpuOptions&amp;quot;
+[
+    {
+        &amp;quot;CoreCount&amp;quot;: 1, 
+        &amp;quot;ThreadsPerCore&amp;quot;: 1
+    }
+]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;lscpuコマンドを叩いた場合にも、ハイパースレッディングが無効化されていることを確認出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@ip-10-0-1-47 ~]# lscpu
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                2
+On-line CPU(s) list:   0
+Off-line CPU(s) list:  1
+Thread(s) per core:    1
+Core(s) per socket:    1
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz
+Stepping:              7
+CPU MHz:               2499.998
+BogoMIPS:              4999.99
+Hypervisor vendor:     KVM
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              36608K
+NUMA node0 CPU(s):     0
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 ida arat pku ospke
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;heading&#34;&gt;その他&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon EC2 インスタンスタイプ&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://aws.amazon.com/jp/ec2/instance-types/&#34;&gt;https://aws.amazon.com/jp/ec2/instance-types/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;M6g インスタンス、A1 インスタンス、T2 インスタンス、m3.medium を除き、各 vCPU はインテル Xeon コアまたは AMD EPYC コア上のスレッドです。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記の通り、いくつかのインスタンスは最初からハイパースレッディングは無効となっている。ハイパースレッディングという用語はIntel用語なので、AMDには適用されないため、&lt;code&gt;スレッド&lt;/code&gt;という言い方をしていると推測。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>ユーザデータを使用してEC2作成時にApacheを自動インストール</title>
