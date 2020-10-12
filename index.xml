@@ -5,12 +5,162 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 05 Oct 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 12 Oct 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>AWS Application Discovery ServiceのエージェントをEC2(Linux)にインストールする</title>
+      <link>/aws-ec2-application-discovery-service.html</link>
+      <pubDate>Mon, 12 Oct 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-ec2-application-discovery-service.html</guid>
+      <description>&lt;h3 id=&#34;aws-application-discovery-service&#34;&gt;AWS Application Discovery Serviceとは？&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://aws.amazon.com/jp/application-discovery/&#34;&gt;https://aws.amazon.com/jp/application-discovery/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;AWS Application Discovery Service では、オンプレミスデータセンターに関する情報を収集することにより、エンタープライズのお客様の移行プロジェクト計画を支援しています。&lt;/p&gt;
+&lt;p&gt;データセンター移行計画には何千ものワークロードが存在し、多くの場合それらが相互に深く依存しあっています。サーバーの使用率データや依存関係のマッピングは、移行プロセス初期の重要なステップです。AWS Application Discovery Service では、サーバーの設定データ、使用状況データ、動作データが収集され、お客様に提供されます。これにより、お客様はワークロードを十分に把握することができます。&lt;/p&gt;
+&lt;p&gt;収集されたデータは、AWS Application Discovery Service のデータストアに暗号化形式で保存されます。このデータを CSV ファイルとしてエクスポートし、AWS で稼働した場合の総所有コスト (TCO) の見積もりや、AWS への移行計画に使用できます。また、このデータは AWS Migration Hub でも利用できます。このサービスでは、検出したサーバーを AWS に移行し、AWS に移行する際の進捗を追跡できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;heading&#34;&gt;エージェントインストール、情報収集&lt;/h3&gt;
+&lt;p&gt;ということで、VMware vCenter向けのエージェントレス構成ではなく、Linuxにエージェントを導入してどのような情報を取得出来るか見てみる。&lt;/p&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;前準備&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;Migration Hub&lt;/code&gt;の設定画面でMigration Hubホームリージョンを指定する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002211430313.png&#34; alt=&#34;image-20201002211430313&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;エージェントをダウンロード&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ads]$ curl -o ./aws-discovery-agent.tar.gz https://s3-us-west-2.amazonaws.com/aws-discovery-agent.us-west-2/linux/latest/aws-discovery-agent.tar.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 36.6M  100 36.6M    0     0  7330k      0  0:00:05  0:00:05 --:--:-- 8357k
+[ec2-user@bastin ads]$ ls -l
+total 37536
+-rw-rw-r-- 1 ec2-user ec2-user 38433031 Oct  2 21:16 aws-discovery-agent.tar.gz
+[ec2-user@bastin ads]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;エージェントの暗号署名を確認&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;7638 F24C 6717 F97C 4F1B  3BC0 5133 255E 4DF4 2DA2&lt;/code&gt;となることを確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ads]$ curl -o ./agent.sig https://s3.us-west-2.amazonaws.com/aws-discovery-agent.us-west-2/linux/latest/aws-discovery-agent.tar.gz.sig
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   819  100   819    0     0   1628      0 --:--:-- --:--:-- --:--:--  1625
+[ec2-user@bastin ads]$ 
+[ec2-user@bastin ads]$ curl -o ./discovery.gpg https://s3.us-west-2.amazonaws.com/aws-discovery-agent.us-west-2/linux/latest/discovery.gpg
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  2255  100  2255    0     0   5207      0 --:--:-- --:--:-- --:--:--  5195
+[ec2-user@bastin ads]$ 
+[ec2-user@bastin ads]$ gpg --no-default-keyring --keyring ./discovery.gpg --verify agent.sig aws-discovery-agent.tar.gz
+gpg: Signature made Fri 18 Sep 2020 07:33:42 AM JST using RSA key ID 4DF42DA2
+gpg: directory `/home/ec2-user/.gnupg&#39; created
+gpg: new configuration file `/home/ec2-user/.gnupg/gpg.conf&#39; created
+gpg: WARNING: options in `/home/ec2-user/.gnupg/gpg.conf&#39; are not yet active during this run
+gpg: /home/ec2-user/.gnupg/trustdb.gpg: trustdb created
+gpg: Good signature from &amp;quot;AWS Application Discovery Service &amp;lt;aws-application-discovery-service@amazon.com&amp;gt;&amp;quot;
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 7638 F24C 6717 F97C 4F1B  3BC0 5133 255E 4DF4 2DA2
+[ec2-user@bastin ads]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;エージェントを解凍&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ads]$ tar -xzf aws-discovery-agent.tar.gz
+[ec2-user@bastin ads]$ ls -l
+total 75244
+-rw-rw-r-- 1 ec2-user ec2-user      819 Oct  2 21:16 agent.sig
+-rw-r--r-- 1 ec2-user ec2-user 25637518 Sep  3 09:03 aws-discovery-agent.deb
+-rw-r--r-- 1 ec2-user ec2-user 12934413 Sep  3 09:02 aws-discovery-agent.rpm
+-rw-rw-r-- 1 ec2-user ec2-user 38433031 Oct  2 21:16 aws-discovery-agent.tar.gz
+-rw-rw-r-- 1 ec2-user ec2-user     2255 Oct  2 21:16 discovery.gpg
+-rw-r--r-- 1 ec2-user ec2-user    27548 Sep  3 09:02 install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;エージェントのインストール&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;aws-access-key-id&lt;/code&gt;や&lt;code&gt;aws-secret-access-key&lt;/code&gt;は各自のidとkeyを設定&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ads]$ sudo bash install -r ap-northeast-1 -k xxxxxxxxxxxx -s xxx/xxxxxxxxxxxx+xxxxxxx
+AWS region option specified as: ap-northeast-1.
+AWS key ID option specified as: xxxxxxxxxxxxxxx.
+AWS key secret option specified.
+
+
+**************************************************
+    INIT PHASE
+**************************************************
+Distribution type of the machine is amzn.
+Distribution of the machine is Amazon Linux.
+Revision of the distribution is 2.
+bastin is using IAM authentication with AWS region ap-northeast-1.
+There is no existing version of the AWS Discovery Agent on the machine.
+Using rpm and yum for package management. Expected agent package name is aws-discovery-agent.rpm.
+Installing using local file /home/ec2-user/ads/aws-discovery-agent.rpm
+～中略～
+**************************************************
+    FINISH PHASE
+**************************************************
+Notice:
+By installing the Amazon Discovery Agent, you agree that your use is subject to the terms of your existing 
+AWS Customer Agreement or other agreement with Amazon Web Services, Inc. or its affiliates governing your 
+use of AWS services. You may not install and use the Amazon Discovery Agent unless you have an account in 
+good standing with AWS.
+*  *  *
+Current running agent reports version as: 2.0.1618.0
+This install script was created to install agent version: 2.0.1618.0
+In most cases, these version numbers should be the same.
+[ec2-user@bastin ads]$ 
+[ec2-user@bastin ads]$ echo $?
+0
+[ec2-user@bastin ads]$ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;エージェントの起動確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ads]$ sudo systemctl status aws-discovery-daemon.service
+● aws-discovery-daemon.service - AWS Discovery Agent: Collects system configuration and usage statistics for AWS Discovery.
+   Loaded: loaded (/usr/lib/systemd/system/aws-discovery-daemon.service; enabled; vendor preset: disabled)
+   Active: active (running) since Fri 2020-10-02 21:23:42 JST; 59s ago
+ Main PID: 11023 (aws-discoveryd)
+   CGroup: /system.slice/aws-discovery-daemon.service
+           └─11023 /opt/aws/discovery/aws-discoveryd nodaemon
+
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: values
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: (?, ?, ?, ?, ?, ?, ?)
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.355855] [0xf7d19700] [debug]   Executing SQL REPLACE INTO commit_points (id, high_seq_num, end_time, end_utc_offset ) VALUES (&#39;LastCommit&#39;, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.355915] [0xf7d19700] [debug]   Executing SQL DELETE FROM last_known_states WHERE commit_point_id = &#39;LastCommit&#39;
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.355958] [0xf7d19700] [debug]   Executing SQL INSERT INTO last_known_states (commit_point_id, type, state, event_seq_num, event_time, event_utc_offset ) VALUES (&#39;LastCommit&#39;, 1, 0, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.356013] [0xf7d19700] [debug]   Executing SQL INSERT INTO last_known_states (commit_point_id, type, state, event_seq_num, event_time, event_utc_offset ) VALUES (&#39;LastCommit&#39;, 3, 0, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.356044] [0xf7d19700] [debug]   Executing SQL INSERT INTO last_known_states (commit_point_id, type, state, event_seq_num, event_time, event_utc_offset ) VALUES (&#39;LastCommit&#39;, 2, 0, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.356070] [0xf7d19700] [debug]   Executing SQL INSERT INTO last_known_states (commit_point_id, type, state, event_seq_num, event_time, event_utc_offset ) VALUES (&#39;LastCommit&#39;, 5, 0, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.356094] [0xf7d19700] [debug]   Executing SQL INSERT INTO last_known_states (commit_point_id, type, state, event_seq_num, event_time, event_utc_offset ) VALUES (&#39;LastCommit&#39;, 4, 0, 1, 1601641423355, 540 )
+Oct 02 21:23:43 bastin aws-discoveryd[11023]: [2020-10-02 21:23:43.356116] [0xf7d19700] [debug]   Executing SQL COMMIT TRANSACTION commit_states
+Hint: Some lines were ellipsized, use -l to show in full.
+[ec2-user@bastin ads]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;ログ・ファイルや設定ファイルの配置場所&lt;/h4&gt;
+&lt;p&gt;ログ・ファイル&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;/var/log/aws/discovery/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;設定ファイル&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;/var/opt/aws/discovery/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;data-collector&#34;&gt;Data Collector&lt;/h4&gt;
+&lt;p&gt;チェックを入れて&lt;code&gt;データ収集を開始&lt;/code&gt;する。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002212831469.png&#34; alt=&#34;image-20201002212831469&#34;&gt;&lt;/p&gt;
+&lt;p&gt;データ収集を開始する。ここで&lt;code&gt;Amazon Athenaでデータ探索を有効&lt;/code&gt;にするとKinesis経由でS3にデータが保存される。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002212906889.png&#34; alt=&#34;image-20201002212906889&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002212927442.png&#34; alt=&#34;image-20201002212927442&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;heading-8&#34;&gt;収集されるデータ&lt;/h4&gt;
+&lt;h5 id=&#34;heading-9&#34;&gt;サーバ基本情報&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002214556049.png&#34; alt=&#34;image-20201002214556049&#34;&gt;&lt;/p&gt;
+&lt;h5 id=&#34;heading-10&#34;&gt;パフォーマンス情報&lt;/h5&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002214610277.png&#34; alt=&#34;image-20201002214610277&#34;&gt;&lt;/p&gt;
+&lt;p&gt;収集される情報は次の通り。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/application-discovery/latest/userguide/agent-data-collected.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/application-discovery/latest/userguide/agent-data-collected.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;検出エージェントで収集されるデータ&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;heading-11&#34;&gt;他の機能&lt;/h4&gt;
+&lt;p&gt;EC2インスタンスの推奨事項も検出してくれる。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20201002214847983.png&#34; alt=&#34;image-20201002214847983&#34;&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>awsetsを使用してAWSリソース情報を出力する</title>
@@ -548,7 +698,7 @@ ORDER by client_datareceived_megabytes DESC;
       <pubDate>Mon, 31 Aug 2020 00:00:00 +0000</pubDate>
       <guid>/aws-ec2-userdata-apache-install.html</guid>
       <description>&lt;h3 id=&#34;heading&#34;&gt;ユーザデータとは？&lt;/h3&gt;
-&lt;p&gt;Linuxインスタンスの初期起動時に実行するコマンドを指します。デフォルトでは初期起動時のみですが、再起動時に毎回実行するということも出来るようです。&lt;/p&gt;
+&lt;p&gt;Linuxインスタンスの初期起動時に実行するコマンドを指す。デフォルトでは初期起動時のみですが、再起動時に毎回実行するということも出来る模様。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/user-data.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/user-data.html&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;Amazon EC2 でインスタンスを起動するとき、起動後にそのインスタンスにユーザーデータを渡し、一般的な自動設定タスクを実行したり、スクリプトを実行したりできます。2 つのタイプのユーザーデータを Amazon EC2 に渡すことができます。&lt;/p&gt;
@@ -556,7 +706,7 @@ ORDER by client_datareceived_megabytes DESC;
 &lt;h3 id=&#34;heading-1&#34;&gt;ユーザデータの設定方法&lt;/h3&gt;
 &lt;p&gt;&lt;code&gt;ステップ 3: インスタンスの詳細の設定&lt;/code&gt; の &lt;code&gt;高度な詳細&lt;/code&gt;欄にユーザデータを指定する欄があります。&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;image-20200830172722192.png&#34; alt=&#34;image-20200830172722192&#34;&gt;&lt;/p&gt;
-&lt;p&gt;ユーザデータには下記を指定します。yum update、Apacheのインストールから権限変更などを実施しています。&lt;/p&gt;
+&lt;p&gt;ユーザデータには下記を指定。yum update、Apacheのインストールから権限変更などを実施。&lt;/p&gt;
 &lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#!/bin/bash
 yum update -y
 amazon-linux-extras install -y lamp-mariadb10.2-php7.2 php7.2
@@ -570,7 +720,7 @@ find /var/www -type d -exec chmod 2775 {} \;
 find /var/www -type f -exec chmod 0664 {} \;
 echo `hostname` &amp;gt; /var/www/html/index.html
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;後はこの状態で他のEC2作成と同じように進めることでインスタンス作成時にApacheインストールまで実施されます。セキュリティグループなどの設定は割愛します。&lt;/p&gt;
+&lt;p&gt;後はこの状態で他のEC2作成と同じように進めることでインスタンス作成時にApacheインストールまで実施される。セキュリティグループなどの設定は割愛します。&lt;/p&gt;
 </description>
     </item>
     
