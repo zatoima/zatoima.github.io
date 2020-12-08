@@ -5,12 +5,151 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Mon, 30 Nov 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Tue, 08 Dec 2020 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>log_fdw拡張機能を使用してAurora PostgreSQLのログを分析する</title>
+      <link>/aws-aurora-postgresql-log_fdw-analyze-postgreslog.html</link>
+      <pubDate>Tue, 08 Dec 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgresql-log_fdw-analyze-postgreslog.html</guid>
+      <description>&lt;p&gt;PostgreSQLのログをSQLベースで分析出来たら良いなって思ったのが始まり。調べて見ると便利な拡張機能があったのでメモ。&lt;/p&gt;
+&lt;h4 id=&#34;heading&#34;&gt;拡張機能の有効化&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE EXTENSION log_fdw;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-1&#34;&gt;外部データラッパーとしてログサーバーを作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE SERVER log_server FOREIGN DATA WRAPPER log_fdw;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-2&#34;&gt;ログファイルのリストを取得&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * from list_postgres_log_files() order by 1;
+SELECT * FROM list_postgres_log_files() WHERE file_name LIKE &#39;postgresql.log.%.csv&#39; ORDER BY 1 DESC;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-3&#34;&gt;ログをインプットにテーブルを作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT create_foreign_table_for_log_file(&#39;postgresql_log_20201206&#39;, &#39;log_server&#39;, &#39;postgresql.log.2020-12-06.csv&#39;);  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-4&#34;&gt;作成される外部テーブルと各カラムに入るサンプルデータ&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;カラム例&lt;/th&gt;
+&lt;th&gt;サンプル例&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;log_time&lt;/td&gt;
+&lt;td&gt;2020-12-06 09:02:55.872+00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;user_name&lt;/td&gt;
+&lt;td&gt;postgres&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;database_name&lt;/td&gt;
+&lt;td&gt;postgres&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;process_id&lt;/td&gt;
+&lt;td&gt;32418&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;connection_from&lt;/td&gt;
+&lt;td&gt;10-0-1-123&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;session_id&lt;/td&gt;
+&lt;td&gt;5fcc9e3f.7ea2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;session_line_num&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;command_tag&lt;/td&gt;
+&lt;td&gt;authentication&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;session_start_time&lt;/td&gt;
+&lt;td&gt;2020-12-06 09:02:55+00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;virtual_transaction_id&lt;/td&gt;
+&lt;td&gt;8/65&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;transaction_id&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;error_severity&lt;/td&gt;
+&lt;td&gt;FATAL&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;sql_state_code&lt;/td&gt;
+&lt;td&gt;28P01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;message&lt;/td&gt;
+&lt;td&gt;password authentication failed for user &amp;ldquo;postgres&amp;rdquo;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;detail&lt;/td&gt;
+&lt;td&gt;Password does not match for user &amp;ldquo;postgres&amp;rdquo;.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;hint&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;internal_query&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;internal_query_pos&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;context&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;query&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;query_pos&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;location&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;application_name&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;heading-5&#34;&gt;ログの中身を確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select * from postgresql_log_20201206;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-6&#34;&gt;特定サーバからログイン失敗した回数を確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select count(*) from postgresql_log_20201206 where connection_from like &#39;10.0.1.123%&#39; and message like &#39;%password authentication failed %&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-7&#34;&gt;不要になった外部テーブルを削除&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;DROP FOREIGN TABLE postgresql_log_20201206;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;heading-8&#34;&gt;参考&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/working-with-rds-and-aurora-postgresql-logs-part-2/&#34;&gt;https://aws.amazon.com/jp/blogs/news/working-with-rds-and-aurora-postgresql-logs-part-2/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;log_fdw を使用して外部テーブル経由でログデータを表示する&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQLのpg_dump、pg_restore目安時間</title>
