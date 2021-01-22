@@ -5,12 +5,129 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 21 Jan 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Fri, 22 Jan 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>AuroraとNeptuneのメンテナンス（パッチ適用）について</title>
+      <link>/aws-aurora-neptune-maintenance-about.html</link>
+      <pubDate>Fri, 22 Jan 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-neptune-maintenance-about.html</guid>
+      <description>&lt;h1 id=&#34;heading&#34;&gt;はじめに&lt;/h1&gt;
+&lt;p&gt;RDSのメンテナンスの種類は「Available(利用可能) 」と「Required(必須) 」の種類が存在する。Aurora(PostgreSQL)とNeptuneにそれぞれAvailableとRequiredのパッチがあったので確認してみる。&lt;/p&gt;
+&lt;p&gt;NeptuneはRDSのと運用周りは同じな模様。（全てが一緒というわけではないと思うが。）&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/limits.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/neptune/latest/userguide/limits.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; 特定の管理機能のために、Amazon Neptune は Amazon Relational Database Service (Amazon RDS) と共有の運用テクノロジーを使用します。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;neptune&#34;&gt;Neptune&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200502105158178.png&#34; alt=&#34;image-20200502105158178&#34;&gt;&lt;/p&gt;
+&lt;h4 id=&#34;aurora&#34;&gt;Aurora&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200502105100980.png&#34; alt=&#34;image-20200502105100980&#34;&gt;&lt;/p&gt;
+&lt;h1 id=&#34;available-required-&#34;&gt;Available(利用可能) とRequired(必須) について&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;必須&lt;/strong&gt; – メンテナンスアクションがリソースに適用され、延期はできません。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;利用可能&lt;/strong&gt; – メンテナンスアクションは利用可能ですが、自動的にはリソースに適用されません。手動で適用できます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;describependingmaintenanceactions-api&#34;&gt;DescribePendingMaintenanceActions API&lt;/h3&gt;
+&lt;p&gt;メンテナンスについては&lt;a href=&#34;http://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribePendingMaintenanceActions.html&#34;&gt;DescribePendingMaintenanceActions API&lt;/a&gt;から確認することが出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ aws rds describe-pending-maintenance-actions
+{
+    &amp;quot;PendingMaintenanceActions&amp;quot;: [
+        {
+            &amp;quot;PendingMaintenanceActionDetails&amp;quot;: [
+                {
+                    &amp;quot;Action&amp;quot;: &amp;quot;system-update&amp;quot;, 
+                    &amp;quot;Description&amp;quot;: &amp;quot;Upgrade to Aurora PostgreSQL 3.1.2&amp;quot;
+                }
+            ], 
+            &amp;quot;ResourceIdentifier&amp;quot;: &amp;quot;arn:aws:rds:ap-northeast-1:xxxxxx:cluster:xxxxxxxpostgresv11&amp;quot;
+        }, 
+        {
+            &amp;quot;PendingMaintenanceActionDetails&amp;quot;: [
+                {
+                    &amp;quot;Action&amp;quot;: &amp;quot;system-update&amp;quot;, 
+                    &amp;quot;CurrentApplyDate&amp;quot;: &amp;quot;2020-05-08T18:33:00Z&amp;quot;, 
+                    &amp;quot;AutoAppliedAfterDate&amp;quot;: &amp;quot;2020-05-08T18:33:00Z&amp;quot;, 
+                    &amp;quot;Description&amp;quot;: &amp;quot;Engine Patch Upgrade&amp;quot;
+                }
+            ], 
+            &amp;quot;ResourceIdentifier&amp;quot;: &amp;quot;arn:aws:rds:ap-northeast-1:xxxxxxx:cluster:xxxxxxx-cluster&amp;quot;
+        } 
+    ]
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;CLIの場合はAvailable(利用可能)かRequired(必須) かどうかは項目を見るだけではわからない。Required(必須)の場合は&lt;code&gt;AutoAppliedAfterDate&lt;/code&gt;、&lt;code&gt;CurrentApplyDate&lt;/code&gt;が出力されるようである。&lt;/p&gt;
+&lt;p&gt;各項目の説明は以下の通り。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;項目&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Action&lt;/td&gt;
+&lt;td&gt;リソースで使用可能な保留中のメンテナンスアクションのタイプ&lt;br /&gt;system-update、db-upgrade、hardware-maintenance、とca-certificate-rotation。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Description&lt;/td&gt;
+&lt;td&gt;メンテナンスアクションの詳細を説明&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AutoAppliedAfterDate&lt;/td&gt;
+&lt;td&gt;アクションが適用されるメンテナンスウィンドウの日付&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;CurrentApplyDate&lt;/td&gt;
+&lt;td&gt;保留中のメンテナンスアクションがリソースに適用される発効日&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ForcedApplyDate&lt;/td&gt;
+&lt;td&gt;メンテナンスアクションが自動的に適用される日付。（延期不可）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;OptInStatus&lt;/td&gt;
+&lt;td&gt;リソースに対して受信されたオプトイン要求のタイプ&lt;br /&gt;明示的に&lt;a href=&#34;https://docs.aws.amazon.com/cli/latest/reference/rds/apply-pending-maintenance-action.html&#34;&gt;apply-pending-maintenance-action&lt;/a&gt;を実行した場合に出力される。&lt;br /&gt;&amp;quot;next-maintenance&amp;rdquo;、&amp;ldquo;immediate&amp;rdquo;、&amp;ldquo;undo-opt-in&amp;rdquo;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;OptInStatusのステータスは&lt;code&gt;apply-pending-maintenance-action&lt;/code&gt;で明示的に指定した場合に出力される。もしくはマネージメントコンソール上の「Upgrade at Next Window(次のウィンドウでアップグレード)」や「Upgrade Now(今すぐアップグレード)」を選択する。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ aws rds apply-pending-maintenance-action --resource-identifier arn:aws:rds:ap-northeast-1:xxxxxxxxxxxxxx:cluster:neptestdb-cluster --apply-action system-update --opt-in-type next-maintenance
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;次の通り、&lt;code&gt;OptInStatus&lt;/code&gt;が出力されるようになる&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ aws rds describe-pending-maintenance-actions --resource-identifier arn:aws:rds:ap-northeast-1:xxxxxxxxxxxxxx:cluster:neptestdb-cluster
+{
+    &amp;quot;PendingMaintenanceActions&amp;quot;: [
+        {
+            &amp;quot;PendingMaintenanceActionDetails&amp;quot;: [
+                {
+                    &amp;quot;Action&amp;quot;: &amp;quot;system-update&amp;quot;, 
+                    &amp;quot;Description&amp;quot;: &amp;quot;Engine Patch Upgrade&amp;quot;, 
+                    &amp;quot;CurrentApplyDate&amp;quot;: &amp;quot;2020-05-03T15:58:00Z&amp;quot;, 
+                    &amp;quot;AutoAppliedAfterDate&amp;quot;: &amp;quot;2020-05-03T15:58:00Z&amp;quot;, 
+                    &amp;quot;OptInStatus&amp;quot;: &amp;quot;next-maintenance&amp;quot;
+                }
+            ], 
+            &amp;quot;ResourceIdentifier&amp;quot;: &amp;quot;arn:aws:rds:ap-northeast-1:xxxxxxx:cluster:xxxxxxx-cluster&amp;quot;
+        }
+    ]
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参考：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_PendingMaintenanceAction.html&#34;&gt;https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_PendingMaintenanceAction.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/cli/latest/reference/rds/apply-pending-maintenance-action.html&#34;&gt;https://docs.aws.amazon.com/cli/latest/reference/rds/apply-pending-maintenance-action.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</title>
