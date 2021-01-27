@@ -5,12 +5,92 @@
     <link>/tags/postgresql/</link>
       <atom:link href="/tags/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 21 Jan 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 27 Jan 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>PostgreSQL</title>
       <link>/tags/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</title>
+      <link>/aws-aurora-rds-postgresql-nologging-load.html</link>
+      <pubDate>Wed, 27 Jan 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-rds-postgresql-nologging-load.html</guid>
+      <description>&lt;h1 id=&#34;unlogged&#34;&gt;UNLOGGEDテーブルとは&lt;/h1&gt;
+&lt;p&gt;UNLOGGEDテーブルはOracle Databaseで言うところのUNLOGGINGテーブルでWALに書き出さないテーブルとなり、高速化が見込める。一方、クラッシュ時には当然WALにデータがないので、リカバリが出来ない。&lt;/p&gt;
+&lt;p&gt;とは言え、データロード等のリトライ可能な処理には有効なので、効果含めて確認してみる&lt;/p&gt;
+&lt;h1 id=&#34;heading&#34;&gt;設定方法&lt;/h1&gt;
+&lt;p&gt;テーブル作成時にオプションを付けるかALTER TABLE文を使用するか。今回はALTER TABLEで実施してみる&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;ALTER TABLE aozora SET UNLOGGED;
+ALTER TABLE aozora SET LOGGED;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;CREATE TABLE &lt;a href=&#34;https://www.postgresql.jp/document/12/html/sql-createtable.html&#34;&gt;https://www.postgresql.jp/document/12/html/sql-createtable.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;ALTER TABLE &lt;a href=&#34;https://www.postgresql.jp/document/12/html/sql-altertable.html&#34;&gt;https://www.postgresql.jp/document/12/html/sql-altertable.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;heading-1&#34;&gt;テーブル作成&lt;/h1&gt;
+&lt;p&gt;青空文庫のテキストデータをロード出来るようにテーブルを準備&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE aozora(file VARCHAR(30),num INT,row INT,word TEXT,subtype1 VARCHAR(30),subtype2 VARCHAR(30),subtype3 VARCHAR(30),subtype4 VARCHAR(10),conjtype VARCHAR(15),conjugation VARCHAR(15),basic TEXT,ruby TEXT,pronunce TEXT );
+ALTER TABLE aozora SET UNLOGGED;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;作成後にテーブル定義を確認すると&lt;code&gt;Unlogged table &amp;quot;public.aozora&amp;quot;&lt;/code&gt;と表示されるようになっている。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;postgres=&amp;gt; \d aozora
+                    Unlogged table &amp;quot;public.aozora&amp;quot;
+   Column    |         Type          | Collation | Nullable | Default 
+-------------+-----------------------+-----------+----------+---------
+ file        | character varying(30) |           |          | 
+ num         | integer               |           |          | 
+ row         | integer               |           |          | 
+ word        | text                  |           |          | 
+ subtype1    | character varying(30) |           |          | 
+ subtype2    | character varying(30) |           |          | 
+ subtype3    | character varying(30) |           |          | 
+ subtype4    | character varying(10) |           |          | 
+ conjtype    | character varying(15) |           |          | 
+ conjugation | character varying(15) |           |          | 
+ basic       | text                  |           |          | 
+ ruby        | text                  |           |          | 
+ pronunce    | text                  |           |          | 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;heading-2&#34;&gt;結果&lt;/h1&gt;
+&lt;p&gt;約3割ほどUNLOGGEDテーブルの方が早い結果に。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;テーブル種別&lt;/th&gt;
+&lt;th&gt;時間&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;UNLOGGEDテーブル&lt;/td&gt;
+&lt;td&gt;0:04:41&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;LOGGEDテーブル&lt;/td&gt;
+&lt;td&gt;0:06:11&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;unlogged-1&#34;&gt;UNLOGGEDテーブルの場合&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &amp;quot;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&amp;quot; &amp;lt; /home/ec2-user/utf8_all.csv
+COPY 87701673
+
+real	4m41.921s
+user	0m19.347s
+sys	0m6.618s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;logged&#34;&gt;LOGGEDテーブルの場合&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &amp;quot;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&amp;quot; &amp;lt; /home/ec2-user/utf8_all.csv
+COPY 87701673
+
+real	6m11.123s
+user	0m18.744s
+sys	0m6.738s
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</title>
