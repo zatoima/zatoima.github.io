@@ -5,12 +5,298 @@
     <link>/tags/aws/</link>
       <atom:link href="/tags/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 27 Jan 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Thu, 28 Jan 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/tags/aws/</link>
     </image>
+    
+    <item>
+      <title>AWS Elastic Beanstalkの殴り書きメモ</title>
+      <link>/aws-elastic-beanstalk-memo.html</link>
+      <pubDate>Thu, 28 Jan 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-elastic-beanstalk-memo.html</guid>
+      <description>&lt;h1 id=&#34;heading&#34;&gt;はじめに&lt;/h1&gt;
+&lt;p&gt;&lt;img src=&#34;image-20210115220048472.png&#34; alt=&#34;image-20210115220048472&#34;&gt;&lt;/p&gt;
+&lt;p&gt;ついつい、「ElasticBeanStalk」とか「Elastic Bean Stalk」とか書きがちなのでまずはそこから。&lt;/p&gt;
+&lt;h1 id=&#34;heading-1&#34;&gt;殴り書きメモ&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;定番構成の構築・アプリデプロイの自動化サービス&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;構成要素&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;アプリケーション
+&lt;ul&gt;
+&lt;li&gt;トップレベルの論理単位&lt;/li&gt;
+&lt;li&gt;バージョン、環境、環境設定が含まれる&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;バージョン
+&lt;ul&gt;
+&lt;li&gt;デプロイ可能なコード&lt;/li&gt;
+&lt;li&gt;S3上でのバージョン管理&lt;/li&gt;
+&lt;li&gt;異なる環境に異なるバージョンをデプロイ可能&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;環境
+&lt;ul&gt;
+&lt;li&gt;各環境に応じて構築されるインフラ環境&lt;/li&gt;
+&lt;li&gt;バージョン（ソースコード）をデプロイ
+&lt;ul&gt;
+&lt;li&gt;例：Webサーバ環境：ELB+EC2（コードがデプロイされる）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;環境設定
+&lt;ul&gt;
+&lt;li&gt;環境に関連するリソースの動作を定義する設定パラメータ
+&lt;ul&gt;
+&lt;li&gt;例：EC2のインスタンスタイプ、Auto Scalingの設定等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;環境のタイプ&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ロードバランシング環境、Auto Scaling環境
+&lt;ul&gt;
+&lt;li&gt;スケーラブルなウェブアプリケーションを実行
+&lt;ul&gt;
+&lt;li&gt;高い可用性と伸縮自在性を兼ね備えた構成&lt;/li&gt;
+&lt;li&gt;Webサーバ環境：ELB+Auto Scaling&lt;/li&gt;
+&lt;li&gt;ワーカー環境：SQS+Auto Scaling&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;シングルインスタンス環境
+&lt;ul&gt;
+&lt;li&gt;バッチアプリケーションの実行環境として
+&lt;ul&gt;
+&lt;li&gt;EC2 1台構成（Auto Scaling Max1台、Min1台）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;EB CLI&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;インストール&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ sudo pip3 install --upgrade awsebcli
+WARNING: pip is being invoked by an old script wrapper. This will fail in a future version of pip.
+Please see https://github.com/pypa/pip/issues/5599 for advice on fixing the underlying issue.
+To avoid this problem you can invoke Python with &#39;-m pip&#39; instead of running pip directly.
+Collecting awsebcli
+  Downloading awsebcli-3.19.2.tar.gz (249 kB)
+     |████████████████████████████████| 249 kB 14.3 MB/s 
+Collecting botocore&amp;lt;1.20.0,&amp;gt;=1.19.0
+    
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;サンプルコードのダウンロード&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ git clone https://github.com/aws-samples/eb-node-express-sample.git
+Cloning into &#39;eb-node-express-sample&#39;...
+remote: Enumerating objects: 8, done.
+remote: Counting objects: 100% (8/8), done.
+remote: Compressing objects: 100% (7/7), done.
+remote: Total 111 (delta 0), reused 2 (delta 0), pack-reused 103
+Receiving objects: 100% (111/111), 269.62 KiB | 496.00 KiB/s, done.
+Resolving deltas: 100% (34/34), done.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Elastic Beanstalkアプリケーションの作成&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin eb-node-express-sample]$ eb init
+    
+Select a default region
+1) us-east-1 : US East (N. Virginia)
+2) us-west-1 : US West (N. California)
+3) us-west-2 : US West (Oregon)
+4) eu-west-1 : EU (Ireland)
+5) eu-central-1 : EU (Frankfurt)
+6) ap-south-1 : Asia Pacific (Mumbai)
+7) ap-southeast-1 : Asia Pacific (Singapore)
+8) ap-southeast-2 : Asia Pacific (Sydney)
+9) ap-northeast-1 : Asia Pacific (Tokyo)
+10) ap-northeast-2 : Asia Pacific (Seoul)
+11) sa-east-1 : South America (Sao Paulo)
+12) cn-north-1 : China (Beijing)
+13) cn-northwest-1 : China (Ningxia)
+14) us-east-2 : US East (Ohio)
+15) ca-central-1 : Canada (Central)
+16) eu-west-2 : EU (London)
+17) eu-west-3 : EU (Paris)
+18) eu-north-1 : EU (Stockholm)
+19) eu-south-1 : EU (Milano)
+20) ap-east-1 : Asia Pacific (Hong Kong)
+21) me-south-1 : Middle East (Bahrain)
+22) af-south-1 : Africa (Cape Town)
+(default is 3): 9
+    
+    
+Select an application to use
+1) bel-dev-beanstalk-test
+2) [ Create new Application ]
+(default is 2): 
+    
+    
+Enter Application Name
+(default is &amp;quot;eb-node-express-sample&amp;quot;): 
+Application eb-node-express-sample has been created.
+    
+It appears you are using Node.js. Is this correct?
+(Y/n): y
+Select a platform branch.
+1) Node.js 12 running on 64bit Amazon Linux 2
+2) Node.js 10 running on 64bit Amazon Linux 2
+3) Node.js running on 64bit Amazon Linux
+(default is 1): 
+    
+Do you wish to continue with CodeCommit? (Y/n): n
+Do you want to set up SSH for your instances?
+(Y/n): y
+    
+Select a keypair.
+1) awskeypair
+2) DMSHandson58
+3) [ Create new KeyPair ]
+(default is 2): 1
+    
+[ec2-user@bastin eb-node-express-sample]$ 
+    
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;環境作成、コードのデプロイ&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin eb-node-express-sample]$ eb create
+Enter Environment Name
+(default is eb-node-express-sample-dev): 
+Enter DNS CNAME prefix
+(default is eb-node-express-sample-dev): 
+    
+Select a load balancer type
+1) classic
+2) application
+3) network
+(default is 2): 
+    
+Would you like to enable Spot Fleet requests for this environment? (y/N): N
+～省略～
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;デプロイメント&lt;/p&gt;
+&lt;p&gt;デプロイポリシーと設定 - AWS Elastic Beanstalk &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/elasticbeanstalk/latest/dg/using-features.rolling-version-deploy.html&#34;&gt;https://docs.aws.amazon.com/ja_jp/elasticbeanstalk/latest/dg/using-features.rolling-version-deploy.html&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;In Place Deployment(Rolling Deploy)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;インスタンスは現行環境のものを利用して、新しいリビジョンのコードを反映
+&lt;ul&gt;
+&lt;li&gt;at once&lt;/li&gt;
+&lt;li&gt;Rolling&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Blue/Green Deployment&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;新しいリビジョンのコードを新しいインスタンスに反映させ、インスタンスごと入れ替える&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;デプロイ設定&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;バッチタイプ：一度にデプロイを反映させる台数
+&lt;ul&gt;
+&lt;li&gt;割合、固定&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;バッチサイズ：各バッチにデプロイするインスタンスの数、または割合&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;URL Swap&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;あるバージョンのアプリケーションをデプロイ後、新しいバージョンのアプリケーションを違う環境(Environment)としてデプロイ。CNAMEを切り替えて、Blue/Green Deploymentを実現する&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Elastic BeanstalkのCNAME Swapを試してみる | Developers.IO &lt;a href=&#34;https://dev.classmethod.jp/articles/beanstalk-cname-swap/&#34;&gt;https://dev.classmethod.jp/articles/beanstalk-cname-swap/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Route53の加重ラウンドロビン&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;新バージョンのコードを少しずつ試すことが可能&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;環境設定のカスタマイズ&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;環境作成時にオプションを直接指定&lt;/li&gt;
+&lt;li&gt;保存済み設定
+&lt;ul&gt;
+&lt;li&gt;S3に設定ファイルとして保存
+&lt;ul&gt;
+&lt;li&gt;eb config save&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;.ebextensions
+&lt;ul&gt;
+&lt;li&gt;リソースのカスタマイズが可能
+&lt;ul&gt;
+&lt;li&gt;カスタム環境変数&lt;/li&gt;
+&lt;li&gt;ソフトウェアインストール&lt;/li&gt;
+&lt;li&gt;ソフトウェアの実行&lt;/li&gt;
+&lt;li&gt;デフォルトにはないAWSリソースの作成&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;モニタリング&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;基本ヘルスレポート
+&lt;ul&gt;
+&lt;li&gt;環境のヘルスステータス&lt;/li&gt;
+&lt;li&gt;ELBのヘルスチェック&lt;/li&gt;
+&lt;li&gt;CloudWatchメトリクス&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;拡張ヘルスレポート
+&lt;ul&gt;
+&lt;li&gt;OSレベルのメトリクス&lt;/li&gt;
+&lt;li&gt;アプリケーションレベルのメトリクス&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;​&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</title>
