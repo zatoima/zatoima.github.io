@@ -5,12 +5,98 @@
     <link>/categories/aws/</link>
       <atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Sun, 07 Feb 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Source Themes Academic (https://sourcethemes.com/academic/)</generator><language>ja</language><lastBuildDate>Wed, 10 Feb 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>img/icon-192.png</url>
       <title>AWS</title>
       <link>/categories/aws/</link>
     </image>
+    
+    <item>
+      <title>Aurora PostgreSQLのフェイルオーバー時間の計測</title>
+      <link>/aws-aurora-failover-time-test.html</link>
+      <pubDate>Wed, 10 Feb 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-failover-time-test.html</guid>
+      <description>&lt;h1 id=&#34;heading&#34;&gt;はじめに&lt;/h1&gt;
+&lt;p&gt;Auroraのよくある質問を見ていたらフェイルオーバーが30秒以内に完了するとあったので、一応確認してみた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://aws.amazon.com/jp/rds/aurora/faqs/&#34;&gt;https://aws.amazon.com/jp/rds/aurora/faqs/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Q: フェイルオーバー中はどのようなことが起き、どのくらいの時間がかかりますか?&lt;/p&gt;
+&lt;p&gt;フェイルオーバーは Amazon Aurora によって自動的に処理されるため、アプリケーションは管理上の手動介入なしで、可能な限り迅速にデータベースオペレーションを再開することができます。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Amazon Aurora レプリカを同一の、または異なるアベイラビリティーゾーンに作成しておくと、フェイルオーバーが発生した場合、Aurora は DB インスタンスの正規名レコード (CNAME) を切り替えて正常なレプリカを指定します。指定されたレプリカはこれにより新しいプライマリに昇格します。フェイルオーバーは開始から終了まで通常 30 秒以内に完了します。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;heading-1&#34;&gt;事前準備&lt;/h1&gt;
+&lt;p&gt;テスト用のテーブル作成&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;create table failovertest(id serial,time timestamp);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;雑なテスト用スクリプト。接続エラーが発生しても継続するようにexceptでpass。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import psycopg2
+import psycopg2.extras
+import time
+import datetime
+
+for i in range(20000):
+  try:
+    dt_now = datetime.datetime.now()
+    conn = psycopg2.connect(&amp;quot;host=xxxxxx.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=xxx user=xxx password=xx&amp;quot;)
+    cur = conn.cursor()
+    cur.execute(&amp;quot;insert into failovertest (time) values (current_timestamp)&amp;quot;)
+    print(dt_now)
+    time.sleep(1)
+    conn.commit()
+    cur.close()
+    conn.close()
+  except:
+    pass
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;heading-2&#34;&gt;結果&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;平均12秒&lt;/code&gt;という結果に。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;Start&lt;/th&gt;
+&lt;th&gt;End&lt;/th&gt;
+&lt;th&gt;秒数&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1回目&lt;/td&gt;
+&lt;td&gt;2:20:40&lt;/td&gt;
+&lt;td&gt;2:20:53&lt;/td&gt;
+&lt;td&gt;0:00:13&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2回目&lt;/td&gt;
+&lt;td&gt;2:23:19&lt;/td&gt;
+&lt;td&gt;2:23:30&lt;/td&gt;
+&lt;td&gt;0:00:11&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3回目&lt;/td&gt;
+&lt;td&gt;2:24:37&lt;/td&gt;
+&lt;td&gt;2:24:53&lt;/td&gt;
+&lt;td&gt;0:00:16&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4回目&lt;/td&gt;
+&lt;td&gt;11:29:03&lt;/td&gt;
+&lt;td&gt;11:29:13&lt;/td&gt;
+&lt;td&gt;0:00:10&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5回目&lt;/td&gt;
+&lt;td&gt;11:30:06&lt;/td&gt;
+&lt;td&gt;11:30:18&lt;/td&gt;
+&lt;td&gt;0:00:12&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQLとRDSの比較メモ（リンク集）</title>
