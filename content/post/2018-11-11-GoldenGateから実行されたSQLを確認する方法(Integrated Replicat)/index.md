@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["Oracle","GoldenGate"]
 categories: ["Oracle","GoldenGate"]
-url: goldengate-check-exection-sql.html
+url: goldengate-check-exection-sql
 date: 2018-11-11
 featured: false
 draft: false

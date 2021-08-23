@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["Oracle","AWR"]
 categories: ["Oracle","AWR"]
-url: oracle-awr-checksql.html
+url: oracle-awr-checksql
 date: 2019-01-21
 featured: false
 draft: false
