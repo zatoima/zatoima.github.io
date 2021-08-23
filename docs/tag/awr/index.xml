@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>AWR | my opinion is my own</title>
+    <link>/tag/awr/</link>
+      <atom:link href="/tag/awr/index.xml" rel="self" type="application/rss+xml" />
+    <description>AWR</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 21 Jan 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>AWR</title>
+      <link>/tag/awr/</link>
+    </image>
+    
+    <item>
+      <title>AWR(DBA_HIST表)を使用した確認SQL</title>
+      <link>/oracle-awr-checksql.html</link>
+      <pubDate>Mon, 21 Jan 2019 00:00:00 +0000</pubDate>
+      <guid>/oracle-awr-checksql.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;AWR（Automatic Workload Repository）とはOracle Databaseの稼働統計とワークロード情報のスナップショットを自動的に収集・管理する機能です。&lt;/p&gt;
+&lt;p&gt;一般的にAWRを使用した分析はAWRレポートをhtml形式、text形式で出力してレポートからパフォーマンスや稼働統計を確認して分析、改善案を整理します。&lt;/p&gt;
+&lt;p&gt;AWRレポートを出力する際には各種ディクショナリ(DBA_HIST表)を参照することからそのディクショナリを直接見て色々な分析を行うことが出来ます。&lt;/p&gt;
+&lt;p&gt;AWR利用には「Diagnostic Pack」のライセンスが追加で必要になります。&lt;/p&gt;
+&lt;h3 id=&#34;awrに格納された過去のsql監視結果をレポートするoracle-12c&#34;&gt;AWRに格納された過去のSQL監視結果をレポートする（Oracle 12c～）&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT report_id,
+       GENERATION_TIME,
+       key1
+FROM dba_hist_reports
+WHERE component_name=&#39;sqlmonitor&#39;
+  AND key1=&#39;5j5wp4d5s9pqz&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awrに格納されているsqlを確認する&#34;&gt;AWRに格納されているSQLを確認する&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select
+    a.begin_interval_time,
+    b.sql_id,
+    c.sql_text
+from DBA_HIST_SNAPSHOT a, DBA_HIST_SQLSTAT st, DBA_HIST_SQLTEXT c
+where a.dbid=b.dbid and a.instance_number=b.instance_number and a.snap_id=b.snap_id
+      and b.dbid=c.dbid and b.sql_id=c.sql_id
+      and c.sql_text like &#39;%&amp;lt;検索SQL&amp;gt;%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awrに格納された過去のsql監視結果をレポートするoracle-12c-1&#34;&gt;AWRに格納された過去のSQL監視結果をレポートする（Oracle 12c～）&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT report_id,
+       GENERATION_TIME,
+       key1
+FROM dba_hist_reports
+WHERE component_name=&#39;sqlmonitor&#39;
+  AND key1=&#39;5j5wp4d5s9pqz&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awr-snapshotの確認&#34;&gt;AWR snapshotの確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DBID
+     , SNAP_ID
+     , MIN(TO_CHAR(BEGIN_INTERVAL_TIME, &#39;YYYY/MM/DD HH24:MI:SS&#39;)) AS BEGIN_INTERVAL_TIME
+     , MIN(TO_CHAR(END_INTERVAL_TIME  , &#39;YYYY/MM/DD HH24:MI:SS&#39;)) AS END_INTERVAL_TIME
+  FROM DBA_HIST_SNAPSHOT
+ WHERE DBID = xxxxxxxxx
+ GROUP BY DBID
+        , SNAP_ID
+ ORDER BY 1,2,3,4;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dba_undo_statから長時間実行されているsql等の確認累積&#34;&gt;dba_undo_statから長時間実行されているSQL等の確認（累積）&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select MAXQUERYSQLID,sum(MAXQUERYLEN)
+from dba_hist_undostat where dbid=&#39;xxxxxxxxx&#39;
+AND BEGIN_TIME &amp;gt;= TO_TIMESTAMP(&#39;2016/02/10 20:00:00&#39;, &#39;YYYY/MM/DD HH24:MI:SS&#39;)
+AND END_TIME &amp;lt;=  TO_TIMESTAMP(&#39;2016/10/31 20:15:00&#39;, &#39;YYYY/MM/DD HH24:MI:SS&#39;)
+group by MAXQUERYSQLID
+order by 2;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dba_undo_statから長時間実行されているsql等の確認個別&#34;&gt;dba_undo_statから長時間実行されているSQL等の確認（個別）&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select MAXQUERYSQLID,sum(MAXQUERYLEN)
+from dba_hist_undostat where dbid=&#39;xxxxxxxxx&#39;
+AND BEGIN_TIME &amp;gt;= TO_TIMESTAMP(&#39;2016/02/10 20:00:00&#39;, &#39;YYYY/MM/DD HH24:MI:SS&#39;)
+AND END_TIME &amp;lt;=  TO_TIMESTAMP(&#39;2016/10/31 20:15:00&#39;, &#39;YYYY/MM/DD HH24:MI:SS&#39;)
+group by MAXQUERYSQLID
+order by 2;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awrから共有プールの拡張履歴を確認する&#34;&gt;AWRから共有プールの拡張履歴を確認する&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;col CURRENT_SIZE for 999,999,999,999,999
+col MIN_SIZE for 999,999,999,999,999
+col MAX_SIZE for 999,999,999,999,999
+col USER_SPECIFIED_SIZE for 999,999,999,999,999
+col COMPONENT for a30
+col diff for 999,999,999,999,999
+set pages 20000
+set lin 20000
+alter session set NLS_DATE_FORMAT=&#39;YYYY/MM/DD HH24:MI:SS&#39;;
+
+select * from DBA_HIST_MEM_DYNAMIC_COMP 
+where LAST_OPER_MODE = &#39;IMMEDIATE&#39; and
+dbid=xxxxxxxxx
+order by LAST_OPER_TIME desc;
+
+select * from DBA_HIST_MEM_DYNAMIC_COMP 
+where LAST_OPER_MODE = &#39;DEFERRED&#39; and
+dbid=xxxxxxxxx
+order by LAST_OPER_TIME;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql_idを指定し実行時間を取得するsql&#34;&gt;SQL_IDを指定し、実行時間を取得するSQL&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select sql_id,sum(EXECUTIONS_DELTA),sum(ELAPSED_TIME_DELTA) ,round(sum(ELAPSED_TIME_DELTA)/sum(EXECUTIONS_DELTA)/100000,0) sec
+from dba_hist_sqlstat natural join dba_hist_snapshot
+where sql_id in 
+(
+  &#39;2znznu2dkbjq1&#39;
+, &#39;39up7r1bnk3mn&#39;
+, &#39;5wna3gkz7wx7v&#39; 
+)
+AND begin_interval_time between to_timestamp(&#39;20160201:00&#39;,&#39;YYYYMMDD:HH24&#39;) 
+AND to_date(&#39;20160213:00&#39;,&#39;YYYYMMDD:HH24&#39;)
+group by sql_id;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awrスナップショットから実行計画を出力&#34;&gt;AWRスナップショットから実行計画を出力&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select plan_table_output from table(DBMS_XPLAN.DISPLAY_AWR(&#39;ff6uqt4322h9&#39;));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;awrの取得削除&#34;&gt;AWRの取得・削除&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;exec dbms_workload_repository.create_snapshot();
+
+exec DBMS_WORKLOAD_REPOSITORY.DROP_SNAPSHOT_RANGE (low_snap_id =&amp;gt; 1,high_snap_id =&amp;gt; 9999999);
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

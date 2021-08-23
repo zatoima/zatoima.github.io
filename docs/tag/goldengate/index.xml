@@ -1,0 +1,2879 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>GoldenGate | my opinion is my own</title>
+    <link>/tag/goldengate/</link>
+      <atom:link href="/tag/goldengate/index.xml" rel="self" type="application/rss+xml" />
+    <description>GoldenGate</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 29 Apr 2019 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>GoldenGate</title>
+      <link>/tag/goldengate/</link>
+    </image>
+    
+    <item>
+      <title>GoldenGate 12.3新機能のParallel Replicatの動作を確認してみる</title>
+      <link>/goldengate-parallel-replicat-try.html</link>
+      <pubDate>Mon, 29 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-parallel-replicat-try.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;前回の記事でParallel Replicatについて整理しました。&lt;/p&gt;
+&lt;p&gt;この記事では実機を使用した構築やプロセス、ログの出力の仕方を確認していきます。&lt;/p&gt;
+&lt;p&gt;今回作成するプロセスは「統合パラレルReplicat」になります。「非統合パラレルReplicat」の場合は別手順となりますのでご注意ください。&lt;/p&gt;
+&lt;h4 id=&#34;integrated-parallel-replicatプロセス作成&#34;&gt;&lt;strong&gt;Integrated Parallel Replicatプロセス作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;プロセスは「parallel」句を付与します。統合モードの際は不要だった「checkpointtable」句を指定します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;GGSCI (dbvm1) 8&amp;gt; dblogin userid c##ggs@db18p1sv,password oracle
+Successfully logged into database DB18P1.
+
+GGSCI (dbvm1 as c##ggs@db18c2/DB18P1) 9&amp;gt; ADD REPLICAT r99,integrated,parallel EXTTRAIL 
+./dirdat/d11/rt checkpointtable c##ggs.ggckpt
+REPLICAT (Parallel) added.
+
+GGSCI (dbvm1 as c##ggs@db18c2/DB18P1) 11&amp;gt; info r99
+REPLICAT R99 Initialized 2018-11-03 17:17 Status STOPPED
+INTEGRATED
+Parallel
+Checkpoint Lag 00:00:00 (updated 00:00:08 ago)
+Log Read Checkpoint File ./dirdat/d11/rt000000000
+First Record RBA 0
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;integrated-parallel-replicatパラメータ&#34;&gt;&lt;strong&gt;Integrated Parallel Replicatパラメータ&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;このパラメータでは「MAP_PARALLELISM」や「MIN_APPLY_PARALLELISM」、「MAX_APPLY_PARALLELISM」が統合パラレルReplicat特有のパラメータになります。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;REPLICAT r99
+USERID c##ggs@db18p1, PASSWORD oracle
+
+DISCARDFILE ./dirrpt/r99.dsc, APPEND, MEGABYTES 500
+DISCARDROLLOVER AT 2:00 ON SUNDAY
+REPORTROLLOVER AT 2:00 ON SUNDAY
+
+MAP_PARALLELISM 3
+MIN_APPLY_PARALLELISM 2
+MAX_APPLY_PARALLELISM 8
+-- BATCHSQL
+MAP ggtest.* ,TARGET db18p1.ggtest.*;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;integrated-parallel-replicat起動時のggserrlog&#34;&gt;&lt;strong&gt;Integrated Parallel Replicat起動時のggserr.log&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;2018-11-03T17:18:08.892+0900 INFO OGG-00987 Oracle GoldenGate Command Interpreter for Oracle: GGSCI command (oracle): start r99.
+2018-11-03T17:18:08.905+0900 INFO OGG-00963 Oracle GoldenGate Manager for Oracle, mgr.prm: Command received from GGSCI on host [192.168.56.127]:47418 (START REPLICAT R99 ).
+2018-11-03T17:18:08.934+0900 INFO OGG-00975 Oracle GoldenGate Manager for Oracle, mgr.prm: REPLICAT R99 starting.
+2018-11-03T17:18:09.170+0900 INFO OGG-03059 Oracle GoldenGate Delivery for Oracle, r99.prm: Operating system character set identified as UTF-8.
+2018-11-03T17:18:09.170+0900 INFO OGG-02695 Oracle GoldenGate Delivery for Oracle, r99.prm: ANSI SQL parameter syntax is usedfor parameter parsing.
+2018-11-03T17:18:09.244+0900 INFO OGG-01360 Oracle GoldenGate Delivery for Oracle, r99.prm: REPLICAT is running in Parallel Integrated mode.
+2018-11-03T17:18:11.117+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 32,269.
+2018-11-03T17:18:11.125+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 32,270.
+2018-11-03T17:18:11.137+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Mapper with pid 32,272.
+2018-11-03T17:18:11.539+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 32,271.
+2018-11-03T17:18:11.668+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Mapper with pid 32,285.
+2018-11-03T17:18:11.668+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 32,286.
+2018-11-03T17:18:11.766+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Mapper with pid 32,287.
+2018-11-03T17:18:11.766+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 32,288.
+2018-11-03T17:18:12.298+0900 INFO OGG-00995 Oracle GoldenGate Delivery for Oracle, r99.prm: REPLICAT R99A00 starting.
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;integrated-parallel-replicat起動中のggserrlog&#34;&gt;&lt;strong&gt;Integrated Parallel Replicat起動中のggserr.log&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;負荷に応じてApplierプロセスが増減します。「MIN_APPLY_PARALLELISM」で指定したApplierプロセスは必ず確保します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;2018-11-03T17:46:44.808+0900 INFO OGG-06067 Oracle GoldenGate Delivery for Oracle, r99.prm: Spawned Applier with pid 17,035.
+2018-11-03T17:46:48.465+0900 INFO OGG-02530 Oracle GoldenGate Delivery for Oracle, r99.prm.backup: Integrated replicat successfully attached to inbound server OGG$R99.
+2018-11-03T17:51:54.641+0900 INFO OGG-06073 Oracle GoldenGate Delivery for Oracle, r99.prm: Removed Applier with pid 15,777.
+2018-11-03T17:53:09.738+0900 INFO OGG-06073 Oracle GoldenGate Delivery for Oracle, r99.prm: Removed Applier with pid 15,780.
+2018-11-03T17:54:24.872+0900 INFO OGG-06073 Oracle GoldenGate Delivery for Oracle, r99.prm: Removed Applier with pid 15,782.
+2018-11-03T17:55:39.986+0900 INFO OGG-06073 Oracle GoldenGate Delivery for Oracle, r99.prm: Removed Applier with pid 15,783.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;integrated-parallel-replicatのosのプロセス情報&#34;&gt;&lt;strong&gt;Integrated Parallel ReplicatのOSのプロセス情報&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;OS上からは「R99Axx」、「R99Mxx」というプロセス名が起動されていることを確認できます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;oracle 32190 25849 0 17:17 pts/2 00:00:00 tail -f ggserr.log
+oracle 32259 26592 1 17:18 ? 00:00:01 /gg/gg181/replicat PARAMFILE /gg/gg181/dirprm/r99.prm REPORTFILE /gg/gg181/dirrpt/R99.rpt PROCESSID R99
+oracle 32269 32259 0 17:18 ? 00:00:00 /gg/gg181/replicat PARAMFILE /gg/gg181/dirprm/r99.prm REPORTFILE /gg/gg181/dirrpt/R99.rpt PROCESSID R99A00 THREADID 0 PARAMCRC 3975171
+oracle 32270 32259 0 17:18 ? 00:00:00 /gg/gg181/replicat PARAMFILE /gg/gg181/dirprm/r99.prm REPORTFILE /gg/gg181/dirrpt/R99.rpt PROCESSID R99A01 THREADID 1 PARAMCRC 3975171
+oracle 32271 32259 0 17:18 ? 00:00:00 /gg/gg181/replicat PARAMFILE /gg/gg181/dirprm/r99.prm REPORTFILE /gg/gg181/dirrpt/R99.rpt PROCESSID R99A02 THREADID 2 PARAMCRC 3975171
+oracle 32272 32259 0 17:18 ? 00:00:00 /gg/gg181/replicat PARAMFILE /gg/gg181/dirprm/r99.prm REPORTFILE /gg/gg181/dirrpt/R99.rpt PROCESSID R99M00 THREADID 0 PARAMCRC 3975171
+oracle 32275 27681 0 17:18 ? 00:00:00 oracledb112n1 (DESCRIPTION=(LOCAL=YES)(ADDRESS=(PROTOCOL=beq)))
+root 32277 2 0 17:18 ? 00:00:00 [kworker/u8:2]
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGate 12.3新機能のParallel Replicatの概要</title>
+      <link>/goldengate-parallel-replicat-overview.html</link>
+      <pubDate>Sun, 28 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-parallel-replicat-overview.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;従来のReplicatのモードは「Classic Replicat」と「Integrated Replicat」の2つでした。GoldenGateの12.3以降のバージョンからReplicatの新モードであるParalell Replicatが登場しました。この新しい特徴を確認する限り従来のモードで実現出来なかったこと（特に性能問題）を解決出来るのでは、と感じています。&lt;/p&gt;
+&lt;p&gt;本記事では、概略レベルを整理して、次回の記事で具体的な動作を確認したいと思います。&lt;/p&gt;
+&lt;h4 id=&#34;概要&#34;&gt;&lt;strong&gt;概要&lt;/strong&gt;&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Parallel Replicatは、毎秒最大100万回以上の適用率を達成する、非常にスケーラブルな適用エンジンを備えています。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Integrated Replicatよりも5倍高速&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;単一の大きなトランザクションを並行して適用&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;データベース外での依存関係計算と並列処理&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;単一の大規模トランザクションを並列化する機能&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;大規模トランザクションを並列化している間も依存関係が考慮&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;トランザクション分割サイズ（レコード数）を指定するSPLIT_TRANS_RECSパラメータによって制御される機能。 デフォルトは100,000です。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;参考&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://www.oracle-scn.com/oracle-goldengate-parallel-replicat/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://www.oracle-scn.com/oracle-goldengate-parallel-replicat/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Classic Replicat、及びIntegrated Replicatの場合、大規模なトランザクション（数千万件を更新後に1度だけcommitされる場合等）はレプリケーション遅延が起こりやすい処理でした。&lt;/p&gt;
+&lt;p&gt;上記の「単一の大規模トランザクションを並列化する機能」や「Integrated Replicatよりも5倍高速」という製品メッセージが事実であれば性能的に高速化が見込めます。&lt;/p&gt;
+&lt;h4 id=&#34;プロセス概略&#34;&gt;&lt;strong&gt;プロセス概略&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;マッパーはパラレルに動作し、証跡の読取り、証跡レコードのマッピング、マップされたレコードの統合Replicat LCR形式への変換、および後続の処理のためのマージャへのLCRの送信を実行します。&lt;/p&gt;
+&lt;p&gt;マスター・プロセスにはコレータとスケジューラの2つのスレッドがあります。コレータはマスターからマップされたトランザクションを受け取り、依存関係の計算のために証跡の順序に戻します。スケジューラがトランザクション間の依存関係を計算し、トランザクションを独立したバッチにグループ化し、ターゲット・データベースに適用するためにバッチをアプライアに送信します。&lt;/p&gt;
+&lt;p&gt;別モードの統合Replicatの場合はこのプロセスが「Reader」となっており、パラレルではなくシリアルです。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121164644456.png&#34; alt=&#34;image-20191121164644456&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;参考&#34;&gt;参考&lt;/h4&gt;
+&lt;p&gt;こちらはIntegrated Repliatの場合です。Applierがパラレル化されるのは同一ですが、Applier以前のアーキテクチャが大きく違います。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121164655589.png&#34; alt=&#34;image-20191121164655589&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;プロセス作成方法&#34;&gt;&lt;strong&gt;プロセス作成方法&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;従来通りプロセス自体はADD Replicatコマンドで作成します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;ggsci &amp;gt; ADD REPLOCAT R1 ,　INTEGRATED ,　PARALLEL ,　EXTTRAIL　./dirdat/ra　checkpointtable ggadmin.ggs_checkpoint
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;使用するパラメータ&#34;&gt;&lt;strong&gt;使用するパラメータ&lt;/strong&gt;&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;パラメータ&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;MAP_PARALLELISM&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;マッパーの数を構成します。これは証跡ファイルを読み取るために使用されるスレッドの数を制御します。最小値は&lt;code&gt;1&lt;/code&gt;、最大値は&lt;code&gt;100&lt;/code&gt;、デフォルトは&lt;code&gt;2&lt;/code&gt;です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;APPLY_PARALLELISM&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;アプライアの数を構成します。これは変更を適用するために使用されるターゲット・データベースの接続の数を制御します。デフォルト値は4です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;MIN_APPLY_PARALLELISM``MAX_APPLY_PARALLELISM&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;並列化の適用が自動チューニングされます。最小値と最大値を設定して、Replicatが並列化を自動的に調整する範囲を定義できます。デフォルト値はありません。&lt;code&gt;APPLY_PARALLELISM&lt;/code&gt;と同時に使用&lt;em&gt;しないでください&lt;/em&gt;。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;SPLIT_TRANS_REC&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;大きなトランザクションを指定のサイズのピースに分割して、パラレルに適用するように指定します。ピース間の依存関係は保持されます。デフォルトでは無効です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;COMMIT_SERIALIZATION&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;FULL&lt;/code&gt;直列化モードのコミットを有効にし、証跡の順序でトランザクションを強制的にコミットします。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;strong&gt;高度なパラメータ&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;LOOK_AHEAD_TRANSACTIONS&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;トランザクションをバッチ化するときに、スケジューラがどの程度先まで対象にするかを制御します。デフォルト値は10000です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;code&gt;CHUNK_SIZE&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;並列Replicatで、どの程度の大きさのトランザクションを大きいトランザクションとみなすかを制御します。並列Replicatは、このサイズより大きいトランザクションを検出すると、そのトランザクションをシリアライズするためにパフォーマンスが低下します。ただし、この値を大きくすると、並列Replicatによって消費されるメモリーも増加します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;その他注意事項&#34;&gt;&lt;strong&gt;その他注意事項&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;•Integrated Parallel Replicatの場合、COMMIT_SERIALIZATIONのFULLモードはサポートされていません。使用できるモードはデフォルトのDEPENDENTになります。&lt;/p&gt;
+&lt;p&gt;•DBのバージョンはターゲットが12.2以降である必要があります。&lt;/p&gt;
+&lt;p&gt;•並列Replicatは完全なメタデータを持つ証跡からのデータ・レプリケーションのみをサポートします。したがって、ソース側はGG12.2以降のバージョンを使用する必要があります。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ロングトランザクション時のGoldenGateのメモリの使用動作を検証する</title>
+      <link>/goldengate-longtransaction-memoryuse.html</link>
+      <pubDate>Sun, 21 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-longtransaction-memoryuse.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;以前、下記記事でGoldenGateのメモリの使い方について整理しました。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Oracle GoldenGateの仮想メモリの使い方を整理する - zato logger &lt;a href=&#34;https://www.zatolog.com/entry/goldengate-vmemory-use&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.zatolog.com/entry/goldengate-vmemory-use&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;実際にロングトランザクションを実行してどのようにメモリを使用するのかを見える化したいと思います。&lt;/p&gt;
+&lt;h4 id=&#34;事前準備&#34;&gt;&lt;strong&gt;事前準備&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;cachesizeについて&#34;&gt;&lt;strong&gt;CACHESIZEについて&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ソース側のCaptureに設定するCACHESIZEは「1GB」を設定しています。&lt;/p&gt;
+&lt;h4 id=&#34;情報取得対象&#34;&gt;&lt;strong&gt;情報取得対象&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;下記情報を1分ごとに取得するため簡易的なスクリプトを配置します。&lt;/p&gt;
+&lt;p&gt;取得する情報はこちらです。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;取得先/取得コマンド&lt;/th&gt;
+&lt;th&gt;取得情報&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;v$sysstat&lt;/td&gt;
+&lt;td&gt;REDO生成量&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SEND EXTRACT &amp;lt;Capture名&amp;gt;, CACHEMGR CACHESTATS&lt;/td&gt;
+&lt;td&gt;キャッシュマネージャー統計&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;info exttrail ./dirdat/c11/lt&lt;/td&gt;
+&lt;td&gt;Trailファイル情報&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;情報取得スクリプト&#34;&gt;&lt;strong&gt;情報取得スクリプト&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;1回しか使わないので雑です。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#!/bin/bash
+
+. &amp;quot;/home/oracle/.oraenv_db112s&amp;quot;
+
+while :
+do
+    date
+    sqlplus / as sysdba &amp;lt;&amp;lt; EOF
+        set pages 2000 lin 2000
+        col name for a20
+        select * from v\$sysstat where name = &#39;redo size&#39;;
+    exit
+
+    EOF
+
+    /gg/gg1/ggsci &amp;lt;&amp;lt; EOF
+    info exttrail ./dirdat/c11/lt
+    SEND EXTRACT c11, CACHEMGR CACHESTATS
+    exit
+    EOF
+
+    ls -lth /gg/gg1/BR/C11/stale
+    ls -lth /gg/gg1/dirtmp
+
+    sleep 60
+done
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ソース側で流すトランザクション&#34;&gt;&lt;strong&gt;ソース側で流すトランザクション&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;一度もcommitせず、「20,000,000(2000万件)」ひたすらInsertを行います。貧弱な環境なのでUNDO表領域が枯渇やアーカイブログ領域やデータファイルのパンクの可能性がありますがトライしてみます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create table memtest(a number primary key,b varchar2(30));
+
+declare
+v_c1 number;
+v_c2 varchar2(30);
+begin
+dbms_random.seed(uid);
+for i in 1..20000000
+loop
+v_c1 := i;
+v_c2 := dbms_random.string(&#39;x&#39;, 16);
+insert into reptest (a, b) values (v_c1, v_c2);
+end loop;
+commit;
+end;
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;実行結果&#34;&gt;&lt;strong&gt;実行結果&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;REDO更新量&lt;/code&gt;、及び&lt;code&gt;vm current(MB&lt;/code&gt;)、&lt;code&gt;byte to disk(MB)&lt;/code&gt;をグラフ化しました。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;images/image-20191121164246512.png&#34; alt=&#34;image-20191121164246512&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;CHCHESIZEの1GBを上限に「vm current」が推移している。&lt;/p&gt;
+&lt;p&gt;先日まとめた資料に&lt;code&gt;CACHESIZE&lt;/code&gt;の上限値は弱い制限であり、トランザクションによっては&lt;code&gt;CACHEMAXSIZE&lt;/code&gt;まで使用する可能性があると記載しました。今回のケースでは同様のトランザクション傾向のためこの弱い制限以上に仮想メモリを使用することは無さそうでした。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;REDO生成量の「7~8割」がディスクのdirtmpにスワップしている。&lt;/p&gt;
+&lt;p&gt;約30分更新し続けており、&lt;code&gt;REDO更新量(MB)&lt;/code&gt;は右肩上がりです。それに合わせて&lt;code&gt;bytes to disk(MB)&lt;/code&gt;も追従する形で右肩上がりとなっています。&lt;/p&gt;
+&lt;p&gt;今回のケースでは約10GBのREDO生成量のロングトランザクションでしたが、実際の業務では大量バッチ更新等が行われる可能性があり、大量のREDO更新が見込まれます。どのくらいスワップ用のディレクトリを確保すべきか改めて考える必要があると思います。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;更新完了後の「vm current」が0に減っている&lt;/p&gt;
+&lt;p&gt;ロングトランザクションが完了してcommitが発行後に&lt;code&gt;vm current(MB)&lt;/code&gt;の値が0になっています。確保されていた仮想メモリが開放されていることがわかります。ちなみに過去どのくらいの仮想メモリを使用したかの最大値を知りたい場合は「vm used max」で確認が出来ます。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Oracle GoldenGateの仮想メモリの使い方を整理する</title>
+      <link>/goldengate-vmemory-use.html</link>
+      <pubDate>Sat, 20 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-vmemory-use.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;GoldenGateもOS上で動作するミドルウェアなので物理メモリ/仮想メモリを使用します。&lt;/p&gt;
+&lt;p&gt;GoldenGateはコミットされたトランザクションのみをレプリケートするため、トランザクションのコミットまたはロールバックを受信するまで、&lt;em&gt;キャッシュ&lt;/em&gt;と呼ばれる&lt;code&gt;管理仮想メモリー・プール&lt;/code&gt;に各トランザクションの操作を保持する必要があります。ここで述べているのは物理メモリではなく仮想メモリです。ご注意ください。&lt;/p&gt;
+&lt;p&gt;本記事で明示的に指定していない場合は、メモリという言葉は仮想メモリを指します。&lt;/p&gt;
+&lt;p&gt;GoldenGateプロセスによって使用される物理メモリーの実際の量は、オペレーティング・システムによって制御されます。&lt;/p&gt;
+&lt;p&gt;具体的なメモリの使い方と使用されるスワップ容量については本記事では扱いません。&lt;/p&gt;
+&lt;h4 id=&#34;必要な仮想メモリ量について&#34;&gt;&lt;strong&gt;必要な仮想メモリ量について&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;仮想メモリの見積もり式は下記の通りマニュアルに記載があります。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-B910F3D9-E41C-4335-AC0A-442435481A19.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-B910F3D9-E41C-4335-AC0A-442435481A19.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;CACHEMGR&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code&gt;1. 1つのExtractプロセスおよび1つのReplicatプロセスを起動します。
+2. GGSCIを実行します。
+3. 実行中の各プロセスのレポート・ファイルを表示し、PROCESS VM AVAIL FROM OS (min)行を探します。
+4. 必要な場合、各値を次の整数(GB)に切り上げます。たとえば、1.76GBの場合は2GBに切り上げます。
+5. 繰り上げられたExtractの値に、Extractプロセスの数を掛けます。
+6. 繰り上げられたReplicatの値に、Replicatプロセスの数を掛けます。
+7. 2つの結果に、システム上のOracle GoldenGateプロセスおよびその他のプロセスで必要とする追加スワップ領域を足します。
+
+(PROCESS_VM x number_Extracts) + (PROCESS_VM x number_Replicats) + (swap_for_other_processes) = max_swap_space_on_system
+
+この合計が、これらのプロセスに必要な最大スワップ領域になります。すべてのOracle GoldenGateプロセスが使用する実際の物理メモリー量は、Oracle GoldenGateプロセスではなく、オペレーティング・システムによって制御されます。グローバル・キャッシュ・サイズは、CACHEMGRのCACHESIZEオプションで制御します。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;仮想メモリ動作&#34;&gt;&lt;strong&gt;仮想メモリ動作&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;下記はプロセス起動時にレポートファイルに出力されるメモリの統計値です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CACHEMGR virtual memory values (may have been adjusted)
+CACHEPAGEOUTSIZE (default):               4M
+PROCESS VM AVAIL FROM OS (min):           2G
+CACHESIZEMAX (strict force to disk):   1.74G
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;仮想メモリ上限値を設定したい場合、CACHESIZEパラメータを設定します。これはプロセスがトランザクション・データのキャッシュに使用できる仮想メモリーの弱い制限を示します。これは、PROCESS VM AVAIL FROM OS (min)の値に基づいて動的に決定されます。CACHEMGRのCACHESIZEオプションを使用して制御できます。トランザクション・データのキャッシングにできる仮想メモリー量(キャッシュ・サイズ)の弱い制限を指定するため、トランザクションによってはこのサイズを超えてメモリを使用するケースも存在します。この場合、上限値は上記の統計値で言うところの &lt;code&gt;CACHESIZEMAX&lt;/code&gt;が上限となります。&lt;/p&gt;
+&lt;p&gt;次に、PROCESS VM AVAIL FROM OS (min)は、このプロセスが使用可能と判断したおおよその仮想メモリー量を示します。内部的な理由で、この量はオペレーティング・システムによって使用可能と表示される量より少ない場合があります。&lt;/p&gt;
+&lt;p&gt;CACHESIZEMAX (strict force to disk)は、PROCESS VM AVAIL FROM OSおよびCACHESIZEから導出されます。通常は、現在仮想メモリー・バッファが特定の内部値を超えているトランザクションのみがページングの候補です。メモリー・リクエストの合計がCACHESIZEの値を超えると、キャッシュ・マネージャはディスクに書き込むトランザクションを探し、ページング候補のリストからトランザクションを選択します。ページング候補のトランザクションがすでにディスクにページングされていて、使用中の仮想メモリーがCACHESIZEMAX (strict force to disk)を超えている場合は、追加のバッファを必要とするすべてのトランザクションをページング候補にできます。このような方法で、常に仮想メモリーの可用性が確保されています。&lt;/p&gt;
+&lt;p&gt;メモリ使用の上限を超える場合 GoldenGateインストール・ディレクトリの&lt;code&gt;dirtmp&lt;/code&gt;サブディレクトリにトランザクション・データがスワップされます。&lt;/p&gt;
+&lt;p&gt;ロングトランザクションが実行される場合は設定しているCACHESIZE次第ですが、ディスクにスワップされる可能性が高いでディスク容量にも注意が必要と思われます。&lt;/p&gt;
+&lt;h4 id=&#34;send-extract-capture名-cachemgr-cachestatsについて&#34;&gt;&lt;strong&gt;SEND EXTRACT &amp;lt;Capture名&amp;gt;, CACHEMGR CACHESTATSについて&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;仮想メモリの使用状況について確認したい場合は下記コマンドを実行します。&lt;/p&gt;
+&lt;p&gt;多くの情報が出力されますが、「CACHE OBJECT MANAGER statistics」セクションを見てどのようなメモリ動作になっているか確認すれば良いと思います。ファイルキャッシュに関する情報は「CACHE File Caching」で確認可能です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 40&amp;gt; SEND EXTRACT c11, CACHEMGR CACHESTATS
+
+Sending CACHEMGR request to EXTRACT C11 ...
+
+CACHE OBJECT MANAGER statistics
+
+CACHE MANAGER VM USAGE
+vm current     =      0    vm anon queues =      0
+vm anon in use =      0    vm file        =      0
+vm used max    =   1.27G   ==&amp;gt; CACHE BALANCED
+
+CACHE CONFIGURATION
+cache size            =   1G   cache force paging = 1.74G
+buffer min            =  64K   buffer max (soft)  =   4M
+pageout eligible size =   4M
+
+================================================================================
+RUNTIME STATS FOR SUPERPOOL
+
+CACHE Transaction Stats
+trans active    =      0    max concurrent =    238
+non-zero total  =      1    trans total    =  42.58K
+
+CACHE File Caching
+filecache rqsts        =    129    bytes to disk      =   8.20G
+file retrieves         =   2.08K   objs filecached    =      1
+queue entries          =    129    queue processed    =    130
+queue entry not needed =      0    queue not signaled =      0
+fc requesting obj      =      0
+
+CACHE MANAGEMENT
+buffer links   =   2.06K  anon gets   =      0
+forced unmaps  =     39   cnnbl try   =    200
+cached out     =    114
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;想定より多く仮想メモリを使用していることを疑われる場合は&lt;code&gt;CACHE MANAGER VM USAGE&lt;/code&gt; を優先的に確認するのが良いと思います。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CACHE MANAGER VM USAGE
+vm current = 1015M vm anon queues = 320M
+vm anon in use = 692M vm file = 3M
+vm used max = 1G ==&amp;gt; CACHE BALANCED
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;各項目の補足説明&#34;&gt;&lt;strong&gt;各項目の補足説明&lt;/strong&gt;&lt;/h5&gt;
+&lt;ul&gt;
+&lt;li&gt;vm current : 現在割当てられている仮想メモリサイズ総量(メモリ＋ページング)&lt;/li&gt;
+&lt;li&gt;vm anon queues : vm current のうち、フリーなメモリサイズ(使用されなくなったメモリをフリーなメモリとして一旦キューに保持しているサイズ)&lt;/li&gt;
+&lt;li&gt;vm anon in use : 現在処理で利用中の仮想メモリサイズ総量&lt;/li&gt;
+&lt;li&gt;vm file : 現在ページングしているサイズ&lt;/li&gt;
+&lt;li&gt;vm used max : これまでに利用された仮想メモリサイズ総量の最大サイズ&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法</title>
+      <link>/goldengate-classic-replicat-trace.html</link>
+      <pubDate>Wed, 17 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-classic-replicat-trace.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;GoldenGateのReplicatプロセスが適用するSQLの調査をする場面があります。SQLの性能調査の場合はSQLトレースを取得して解析という流れになると思いますが、DB層からの操作ではGoldenGateセッション単位での設定は出来ないので、DB単位で設定する必要があります。&lt;/p&gt;
+&lt;p&gt;一方、GoldenGateにはSQLEXECというパラメータが用意されてありますので、こちらをReplicatプロセスのパラメータ・ファイルに記載することでReplicatが適用するSQLのみ10046トレースが取得が可能です。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SQLEXEC &lt;a href=&#34;https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/gg_parameters156.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/gg_parameters156.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;SQLEXEC&lt;/code&gt;パラメータでは、Oracle GoldenGate処理の範囲でストアド・プロシージャ、問合せまたはデータベース・コマンドを実行します。&lt;code&gt;SQLEXEC&lt;/code&gt;により、Oracle GoldenGateはデータベースと直接通信し、データベースによってサポートされている処理を実行できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;設定方法&#34;&gt;&lt;strong&gt;設定方法&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;～省略～
+REPORTCOUNT EVERY 10 MINUTES, RATE
+
+SQLEXEC  &amp;quot;ALTER  SESSION  SET  TRACEFILE_IDENTIFIER=&#39;GG_DEBUG&#39;&amp;quot;
+SQLEXEC  &amp;quot;alter session set events &#39;10046 trace name context forever,level 12&#39;&amp;quot;
+
+BATCHSQL
+MAP ggtest.* ,TARGET db18p1.ggtest.*;
+～省略～
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;※この方法で10046トレースが取得できるのはClassic Replicatの場合のみです。Integrated Replicatでは他の方法を使用してSQL性能情報を取得する必要があります。&lt;/p&gt;
+&lt;h4 id=&#34;実行結果&#34;&gt;&lt;strong&gt;実行結果&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;TRACEFILE_IDENTIFIERで「GG_DEBUG」を付与しているため、トレースファイルには「GG_DEBUG」がついたファイルが生成されます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[oracle@dbvgg trace]$ pwd
+/u01/app/oracle/diag/rdbms/db18s/db18s/trace
+[oracle@dbvgg trace]$ ls -ltr | tail
+-rw-r----- 1 oracle oinstall    1737  4月  3 10:49 2019 db18s_m000_3762.trm
+-rw-r----- 1 oracle oinstall    8661  4月  3 10:49 2019 db18s_m000_3762.trc
+-rw-r----- 1 oracle oinstall    1160  4月  3 10:49 2019 db18s_dbrm_3705.trm
+-rw-r----- 1 oracle oinstall    4775  4月  3 10:49 2019 db18s_dbrm_3705.trc
+-rw-r----- 1 oracle oinstall    1646  4月  3 10:50 2019 db18s_m003_4089.trm
+-rw-r----- 1 oracle oinstall    7495  4月  3 10:50 2019 db18s_m003_4089.trc
+-rw-r----- 1 oracle oinstall    1894  4月  3 10:50 2019 db18s_m002_4087.trm
+-rw-r----- 1 oracle oinstall   11111  4月  3 10:50 2019 db18s_m002_4087.trc
+-rw-r----- 1 oracle oinstall  234008  4月  3 10:50 2019 db18s_ora_5208_GG_DEBUG.trm
+-rw-r----- 1 oracle oinstall 1339711  4月  3 10:50 2019 db18s_ora_5208_GG_DEBUG.trc
+[oracle@dbvgg trace]$
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGateのClassic Replicat(非統合Replicat)の作成手順</title>
+      <link>/goldengate-classic-replicat-create.html</link>
+      <pubDate>Wed, 10 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-classic-replicat-create.html</guid>
+      <description>&lt;p&gt;他記事でIntegrated Replicat(統合Replicat)のプロセス構成手順は記載しました。ただ、Classic Replicat（非統合Replicat）も使用することが多いので手順を記載します。&lt;/p&gt;
+&lt;p&gt;手順の違いはコマンドの引数（オプション）が変わるということとチェックポイント表の作成が必要ということです。内部的な動作は多く変わっているのでそこは別途注意が必要かと思います。&lt;/p&gt;
+&lt;h4 id=&#34;ターゲット側にてclassic-replicatプロセスを作成&#34;&gt;&lt;strong&gt;ターゲット側にてClassic Replicatプロセスを作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;パラメータファイル作成&#34;&gt;&lt;strong&gt;パラメータファイル作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db18s --環境変数の読み込み
+cd /gg/gg2
+./ggsci
+
+#パラメータ作成
+edit param r21
+
+下記パラメータを設定する
+----
+REPLICAT R21
+USERID c##ggs@db18p1,  PASSWORD oracle
+DISCARDFILE ./dirrpt/r21.dsc, APPEND, MEGABYTES 500
+DISCARDROLLOVER AT 2:00 ON SUNDAY
+REPORTROLLOVER AT 2:00 ON SUNDAY
+
+BATCHSQL
+MAP ggtest.* ,TARGET db18p1.ggtest.*;
+----
+
+view param r21
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;replicatプロセスの作成&#34;&gt;&lt;strong&gt;Replicatプロセスの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#DBログイン
+dblogin userid c##ggs@db18p1,password oracle
+
+#Replicatプロセスの作成
+add replicat r21, exttrail ./dirdat/d11/rt, CHECKPOINTTABLE c##ggs.ggs_ckpt
+
+#チェックポイントファイルの作成
+ADD CHECKPOINTTABLE c##ggs.ggs_ckpt
+INFO CHECKPOINTTABLE c##ggs.ggs_ckpt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+GSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 4&amp;gt; add replicat r11, exttrail ./dirdat/d11/rt, CHECKPOINTTABLE c##ggs.ggs_ckpt
+REPLICAT added.
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 5&amp;gt; add checkpointtable
+ERROR: Missing checkpoint table specification.
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 6&amp;gt;
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 6&amp;gt; ADD CHECKPOINTTABLE c##ggs.ggs_ckpt
+Logon catalog name DB18P1 will be used for table specification DB18P1.c##ggs.ggs_ckpt.
+
+Successfully created checkpoint table DB18P1.c##ggs.ggs_ckpt.
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 7&amp;gt; info checkpointtable c##ggs.ggs_ckpt
+Logon catalog name DB18P1 will be used for table specification DB18P1.c##ggs.ggs_ckpt.
+
+Checkpoint table DB18P1.c##ggs.ggs_ckpt created 2019-04-03 10:33:15.
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;各プロセスの作成手順のマニュアルはこちらです。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GIORA/GUID-7065CF34-FD9A-4652-A34A-AE9F6BD3C87E.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GIORA/GUID-7065CF34-FD9A-4652-A34A-AE9F6BD3C87E.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; Replicatグループの追加&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Classic Replicatを使用する場合はチェックポイント表の理解も重要です。こちらのマニュアルの記載をご参照ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GIORA/GUID-B3EFA08D-145B-4806-B7E2-B8AE409C651C.htm#GUID-B3EFA08D-145B-4806-B7E2-B8AE409C651C&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GIORA/GUID-B3EFA08D-145B-4806-B7E2-B8AE409C651C.htm#GUID-B3EFA08D-145B-4806-B7E2-B8AE409C651C&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; チェックポイント表の作成(非統合Replicatのみ)&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GWUAD/GUID-D1ED9CCF-C81C-4CE2-8EAB-E4C8C7BDF58C.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GWUAD/GUID-D1ED9CCF-C81C-4CE2-8EAB-E4C8C7BDF58C.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&amp;gt; Oracle GoldenGateチェックポイント表&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>実行中のGoldenGateプロセスのパラメータの情報取得</title>
+      <link>/goldengate-gg-process-getparaminfo.html</link>
+      <pubDate>Sat, 06 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-gg-process-getparaminfo.html</guid>
+      <description>&lt;p&gt;実行中のプロセスのパラメータを取得する方法。意図的に設定したパラメータ、左記以外のパラメータも出力されるため合わせてご確認ください。&lt;/p&gt;
+&lt;p&gt;マニュアルはこちらです。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-6D0E4481-BB8A-4B3C-B8E9-2305BC01928E.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-6D0E4481-BB8A-4B3C-B8E9-2305BC01928E.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;GETPARAMINFO&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;GETPARAMINFO&lt;/code&gt;では、Extract、Replicat、Manageなどの実行中のインスタンスのランタイム・パラメータ値を問い合せます。1つまたはすべてのパラメータを問い合せて、出力をコンソールまたはテキスト・ファイルに送信できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;mgrプロセス&#34;&gt;MGRプロセス&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (node1.oracle12c.jp) 1&amp;gt; send MGR getparaminfo
+
+Sending GETPARAMINFO request to MANAGER ...
+
+GLOBALS
+
+checkpointtable                      : c##ggs.ggs_ckpt
+enablemonitoring                     : &amp;lt;enabled&amp;gt;
+
+/u01/ogg_1/dirprm/mgr.prm
+
+port                                 : 7809
+purgeoldextracts                     : /u01/ogg_1/dirdat
+
+Default Values
+
+ptkcaptureprocstats                  : &amp;lt;enabled&amp;gt;
+ptkmonitorfrequency                  : 1
+ptkprocesscheckfrequency             : 1
+checkminutes                         : 10
+monitoring_heartbeat_timeout         : 10
+  usecheckpoints                     : &amp;lt;enabled&amp;gt;
+  minkeepfiles                       : 1
+  frequencyminutes                   : 60
+repobackupdir                        : dirbkup
+repobackupfrequency                  : 0
+reponumbackupsbeforefullbackup       : 3
+ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;captureプロセス&#34;&gt;Captureプロセス&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (node1.oracle12c.jp) 2&amp;gt; send cap01 getparaminfo
+
+Sending GETPARAMINFO request to EXTRACT CAP01 ...
+
+GLOBALS
+
+checkpointtable                      : c##ggs.ggs_ckpt
+enablemonitoring                     : &amp;lt;enabled&amp;gt;
+
+/u01/ogg_1/dirprm/cap01.prm
+
+extract                              : CAP01
+logallsupcols                        : &amp;lt;enabled&amp;gt;
+setenv                               : (ORACLE_HOME=/u01/app/oracle/product/12.1.0/dbhome_1)
+setenv                               : (ORACLE_SID=cdb1)
+userid                               : c##ggs
+  password                           : *******
+updaterecordformat                   : COMPACT
+ddl                                  : &amp;lt;enabled&amp;gt;
+  include                            : &amp;lt;enabled&amp;gt;
+                                     : &amp;lt;enabled&amp;gt;
+    mapped                           : &amp;lt;enabled&amp;gt;
+                                     : &amp;lt;enabled&amp;gt;
+    sourcecatalog                    : p_pdb1
+                                     : p_pdb2
+exttrail                             : ./dirdat/local/lt
+table                                : p_pdb1.oracle.*
+table                                : p_pdb2.oracle.*
+sourcecatalog                        : p_pdb1
+table                                : oracle.*
+sourcecatalog                        : p_pdb2
+
+Default Values
+
+deletelogrecs                        : &amp;lt;enabled&amp;gt;
+fetchoptions                         :
+  userowid                           : &amp;lt;enabled&amp;gt;
+  usekey                             : &amp;lt;enabled&amp;gt;
+  missingrow                         : ALLOW
+  usesnapshot                        : &amp;lt;enabled&amp;gt;
+  uselatestversion                   : &amp;lt;enabled&amp;gt;
+  maxfetchstatements                 : 100
+  usediagnostics                     : &amp;lt;disabled&amp;gt;
+  detaileddiagnostics                : &amp;lt;disabled&amp;gt;
+  diagnosticsonall                   : &amp;lt;disabled&amp;gt;
+  nosuppressduplicates               : &amp;lt;enabled&amp;gt;
+flushsecs                            : 1
+passthrumessages                     : &amp;lt;enabled&amp;gt;
+ptkcapturecachemgr                   : &amp;lt;enabled&amp;gt;
+ptkcaptureift                        : &amp;lt;enabled&amp;gt;
+ptkcapturenetwork                    : &amp;lt;enabled&amp;gt;
+ptkcapturequeuestats                 : &amp;lt;enabled&amp;gt;
+ptkspstats                           : &amp;lt;enabled&amp;gt;
+tcpsourcetimer                       : &amp;lt;enabled&amp;gt;
+warnlongtrans                        : 3600 second(s)
+retrydelay                           : 60
+allocfiles                           : 500
+allowduptargetmap                    : &amp;lt;disabled&amp;gt;
+binarychars                          : &amp;lt;enabled&amp;gt;
+checkpointsecs                       : 10 second(s)
+cmdtrace                             : OFF
+dynamicresolution                    : &amp;lt;enabled&amp;gt;
+eofdelay                             : 1
+eofdelaycsecs                        : 100
+functionstacksize                    : 200
+numfiles                             : 1000
+ptkcapturetablestats                 : &amp;lt;enabled&amp;gt;
+ptkmaxtables                         : 100
+ptktablepollfrequency                : 1
+varwidthnchar                        : &amp;lt;disabled&amp;gt;
+enableheartbeat                      : &amp;lt;enabled&amp;gt;
+ptkcaptureprocstats                  : &amp;lt;enabled&amp;gt;
+ptkmonitorfrequency                  : 1
+use_traildefs                        : &amp;lt;enabled&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;data-pumpプロセス&#34;&gt;Data Pumpプロセス&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (node1.oracle12c.jp) 3&amp;gt; send dp01 getparaminfo
+
+Sending GETPARAMINFO request to EXTRACT DP01 ...
+
+GLOBALS
+
+checkpointtable                      : c##ggs.ggs_ckpt
+enablemonitoring                     : &amp;lt;enabled&amp;gt;
+
+/u01/ogg_1/dirprm/dp01.prm
+
+extract                              : DP01
+passthru                             : &amp;lt;enabled&amp;gt;
+rmthost                              : node1.oracle12c.jp
+  mgrport                            : 7810
+rmttrail                             : /u01/ogg_2/dirdat/remote/rt
+table                                : p_pdb1.oracle.*
+table                                : p_pdb2.oracle.*
+
+Default Values
+
+deletelogrecs                        : &amp;lt;enabled&amp;gt;
+fetchoptions                         :
+  userowid                           : &amp;lt;enabled&amp;gt;
+  usekey                             : &amp;lt;enabled&amp;gt;
+  missingrow                         : ALLOW
+  usesnapshot                        : &amp;lt;enabled&amp;gt;
+  uselatestversion                   : &amp;lt;enabled&amp;gt;
+  maxfetchstatements                 : 100
+  usediagnostics                     : &amp;lt;disabled&amp;gt;
+  detaileddiagnostics                : &amp;lt;disabled&amp;gt;
+  diagnosticsonall                   : &amp;lt;disabled&amp;gt;
+  nosuppressduplicates               : &amp;lt;enabled&amp;gt;
+flushsecs                            : 1
+passthrumessages                     : &amp;lt;enabled&amp;gt;
+ptkcapturecachemgr                   : &amp;lt;enabled&amp;gt;
+ptkcaptureift                        : &amp;lt;enabled&amp;gt;
+ptkcapturenetwork                    : &amp;lt;enabled&amp;gt;
+ptkcapturequeuestats                 : &amp;lt;enabled&amp;gt;
+ptkspstats                           : &amp;lt;enabled&amp;gt;
+rmthost                              :
+  port                               : 7819
+  timeout                            : 300
+tcpsourcetimer                       : &amp;lt;enabled&amp;gt;
+warnlongtrans                        : 3600 second(s)
+retrydelay                           : 60
+allocfiles                           : 500
+allowduptargetmap                    : &amp;lt;disabled&amp;gt;
+binarychars                          : &amp;lt;enabled&amp;gt;
+checkpointsecs                       : 10 second(s)
+cmdtrace                             : OFF
+dynamicresolution                    : &amp;lt;enabled&amp;gt;
+eofdelay                             : 1
+eofdelaycsecs                        : 100
+functionstacksize                    : 200
+numfiles                             : 1000
+ptkcapturetablestats                 : &amp;lt;enabled&amp;gt;
+ptkmaxtables                         : 100
+ptktablepollfrequency                : 1
+varwidthnchar                        : &amp;lt;disabled&amp;gt;
+enableheartbeat                      : &amp;lt;enabled&amp;gt;
+ptkcaptureprocstats                  : &amp;lt;enabled&amp;gt;
+ptkmonitorfrequency                  : 1
+use_traildefs                        : &amp;lt;enabled&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;replicatプロセス&#34;&gt;Replicatプロセス&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (node1.oracle12c.jp) 1&amp;gt; send rep01 getparaminfo
+
+Sending GETPARAMINFO request to REPLICAT REP01 ...
+
+GLOBALS
+
+checkpointtable                      : c##ggs.ggs_ckpt
+enablemonitoring                     : &amp;lt;enabled&amp;gt;
+
+/u01/ogg_2/dirprm/rep01.prm
+
+replicat                             : REP01
+setenv                               : (&amp;quot;ORACLE_HOME=/u01/app/oracle/product/12.1.0/dbhome_1&amp;quot;)
+setenv                               : (ORACLE_SID=cdb2)
+userid                               : c##ggs@s_pdb1
+  password                           : *******
+assumetargetdefs                     : &amp;lt;enabled&amp;gt;
+discardfile                          : ./dirrpt/REP01.DSC
+  purge                              : &amp;lt;enabled&amp;gt;
+map                                  : p_pdb1.oracle.*
+  target                             : s_pdb1.oracle.*
+
+Default Values
+
+allownoopupdates                     : &amp;lt;disabled&amp;gt;
+applynoopupdates                     : &amp;lt;disabled&amp;gt;
+auditreps                            : &amp;lt;enabled&amp;gt;
+deferapplyinterval                   : 0 FILESEQNO
+grouptransops                        : 50
+maxdiscardrecs                       : 0
+maxsqlstatements                     : 250
+ptkcapturebatchsql                   : &amp;lt;enabled&amp;gt;
+ptkirstatsfrequency                  : 10
+restartcollisions                    : &amp;lt;disabled&amp;gt;
+retrydelay                           : 60
+warnrate                             : 100
+allocfiles                           : 500
+allowduptargetmap                    : &amp;lt;disabled&amp;gt;
+binarychars                          : &amp;lt;enabled&amp;gt;
+checkpointsecs                       : 10 FILESEQNO
+cmdtrace                             : OFF
+dynamicresolution                    : &amp;lt;enabled&amp;gt;
+eofdelay                             : 1
+eofdelaycsecs                        : 100
+functionstacksize                    : 200
+numfiles                             : 1000
+ptkcapturetablestats                 : &amp;lt;enabled&amp;gt;
+ptkmaxtables                         : 100
+ptktablepollfrequency                : 1
+varwidthnchar                        : &amp;lt;disabled&amp;gt;
+enableheartbeat                      : &amp;lt;enabled&amp;gt;
+ptkcaptureprocstats                  : &amp;lt;enabled&amp;gt;
+ptkmonitorfrequency                  : 1
+use_traildefs                        : &amp;lt;enabled&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGateのコマンドを使用してオープントランザクションを特定する</title>
+      <link>/goldengate-opentransaction-getinfo.html</link>
+      <pubDate>Fri, 05 Apr 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-opentransaction-getinfo.html</guid>
+      <description>&lt;h4 id=&#34;showtransオプションを使用するとオープントランザクションの情報が出力される&#34;&gt;showtransオプションを使用するとオープントランザクションの情報が出力される&lt;/h4&gt;
+&lt;p&gt;XIDを把握します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (dbvgg.jp.oracle.com) 2&amp;gt; send c11,showtrans
+
+Sending SHOWTRANS request to EXTRACT C11 ...
+
+------------------------------------------------------------
+XID:                  5.15.930
+Items:                1
+Extract:              C11
+Redo Thread:          1
+Start Time:           2019-03-29:22:00:35
+SCN:                  0.1124828 (1124828)
+Redo Seq:             10
+Redo RBA:             122960912
+Status:               Running
+ 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;稼動しているトランザクションを見る方法&#34;&gt;稼動しているトランザクションを見る方法&lt;/h4&gt;
+&lt;p&gt;SES_ADDRが判明します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select SES_ADDR,XIDUSN, XIDSLOT, XIDSQN, START_SCN from v$transaction;
+SES_ADDR          XIDUSN  XIDSLOT  XIDSQN  START_SCN
+000000010868F4E0  5       15       930     1124828
+SQL&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;特定のトランザクションが動いているセッションを知る方法&#34;&gt;特定のトランザクションが動いているセッションを知る方法&lt;/h4&gt;
+&lt;p&gt;SES_ADDRをv$sessionのsaddrに指定します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select sid,serial#,username,logon_time,status
+  2  from v$session
+  3  where saddr=&#39;000000010868F4E0&#39;;
+SID  SERIAL#  USERNAME  LOGON_TIME  STATUS
+18   1117     GGTEST    19-03-29    INACTIVE
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;sql_idsql_textを確認する方法&#34;&gt;SQL_ID、SQL_TEXTを確認する方法&lt;/h4&gt;
+&lt;p&gt;sid,serial#を基にSQL_TEXTを確認します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; SELECT
+  2    s.sid,
+  3    s.serial#,
+  4    s.status,
+  5    s.machine,
+  6    s.osuser,
+  7    s.module,
+  8    s.username,
+  9    s.process,
+ 10    p.program,
+ 11    a.sql_text
+ 12  FROM v$session s,
+ 13       v$sqlarea a,
+ 14       v$process p
+ 15  WHERE s.PREV_HASH_VALUE = a.hash_value
+ 16    AND s.PREV_SQL_ADDR = a.address
+ 17    AND s.paddr = p.addr
+ 18    AND s.SID = 18;
+SID  SERIAL#  STATUS    MACHINE              OSUSER  MODULE    USERNAME  PROCESS  PROGRAM                              SQL_TEXT
+18   1117     INACTIVE  dbvgg.jp.oracle.com  oracle  SQL*Plus  GGTEST    11342    oracle@dbvgg.jp.oracle.com (TNS V1-V3)  insert into t1 values (TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISSFF4&#39;)),dbms_flashback.get_system_change_number,&#39;test&#39;,sysdate)
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;マニュアルはこちらです。send extractには便利なオプションがたくさんありますのでご確認ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/ggsci_commands014.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/ggsci_commands014.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SEND EXTRACT&lt;/p&gt;
+&lt;p&gt;SHOWTRANS&lt;/p&gt;
+&lt;p&gt;オープンしているトランザクションに関する情報を表示します。&lt;code&gt;SHOWTRANS&lt;/code&gt;は、データベース・タイプに応じて次のいずれかを表示します。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;プロセス・チェックポイント(Extractが再起動する場合に、トランザクション処理を継続する必要がある最も古いログを示します)。チェックポイントの詳細は、&lt;em&gt;Oracle GoldenGateの管理for Windows and UNIX&lt;/em&gt;を参照してください。&lt;/li&gt;
+&lt;li&gt;トランザクションID&lt;/li&gt;
+&lt;li&gt;Extractグループ名&lt;/li&gt;
+&lt;li&gt;REDOスレッド番号&lt;/li&gt;
+&lt;li&gt;(トランザクションの実際の開始時刻でなく)Oracle GoldenGateがトランザクションから抽出した最初の操作のタイムスタンプ&lt;/li&gt;
+&lt;li&gt;システム変更番号(SCN)&lt;/li&gt;
+&lt;li&gt;REDOログ番号とRBA&lt;/li&gt;
+&lt;li&gt;ステータス(&lt;code&gt;Pending COMMIT&lt;/code&gt;または&lt;code&gt;Running&lt;/code&gt;)。&lt;code&gt;Pending COMMIT&lt;/code&gt;は、&lt;code&gt;FORCETRANS&lt;/code&gt;発行後のトランザクション書込み中に表示されます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;オプションを指定しない場合&lt;code&gt;SHOWTRANS&lt;/code&gt;では、使用可能なバッファに収まるオープンしているすべてのトランザクションが表示されます。&lt;a href=&#34;https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/ggsci_commands014.htm#CHDBIDFA&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;SHOWTRANS&lt;/a&gt;のサンプル出力は、&lt;code&gt;例1-0&lt;/code&gt;を参照してください。出力をさらに制御するには、次のオプションを参照してください。&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて</title>
+      <link>/goldengate-flashbackscn-instantiationSCN.html</link>
+      <pubDate>Sat, 30 Mar 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-flashbackscn-instantiationSCN.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;GoldenGateにはインスタンス化SCNという機能があります。この機能を使用するとDatapumpを使用したシステム無停止の初期移行が簡単に出来ます。&lt;/p&gt;
+&lt;p&gt;詳細は下記のqiita記事がわかりやすいのでご確認ください。&lt;/p&gt;
+&lt;p&gt;インスタンス化SCNを使ってお手軽初期移行 - Qiita &lt;a href=&#34;https://qiita.com/kurouuuron/items/118afdc6b6d15d46e7dd&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/kurouuuron/items/118afdc6b6d15d46e7dd&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Oracle Datapump との連携を強化した、GoldenGateの初期移行用の機能。&lt;/p&gt;
+&lt;p&gt;一言でいえば、Datapumpを使用したシステム無停止の初期移行が簡単にできる、という機能。&lt;/p&gt;
+&lt;p&gt;もう少し言えば、Flashback_scnやHandlecollisionsなどの初期移行で考慮すべきポイントを考慮せずによくしてくれた機能。&lt;/p&gt;
+&lt;p&gt;実際の挙動としては、Datapumpでexpdpした際に、その表はどのSCNまで反映し終わっているか、というデータを内部的に付与してくれて、impdpしたらReplicatがそのSCN以降のデータから自動で当ててくれる、というもの。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;この記事にもあるようにGoldenGate12.2以上でadd trandataを実行した場合にpreparescnがデフォルトで付与されるためDatapumpでexpdpした際に、その表はどのSCNまで反映し終わっているか、というデータを内部的に付与してくれます。&lt;/p&gt;
+&lt;h4 id=&#34;環境の前提&#34;&gt;&lt;strong&gt;環境の前提&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;add trandata preparecsn noneを指定した場合の動作になります。&lt;/p&gt;
+&lt;p&gt;none以外を設定した場合は下記の内容は異なる場合がありますのでご注意ください。&lt;/p&gt;
+&lt;h4 id=&#34;add-trandata-preparescn-noneをした場合の動作&#34;&gt;&lt;strong&gt;add trandata preparescn noneをした場合の動作&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-D3FD004B-81E4-4185-92D3-812834A5DEFC.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;マニュアル&lt;/a&gt;に記載があるとおり、この場合はインスタンス化の準備は行われません。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;ソース側でのエクスポート&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[oracle@xxxxxxxx1p ~]$ expdp ggtest/xxxxxx DIRECTORY=homedir DUMPFILE=t10.dmp TABLES=t10 CONTENT=DATA_ONLY REUSE_DUMPFILES=YES
+
+Export: Release 11.2.0.4.0 - Production on 日 3月 3 16:47:00 2019
+
+Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.
+
+接続先: Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+Data Mining and Real Application Testing options
+FLASHBACKでは、データベース整合性が自動的に維持されます。
+&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;を起動しています: ggtest DIRECTORY=homedir DUMPFILE=t10.dmp TABLES=t10 CONTENT=DATA_ONLY REUSE_DUMPFILES=YES
+BLOCKSメソッドを使用して見積り中です...
+オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+BLOCKSメソッドを使用した見積り合計: 384 KB
+. . &amp;quot;GGTEST&amp;quot;.&amp;quot;T10&amp;quot;                              288.6 KB   10000行がエクスポートされました
+マスター表&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;は正常にロード/アンロードされました
+******************************************************************************
+GGTEST.SYS_EXPORT_TABLE_01に設定されたダンプ・ファイルは次のとおりです:
+  /home/oracle/t10.dmp
+ジョブ&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;が日 3月 3 16:47:04 2019 elapsed 0 00:00:02で正常に完了しました
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ターゲット側のインポート&#34;&gt;&lt;strong&gt;ターゲット側のインポート&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[oracle@xxxxxx ~]$ impdp ggtest/xxxxxx@xxxxxxxx1 DIRECTORY=homedir DUMPFILE=t10.dmp tables=t10
+
+Import: Release 18.0.0.0.0 - Production on 日 3月 3 16:48:33 2019
+Version 18.4.0.0.0
+
+Copyright (c) 1982, 2018, Oracle and/or its affiliates.  All rights reserved.
+
+接続先: Oracle Database 18c Enterprise Edition Release 18.0.0.0.0 - Production
+マスター表&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_IMPORT_TABLE_01&amp;quot;は正常にロード/アンロードされました
+&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_IMPORT_TABLE_01&amp;quot;を起動しています: ggtest@xxxxxxxx1 DIRECTORY=homedir DUMPFILE=t10.dmp tables=t10
+オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+. . &amp;quot;GGTEST&amp;quot;.&amp;quot;T10&amp;quot;                              288.6 KB   10000行がインポートされました
+ジョブ&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_IMPORT_TABLE_01&amp;quot;が日 3月 3 16:48:45 2019 elapsed 0 00:00:09で正常に完了しました
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;インスタンス化scnの確認&#34;&gt;&lt;strong&gt;インスタンス化SCNの確認&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;preparescn noneのため、この場合はインスタンスSCN化されていません。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;SQL&amp;gt; select source_database,source_object_owner,source_object_name,instantiation_scn from  DBA_APPLY_INSTANTIATED_OBJECTS where SOURCE_OBJECT_NAME=&#39;T10&#39;;
+
+行が選択されていません
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;expdp時にflashback_scnを使用した場合&#34;&gt;&lt;strong&gt;expdp時にFLASHBACK_SCNを使用した場合&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ここでようやく表題の件ですが、このケースはtrandata時にpreparecsn noneに設定した場合においてもインスタンス化SCNがexpdp時に設定される動作のようです。&lt;/p&gt;
+&lt;h4 id=&#34;エクスポート時のコマンド&#34;&gt;&lt;strong&gt;エクスポート時のコマンド&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ここで特定時点のFLASHBACK_SCNを指定します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[oracle@xxxxxxxx1p ~]$ expdp ggtest/xxxxxx DIRECTORY=homedir DUMPFILE=t10.dmp TABLES=t10 CONTENT=DATA_ONLY REUSE_DUMPFILES=YES FLASHBACK_SCN=25587768
+
+Export: Release 11.2.0.4.0 - Production on 日 3月 3 16:59:04 2019
+
+Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.
+
+接続先: Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+Data Mining and Real Application Testing options
+FLASHBACKでは、データベース整合性が自動的に維持されます。
+&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;を起動しています: ggtest DIRECTORY=homedir DUMPFILE=t10.dmp TABLES=t10 CONTENT=DATA_ONLY REUSE_DUMPFILES=YES FLASHBACK_SCN=25587768
+BLOCKSメソッドを使用して見積り中です...
+オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+BLOCKSメソッドを使用した見積り合計: 384 KB
+. . &amp;quot;GGTEST&amp;quot;.&amp;quot;T10&amp;quot;                              288.6 KB   10000行がエクスポートされました
+マスター表&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;は正常にロード/アンロードされました
+******************************************************************************
+GGTEST.SYS_EXPORT_TABLE_01に設定されたダンプ・ファイルは次のとおりです:
+  /home/oracle/t10.dmp
+ジョブ&amp;quot;GGTEST&amp;quot;.&amp;quot;SYS_EXPORT_TABLE_01&amp;quot;が日 3月 3 16:59:08 2019 elapsed 0 00:00:02で正常に完了しました
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;FLASHBACK_SCN を指定してexpdpしたdmpファイルをimpdpした場合、 DBA_APPLY_INSTANTIATED_OBJECTS は INSTANTIATION_SCNが設定されています。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;SQL&amp;gt; select source_database,source_object_owner,source_object_name,instantiation_scn from  DBA_APPLY_INSTANTIATED_OBJECTS where SOURCE_OBJECT_NAME=&#39;T10&#39;;
+SOURCE_DATABASE   SOURCE_OBJECT_OWNER   SOURCE_OBJECT_NAME     INSTANTIATION_SCN
+xxxxxxx           GGTEST                T10                             25587768 ←★INSTANTIATION_SCNが設定されている
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;まとめ&#34;&gt;&lt;strong&gt;まとめ&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;add trandata時にpreparecsn noneを設定した場合においてもexpdp時にFLASHBACK_SCNを使用した場合はインスタンス化SCNが設定されるという動作になります。&lt;/p&gt;
+&lt;p&gt;この動作についてですが、streamsのマニュアルに記載があります。合わせてご確認ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E16338_01/server.112/b61352/instant.htm#CIHBDFJE&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E16338_01/server.112/b61352/instant.htm#CIHBDFJE&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;エクスポート中、Oracle Data Pumpでは、データベース・オブジェクトごとにエクスポートされたデータおよび手続き型操作が特定の時点で一貫性を持つように、自動的にOracle Flashbackが使用されます。Oracle Streams環境でインスタンス化を実行する場合は、ある程度の一貫性が必要です。データ・ポンプ・エクスポート・ユーティリティを使用すると、Oracle Streamsのインスタンス化についてこの一貫性を確保できます。&lt;/p&gt;
+&lt;p&gt;Oracle Streamsのインスタンス化のみでなく、他の用途にもエクスポート・ダンプ・ファイルを使用しており、その用途がデータ・ポンプのデフォルトのエクスポートで得られる一貫性より厳密な一貫性要件を伴う場合は、Oracle Streamsのインスタンス化にデータ・ポンプ・エクスポート・ユーティリティ・パラメータ&lt;code&gt;FLASHBACK_SCN&lt;/code&gt;または&lt;code&gt;FLASHBACK_TIME&lt;/code&gt;を使用できます。たとえば、エクスポートに外部キー制約を持つオブジェクトが含まれている場合、より厳密な一貫性が要求される場合があります。&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGateをインストールしてDB間のレプリケーション環境を構築する</title>
+      <link>/goldengate-12c-18c-install-implement.html</link>
+      <pubDate>Fri, 29 Mar 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-12c-18c-install-implement.html</guid>
+      <description>&lt;p&gt;GoldenGateを使用してOracle Database間のレプリケーションを構築します。&lt;/p&gt;
+&lt;p&gt;レプリケーションまでのステップは下記の通りですが、本記事だと「1.」と「2.」を対象にしています。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;GoldenGateインストール&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;GoldenGate環境設定&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;データ伝搬&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;環境構成&#34;&gt;&lt;strong&gt;環境構成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;マシンスペックの関係で同一マシン内に2DBを作成しています。この2DBをGoldenGateを使用してレプリケーション環境を作成します。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;ソース&lt;/th&gt;
+&lt;th&gt;ターゲット&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;DBバージョン&lt;/td&gt;
+&lt;td&gt;11.2.0.4&lt;/td&gt;
+&lt;td&gt;18c&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GoldenGateバージョン&lt;/td&gt;
+&lt;td&gt;12.2.0.1&lt;/td&gt;
+&lt;td&gt;18.1.0.0.0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;DB名&lt;/td&gt;
+&lt;td&gt;db112s&lt;/td&gt;
+&lt;td&gt;db18s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;PDB名&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;td&gt;db18p1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GoldenGate用DBユーザ&lt;/td&gt;
+&lt;td&gt;ggs&lt;/td&gt;
+&lt;td&gt;c##ggs&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;伝搬用ユーザ&lt;/td&gt;
+&lt;td&gt;ggtest&lt;/td&gt;
+&lt;td&gt;ggtest&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GoldenGateインストール先&lt;/td&gt;
+&lt;td&gt;/gg/gg1&lt;/td&gt;
+&lt;td&gt;/gg/gg2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Captureプロセス&lt;/td&gt;
+&lt;td&gt;c11&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Data Pumpプロセス&lt;/td&gt;
+&lt;td&gt;d11&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Replicatプロセス&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;td&gt;r11&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Captureプロセスのモード&lt;/td&gt;
+&lt;td&gt;統合モード&lt;br /&gt;(Integrated Capture)&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Replicatプロセスのモード&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;td&gt;統合モード&lt;br /&gt;(Integrated Replicat)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;その他&lt;/td&gt;
+&lt;td&gt;シングル構成&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;前提事項&#34;&gt;&lt;strong&gt;前提事項&lt;/strong&gt;&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;既にソースDBとターゲットDBがインストールされていること&lt;/li&gt;
+&lt;li&gt;GoldenGateのメディアファイルを事前にダウンロードしていること&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;goldengateインストール&#34;&gt;&lt;strong&gt;GoldenGateインストール&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;gg_homeの作成&#34;&gt;&lt;strong&gt;GG_HOMEの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;今回はCUIベースでのインストールを行います。GUIでインストールしたい場合は下記qiitaの記事をご参照ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;GoldenGate布教活動②　～GoldenGateのインストール～ - Qiita &lt;a href=&#34;https://qiita.com/ch0c0bana0/items/a57debf29a8d907e9feb&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/ch0c0bana0/items/a57debf29a8d907e9feb&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;su -
+mkdir -p /gg/gg1
+mkdir -p /gg/gg2
+chmod -R 755 /gg
+chown -R oracle:oinstall /gg
+exit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengate12cr212201のインストール&#34;&gt;&lt;strong&gt;GoldenGate12cR2(12.2.0.1)のインストール&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;メディアファイルの解凍&#34;&gt;&lt;strong&gt;メディア・ファイルの解凍&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#コマンド
+cd /home/oracle/software/goldengate/12.2.0.1/V100692-01
+ls -l
+unzip V100692-01.zip
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg V100692-01]$
+[oracle@dbvgg V100692-01]$ cd /home/oracle/software/goldengate/12.2.0.1/V100692-01
+[oracle@dbvgg V100692-01]$ ls -l
+合計 464468
+-rwxr-xr-x 1 oracle oinstall 475611228  7月  7 19:15 2017 V100692-01.zip
+[oracle@dbvgg V100692-01]$ unzip V100692-01.zip
+Archive:  V100692-01.zip
+   creating: fbo_ggs_Linux_x64_shiphome/
+   creating: fbo_ggs_Linux_x64_shiphome/Disk1/
+～中略～
+   creating: fbo_ggs_Linux_x64_shiphome/Disk1/response/
+  inflating: fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+  inflating: OGG-12.2.0.1-README.txt
+  inflating: OGG-12.2.0.1.1-ReleaseNotes.pdf
+[oracle@dbvgg V100692-01]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;サイレントインストール用のレスポンスファイルの修正&#34;&gt;&lt;strong&gt;サイレントインストール用のレスポンスファイルの修正&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;★部分が修正箇所になります。環境に合わせて修正する必要があります。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd ./fbo_ggs_Linux_x64_shiphome/Disk1/response
+ls -l
+vi oggcore.rsp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#oggcore.rspの修正内容
+####################################################################
+## Copyright(c) Oracle Corporation 2014. All rights reserved.     ##
+##                                                                ##
+## Specify values for the variables listed below to customize     ##
+## your installation.                                             ##
+##                                                                ##
+## Each variable is associated with a comment. The comment        ##
+## can help to populate the variables with the appropriate        ##
+## values.                                                        ##
+##                                                                ##
+## IMPORTANT NOTE: This file should be secured to have read       ##
+## permission only by the oracle user or an administrator who     ##
+## own this installation to protect any sensitive input values.   ##
+##                                                                ##
+####################################################################
+
+#-------------------------------------------------------------------------------
+# Do not change the following system generated value.
+#-------------------------------------------------------------------------------
+oracle.install.responseFileVersion=/oracle/install/rspfmt_ogginstall_response_schema_v12_1_2
+
+
+################################################################################
+##                                                                            ##
+## Oracle GoldenGate installation option and details                          ##
+##                                                                            ##
+################################################################################
+
+#-------------------------------------------------------------------------------
+# Specify the installation option.
+# Specify ORA12c for installing Oracle GoldenGate for Oracle Database 12c and
+#         ORA11g for installing Oracle GoldenGate for Oracle Database 11g
+#-------------------------------------------------------------------------------
+INSTALL_OPTION=ORA11g ★←
+
+#-------------------------------------------------------------------------------
+# Specify a location to install Oracle GoldenGate
+#-------------------------------------------------------------------------------
+SOFTWARE_LOCATION=/gg/gg1 ★←
+
+#-------------------------------------------------------------------------------
+# Specify true to start the manager after installation.
+#-------------------------------------------------------------------------------
+START_MANAGER=false ★←
+
+#-------------------------------------------------------------------------------
+# Specify a free port within the valid range for the manager process.
+# Required only if START_MANAGER is true.
+#-------------------------------------------------------------------------------
+MANAGER_PORT=
+
+#-------------------------------------------------------------------------------
+# Specify the location of the Oracle Database.
+# Required only if START_MANAGER is true.
+#-------------------------------------------------------------------------------
+DATABASE_LOCATION=
+
+
+################################################################################
+##                                                                            ##
+## Specify details to Create inventory for Oracle installs                    ##
+## Required only for the first Oracle product install on a system.            ##
+##                                                                            ##
+################################################################################
+
+#-------------------------------------------------------------------------------
+# Specify the location which holds the install inventory files.
+# This is an optional parameter if installing on
+# Windows based Operating System.
+#-------------------------------------------------------------------------------
+INVENTORY_LOCATION=
+
+#-------------------------------------------------------------------------------
+# Unix group to be set for the inventory directory.
+# This parameter is not applicable if installing on
+# Windows based Operating System.
+#-------------------------------------------------------------------------------
+UNIX_GROUP_NAME=
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengateインストール-1&#34;&gt;&lt;strong&gt;GoldenGateインストール&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1
+./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg Disk1]$ ./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+Oracle Universal Installerを起動中です...
+
+一時領域の確認中: 120MBを超えている必要があります.   実際 28028MB    問題なし
+スワップ領域の確認中: 150MBを超えている必要があります.   実際 7855MB    問題なし
+Oracle Universal Installerの起動を準備中 /tmp/OraInstall2019-03-29_05-24-01PM. お待ちください...
+このインストール・セッションのログは次の場所にあります:
+ /u01/app/oraInventory/logs/installActions2019-03-29_05-24-01PM.log
+Oracle GoldenGate Coreのインストールが成功しました。
+詳細は&#39;/u01/app/oraInventory/logs/silentInstall2019-03-29_05-24-01PM.log&#39;を確認してください。
+Successfully Setup Software.
+
+[oracle@dbvgg Disk1]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;opatch更新&#34;&gt;&lt;strong&gt;OPatch更新&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#OPatch更新
+cd /home/oracle/software/goldengate/12.2.0.1/p6880880
+unzip p6880880_112000_Linux-x86-64.zip
+cp -Rp ./OPatch/* /gg/gg1/OPatch/
+/gg/gg1/OPatch/opatch version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg p6880880]$ /gg/gg1/OPatch/opatch version
+OPatch Version: 11.2.0.3.19
+
+OPatch succeeded.
+[oracle@dbvgg p6880880]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengate用のpatch更新&#34;&gt;&lt;strong&gt;GoldenGate用のPatch更新&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#OPatch更新
+export ORACLE_HOME=/gg/gg1
+export PATH=$ORACLE_HOME/OPatch:$PATH
+
+cd /home/oracle/software/goldengate/12.2.0.1/p26849940
+unzip p26849940_12201170919_Linux-x86-64.zip
+cd 26849940/
+/gg/gg1/OPatch/opatch prereq CheckConflictAgainstOHWithDetail -ph ./
+$ORACLE_HOME/OPatch/opatch apply -oh $ORACLE_HOME
+$ORACLE_HOME/OPatch/opatch lspatches
+$ORACLE_HOME/OPatch/opatch lsinventory
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg 26849940]$ $ORACLE_HOME/OPatch/opatch apply -oh $ORACLE_HOME
+
+Oracle Interim Patch Installerバージョン11.2.0.3.19
+Copyright (c) 2019, Oracle Corporation.  All rights reserved。
+
+
+Oracle Home       : /gg/gg1
+Central Inventory : /u01/app/oraInventory
+   from           : /gg/gg1/oraInst.loc
+OPatch version    : 11.2.0.3.19
+OUI version       : 11.2.0.3.0
+Log file location : /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-36-23午後_1.log
+
+Verifying environment and performing prerequisite checks...
+OPatch continues with these patches:   26849940
+
+続行しますか。[y|n]
+y
+User Responded with: Y
+All checks passed.
+セキュリティの問題について通知を受ける電子メール・アドレスを指定し、Oracle Configuration
+Managerをインストールして開始してください。My Oracle Supportの電子メール・アドレス/ユーザー名を使用すればより簡単です。
+詳細はhttp://www.oracle.com/support/policies.htmlにアクセスしてください。
+電子メール・アドレス/ユーザー名:
+
+セキュリティの問題について通知を受け取るための電子メール・アドレスが指定されていません。
+セキュリティの問題に関する通知を今後も受け取りませんか([Y]はい, [N]いいえ) [N]:  y
+
+
+
+ローカル・システムのこのORACLE_HOME以外で実行しているOracleインスタンスを停止してください。
+(Oracleホーム = &#39;/gg/gg1&#39;)
+
+
+ローカル・システムにパッチを適用する準備ができましたか。 [y|n]
+y
+User Responded with: Y
+Backing up files...
+Applying interim patch &#39;26849940&#39; to OH &#39;/gg/gg1&#39;
+
+コンポーネントoracle.oggcore.ora11g, 12.2.0.0.0にパッチを適用中...
+Patch 26849940 successfully applied.
+Log file location: /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-36-23午後_1.log
+
+OPatch succeeded.
+[oracle@dbvgg 26849940]$
+[oracle@dbvgg 26849940]$ $ORACLE_HOME/OPatch/opatch lspatches
+26849940;
+
+OPatch succeeded.
+[oracle@dbvgg 26849940]$
+[oracle@dbvgg 26849940]$ $ORACLE_HOME/OPatch/opatch lsinventory
+
+Oracle Interim Patch Installerバージョン11.2.0.3.19
+Copyright (c) 2019, Oracle Corporation.  All rights reserved。
+
+
+Oracle Home       : /gg/gg1
+Central Inventory : /u01/app/oraInventory
+   from           : /gg/gg1/oraInst.loc
+OPatch version    : 11.2.0.3.19
+OUI version       : 11.2.0.3.0
+Log file location : /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-38-37午後_1.log
+
+Lsinventory Output file location : /gg/gg1/cfgtoollogs/opatch/lsinv/lsinventory2019-03-29_17-38-37午後.txt
+
+--------------------------------------------------------------------------------
+Local Machine Information::
+Hostname: dbvgg.jp.oracle.com
+ARU platform id: 226
+ARU platform description:: Linux x86-64
+
+インストールされた最上位製品(1):
+
+Oracle GoldenGate Core                                               12.2.0.0.0
+このOracleホームには1の製品がインストールされています。
+
+
+仮パッチ(1) :
+
+Patch  26849940     : applied on Fri Mar 29 17:37:09 JST 2019
+Unique Patch ID:  21947835
+   Created on 13 Feb 2018, 15:29:18 hrs PST8PDT
+   Bugs fixed:
+     26112114, 21254311, 22628312, 25256300, 24339776, 22466155, 21562399
+     22910007, 22642576, 25096792, 25252388, 26122243, 25031466, 24826961
+     24804392, 22912874, 24312736, 24302758, 24414523, 23733399, 22959377
+     23514258, 25369310, 21548970, 23642240, 22266611, 23058710, 24744349
+     25918872, 24598011, 25797611, 23755469, 25667779, 21131090, 22202129
+     22478792, 25814949, 22830589, 22295723, 22993705, 25213169, 23102612
+     22458470, 23750747, 21888279, 23267559, 22295940, 22730188, 25674499
+     23712604, 25137084, 25350730, 22811754, 26127417, 20822775, 24439762
+     23661056, 23607346, 23641740, 23499047, 22352402, 23751229, 25439681
+     24345528, 22514172, 25927416, 25463128, 23478103, 23587474, 23763062
+     21425179, 23067041, 24359320, 22046726, 21763449, 23479013, 23275654
+     25231249, 23133585, 22004485, 23608765, 25087704, 26000622, 24752349
+     23108041, 22455149, 25462009, 26253307, 22103949, 24310901, 21452073
+     23580290, 25414758, 23040154, 22257964, 26159982, 22888353, 24751551
+     21805148, 21481506, 22553129, 23328064, 20656312
+
+
+
+--------------------------------------------------------------------------------
+
+OPatch succeeded.
+[oracle@dbvgg 26849940]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengate18c181000のインストール&#34;&gt;&lt;strong&gt;GoldenGate18c(18.1.0.0.0)のインストール&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;メディアファイルの解凍-1&#34;&gt;&lt;strong&gt;メディア・ファイルの解凍&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#コマンド
+cd /home/oracle/software/goldengate/18.1.0.0/V980002-01
+ls -l
+unzip V980002-01.zip
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg V980002-01]$ cd /home/oracle/software/goldengate/18.1.0.0/V980002-01
+[oracle@dbvgg V980002-01]$
+[oracle@dbvgg V980002-01]$ ll
+合計 383516
+-rwxr-xr-x 1 oracle oinstall 392717701 10月 19 11:16 2018 V980002-01.zip
+[oracle@dbvgg V980002-01]$
+[oracle@dbvgg V980002-01]$
+[oracle@dbvgg V980002-01]$ unzip V980002-01.zip
+Archive:  V980002-01.zip
+   creating: fbo_ggs_Linux_x64_shiphome/
+  ～中略～
+  inflating: fbo_ggs_Linux_x64_shiphome/Disk1/stage/sizes/oracle.oggcore.top18.1.0.0.0ora18c.sizes.properties
+  inflating: OGG-18.1.0.0-README.txt
+  inflating: OGG_WinUnix_Rel_Notes_18.1.0.0.0.pdf
+[oracle@dbvgg V980002-01]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;サイレントインストール用のレスポンスファイルの修正-1&#34;&gt;&lt;strong&gt;サイレントインストール用のレスポンスファイルの修正&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;★部分が修正箇所になります。環境に合わせて修正する必要があります。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd ./fbo_ggs_Linux_x64_shiphome/Disk1/response
+ls -l
+vi oggcore.rsp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#oggcore.rspの修正内容
+####################################################################
+## Copyright(c) Oracle Corporation 2018. All rights reserved.     ##
+##                                                                ##
+## Specify values for the variables listed below to customize     ##
+## your installation.                                             ##
+##                                                                ##
+## Each variable is associated with a comment. The comment        ##
+## can help to populate the variables with the appropriate        ##
+## values.                                                        ##
+##                                                                ##
+## IMPORTANT NOTE: This file should be secured to have read       ##
+## permission only by the oracle user or an administrator who     ##
+## own this installation to protect any sensitive input values.   ##
+##                                                                ##
+####################################################################
+
+#-------------------------------------------------------------------------------
+# Do not change the following system generated value.
+#-------------------------------------------------------------------------------
+oracle.install.responseFileVersion=/oracle/install/rspfmt_ogginstall_response_schema_v12_1_2
+
+
+################################################################################
+##                                                                            ##
+## Oracle GoldenGate installation option and details                          ##
+##                                                                            ##
+################################################################################
+
+#-------------------------------------------------------------------------------
+# Specify the installation option.
+# Specify ORA18c for installing Oracle GoldenGate for Oracle Database 18c or
+#         ORA12c for installing Oracle GoldenGate for Oracle Database 12c or
+#         ORA11g for installing Oracle GoldenGate for Oracle Database 11g
+#-------------------------------------------------------------------------------
+INSTALL_OPTION=ORA18c ★←
+
+#-------------------------------------------------------------------------------
+# Specify a location to install Oracle GoldenGate
+#-------------------------------------------------------------------------------
+SOFTWARE_LOCATION=/gg/gg2 ★←
+
+#-------------------------------------------------------------------------------
+# Specify true to start the manager after installation.
+#-------------------------------------------------------------------------------
+START_MANAGER=false ★←
+
+#-------------------------------------------------------------------------------
+# Specify a free port within the valid range for the manager process.
+# Required only if START_MANAGER is true.
+#-------------------------------------------------------------------------------
+MANAGER_PORT=
+
+#-------------------------------------------------------------------------------
+# Specify the location of the Oracle Database.
+# Required only if START_MANAGER is true.
+#-------------------------------------------------------------------------------
+DATABASE_LOCATION=
+
+
+################################################################################
+##                                                                            ##
+## Specify details to Create inventory for Oracle installs                    ##
+## Required only for the first Oracle product install on a system.            ##
+##                                                                            ##
+################################################################################
+
+#-------------------------------------------------------------------------------
+# Specify the location which holds the install inventory files.
+# This is an optional parameter if installing on
+# Windows based Operating System.
+#-------------------------------------------------------------------------------
+INVENTORY_LOCATION=
+
+#-------------------------------------------------------------------------------
+# Unix group to be set for the inventory directory.
+# This parameter is not applicable if installing on
+# Windows based Operating System.
+#-------------------------------------------------------------------------------
+UNIX_GROUP_NAME=
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengateインストール-2&#34;&gt;&lt;strong&gt;GoldenGateインストール&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cd /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1
+./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#実行結果
+[oracle@dbvgg Disk1]$ ./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+Oracle Universal Installerを起動中です...
+
+一時領域の確認中: 120MBを超えている必要があります.   実際 25219MB    問題なし
+スワップ領域の確認中: 150MBを超えている必要があります.   実際 7855MB    問題なし
+Oracle Universal Installerの起動を準備中 /tmp/OraInstall2019-03-29_05-44-14PM. お待ちください...
+このインストール・セッションのログは次の場所にあります:
+ /u01/app/oraInventory/logs/installActions2019-03-29_05-44-14PM.log
+Oracle GoldenGate Coreのインストールが成功しました。
+詳細は&#39;/u01/app/oraInventory/logs/silentInstall2019-03-29_05-44-14PM.log&#39;を確認してください。
+Successfully Setup Software.
+
+[oracle@dbvgg Disk1]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;trailファイル格納ディレクトリの作成&#34;&gt;&lt;strong&gt;Trailファイル格納ディレクトリの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;「/gg/gg1/c11」はソース側のCaptureプロセスが生成するLocal Trailの格納ディレクトリ、「/gg/gg2/d11」はData Pumpがターゲット側に生成するRemote Trailの格納ディレクトリとなります。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mkdir -p /gg/gg1/dirdat/c11 #Local Trail用の格納ディレクトリ
+mkdir -p /gg/gg2/dirdat/d11 #Remote Trail用の格納ディレクトリ
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;db環境変更ソース側&#34;&gt;&lt;strong&gt;DB環境変更（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;表領域の作成&#34;&gt;&lt;strong&gt;表領域の作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+sqlplus / as sysdba
+create tablespace ggdata datafile &#39;/u01/app/oracle/oradata/DB112S/datafile/ggdata.dbf&#39; size 5G;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;伝搬対象ユーザ及びgoldengate管理ユーザの作成&#34;&gt;&lt;strong&gt;伝搬対象ユーザ、及びGoldenGate管理ユーザの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE USER ggs IDENTIFIED BY oracle DEFAULT TABLESPACE ggdata;
+CREATE USER ggtest IDENTIFIED BY oracle DEFAULT TABLESPACE ggdata;
+
+GRANT dba TO ggs;
+GRANT dba TO ggtest;
+exec dbms_goldengate_auth.grant_admin_privilege(&#39;GGS&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;初期化パラメータの変更最小サプリメンタルロギングの設定&#34;&gt;&lt;strong&gt;初期化パラメータの変更/最小サプリメンタルロギングの設定&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- 事前確認
+show parameter enable_goldengate_replication
+select name,supplemental_log_data_min from v$database;
+select log_mode from v$database;
+
+-- 初期化パラメータの変更
+alter system set enable_goldengate_replication=true scope=both;
+alter system set streams_pool_size=1250M scope=both SID=&#39;*&#39;; -- Integrated Capture要件
+
+-- 最小サプリメンタルロギングの設定
+alter database add supplemental log data;
+alter system switch logfile;
+
+-- 設定変更確認
+show parameter enable_goldengate_replication
+select name,supplemental_log_data_min from v$database;
+select log_mode from v$database;
+exit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- 実行結果
+SQL&amp;gt; show parameter enable_goldengate_replication
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+enable_goldengate_replication        boolean     FALSE
+SQL&amp;gt;
+SQL&amp;gt; select name,supplemental_log_data_min from v$database;
+
+NAME      SUPPLEME
+--------- --------
+DB112S    NO
+
+SQL&amp;gt; select log_mode from v$database;
+
+LOG_MODE
+------------
+ARCHIVELOG
+
+SQL&amp;gt;
+SQL&amp;gt;
+SQL&amp;gt; alter system set enable_goldengate_replication=true scope=both;
+
+システムが変更されました。
+
+SQL&amp;gt; alter system set streams_pool_size=1250M scope=both SID=&#39;*&#39;;
+
+システムが変更されました。
+
+SQL&amp;gt; alter database add supplemental log data;
+
+データベースが変更されました。
+
+SQL&amp;gt; alter system switch logfile;
+
+システムが変更されました。
+
+SQL&amp;gt; show parameter enable_goldengate_replication
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+enable_goldengate_replication        boolean     TRUE
+SQL&amp;gt; select name,supplemental_log_data_min from v$database;
+
+NAME      SUPPLEME
+--------- --------
+DB112S    YES
+
+SQL&amp;gt; select log_mode from v$database;
+
+LOG_MODE
+------------
+ARCHIVELOG
+
+SQL&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;db環境変更ターゲット側&#34;&gt;&lt;strong&gt;DB環境変更（ターゲット側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;表領域の作成-1&#34;&gt;&lt;strong&gt;表領域の作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;. /home/oracle/.oraenv_db18s --環境変数の読み込み
+sqlplus / as sysdba
+create tablespace ggdata datafile &#39;/u01/app/oracle/oradata/DB18S/ggdata.dbf&#39; size 1G;
+alter session set container=db18p1;
+create tablespace ggdata datafile &#39;/u01/app/oracle/oradata/DB18S/db18p1/ggdata.dbf&#39; size 5G;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;伝搬対象ユーザ及びgoldengate管理ユーザの作成-1&#34;&gt;&lt;strong&gt;伝搬対象ユーザ、及びGoldenGate管理ユーザの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;alter session set container=cdb$root;
+show con_name
+CREATE USER c##ggs IDENTIFIED BY oracle DEFAULT TABLESPACE ggdata;
+alter session set container=db18p1;
+show con_name
+CREATE USER ggtest IDENTIFIED BY oracle DEFAULT TABLESPACE ggdata;
+
+alter session set container=cdb$root;
+GRANT DBA TO c##ggs container=all;
+exec dbms_goldengate_auth.grant_admin_privilege(&#39;C##GGS&#39;);
+
+alter session set container=db18p1;
+GRANT DBA TO ggtest;
+exec dbms_goldengate_auth.grant_admin_privilege(&#39;C##GGS&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;初期化パラメータの変更最小サプリメンタルロギングの設定-1&#34;&gt;&lt;strong&gt;初期化パラメータの変更/最小サプリメンタルロギングの設定&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;alter session set container=cdb$root;
+show con_name
+
+-- 事前確認
+show parameter enable_goldengate_replication
+select name,supplemental_log_data_min from v$database;
+select log_mode from v$database;
+
+-- 初期化パラメータの変更
+alter system set enable_goldengate_replication=true scope=both;
+alter system set streams_pool_size=1250M scope=both SID=&#39;*&#39;; -- Integrated Replicat要件
+
+-- 最小サプリメンタルロギングの設定
+alter database add supplemental log data;  -- ターゲット側なので本来であれば不要。logminer要件のため設定
+alter system switch logfile;
+
+-- 設定変更確認
+show parameter enable_goldengate_replication
+select name,supplemental_log_data_min from v$database;
+select log_mode from v$database;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- 実行結果
+SQL&amp;gt; alter session set container=cdb$root;
+
+セッションが変更されました。
+
+SQL&amp;gt;
+SQL&amp;gt; show con_name
+
+CON_NAME
+------------------------------
+CDB$ROOT
+SQL&amp;gt; show parameter enable_goldengate_replication
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+enable_goldengate_replication        boolean     FALSE
+SQL&amp;gt; select name,supplemental_log_data_min from v$database;
+
+NAME      SUPPLEME
+--------- --------
+DB18S     NO
+
+SQL&amp;gt; select log_mode from v$database;
+
+LOG_MODE
+------------
+ARCHIVELOG
+
+SQL&amp;gt; alter system set enable_goldengate_replication=true scope=both;
+
+システムが変更されました。
+
+SQL&amp;gt; alter system set streams_pool_size=1250M scope=both SID=&#39;*&#39;;
+
+システムが変更されました。
+
+SQL&amp;gt; alter database add supplemental log data;
+
+データベースが変更されました。
+
+SQL&amp;gt; alter system switch logfile;
+
+システムが変更されました。
+
+SQL&amp;gt; show parameter enable_goldengate_replication
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+enable_goldengate_replication        boolean     TRUE
+SQL&amp;gt; select name,supplemental_log_data_min from v$database;
+
+NAME      SUPPLEME
+--------- --------
+DB18S     YES
+
+SQL&amp;gt; select log_mode from v$database;
+
+LOG_MODE
+------------
+ARCHIVELOG
+
+SQL&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengate環境設定&#34;&gt;&lt;strong&gt;GoldenGate環境設定&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;gg_home配下のサブディレクトリ作成&#34;&gt;&lt;strong&gt;GG_HOME配下のサブディレクトリ作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;サプリメンタル・ロギングはソース側で実施します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+./ggsci
+create subdirs
+exit
+
+cd /gg/gg2
+./ggsci
+create subdirs
+exit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+[oracle@dbvgg gg1]$ ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+Linux, x64, 64bit (optimized), Oracle 11g on Oct 30 2017 19:19:45
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; create subdirs
+
+Creating subdirectories under current directory /gg/gg1
+
+Parameter files                /gg/gg1/dirprm: created
+Report files                   /gg/gg1/dirrpt: created
+Checkpoint files               /gg/gg1/dirchk: created
+Process status files           /gg/gg1/dirpcs: created
+SQL script files               /gg/gg1/dirsql: created
+Database definitions files     /gg/gg1/dirdef: created
+Extract data files             /gg/gg1/dirdat: created
+Temporary files                /gg/gg1/dirtmp: created
+Credential store files         /gg/gg1/dircrd: created
+Masterkey wallet files         /gg/gg1/dirwlt: created
+Dump files                     /gg/gg1/dirdmp: created
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt;
+GGSCI (dbvgg.jp.oracle.com) 3&amp;gt; exit
+[oracle@dbvgg gg1]$ cd /gg/gg2
+[oracle@dbvgg gg2]$ ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 18.1.0.0.0 OGGCORE_18.1.0.0.0_PLATFORMS_180928.0432_FBO
+Linux, x64, 64bit (optimized), Oracle 18c on Sep 29 2018 07:21:38
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2018, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; create subdirs
+
+Creating subdirectories under current directory /gg/gg2
+
+Parameter file                 /gg/gg2/dirprm: created.
+Report file                    /gg/gg2/dirrpt: created.
+Checkpoint file                /gg/gg2/dirchk: created.
+Process status files           /gg/gg2/dirpcs: created.
+SQL script files               /gg/gg2/dirsql: created.
+Database definitions files     /gg/gg2/dirdef: created.
+Extract data files             /gg/gg2/dirdat: created.
+Temporary files                /gg/gg2/dirtmp: created.
+Credential store files         /gg/gg2/dircrd: created.
+Masterkey wallet files         /gg/gg2/dirwlt: created.
+Dump files                     /gg/gg2/dirdmp: created.
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt; exit
+[oracle@dbvgg gg2]$
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;スキーマレベルのサプリメンタルロギングの実施&#34;&gt;&lt;strong&gt;スキーマ・レベルのサプリメンタルロギングの実施&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;サプリメンタル・ロギングはソース側で実施します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+./ggsci
+dblogin userid ggs@db112s, password oracle
+add schematrandata ggtest
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+[oracle@dbvgg gg1]$ ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+Linux, x64, 64bit (optimized), Oracle 11g on Oct 30 2017 19:19:45
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; dblogin userid ggs@db112s, password oracle
+Successfully logged into database.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 2&amp;gt; add schematrandata ggtest
+
+2019-03-29 17:59:55  INFO    OGG-01788  SCHEMATRANDATA has been added on schema ggtest.
+
+2019-03-29 17:59:55  INFO    OGG-01976  SCHEMATRANDATA for scheduling columns has been added on schema ggtest.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 3&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ggパラメータファイルの作成&#34;&gt;&lt;strong&gt;GGパラメータファイルの作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;GoldenGateのパラメータは各プロセスごとに作成する必要があります。GLOBALS、MGRパラメータはソース、及びターゲット側に存在するので両サイトで作成する必要があります。&lt;/p&gt;
+&lt;h4 id=&#34;globalsパラメータソース側&#34;&gt;&lt;strong&gt;GLOBALSパラメータ（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+
+./ggsci
+EDIT PARAMS GLOBALS
+
+#下記をviエディタで指定する
+SYSLOG NONE
+GGSCHEMA ggs
+NODUPMSGSUPPRESSION
+
+view params GLOBALS
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;mgrパラメータソース側&#34;&gt;&lt;strong&gt;MGRパラメータ（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+
+./ggsci
+EDIT PARAMS MGR
+
+# MGRファイルの設定
+PORT 7809
+
+AUTOSTART EXTRACT c11
+AUTOSTART EXTRACT d11
+AUTORESTART EXTRACT c11, RETRIES 2, WAITMINUTES 1, RESETMINUTES 60
+AUTORESTART EXTRACT d11, RETRIES 5, WAITMINUTES 1, RESETMINUTES 60
+
+-- Trailファイルのメンテンス設定
+PURGEOLDEXTRACTS ./dirdat/c11/*,  USECHECKPOINTS, MINKEEPDAYS 1
+
+view params GLOBALS
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;captureパラメータソース側&#34;&gt;&lt;strong&gt;Captureパラメータ（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+
+./ggsci
+EDIT PARAMS C11
+
+# CAPTUREファイルの設定
+EXTRACT c11
+USERID ggs@db112s,PASSWORD oracle
+EXTTRAIL ./dirdat/c11/lt
+CACHEMGR CACHESIZE 4GB
+DISCARDFILE ./dirrpt/c11.dsc, APPEND, MEGABYTES 500
+DISCARDROLLOVER AT 2:00 ON SUNDAY
+REPORTROLLOVER AT 2:00 ON SUNDAY
+DDL INCLUDE ALL
+DDLOPTIONS CAPTUREGLOBALTEMPTABLE,REPORT
+TRANLOGOPTIONS INTEGRATEDPARAMS (MAX_SGA_SIZE 1250, PARALLELISM 2)
+
+TABLE ggtest.* ;
+
+view params MGR
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;data-pumpパラメータソース側&#34;&gt;&lt;strong&gt;Data Pumpパラメータ（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;今回は筐体内の2DB間のレプリケーション設定なので、RMTHOSTに「localhost」を設定しています。本来ならばターゲットサーバのhostname、もしくはIPアドレスの指定が必要です。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+
+./ggsci
+EDIT PARAMS d11
+
+# Data Pumpファイルの設定
+EXTRACT d11
+PASSTHRU
+RMTHOST localhost,  MGRPORT 7810
+RMTTRAIL ./dirdat/d11/rt
+
+TABLE ggtest.*;
+
+view params c11
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;globalsパラメータターゲット側&#34;&gt;&lt;strong&gt;GLOBALSパラメータ（ターゲット側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db18s --環境変数の読み込み
+cd /gg/gg2
+
+./ggsci
+EDIT PARAM GLOBALS
+
+GGSCHEMA c##ggs
+NODUPMSGSUPPRESSION
+
+view params GLOBALS
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;mgrパラメータソース側-1&#34;&gt;&lt;strong&gt;MGRパラメータ（ソース側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg2
+
+./ggsci
+EDIT PARAMS MGR
+
+# MGRファイルの設定
+PORT 7810
+
+AUTOSTART REPLICAT r11
+AUTORESTART REPLICAT r11, RETRIES 2, WAITMINUTES 1, RESETMINUTES 60
+
+-- Trailファイルのメンテンス設定
+PURGEOLDEXTRACTS ./dirdat/d11/*,  USECHECKPOINTS, MINKEEPDAYS 1
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;replicatパラメータターゲット側&#34;&gt;&lt;strong&gt;Replicatパラメータ（ターゲット側）&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg2
+
+./ggsci
+EDIT PARAMS R11
+
+REPLICAT r11
+USERID c##ggs@db18p1, PASSWORD oracle
+DBOPTIONS INTEGRATEDPARAMS(PARALLELISM 4,MAX_PARALLELISM 4)
+
+DISCARDFILE ./dirrpt/r11.dsc, APPEND, MEGABYTES 500
+DISCARDROLLOVER AT 2:00 ON SUNDAY
+REPORTROLLOVER AT 2:00 ON SUNDAY
+
+DDL INCLUDE ALL
+DDLOPTIONS CAPTUREGLOBALTEMPTABLE,REPORT
+REPORTCOUNT EVERY 10 MINUTES, RATE
+
+BATCHSQL
+MAP ggtest.* ,TARGET db18p1.ggtest.*;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengateプロセス作成&#34;&gt;&lt;strong&gt;GoldenGateプロセス作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;ソース側のプロセス作成&#34;&gt;&lt;strong&gt;ソース側のプロセス作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+./ggsci
+
+#DBログイン
+dblogin userid ggs@db112s,password oracle
+
+#Captuteプロセスの作成・追加
+REGISTER EXTRACT c11 DATABASE
+add extract c11, integrated,tranlog, begin now
+add exttrail  ./dirdat/c11/lt, extract c11, megabytes 500
+
+#Data Pumpプロセスの作成・追加
+add extract d11, exttrailsource ./dirdat/c11/lt
+add rmttrail ./dirdat/d11/rt, extract d11
+
+#確認
+info all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; dblogin userid ggs@db112s,password oracle
+Successfully logged into database.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 2&amp;gt; REGISTER EXTRACT c11 DATABASE
+
+2019-03-29 18:18:00  INFO    OGG-02003  Extract C11 successfully registered with database at SCN 1089847.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 3&amp;gt; add extract c11, integrated,tranlog, begin now
+EXTRACT (Integrated) added.
+
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 4&amp;gt; add exttrail  ./dirdat/c11/lt, extract c11, megabytes 500
+EXTTRAIL added.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 5&amp;gt;
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 5&amp;gt;
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 5&amp;gt; add extract d11, exttrailsource ./dirdat/c11/lt
+EXTRACT added.
+
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 6&amp;gt;
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 6&amp;gt; add rmttrail ./dirdat/d11/rt, extract d11
+RMTTRAIL added.
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 7&amp;gt;
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 7&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     STOPPED
+EXTRACT     STOPPED     C11         00:00:00      00:00:17
+EXTRACT     STOPPED     D11         00:00:00      00:00:07
+
+
+GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 8&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ターゲット側のプロセス作成&#34;&gt;&lt;strong&gt;ターゲット側のプロセス作成&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ReplicatはPDBに対して適用するため、dblogin時に指定する接続記述子はCDB$ROOTではなく適用するPDBへの指定が必要です。&lt;/p&gt;
+&lt;p&gt;またIntegrated Catptureの場合はregisterコマンドが必要でしたが、Integrated Replicatの場合は不要です。（内部的に発行されています。）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db18s --環境変数の読み込み
+cd /gg/gg2
+./ggsci
+
+#DBログイン
+dblogin userid c##ggs@db18p1,password oracle
+
+#Replicatプロセスの作成
+ADD REPLICAT r11,integrated EXTTRAIL ./dirdat/d11/rt
+
+#状態確認
+info all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; dblogin userid c##ggs@db18p1,password oracle
+
+Successfully logged into database DB18P1.
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 2&amp;gt;
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 2&amp;gt; ADD REPLICAT r11,integrated EXTTRAIL ./dirdat/d11/rt
+REPLICAT (Integrated) added.
+
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 3&amp;gt;
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 3&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     STOPPED
+REPLICAT    STOPPED     R11         00:00:00      00:00:20
+
+
+GGSCI (dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1) 4&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengateプロセス起動&#34;&gt;&lt;strong&gt;GoldenGateプロセス起動&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;ソース側のData Pumpプロセスはターゲット側のMGRプロセスと通信をします。したがって、先にターゲット側のMGRプロセスを起動する必要があるため、ターゲット側から起動を行います。&lt;/p&gt;
+&lt;h4 id=&#34;ターゲット側のプロセス起動&#34;&gt;&lt;strong&gt;ターゲット側のプロセス起動&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db18s --環境変数の読み込み
+cd /gg/gg1
+./ggsci
+
+#起動コマンド
+start mgr
+
+# mgrのパラメータでautostartを設定しているためreplicatプロセスの起動は不要。
+#start r11
+
+#状態確認コマンド
+info all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+[oracle@dbvgg gg2]$ ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 18.1.0.0.0 OGGCORE_18.1.0.0.0_PLATFORMS_180928.0432_FBO
+Linux, x64, 64bit (optimized), Oracle 18c on Sep 29 2018 07:21:38
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2018, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     STOPPED
+REPLICAT    STOPPED     R11         00:00:00      00:00:49
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt; start mgr
+Manager started.
+
+
+GGSCI (dbvgg.jp.oracle.com) 3&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     RUNNING
+REPLICAT    RUNNING     R11         00:00:00      00:00:03
+
+
+GGSCI (dbvgg.jp.oracle.com) 4&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ソース側のプロセス起動&#34;&gt;&lt;strong&gt;ソース側のプロセス起動&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+./ggsci
+
+#起動コマンド
+start mgr
+# mgrのパラメータでautostartを設定しているためcapture、data pumpプロセスの起動は不要。
+# start c11
+# start d11
+
+#状態確認コマンド
+info all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;# 実行結果
+[oracle@dbvgg gg1]$ ./ggsci
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+Linux, x64, 64bit (optimized), Oracle 11g on Oct 30 2017 19:19:45
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     STOPPED
+EXTRACT     STOPPED     C11         00:00:02      00:00:30
+EXTRACT     STOPPED     D11         00:00:00      00:00:29
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt; start mgr
+Manager started.
+
+
+GGSCI (dbvgg.jp.oracle.com) 3&amp;gt; info all
+
+Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+
+MANAGER     RUNNING
+EXTRACT     RUNNING     C11         00:00:10      00:00:07
+EXTRACT     RUNNING     D11         00:00:00      00:00:04
+
+
+GGSCI (dbvgg.jp.oracle.com) 4&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;appendix&#34;&gt;&lt;strong&gt;Appendix&lt;/strong&gt;&lt;/h4&gt;
+&lt;h4 id=&#34;ogg-02912エラー対応&#34;&gt;&lt;strong&gt;OGG-02912エラー対応&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;**DB11.2とGG12.2(Integrated Capture)**の組み合わせで初回起動時、OGG-02912が発生し Capture プロセスが ABENDする場合があります。(適用されているPSU/BPに依存します。)&lt;/p&gt;
+&lt;p&gt;Oracle GoldenGate12.2 からTrailファイルのフォーマットが変更されていることによるエラーです。（データベース側のログマイナーに関するファンクションが対応していない場合に発生します。）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-text&#34;&gt;ERROR OGG-02912 Patch 17030189 is required on your Oracle mining database for trail format RELEASE 12.2 or later.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;エラーが発生した場合はエラーメッセージにある通り「Patch 17030189」を適用するか、GG_HOME配下にある「prvtlmpg.plb」を実行することでエラーを回避することが出来ます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;. /home/oracle/.oraenv_db112s --環境変数の読み込み
+cd /gg/gg1
+sqlplus / as sysdba
+@prvtlmpg.plb
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;-- 実行結果
+[oracle@dbvgg gg1]$ sqlplus / as sysdba
+
+SQL*Plus: Release 11.2.0.4.0 Production on 金 3月 29 18:22:29 2019
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+
+
+Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, OLAP, Data Mining and Real Application Testing options
+に接続されました。
+SQL&amp;gt; @prvtlmpg.plb
+
+Oracle GoldenGate Workaround prvtlmpg
+
+This script provides a temporary workaround for bug 17030189.
+It is strongly recommended that you apply the official Oracle
+Patch for bug 17030189 from My Oracle Support instead of using
+this workaround.
+
+This script must be executed in the mining database of Integrated
+Capture. You will be prompted for the username of the mining user.
+Use a double quoted identifier if the username is case sensitive
+or contains special characters. In a CDB environment, this script
+must be executed from the CDB$ROOT container and the mining user
+must be a common user.
+
+===========================  WARNING  ==========================
+You MUST stop all Integrated Captures that belong to this mining
+user before proceeding!
+================================================================
+
+Enter Integrated Capture mining user: ggs
+
+Installing workaround...
+エラーはありません。
+エラーはありません。
+エラーはありません。
+Installation completed.
+SQL&amp;gt;
+SQL&amp;gt; Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, OLAP, Data Mining and Real Application Testing optionsとの接続が切断されました。
+[oracle@dbvgg gg1]$
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>MERGE文のGoldenGateによる伝搬</title>
+      <link>/goldengate-merge-replication.html</link>
+      <pubDate>Sun, 10 Mar 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-merge-replication.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;MERGE文による更新をソース側DBで実施した場合、GoldenGateでどのように実行されるかを確認。&lt;/p&gt;
+&lt;p&gt;当初の推察通りだったが、REDOログ・ファイルから更新情報を読み込むアーキテクチャ上、MERGE文でINSERTが使用された場合は、INSERT文をキャプチャするし、UPDATE文だった場合は当然UPDATE文で伝搬される。&lt;/p&gt;
+&lt;h3 id=&#34;テストデータ作成&#34;&gt;テストデータ作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table t1;
+create table t1(a number primary key,b number,c varchar(30),d number);
+insert into t1 values (1,dbms_flashback.get_system_change_number,&#39;test&#39;,TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISS&#39;)));
+commit;
+
+drop table t2;
+create table t2(a number primary key,b number,c varchar(30),d number);
+insert into t2 values (1,dbms_flashback.get_system_change_number,&#39;test&#39;,TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISS&#39;)));
+insert into t2 values (2,dbms_flashback.get_system_change_number,&#39;test&#39;,TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISS&#39;)));
+insert into t2 values (3,dbms_flashback.get_system_change_number,&#39;test&#39;,TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISS&#39;)));
+insert into t2 values (4,dbms_flashback.get_system_change_number,&#39;test&#39;,TO_NUMBER(TO_CHAR(SYSTIMESTAMP, &#39;YYYYMMDDHH24MISS&#39;)));
+commit;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;テストデータの確認&#34;&gt;テストデータの確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;SQL&amp;gt; select * from t1;
+A  B        C     D               
+1  1202613  test  20190610133851  
+
+SQL&amp;gt; select * from t2;
+A  B        C     D               
+1  1202715  test  20190610133852  
+2  1202726  test  20190610133852  
+3  1202726  test  20190610133852  
+4  1202726  test  20190610133852  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;merge文の実行&#34;&gt;MERGE文の実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;MERGE INTO t1
+  USING t2
+  ON (t1.a = t2.a) 
+  WHEN MATCHED THEN
+    UPDATE SET
+      t1.b = t2.b
+  WHEN NOT MATCHED THEN
+    INSERT (a, b, c, d)
+    VALUES (t2.a,t2.b,t2.c,t2.d)
+/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;merge後のテストデータ確認&#34;&gt;MERGE後のテストデータ確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;SQL&amp;gt; select * from t1;
+A  B        C     D               
+1  1202715  test  20190610133851  
+2  1202726  test  20190610133852  
+3  1202726  test  20190610133852  
+4  1202726  test  20190610133852  
+
+
+SQL&amp;gt; select * from t2;
+A  B        C     D               
+1  1202715  test  20190610133852  
+2  1202726  test  20190610133852  
+3  1202726  test  20190610133852  
+4  1202726  test  20190610133852  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;goldengateの伝搬結果&#34;&gt;GoldenGateの伝搬結果&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;	      A 	      B C					     D
+--------------- --------------- ------------------------------ ---------------
+	      1 	1202715 test				20190610133851
+	      2 	1202726 test				20190610133852
+	      3 	1202726 test				20190610133852
+	      4 	1202726 test				20190610133852
+
+SQL&amp;gt; 
+	      A 	      B C					     D
+--------------- --------------- ------------------------------ ---------------
+	      1 	1202715 test				20190610133852
+	      2 	1202726 test				20190610133852
+	      3 	1202726 test				20190610133852
+	      4 	1202726 test				20190610133852
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;ターゲット側の共有プールvsqlから実行されたsqlを確認&#34;&gt;ターゲット側の共有プール（v$sql)から実行されたSQLを確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT sql_id,
+       plan_hash_value,
+       sql_text,
+       module,
+       fetches,
+       command_type,
+       executions,
+       first_load_time,
+       last_active_time,
+       action,
+       service,
+       is_bind_aware
+FROM V$SQL
+WHERE module=&#39;GoldenGate&#39;
+and   action like &#39;%Apply Server&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行結果&#34;&gt;実行結果&lt;/h3&gt;
+&lt;p&gt;少し見にくいが、INSERT文とUPDATE文がGGTESTスキーマのT1テーブルに実行されていることがわかる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; SELECT sql_id,
+  2         plan_hash_value,
+  3         sql_text,
+  4         module,
+  5         fetches,
+  6         command_type,
+  7         executions,
+  8         first_load_time,
+  9         last_active_time,
+ 10         action,
+ 11         service,
+ 12         is_bind_aware
+ 13  FROM V$SQL
+ 14  WHERE module=&#39;GoldenGate&#39;
+ 15  and   action like &#39;%Apply Server&#39;;
+&amp;quot;SQL_ID&amp;quot;,&amp;quot;PLAN_HASH_VALUE&amp;quot;,&amp;quot;SQL_TEXT&amp;quot;,&amp;quot;MODULE&amp;quot;,&amp;quot;FETCHES&amp;quot;,&amp;quot;COMMAND_TYPE&amp;quot;,&amp;quot;EXECUTIONS&amp;quot;,&amp;quot;FIRST_LOAD_TIME&amp;quot;,&amp;quot;LAST_ACTIVE_TIME&amp;quot;,&amp;quot;ACTION&amp;quot;,&amp;quot;SERVICE&amp;quot;,&amp;quot;IS_BIND_AWARE&amp;quot;
+&amp;quot;6j3z4vh2pudfs&amp;quot;,0,&amp;quot; INSERT /*+ restrict_all_ref_cons */ INTO &amp;quot;&amp;quot;GGTEST&amp;quot;&amp;quot;.&amp;quot;&amp;quot;T1&amp;quot;&amp;quot; (&amp;quot;&amp;quot;A&amp;quot;&amp;quot;,&amp;quot;&amp;quot;B&amp;quot;&amp;quot;,&amp;quot;&amp;quot;C&amp;quot;&amp;quot;,&amp;quot;&amp;quot;D&amp;quot;&amp;quot;) VALUES (:1   ,:2   ,:3   ,:4   )&amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,2,2,&amp;quot;2019-06-10/12:25:03&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+&amp;quot;g92sukn9vaduv&amp;quot;,0,&amp;quot;INSERT INTO sys.streams$_apply_progress (apply#, source_db_name, xidusn, xidslt, xidsqn, commit_scn, commit_position, transaction_id) VALUES (1, &#39;NULL&#39;, :1, :2, :3, :4, :5, :6)&amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,2,119,&amp;quot;2019-06-10/12:23:53&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+&amp;quot;9vyxjaht16r7v&amp;quot;,0,&amp;quot; INSERT /*+ restrict_all_ref_cons */ INTO &amp;quot;&amp;quot;GGTEST&amp;quot;&amp;quot;.&amp;quot;&amp;quot;T2&amp;quot;&amp;quot; (&amp;quot;&amp;quot;A&amp;quot;&amp;quot;,&amp;quot;&amp;quot;B&amp;quot;&amp;quot;,&amp;quot;&amp;quot;C&amp;quot;&amp;quot;,&amp;quot;&amp;quot;D&amp;quot;&amp;quot;) VALUES (:1   ,:2   ,:3   ,:4   )&amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,2,1,&amp;quot;2019-06-10/12:27:25&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+&amp;quot;ghjk279rcm16p&amp;quot;,3903122721,&amp;quot;UPDATE SYS.STREAMS$_APPLY_MILESTONE SET OLDEST_SCN=:1, COMMIT_SCN=:2,SYNCH_SCN=:3, SPARE1=:4, EPOCH=:5, PROCESSED_SCN=:6, APPLY_TIME=:7,APPLIED_MESSAGE_CREATE_TIME=:8, START_SCN=:9, OLDEST_TRANSACTION_ID=:10,LWM_EXTERNAL_POS=:11, OLDEST_POSITION=:12, PROCESSED_POSITION=:13,START_POSITION=:14, OLDEST_CREATE_TIME=:15, XOUT_PROCESSED_POSITION=:16,XOUT_PROCESSED_CREATE_TIME=:17, XOUT_PROCESSED_TID=:18,APPLIED_HIGH_POSITION=:19, XOUT_PROCESSED_TIME=:20, SPARE5=:21, PTO_RECOVERY_SCN=:22,PTO_RECOVERY_INCARNATION=DECODE(:23,PTO_RECOVERY_SCN,                                 PTO_RECOVERY_INCARNATION,                                (select incarnation# from                                  v$database_incarnation                                  where status = &#39;CURRENT&#39;))  WHERE APPLY#=:24&amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,6,4,&amp;quot;2019-06-10/12:23:54&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+&amp;quot;0913ps7wxvf0h&amp;quot;,559339712,&amp;quot; UPDATE /*+ restrict_all_ref_cons */ &amp;quot;&amp;quot;GGTEST&amp;quot;&amp;quot;.&amp;quot;&amp;quot;T1&amp;quot;&amp;quot; SET &amp;quot;&amp;quot;B&amp;quot;&amp;quot;=:1    WHERE &amp;quot;&amp;quot;A&amp;quot;&amp;quot;=:2   &amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,6,1,&amp;quot;2019-06-10/12:55:15&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+&amp;quot;0913ps7wxvf0h&amp;quot;,1027040727,&amp;quot; UPDATE /*+ restrict_all_ref_cons */ &amp;quot;&amp;quot;GGTEST&amp;quot;&amp;quot;.&amp;quot;&amp;quot;T1&amp;quot;&amp;quot; SET &amp;quot;&amp;quot;B&amp;quot;&amp;quot;=:1    WHERE &amp;quot;&amp;quot;A&amp;quot;&amp;quot;=:2   &amp;quot;,&amp;quot;GoldenGate&amp;quot;,0,6,1,&amp;quot;2019-06-10/12:55:15&amp;quot;,19-06-10,&amp;quot;OGG$R11 - Apply Server&amp;quot;,&amp;quot;db18p1&amp;quot;,&amp;quot;N&amp;quot;
+
+6行が選択されました。 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGate関連プロセスのsession情報を確認する方法</title>
+      <link>/goldengate-check-session-info.html</link>
+      <pubDate>Sat, 16 Feb 2019 00:00:00 +0000</pubDate>
+      <guid>/goldengate-check-session-info.html</guid>
+      <description>&lt;h3 id=&#34;moduleで対象プロセスを絞り込む&#34;&gt;&lt;strong&gt;moduleで対象プロセスを絞り込む&lt;/strong&gt;&lt;/h3&gt;
+&lt;p&gt;Integrated Capture/Replicatの場合は、GoldenGateプロセスもDB内のプロセスのため、module列で絞り込んで出力することが出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    s.inst_id,
+    s.con_id,
+    s.logon_time,
+    s.sid,
+    s.serial#,
+    s.module,
+    p.spid,
+    p.pid,
+    s.action,
+    s.process,
+    s.program,
+    s.status,
+    s.action,
+    DECODE(s.server,&#39;DEDICATED&#39;,&#39;DED&#39;,&#39;SHR&#39;) SVR,
+    s.STATE,
+    s.event
+FROM
+    gv$session s,
+    v$process p
+WHERE
+    (s.module = &#39;GoldenGate&#39; OR
+        s.module LIKE &#39;%tream%&#39; OR
+        s.module LIKE &#39;OGG%&#39;) AND
+    p.addr=s.paddr
+ORDER BY
+    s.con_id,
+    s.inst_id,
+    s.module,
+    s.action;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;出力結果例&#34;&gt;&lt;strong&gt;出力結果例&lt;/strong&gt;&lt;/h3&gt;
+&lt;p&gt;ターゲット側で実行しているため、Integrated Replicatのプロセスのみ。
+Action列で、「Coordinator」、「Receiver」、「Reader」、「Apply Server」か判別可能。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;INST_ID&lt;/th&gt;
+&lt;th&gt;CON_ID&lt;/th&gt;
+&lt;th&gt;LOGON_TIME&lt;/th&gt;
+&lt;th&gt;SID&lt;/th&gt;
+&lt;th&gt;SERIAL#&lt;/th&gt;
+&lt;th&gt;MODULE&lt;/th&gt;
+&lt;th&gt;SPID&lt;/th&gt;
+&lt;th&gt;PID&lt;/th&gt;
+&lt;th&gt;ACTION&lt;/th&gt;
+&lt;th&gt;PROCESS&lt;/th&gt;
+&lt;th&gt;PROGRAM&lt;/th&gt;
+&lt;th&gt;STATUS&lt;/th&gt;
+&lt;th&gt;ACTION&lt;/th&gt;
+&lt;th&gt;SVR&lt;/th&gt;
+&lt;th&gt;STATE&lt;/th&gt;
+&lt;th&gt;EVENT&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;339&lt;/td&gt;
+&lt;td&gt;34151&lt;/td&gt;
+&lt;td&gt;Streams&lt;/td&gt;
+&lt;td&gt;28703&lt;/td&gt;
+&lt;td&gt;59&lt;/td&gt;
+&lt;td&gt;AQ LB Coordinator&lt;/td&gt;
+&lt;td&gt;28703&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (QM03)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;AQ LB Coordinator&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;Streams AQ: load balancer idle&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;td&gt;462&lt;/td&gt;
+&lt;td&gt;Streams&lt;/td&gt;
+&lt;td&gt;27781&lt;/td&gt;
+&lt;td&gt;57&lt;/td&gt;
+&lt;td&gt;QMON Coordinator&lt;/td&gt;
+&lt;td&gt;27781&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (QM02)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;QMON Coordinator&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;Streams AQ: qmn coordinator idle wait&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;td&gt;58083&lt;/td&gt;
+&lt;td&gt;Streams&lt;/td&gt;
+&lt;td&gt;27787&lt;/td&gt;
+&lt;td&gt;60&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;27787&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (Q003)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;Streams AQ: waiting for time management or cleanup tasks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;177&lt;/td&gt;
+&lt;td&gt;6407&lt;/td&gt;
+&lt;td&gt;Streams&lt;/td&gt;
+&lt;td&gt;27789&lt;/td&gt;
+&lt;td&gt;61&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;27789&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (Q004)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;Streams AQ: qmn slave idle wait&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;182&lt;/td&gt;
+&lt;td&gt;19018&lt;/td&gt;
+&lt;td&gt;Streams&lt;/td&gt;
+&lt;td&gt;27829&lt;/td&gt;
+&lt;td&gt;67&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;27829&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (Q006)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;QMON Slave&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;Streams AQ: qmn slave idle wait&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;33&lt;/td&gt;
+&lt;td&gt;20930&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28053&lt;/td&gt;
+&lt;td&gt;75&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Coordinator&lt;/td&gt;
+&lt;td&gt;28053&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AP01)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Coordinator&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;rdbms ipc message&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;176&lt;/td&gt;
+&lt;td&gt;19252&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28055&lt;/td&gt;
+&lt;td&gt;76&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Reader&lt;/td&gt;
+&lt;td&gt;28055&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AS01)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Reader&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;REPL Capture/Apply: messages&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;350&lt;/td&gt;
+&lt;td&gt;51690&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28051&lt;/td&gt;
+&lt;td&gt;74&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Receiver&lt;/td&gt;
+&lt;td&gt;28047&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:replicat@xxxxxxx1t.jp.oracle.com&#34;&gt;replicat@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (TNS V1-V3)&lt;/td&gt;
+&lt;td&gt;INACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Receiver&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;SQL*Net message from client&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;349&lt;/td&gt;
+&lt;td&gt;48410&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28057&lt;/td&gt;
+&lt;td&gt;77&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;28057&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AS02)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;rdbms ipc message&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;35&lt;/td&gt;
+&lt;td&gt;16249&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28059&lt;/td&gt;
+&lt;td&gt;78&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;28059&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AS03)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;rdbms ipc message&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;184&lt;/td&gt;
+&lt;td&gt;29507&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28061&lt;/td&gt;
+&lt;td&gt;79&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;28061&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AS04)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;rdbms ipc message&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2019/3/3&lt;/td&gt;
+&lt;td&gt;352&lt;/td&gt;
+&lt;td&gt;60489&lt;/td&gt;
+&lt;td&gt;GoldenGate&lt;/td&gt;
+&lt;td&gt;28063&lt;/td&gt;
+&lt;td&gt;80&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;28063&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;mailto:oracle@xxxxxxx1t.jp.oracle.com&#34;&gt;oracle@xxxxxxx1t.jp.oracle.com&lt;/a&gt; (AS05)&lt;/td&gt;
+&lt;td&gt;ACTIVE&lt;/td&gt;
+&lt;td&gt;OGG$R11 - Apply Server&lt;/td&gt;
+&lt;td&gt;DED&lt;/td&gt;
+&lt;td&gt;WAITING&lt;/td&gt;
+&lt;td&gt;rdbms ipc message&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGateから実行されたSQLを確認する方法(Integrated Replicat)</title>
+      <link>/goldengate-check-exection-sql.html</link>
+      <pubDate>Sun, 11 Nov 2018 00:00:00 +0000</pubDate>
+      <guid>/goldengate-check-exection-sql.html</guid>
+      <description>&lt;p&gt;GoldenGateの場合においてもSQLが内部的に実行されており、Oracle Databaseの共有プールに情報が格納されている。&lt;/p&gt;
+&lt;p&gt;なので、Replicatが動作するターゲット側で下記SQLを実行してどのようなSQLが実行されているか確認出来る。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT sql_id,
+       plan_hash_value,
+       sql_text,
+       module,
+       fetches,
+       command_type,
+       executions,
+       first_load_time,
+       last_active_time,
+       action,
+       service,
+       is_bind_aware
+FROM V$SQL
+WHERE module=&#39;GoldenGate&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;注意事項
+&lt;ul&gt;
+&lt;li&gt;(g)v$sqlのsql_text列は「VARCHAR2(1000)」のため、長過ぎるものはCLOB型のSQL_FULLTEXTで出力。dbms_lob.substrで変換。&lt;/li&gt;
+&lt;li&gt;バインド変数値を確認する場合は、v$sql_bind_captureから&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GoldenGateパラメータの定義情報の取得(info paramコマンド)</title>
+      <link>/goldengate-info-param.html</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>/goldengate-info-param.html</guid>
+      <description>&lt;h4 id=&#34;はじめに&#34;&gt;&lt;strong&gt;はじめに&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;info paramコマンドを使用するとGoldenGateのパラメータ定義情報を取得可能です。本機能はGoldenGate12.2のバージョンから使用可能です。&lt;/p&gt;
+&lt;p&gt;マニュアルはこちら&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-60208072-8E74-4703-B4FF-31761E6CDDC0.htm#GUID-60208072-8E74-4703-B4FF-31761E6CDDC0&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-60208072-8E74-4703-B4FF-31761E6CDDC0.htm#GUID-60208072-8E74-4703-B4FF-31761E6CDDC0&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;INFO PARAM&lt;/p&gt;
+&lt;p&gt;INFO PARAMでは、パラメータ定義情報を取得します。名前が複数のレコードに一致した場合、一致したレコードがすべて表示されます。問合せパラメータに子オプションがある場合、各子オプションの名前が「Options」タブにリストされていても、出力には表示されません。オプションのレコード全体を表示するには、parameter.optionという形式の完全名を個別に問い合せる必要があります。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;基本的な使い方&#34;&gt;&lt;strong&gt;基本的な使い方&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;下記のようにパラメータ、及びパラメータのサブ・パラメータの情報を取得することが出来ます。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;GGSCI (dbvgg.jp.oracle.com) 3&amp;gt; info param BATCHSQL
+
+param name  : batchsql
+description : Use the BATCHSQL parameter to increase the performance of Replicat. BATCHSQL causes Replicat to organize similar SQL statements into arrays and apply them at an accelerated rate. In its normal mode, Replicat applies one SQL statement at a time.
+argument    : no argument
+options     : batcherrormode|nobatcherrormode, batchesperqueue, batchtransops
+              bypasspkcheck|nobypasspkcheck, bytesperqueue
+              checkuniquekeys|nocheckuniquekeys
+              errorhandling|noerrorhandling, maxthreadqueuedepth, opsperbatch
+              opsperqueue, thread, trace
+component(s): REPLICAT
+mode(s)     : all Replicat modes
+platform(s) : all platforms
+versions    :
+database(s) : Oracle 8
+              Oracle 9i
+              Oracle 10g
+              Oracle 11g
+              Oracle 12c
+              Oracle 18c
+              Sybase
+              DB2LUW 10.5
+              DB2LUW 10.1
+              DB2LUW 9.5
+              DB2LUW 9.7
+              Teradata
+              Timesten
+              DB2 for i
+              DB2 for i Remote
+              MS SQL
+              MS SQL CDC
+              Informix
+              SQL/MX
+              DB2 z/OS
+              PostgreSQL
+status      : current
+mandatory   : false
+dynamic     : false
+relations   : none
+
+
+GGSCI (dbvgg.jp.oracle.com) 4&amp;gt; info param BATCHSQL.opsperbatch
+
+param name  : batchsql.opsperbatch
+description : Sets the maximum number of row operations that one batch can contain. After OPSPERBATCH is reached, a target transaction is executed.
+argument    : integer
+default     : 1200
+      range : 1 - 100000
+options     :
+component(s): REPLICAT
+mode(s)     : all Replicat modes
+platform(s) : all platforms
+versions    :
+database(s) : Oracle 8
+              Oracle 9i
+              Oracle 10g
+              Oracle 11g
+              Oracle 12c
+              Oracle 18c
+              Sybase
+              DB2LUW 10.5
+              DB2LUW 10.1
+              DB2LUW 9.5
+              DB2LUW 9.7
+              Teradata
+              Timesten
+              DB2 for i
+              DB2 for i Remote
+              MS SQL
+              MS SQL CDC
+              Informix
+              SQL/MX
+              DB2 z/OS
+              PostgreSQL
+status      : current
+mandatory   : false
+dynamic     : false
+relations   : none
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;出力内容&#34;&gt;&lt;strong&gt;出力内容&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;下記のような出力結果が出力されます。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;No.&lt;/th&gt;
+&lt;th&gt;項目&lt;/th&gt;
+&lt;th&gt;補足&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;param name&lt;/td&gt;
+&lt;td&gt;パラメータ名&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;description&lt;/td&gt;
+&lt;td&gt;パラメータ説明&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;argument&lt;/td&gt;
+&lt;td&gt;引数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;options&lt;/td&gt;
+&lt;td&gt;サブパラメータ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;component&lt;/td&gt;
+&lt;td&gt;対応コンポーネント&lt;br /&gt;   (「capture」 or 「data pump」 or 「replicat」)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;mode&lt;/td&gt;
+&lt;td&gt;Integratedモード or classicモード&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;platform&lt;/td&gt;
+&lt;td&gt;対応プラットフォーム&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;versions&lt;/td&gt;
+&lt;td&gt;対応バージョン&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;database&lt;/td&gt;
+&lt;td&gt;対応データベース&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;status&lt;/td&gt;
+&lt;td&gt;current or deprecated&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;mandatory&lt;/td&gt;
+&lt;td&gt;必須かどうか？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;dynamic&lt;/td&gt;
+&lt;td&gt;動的変更が可能か？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;relations&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;goldengateのバージョン間の出力差異を確認する&#34;&gt;&lt;strong&gt;GoldenGateのバージョン間の出力差異を確認する&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;GoldenGateの12.3以降のバージョンではSYSLOGパラメータが非推奨に変更されています。この変更がどのように出力結果に影響しているか確認してみます。&lt;/p&gt;
+&lt;p&gt;下記出力結果の「★」印箇所のように「deprecated」に変更されています。GGのアップデート時にパラメータをチェックするのも良いかもですね。&lt;/p&gt;
+&lt;h4 id=&#34;goldengate-12201の出力結果&#34;&gt;&lt;strong&gt;GoldenGate 12.2.0.1の出力結果&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;[oracle@dbvgg ~]$ ogg1
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+Linux, x64, 64bit (optimized), Oracle 11g on Oct 30 2017 19:19:45
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; info param syslog
+
+param name  : syslog
+description : Use the SYSLOG parameter to control the types of messages that Oracle GoldenGate sends to the system logs on a Windows or UNIX system, or to the SYSOPR message queue on an IBM i system.
+argument    : no argument
+options     : all, error, info, none, warn
+component(s): MGR
+              GLOBALS
+mode(s)     : none
+platform(s) : all platforms
+versions    :
+    min ver : 11.1.1
+database(s) : all supported databases (on the supported platforms).
+status      : current ★←「current」
+mandatory   : false
+dynamic     : false
+relations   : none
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;goldengate-181の出力結果&#34;&gt;&lt;strong&gt;GoldenGate 18.1の出力結果&lt;/strong&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;[oracle@dbvgg ~]$ ogg2
+
+Oracle GoldenGate Command Interpreter for Oracle
+Version 18.1.0.0.0 OGGCORE_18.1.0.0.0_PLATFORMS_180928.0432_FBO
+Linux, x64, 64bit (optimized), Oracle 18c on Sep 29 2018 07:21:38
+Operating system character set identified as UTF-8.
+
+Copyright (C) 1995, 2018, Oracle and/or its affiliates. All rights reserved.
+
+
+
+GGSCI (dbvgg.jp.oracle.com) 1&amp;gt; info param syslog
+
+param name  : syslog
+description : Use the SYSLOG parameter to control the types of messages that Oracle GoldenGate sends to the system logs on a Windows or UNIX system, or to the SYSOPR message queue on an IBM i system.
+argument    : no argument
+options     : all, error, info, none, warn
+component(s): MGR
+              GLOBALS
+mode(s)     : none
+platform(s) : all platforms
+versions    :
+    min ver : 11.1.1
+database(s) : all supported databases (on the supported platforms).
+status      : deprecated ★←「deprecated」に変更されている
+mandatory   : false
+dynamic     : false
+relations   : none
+
+
+GGSCI (dbvgg.jp.oracle.com) 2&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

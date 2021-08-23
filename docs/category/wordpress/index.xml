@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>WordPress | my opinion is my own</title>
+    <link>/category/wordpress/</link>
+      <atom:link href="/category/wordpress/index.xml" rel="self" type="application/rss+xml" />
+    <description>WordPress</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 17 Feb 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>WordPress</title>
+      <link>/category/wordpress/</link>
+    </image>
+    
+    <item>
+      <title>EC2上にWordPressをインストールする</title>
+      <link>/wordpress-ec2-install.html</link>
+      <pubDate>Mon, 17 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/wordpress-ec2-install.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;知人にIT業界にいるんだから、ホームページくらい作れるんでしょ？と煽られたのでWordPressをAWSのEC2上にインストールしていきます。&lt;/p&gt;
+&lt;p&gt;WordPressのインストール要件は下記の通り。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;要件 | WordPress.org 日本語 &lt;a href=&#34;https://ja.wordpress.org/about/requirements/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://ja.wordpress.org/about/requirements/&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;PHP バージョン 7.3 以上。&lt;/li&gt;
+&lt;li&gt;MySQL バージョン 5.6 以上、または MariaDB バージョン 10.1 以上&lt;/li&gt;
+&lt;li&gt;HTTPS 対応&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;環境情報&#34;&gt;環境情報&lt;/h3&gt;
+&lt;p&gt;無料枠のt2.microにインストールしていきます。Amazon Linuxです。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@wp-ec2 ~]$ cat /etc/os-release
+NAME=&amp;quot;Amazon Linux&amp;quot;
+VERSION=&amp;quot;2&amp;quot;
+ID=&amp;quot;amzn&amp;quot;
+ID_LIKE=&amp;quot;centos rhel fedora&amp;quot;
+VERSION_ID=&amp;quot;2&amp;quot;
+PRETTY_NAME=&amp;quot;Amazon Linux 2&amp;quot;
+ANSI_COLOR=&amp;quot;0;33&amp;quot;
+CPE_NAME=&amp;quot;cpe:2.3:amazon:amazon_linux:2&amp;quot;
+HOME_URL=&amp;quot;https://amazonlinux.com/&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;mysql&#34;&gt;MySQL&lt;/h3&gt;
+&lt;h4 id=&#34;mysqlのインストール&#34;&gt;MySQLのインストール&lt;/h4&gt;
+&lt;p&gt;Amazon LinuxにはデフォルトでMariaDBがインストールされているので、MySQL5.7を使用できるように設定をしていきます。MariaDBで良い場合は特に何もしなくて良いかと思います。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo su -
+yum info mysql
+
+#リポジトリの追加
+yum localinstall -y https://dev.mysql.com/get/mysql80-community-release-el7-1.noarch.rpm
+
+#mysql8.0リポジトリの無効化
+yum-config-manager --disable mysql80-community
+
+#mysql5.7リポジトリの有効化
+yum-config-manager --enable mysql57-community
+
+#mysql5.7がインストールできるか確認
+yum info mysql-community-server
+
+#インストール
+yum -y install mysql-community-server
+
+#バージョン確認
+mysqld --version
+
+#自動起動確認
+systemctl start mysqld.service
+systemctl enable mysqld.service
+systemctl status mysqld.service
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;参考：AWSのEC2で行うAmazon Linux2（MySQL5.7）環境構築 - Qiita &lt;a href=&#34;https://qiita.com/2no553/items/952dbb8df9a228195189&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/2no553/items/952dbb8df9a228195189&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;MySQLの5.7.29がインストールされました。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@wp-ec2 ~]# mysqld --version
+mysqld  Ver 5.7.29 for Linux on x86_64 (MySQL Community Server (GPL))
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# systemctl status mysqld.service
+● mysqld.service - MySQL Server
+   Loaded: loaded (/usr/lib/systemd/system/mysqld.service; enabled; vendor preset: disabled)
+   Active: active (running) since Sun 2020-02-02 02:54:44 UTC; 4s ago
+     Docs: man:mysqld(8)
+           http://dev.mysql.com/doc/refman/en/using-systemd.html
+ Main PID: 3749 (mysqld)
+   CGroup: /system.slice/mysqld.service
+           └─3749 /usr/sbin/mysqld --daemonize --pid-file=/var/run/mysqld/mysqld.pid
+
+Feb 02 02:54:39 wp-ec2 systemd[1]: Starting MySQL Server...
+Feb 02 02:54:44 wp-ec2 systemd[1]: Started MySQL Server.
+[root@wp-ec2 ~]# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;mysqlの初期設定&#34;&gt;mysqlの初期設定&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cat /var/log/mysqld.log | grep password
+mysql_secure_installation
+
+Change the password for root ? ((Press y|Y for Yes, any other key for No) : no
+Remove anonymous users? (Press y|Y for Yes, any other key for No) : yes
+Disallow root login remotely? (Press y|Y for Yes, any other key for No) : yes
+Remove test database and access to it? (Press y|Y for Yes, any other key for No) : yes
+Reload privilege tables now? (Press y|Y for Yes, any other key for No) : yes
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;文字コード変更&#34;&gt;文字コード変更&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;mysql -u root -p
+show global variables like &#39;character%&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;etcmycnfの設定を変更&#34;&gt;/etc/my.cnfの設定を変更&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo vi /etc/my.cnf
+
+[mysqld]
+character_set_server=utf8mb4
+
+[client]
+default-character-set=utf8mb4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;mysqlを再起動&#34;&gt;mysqlを再起動&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo systemctl restart mysqld.service
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;wordpress用のデータベースユーザ設定を行う&#34;&gt;WordPress用のデータベース、ユーザ設定を行う&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;create database wp1;
+grant all privileges on `wp1`.* to &#39;wp1&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;xxxxxxxx&#39;;
+show grants for wp1@localhost;
+SELECT host, user FROM mysql.user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;php&#34;&gt;PHP&lt;/h3&gt;
+&lt;h4 id=&#34;phpのインストール&#34;&gt;PHPのインストール&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;amazon-linux-extras list | grep php 
+amazon-linux-extras install php7.3
+php -v
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;バージョン確認&#34;&gt;バージョン確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@wp-ec2 ~]# php -v
+PHP 7.3.11 (cli) (built: Oct 31 2019 19:16:47) ( NTS )
+Copyright (c) 1997-2018 The PHP Group
+Zend Engine v3.3.11, Copyright (c) 1998-2018 Zend Technologies
+[root@wp-ec2 ~]# 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;apache&#34;&gt;Apache&lt;/h3&gt;
+&lt;h4 id=&#34;apacheのインストール&#34;&gt;Apacheのインストール&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@wp-ec2 ~]# yum info httpd
+Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+31 packages excluded due to repository priority protections
+Available Packages
+Name        : httpd
+Arch        : x86_64
+Version     : 2.4.41
+Release     : 1.amzn2.0.1
+Size        : 1.3 M
+Repo        : amzn2-core/2/x86_64
+Summary     : Apache HTTP Server
+URL         : https://httpd.apache.org/
+License     : ASL 2.0
+Description : The Apache HTTP Server is a powerful, efficient, and extensible
+            : web server.
+
+
+yum -y install httpd
+
+[root@wp-ec2 ~]# httpd -v
+Server version: Apache/2.4.41 ()
+Server built:   Oct 22 2019 22:59:04
+[root@wp-ec2 ~]# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apacheの起動&#34;&gt;Apacheの起動&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;systemctl status httpd
+systemctl start httpd
+systemctl status httpd
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@wp-ec2 ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+  Drop-In: /usr/lib/systemd/system/httpd.service.d
+           └─php-fpm.conf
+   Active: inactive (dead)
+     Docs: man:httpd.service(8)
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# systemctl start httpd
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+  Drop-In: /usr/lib/systemd/system/httpd.service.d
+           └─php-fpm.conf
+   Active: active (running) since Sun 2020-02-02 03:13:17 UTC; 4s ago
+     Docs: man:httpd.service(8)
+ Main PID: 30339 (httpd)
+   Status: &amp;quot;Processing requests...&amp;quot;
+   CGroup: /system.slice/httpd.service
+           ├─30339 /usr/sbin/httpd -DFOREGROUND
+           ├─30346 /usr/sbin/httpd -DFOREGROUND
+           ├─30347 /usr/sbin/httpd -DFOREGROUND
+           ├─30348 /usr/sbin/httpd -DFOREGROUND
+           ├─30349 /usr/sbin/httpd -DFOREGROUND
+           └─30350 /usr/sbin/httpd -DFOREGROUND
+
+Feb 02 03:13:17 wp-ec2 systemd[1]: Starting The Apache HTTP Server...
+Feb 02 03:13:17 wp-ec2 httpd[30339]: AH00558: httpd: Could not reliably determine the server&#39;s fully qualified domain name, using fe80::459:bdff:fe4b:3ffa. Set the &#39;ServerN... this message
+Feb 02 03:13:17 wp-ec2 systemd[1]: Started The Apache HTTP Server.
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# ps -ef | grep httpd | grep -v grep
+root     30339     1  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache   30346 30339  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache   30347 30339  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache   30348 30339  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache   30349 30339  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache   30350 30339  0 03:13 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+[root@wp-ec2 ~]# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apacheの起動設定確認&#34;&gt;Apacheの起動設定確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;systemctl is-enabled httpd
+systemctl enable httpd
+systemctl is-enabled httpd
+
+[root@wp-ec2 ~]# systemctl is-enabled httpd
+disabled
+[root@wp-ec2 ~]# systemctl enable httpd
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+[root@wp-ec2 ~]# 
+[root@wp-ec2 ~]# systemctl is-enabled httpd
+enabled
+[root@wp-ec2 ~]# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Apacheのインストール、及び有効化も完了したので、Webサーバへのテストアクセスを行う。ブラウザでパブリックIPを入力して移動する。現時点では特にコンテンツを配置していないので、Apacheのテストページが表示される。&lt;/p&gt;
+&lt;p&gt;※AWS側のセキュリティグループの設定が必要。http(もしくはhttps)のプロトコルとポートを開けてください。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200202121924757&#34; srcset=&#34;
+               /image-20200202121924757_hu9d483a27bb29e57d6ec008d32cb4f6e1_137769_6fd00215f18eb6feea97a2cd219df4d7.png 400w,
+               /image-20200202121924757_hu9d483a27bb29e57d6ec008d32cb4f6e1_137769_201eb7cd5d35ef4184d4dfd9db0ca20a.png 760w,
+               /image-20200202121924757_hu9d483a27bb29e57d6ec008d32cb4f6e1_137769_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200202121924757_hu9d483a27bb29e57d6ec008d32cb4f6e1_137769_6fd00215f18eb6feea97a2cd219df4d7.png&#34;
+               width=&#34;760&#34;
+               height=&#34;298&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h4 id=&#34;ファイルのパーミッション変更&#34;&gt;ファイルのパーミッション変更&lt;/h4&gt;
+&lt;p&gt;Amazon Linux Apache ドキュメントルートは /var/www/htmlであり、デフォルトでは root によって所有されるのでこれをec2-userでも編集できるように変更する。具体的にはec2-user を apache グループに追加し、apache ディレクトリの所有権を /var/www グループに付与し、グループへの書き込み権限を割り当てる。これによりwordpressのファイル編集やphpファイルの編集が出来るようになる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;usermod -a -G apache ec2-user
+exit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;再ログインして確認する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@wp-ec2 ~]$ groups
+ec2-user adm wheel apache systemd-journal
+[ec2-user@wp-ec2 ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;/var/www とそのコンテンツのグループ所有権を apache グループに変更&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo chown -R ec2-user:apache /var/www
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;グループの書き込み許可を追加して、これからのサブディレクトにグループ ID を設定するには、/var/www とサブディレクトのディレクトリ許可を変更&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo chmod 2775 /var/www &amp;amp;&amp;amp; find /var/www -type d -exec sudo chmod 2775 {} \;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;グループ書き込み許可を追加するには、&lt;code&gt;/var/www&lt;/code&gt; とサブディレクトリのファイル許可を再帰的に変更&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo find /var/www -type f -exec sudo chmod 0664 {} \;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;httpdconfの修正&#34;&gt;httpd.confの修正&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi /etc/httpd/conf/httpd.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;AllowOverride None&lt;/code&gt;を&lt;code&gt;AllowOverride All&lt;/code&gt;に変更する。&lt;/p&gt;
+&lt;h3 id=&#34;wordpress&#34;&gt;WordPress&lt;/h3&gt;
+&lt;h4 id=&#34;wordpressのインストール設定&#34;&gt;WordPressのインストール、設定&lt;/h4&gt;
+&lt;p&gt;SSL/TLSの設定は一旦、置いておいてWordPress環境のインストール、設定を行う。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget https://ja.wordpress.org/latest-ja.tar.gz
+tar -xzf latest-ja.tar.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;wp-configphp-ファイルの作成と編集&#34;&gt;wp-config.php ファイルの作成と編集&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cp wordpress/wp-config-sample.php wordpress/wp-config.php
+vi wordpress/wp-config.php
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記情報を入力していく。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;define(&#39;DB_NAME&#39;, &#39;wordpress-db&#39;);
+define(&#39;DB_USER&#39;, &#39;wordpress-user&#39;);
+define(&#39;DB_PASSWORD&#39;, &#39;your_strong_password&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;次にAuthentication Unique Keys and Salts のセクションを修正する。これらの KEY と SALT の値は、WordPress ユーザーがローカルマシンに保存したブラウザクッキーに対する暗号化レイヤーを提供します。基本的に、ここで長くてランダムな値を指定すると、サイトのセキュリティが向上します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;define( &#39;AUTH_KEY&#39;,         &#39;put your unique phrase here&#39; );
+define( &#39;SECURE_AUTH_KEY&#39;,  &#39;put your unique phrase here&#39; );
+define( &#39;LOGGED_IN_KEY&#39;,    &#39;put your unique phrase here&#39; );
+define( &#39;NONCE_KEY&#39;,        &#39;put your unique phrase here&#39; );
+define( &#39;AUTH_SALT&#39;,        &#39;put your unique phrase here&#39; );
+define( &#39;SECURE_AUTH_SALT&#39;, &#39;put your unique phrase here&#39; );
+define( &#39;LOGGED_IN_SALT&#39;,   &#39;put your unique phrase here&#39; );
+define( &#39;NONCE_SALT&#39;,       &#39;put your unique phrase here&#39; );
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記にアクセスしてSALTのキーを取得して貼り付ける。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://api.wordpress.org/secret-key/1.1/salt/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://api.wordpress.org/secret-key/1.1/salt/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;パーミッション変更&#34;&gt;パーミッション変更&lt;/h4&gt;
+&lt;p&gt;wordpress配下の所有者とgroupをapache所有とする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo chown -R apache:apache /var/www/html/*
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;wordpressの設定&#34;&gt;WordPressの設定&lt;/h4&gt;
+&lt;p&gt;下記にアクセスして、WordPressのインストール設定を入力する。&lt;code&gt;xxx.xxx.xxx.xxx&lt;/code&gt;はEC2にアタッチしたElasitc IP。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://xxx.xxx.xxx.xxx/wp1/wp-admin/install.php&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://xxx.xxx.xxx.xxx/wp1/wp-admin/install.php&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200202132141602&#34; srcset=&#34;
+               /image-20200202132141602_hu4b917310f0ea5b95e955013b4b29f768_50931_bb59798faccf288de85593b31a6b54ba.png 400w,
+               /image-20200202132141602_hu4b917310f0ea5b95e955013b4b29f768_50931_258947c9e7af150dd44b84e9fe50a2b4.png 760w,
+               /image-20200202132141602_hu4b917310f0ea5b95e955013b4b29f768_50931_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200202132141602_hu4b917310f0ea5b95e955013b4b29f768_50931_bb59798faccf288de85593b31a6b54ba.png&#34;
+               width=&#34;760&#34;
+               height=&#34;678&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200202132156890&#34; srcset=&#34;
+               /image-20200202132156890_hu56047a0ad7e894ebb3c2ec97311903b3_14565_a2540e104de0bae65f35248c0b11ee0f.png 400w,
+               /image-20200202132156890_hu56047a0ad7e894ebb3c2ec97311903b3_14565_1a00a2f5206383485bb638fe4caa3cfb.png 760w,
+               /image-20200202132156890_hu56047a0ad7e894ebb3c2ec97311903b3_14565_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200202132156890_hu56047a0ad7e894ebb3c2ec97311903b3_14565_a2540e104de0bae65f35248c0b11ee0f.png&#34;
+               width=&#34;702&#34;
+               height=&#34;381&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200202132229235&#34; srcset=&#34;
+               /image-20200202132229235_huff422df92c737e9e2c7699192890b9ef_108955_336124b6a21ecb94cd98f6e67a35adfc.png 400w,
+               /image-20200202132229235_huff422df92c737e9e2c7699192890b9ef_108955_cba2e6819c59577c4da85963b9deb562.png 760w,
+               /image-20200202132229235_huff422df92c737e9e2c7699192890b9ef_108955_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200202132229235_huff422df92c737e9e2c7699192890b9ef_108955_336124b6a21ecb94cd98f6e67a35adfc.png&#34;
+               width=&#34;760&#34;
+               height=&#34;358&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;ここまででWordPressを稼働できるところまで来た。独自ドメインの設定とHTTPS化はまた別途。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>1つのEC2インスタンス上に複数のWordPressをホストする方法</title>
+      <link>/wordpress-ec2-multipul-host.html</link>
+      <pubDate>Thu, 13 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/wordpress-ec2-multipul-host.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;t2.microインスタンス上に複数WordPressをホストしたいと思ったことがあった。あまりネット上でググったところ情報が無かったのでメモしとおきます。&lt;/p&gt;
+&lt;p&gt;理由としては&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;各サイトPV数もなく重要度も高くなく負荷も高くないので、可能な限りt2.microの無料枠の中で運用したい&lt;/li&gt;
+&lt;li&gt;WordPressごとにEC2インスタンス立てるのは費用の観点からよろしくない。(t2.microインスタンスといえど)&lt;/li&gt;
+&lt;li&gt;複数インスタンスの管理がめんどくさい&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;です。&lt;/p&gt;
+&lt;h3 id=&#34;やり方&#34;&gt;やり方&lt;/h3&gt;
+&lt;p&gt;いくつか方法はありそうでした。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;WordPress側のマルチサイト機能&lt;/li&gt;
+&lt;li&gt;Apache（Webサーバ）とDBを複数立てる&lt;/li&gt;
+&lt;li&gt;ApacheのVirtualHost機能を使用&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h4 id=&#34;1-wordpress側のマルチサイト機能&#34;&gt;1. WordPress側のマルチサイト機能&lt;/h4&gt;
+&lt;p&gt;1.のWordPress側のマルチサイト機能はサブディレクトリとサブドメイン形式しか選べず、「複数ドメインを一つのWordPress上で運用」するのは出来ないみたいです。（知らないだけかもしれない）&lt;/p&gt;
+&lt;h5 id=&#34;サブディレクトリ形式&#34;&gt;サブディレクトリ形式&lt;/h5&gt;
+&lt;p&gt;&lt;a href=&#34;http://example.com/blog1/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://example.com/blog1/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://example.com/blog2/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://example.com/blog2/&lt;/a&gt;&lt;/p&gt;
+&lt;h5 id=&#34;サブドメイン形式&#34;&gt;サブドメイン形式&lt;/h5&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog1.example.com/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://blog1.example.com/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog2.example.com/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://blog2.example.com/&lt;/a&gt;&lt;/p&gt;
+&lt;h4 id=&#34;2apachewebサーバとdbを複数立てる&#34;&gt;2.Apache（Webサーバ）とDBを複数立てる&lt;/h4&gt;
+&lt;p&gt;2.はt2.microで運用する上で限られたリソース食いそうなので出来ればやりたくなかった。&lt;/p&gt;
+&lt;p&gt;当初は下記の通りApache自体を複数に分けてリッスンポートも分けて…とする必要があるのかな、と思っていたのですが、3.のVirtualHost機能を使えばアクセス先のURLごとに制御が可能でした。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200209154737219.png&#34; alt=&#34;image-20200209154737219&#34;  /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;3apacheのvirtualhost機能を使用&#34;&gt;3.ApacheのVirtualHost機能を使用&lt;/h4&gt;
+&lt;p&gt;結果、3.のデータベース層とApacheのVirtualHost機能を使うこと出来ました。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200209154507432.png&#34; alt=&#34;image-20200209154507432&#34;  /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;設定方法&#34;&gt;設定方法&lt;/h3&gt;
+&lt;h4 id=&#34;mysql上にデータベースを追加する&#34;&gt;MySQL上にデータベースを追加する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create database wp2;
+
+grant all privileges on `wp2`.* to &#39;wp2&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;xxxxxxxx&#39;;
+show grants for wp2@localhost;
+SELECT host, user FROM mysql.user;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apacheのディレクトリを作成&#34;&gt;Apacheのディレクトリを作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mkdir -p /var/www/html1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;apacheのマルチサイト設定&#34;&gt;Apacheのマルチサイト設定&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi /etc/httpd/conf/httpd.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下記設定を追加する。&lt;/p&gt;
+&lt;p&gt;ServerNameに記載している&lt;code&gt;example1.com&lt;/code&gt;にアクセスした人は&lt;code&gt;/var/www/html/&lt;/code&gt;のページが表示され、&lt;code&gt;example2.com&lt;/code&gt;にアクセスした人は&lt;code&gt;/var/www/html1/&lt;/code&gt;のページが表示されるようになります。なお、Apacheのバージョンは2.4です。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;&amp;lt;VirtualHost *:80&amp;gt;
+  DocumentRoot /var/www/html/
+  ServerName example1.com:80
+&amp;lt;/VirtualHost&amp;gt;
+
+&amp;lt;VirtualHost *:80&amp;gt;
+  DocumentRoot /var/www/html1/
+  ServerName example2.com:80
+&amp;lt;/VirtualHost&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以降は通常のWordPressのインストールと同様なのでこちらの「WordPress」のインストールをご参照ください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;EC2上にWordPressをインストールする | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/wordpress-ec2-install.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/wordpress-ec2-install.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;最後に&#34;&gt;最後に&lt;/h2&gt;
+&lt;p&gt;ApacheとMySQLを共有しているので何かトラブルがあった場合は仲良く一緒に影響を受けてしまうので重要度が高まってきたら別インスタンスを立ててホストするなど検討が必要だと思います。&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

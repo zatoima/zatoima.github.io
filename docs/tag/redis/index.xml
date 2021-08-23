@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Redis | my opinion is my own</title>
+    <link>/tag/redis/</link>
+      <atom:link href="/tag/redis/index.xml" rel="self" type="application/rss+xml" />
+    <description>Redis</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 07 Apr 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>Redis</title>
+      <link>/tag/redis/</link>
+    </image>
+    
+    <item>
+      <title>ElastiCache（Redis）への定期書き込み用スクリプト</title>
+      <link>/aws-elasticache-redis-bash-write-monitoring.html</link>
+      <pubDate>Wed, 07 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-elasticache-redis-bash-write-monitoring.html</guid>
+      <description>&lt;p&gt;ElastiCache Redisのフェイルオーバーやメンテナンス時にどのくらい影響があるかを調査する時に適当に準備したスクリプト&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;タイムアウトを0.1秒に設定
+&lt;ul&gt;
+&lt;li&gt;接続不可の場合に、タイムアウトさせて次の処理に進むため&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;redis-cliの戻り値で処理成功か否かでsleep時間を微調整&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;#!/bin/bash
+for a in {1..100000}
+  do
+    dt_now=`date &amp;quot;+%Y%m%d%H%M%S&amp;quot;`
+    echo &amp;quot;===================&amp;quot;
+    timeout -sKILL 0.1 redis-cli -c -h redis-test11.xxxxx.ng.0001.apne1.cache.amazonaws.com -p 6379 set $dt_now $a
+      if [ $? != 0 ]; then 
+        # タイムアウトしたときの処理
+        echo &amp;quot;異常終了orタイムアウト&amp;quot;
+      else
+        # 正常終了したときの処理
+        echo &amp;quot;正常終了&amp;quot;
+        sleep 1
+      fi
+    echo $dt_now
+    echo &amp;quot;===================&amp;quot;
+  done
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ElastiCacheのRedisにベンチマークを実施する</title>
+      <link>/aws-elasticache-redis-benchmark.html</link>
+      <pubDate>Fri, 27 Nov 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-elasticache-redis-benchmark.html</guid>
+      <description>&lt;p&gt;デフォルトで付属される&lt;code&gt;redis-benchmark&lt;/code&gt;を使用してElastiCacheのRedisに対してベンチマークをしてみる。&lt;/p&gt;
+&lt;h4 id=&#34;マニュアル&#34;&gt;マニュアル&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;How fast is Redis? – Redis &lt;a href=&#34;https://redis.io/topics/benchmarks&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://redis.io/topics/benchmarks&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;オプション説明&#34;&gt;オプション説明&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;オプション&lt;/th&gt;
+&lt;th&gt;オプション補足&lt;/th&gt;
+&lt;th&gt;デフォルト値&lt;/th&gt;
+&lt;th&gt;説明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;-h&lt;/td&gt;
+&lt;td&gt;&lt;hostname&gt;&lt;/td&gt;
+&lt;td&gt;127.0.0.1&lt;/td&gt;
+&lt;td&gt;サーバーのホスト名を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-p&lt;/td&gt;
+&lt;td&gt;&lt;port&gt;&lt;/td&gt;
+&lt;td&gt;6379&lt;/td&gt;
+&lt;td&gt;サーバポートを指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-s&lt;/td&gt;
+&lt;td&gt;&lt;socket&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;サーバソケットを指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-c&lt;/td&gt;
+&lt;td&gt;&lt;clients&gt;&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;td&gt;同時接続数を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-n&lt;/td&gt;
+&lt;td&gt;&lt;requests&gt;&lt;/td&gt;
+&lt;td&gt;100000&lt;/td&gt;
+&lt;td&gt;リクエストの数を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-d&lt;/td&gt;
+&lt;td&gt;&lt;size&gt;&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;データサイズのバイトの形式でSET / GETの値を指定&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-r&lt;/td&gt;
+&lt;td&gt;&lt;keyspacelen&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;実際のオペレーションを想定してランダムなコマンドを発行して、キャッシュミスを誘発する&lt;br /&gt;例：100kの可能なキーのうちすべての操作にランダムキーを使用して100万のSET操作を実行する&lt;br /&gt;redis-benchmark -t set -r  100000 -n 1000000&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-k&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;1=keep alive 0=reconnect&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-P&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;パイプラインを有効化&lt;br /&gt;&lt;a href=&#34;https://redis.io/topics/pipelining&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://redis.io/topics/pipelining&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-q&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;クエリ/秒の値のみを表示&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-csv&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;CSV形式で出力。ヘッダーは出力されないので注意&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-l&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;ひたすらループ処理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-t&lt;/td&gt;
+&lt;td&gt;&lt;tests&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;カンマで区切られたテストのリストのみを実行     例： -t get,set → get と setコマンドのみ実行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;-I&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;アイドルモード&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h4 id=&#34;パターン1&#34;&gt;パターン1&lt;/h4&gt;
+&lt;p&gt;デフォルト設定で実施。リクエスト数「100,000」、同時接続数「50」、データサイズ「2バイト」等&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;出力結果&lt;/p&gt;
+&lt;p&gt;レイテンシのばらつきやレクエストが何秒で完了したか出力&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com
+====== PING_INLINE ======
+  100000 requests completed in 2.62 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+12.45% &amp;lt;= 1 milliseconds
+98.95% &amp;lt;= 2 milliseconds
+99.54% &amp;lt;= 3 milliseconds
+99.75% &amp;lt;= 4 milliseconds
+99.90% &amp;lt;= 5 milliseconds
+99.97% &amp;lt;= 6 milliseconds
+100.00% &amp;lt;= 6 milliseconds
+38138.82 requests per second
+
+～省略～
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;パターン2&#34;&gt;パターン2&lt;/h4&gt;
+&lt;p&gt;サイレントモードで実施する。クエリ/秒の値のみを表示。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -q
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;出力結果&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -q
+PING_INLINE: 43840.42 requests per second
+PING_BULK: 35958.29 requests per second
+SET: 37907.50 requests per second
+GET: 34293.55 requests per second
+INCR: 41288.19 requests per second
+LPUSH: 43327.55 requests per second
+RPUSH: 43725.41 requests per second
+LPOP: 46403.71 requests per second
+RPOP: 44943.82 requests per second
+SADD: 45085.66 requests per second
+HSET: 27563.40 requests per second
+SPOP: 34258.31 requests per second
+LPUSH (needed to benchmark LRANGE): 31279.32 requests per second
+LRANGE_100 (first 100 elements): 30902.35 requests per second
+LRANGE_300 (first 300 elements): 15941.34 requests per second
+LRANGE_500 (first 450 elements): 12241.40 requests per second
+LRANGE_600 (first 600 elements): 9856.10 requests per second
+MSET (10 keys): 25766.55 requests per second
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;パターン3&#34;&gt;パターン3&lt;/h4&gt;
+&lt;p&gt;クライアント数を「100」に増やし、かつ「set」と「get」コマンドのみ実行する。（サイレントモード）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -q -t set,get
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;出力結果&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -q -t set,get
+SET: 45766.59 requests per second
+GET: 42789.90 requests per second
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;パターン4&#34;&gt;パターン4&lt;/h4&gt;
+&lt;p&gt;CSVモードで実行&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -t set,get --csv
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;出力結果&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -t set,get --csv
+&amp;quot;SET&amp;quot;,&amp;quot;41562.76&amp;quot;
+&amp;quot;GET&amp;quot;,&amp;quot;38491.14&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;その他&#34;&gt;その他&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;redis-cli&lt;/code&gt; に&lt;code&gt;--latency&lt;/code&gt;を付与することでPINGを使用したレイテンシを計測することが出来る。ひたすらサンプルを取り続けるのでCtrl+Cでストップする&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ redis-cli -h redistest.xxxx.0001.apne1.cache.amazonaws.com -p 6379 --latency
+min: 0, max: 18, avg: 0.40 (4591 samples)
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

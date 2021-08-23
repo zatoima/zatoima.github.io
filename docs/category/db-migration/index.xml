@@ -1,0 +1,1703 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DB Migration | my opinion is my own</title>
+    <link>/category/db-migration/</link>
+      <atom:link href="/category/db-migration/index.xml" rel="self" type="application/rss+xml" />
+    <description>DB Migration</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 30 Apr 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>DB Migration</title>
+      <link>/category/db-migration/</link>
+    </image>
+    
+    <item>
+      <title>OracleとPostgreSQLのシーケンスキャッシュの動作差異</title>
+      <link>/oracle-postgresql-sequence-cache-incompatible.html</link>
+      <pubDate>Fri, 30 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-sequence-cache-incompatible.html</guid>
+      <description>&lt;p&gt;OracleとPostgreSQLのシーケンスキャッシュを使用した場合の動作差異についてメモ。PostgreSQLの&lt;code&gt;cache&lt;/code&gt;はデフォルト1なので、変更しない限りは同じような採番になるはずだが、基本的な構文がOracleとPostgreSQLで同じなので、そのまま使わないように注意。&lt;/p&gt;
+&lt;p&gt;ここではPostgreSQLのCache値を変更した場合の注意点を記載。&lt;/p&gt;
+&lt;h3 id=&#34;シーケンスの作成&#34;&gt;シーケンスの作成&lt;/h3&gt;
+&lt;p&gt;OracleとPostgreSQL両方ともシーケンスの始まりを「1」、キャッシュを「20」と設定。&lt;/p&gt;
+&lt;h5 id=&#34;oracle&#34;&gt;Oracle&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop sequence oraseq1;
+create sequence oraseq1 start with 1 increment by 1 cache 20;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop sequence pgsqlseq1;
+create sequence pgsqlseq1 start with 1 increment by 1 cache 20;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;oracle環境での動作&#34;&gt;Oracle環境での動作&lt;/h3&gt;
+&lt;h5 id=&#34;session-a&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;結果は当然シーケンス値は「1」となる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-b&#34;&gt;Session B&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;別セッションでシーケンスを取得する場合、Oracleではnextvalもcurrvalが「2」となる。※ここの動作がOracleとPostgreSQLが異なる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-a-1&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select oraseq1.nextval from dual;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; select oraseq1.nextval from dual;
+
+   NEXTVAL
+----------
+	 3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql環境での動作&#34;&gt;PostgreSQL環境での動作&lt;/h3&gt;
+&lt;h5 id=&#34;session-a-2&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 1         |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-b-1&#34;&gt;Session B&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 21        |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;session-a-3&#34;&gt;Session A&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select nextval(&#39;pgsqlseq1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; select nextval(&#39;pgsqlseq1&#39;);                                                      
++-----------+
+| nextval   |
+|-----------|
+| 2         |
++-----------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;結果&#34;&gt;結果&lt;/h3&gt;
+&lt;h4 id=&#34;start-1cache--20のシーケンスでnextvalを実行した場合のシーケンス値について&#34;&gt;start 1、cache  20のシーケンスでnextvalを実行した場合のシーケンス値について&lt;/h4&gt;
+&lt;p&gt;こうなる。※OracleはOrderオプション指定無しを前提&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;実行順序&lt;/th&gt;
+&lt;th&gt;セッション&lt;/th&gt;
+&lt;th&gt;Oracle&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session A&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session B&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;↓&lt;/td&gt;
+&lt;td&gt;Session A&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;最後に&#34;&gt;最後に&lt;/h3&gt;
+&lt;p&gt;Oracleでは特定事象が起きないとシーケンスは飛び番にはならないと思っているが、Cache値をデフォルトから変更すると、PostgreSQLは安易に起こりうる。連番ではなく、一意を保証という点では良いかもしれない。そもそもキャッシュしている時点で連番になることを保証するのはOracleでも難しいはず。Oracleのインスタンス障害や共有プールからのエージアウト等があった場合にはキャッシュ分は飛ぶので。&lt;/p&gt;
+&lt;p&gt;PostgreSQLでシーケンスをキャッシュすると、複数セッションからシーケンスを取る場合に連番とはならないので注意が必要。連番を保証したい場合は、シーケンスのキャッシュ値をデフォルトの「1」のままにするか、SERIALデータ型を使うか、になると考えられる。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ora2pgとSCTの変換結果の差異</title>
+      <link>/aws-sct-ora2pg-conversion-compare.html</link>
+      <pubDate>Thu, 30 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-sct-ora2pg-conversion-compare.html</guid>
+      <description>&lt;p&gt;興味本位でOracleからPostgreSQLへスキーマ移行する場合によく使用される&lt;code&gt;ora2pg&lt;/code&gt;と&lt;code&gt;SCT(AWS Schema Conversion Tool )&lt;/code&gt;の変換結果を比較してみた。ora2pg、SCT共にデフォルト設定で実施してwinmergeで比較してみた。左側がSCT、右側がora2pgとなる。予想以上に結果が異なって驚いた。&lt;/p&gt;
+&lt;p&gt;ソースとなるOracle側に作ったテーブルはこちら。&lt;/p&gt;
+&lt;h4 id=&#34;create文&#34;&gt;CREATE文&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE &amp;quot;DATATYPES&amp;quot;(
+ &amp;quot;BFILE&amp;quot; BFILE,
+ &amp;quot;BINARY_FLOAT&amp;quot; BINARY_FLOAT,
+ &amp;quot;BINARY_DOUBLE&amp;quot; BINARY_DOUBLE,
+ &amp;quot;BLOB&amp;quot; BLOB,
+ &amp;quot;CHAR&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CHARACTER&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CLOB&amp;quot; CLOB,
+ &amp;quot;NCLOB&amp;quot; NCLOB,
+ &amp;quot;DATE&amp;quot; DATE,
+ &amp;quot;DECIMAL&amp;quot; NUMBER(3,2),
+ &amp;quot;DEC&amp;quot; NUMBER(3,2),
+ &amp;quot;DOUBLE_PRECISION&amp;quot; FLOAT(126),
+ &amp;quot;FLOAT&amp;quot; FLOAT(3),
+ &amp;quot;INTEGER&amp;quot; NUMBER(*,0),
+ &amp;quot;INT&amp;quot; NUMBER(*,0),
+ &amp;quot;INTERVAL_YEAR&amp;quot; INTERVAL YEAR(4) TO MONTH,
+ &amp;quot;INTERVAL_DAY&amp;quot; INTERVAL DAY(4) TO SECOND(4),
+ &amp;quot;LONG&amp;quot; LONG,
+ &amp;quot;NCHAR&amp;quot; NCHAR(10),
+ &amp;quot;NCHAR_VARYING&amp;quot; NVARCHAR2(10),
+ &amp;quot;NUMBER&amp;quot; NUMBER(9,9),
+ &amp;quot;NUMBER1&amp;quot; NUMBER(9,0),
+ &amp;quot;NUMBER(*)&amp;quot; NUMBER,
+ &amp;quot;NUMERIC&amp;quot; NUMBER(9,9),
+ &amp;quot;NVARCHAR2&amp;quot; NVARCHAR2(10),
+ &amp;quot;RAW&amp;quot; RAW(10),
+ &amp;quot;REAL&amp;quot; FLOAT(63),
+ &amp;quot;ROW_ID&amp;quot; ROWID,
+ &amp;quot;SMALLINT&amp;quot; NUMBER(*,0),
+ &amp;quot;TIMESTAMP&amp;quot; TIMESTAMP(5),
+ &amp;quot;TIMESTAMP WITH TIME ZONE&amp;quot; TIMESTAMP(5) WITH TIME ZONE,
+ &amp;quot;UROWID&amp;quot; UROWID(10),
+ &amp;quot;VARCHAR&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;VARCHAR2&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;XMLTYPE&amp;quot; &amp;quot;PUBLIC&amp;quot;.&amp;quot;XMLTYPE&amp;quot;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル定義&#34;&gt;テーブル定義&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;SQL&amp;gt; desc DATATYPES;
+ Name					   Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ BFILE						    BINARY FILE LOB
+ BINARY_FLOAT					BINARY_FLOAT
+ BINARY_DOUBLE					BINARY_DOUBLE
+ BLOB						    BLOB
+ CHAR						    CHAR(10)
+ CHARACTER					    CHAR(10)
+ CLOB						    CLOB
+ NCLOB						    NCLOB
+ DATE						    DATE
+ DECIMAL					    NUMBER(3,2)
+ DEC						    NUMBER(3,2)
+ DOUBLE_PRECISION				FLOAT(126)
+ FLOAT						    FLOAT(3)
+ INTEGER					    NUMBER(38)
+ INT						    NUMBER(38)
+ INTERVAL_YEAR					INTERVAL YEAR(4) TO MONTH
+ INTERVAL_DAY					INTERVAL DAY(4) TO SECOND(4)
+ LONG						    LONG
+ NCHAR						    NCHAR(10)
+ NCHAR_VARYING					NVARCHAR2(10)
+ NUMBER 					    NUMBER(9,9)
+ NUMBER1					    NUMBER(9)
+ NUMBER(* )					    NUMBER
+ NUMERIC					    NUMBER(9,9)
+ NVARCHAR2					    NVARCHAR2(10)
+ RAW						    RAW(10)
+ REAL						    FLOAT(63)
+ ROW_ID 					    ROWID
+ SMALLINT					    NUMBER(38)
+ TIMESTAMP					    TIMESTAMP(5)
+ TIMESTAMP WITH TIME ZONE		 TIMESTAMP(5) WITH TIME ZONE
+ UROWID 					    ROWID
+ VARCHAR					    VARCHAR2(10)
+ VARCHAR2					    VARCHAR2(10)
+ XMLTYPE					    PUBLIC.XMLTYPE STORAGE BINARY
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;変換結果&#34;&gt;変換結果&lt;/h4&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200530231421545.png&#34; alt=&#34;image-20200530231421545&#34; style=&#34;zoom:150%;&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;表形式で記載。右側のora2pgとSCT側がPostgreSQL結果で&lt;code&gt;\d&lt;/code&gt;で定義を出力した結果となる。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;No.&lt;/th&gt;
+&lt;th&gt;Oracle  (※descの結果）&lt;/th&gt;
+&lt;th&gt;SCT  (\d メタコマンド結果）&lt;/th&gt;
+&lt;th&gt;ora2pg  (\d メタコマンド結果）&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;BINARY FILE LOB&lt;/td&gt;
+&lt;td&gt;character varying(255)&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;BINARY_FLOAT&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;BINARY_DOUBLE&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;BLOB&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;CLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;NCLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;DATE&lt;/td&gt;
+&lt;td&gt;timestamp(0) without time zone&lt;/td&gt;
+&lt;td&gt;timestamp without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;numeric(3,2)&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;numeric(3,2)&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;FLOAT(126)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;FLOAT(3)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;15&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;td&gt;INTERVAL YEAR(4) TO MONTH&lt;/td&gt;
+&lt;td&gt;interval year to month&lt;/td&gt;
+&lt;td&gt;interval year to month&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;td&gt;INTERVAL DAY(4) TO SECOND(4)&lt;/td&gt;
+&lt;td&gt;interval day to second(4)&lt;/td&gt;
+&lt;td&gt;interval day to second(4)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;18&lt;/td&gt;
+&lt;td&gt;LONG&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;19&lt;/td&gt;
+&lt;td&gt;NCHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;20&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;numeric(9,9)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;22&lt;/td&gt;
+&lt;td&gt;NUMBER(9)&lt;/td&gt;
+&lt;td&gt;numeric(9,0)&lt;/td&gt;
+&lt;td&gt;integer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;td&gt;NUMBER&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;td&gt;bigint&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;24&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;numeric(9,9)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;26&lt;/td&gt;
+&lt;td&gt;RAW(10)&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;27&lt;/td&gt;
+&lt;td&gt;FLOAT(63)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;28&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;character(255)&lt;/td&gt;
+&lt;td&gt;oid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;29&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;30&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5)&lt;/td&gt;
+&lt;td&gt;timestamp(5) without time zone&lt;/td&gt;
+&lt;td&gt;timestamp without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;31&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5) WITH TIME ZONE&lt;/td&gt;
+&lt;td&gt;timestamp(5) with time zone&lt;/td&gt;
+&lt;td&gt;timestamp with time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;32&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;character varying&lt;/td&gt;
+&lt;td&gt;oid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;33&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;34&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;35&lt;/td&gt;
+&lt;td&gt;PUBLIC.XMLTYPE STORAGE BINARY&lt;/td&gt;
+&lt;td&gt;xml&lt;/td&gt;
+&lt;td&gt;xml&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施</title>
+      <link>/oracle-postgresql-ora2pg-migration.html</link>
+      <pubDate>Mon, 06 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-ora2pg-migration.html</guid>
+      <description>&lt;p&gt;ora2pgのセットアップ、変換作業の実施。インストール手順は&lt;a href=&#34;http://ora2pg.darold.net/documentation.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;ora2pgのサイト&lt;/a&gt;を参照。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;instant-client-packageのインストール&#34;&gt;Instant Client Packageのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Instant Clientのrpmダウンロードは&lt;a href=&#34;https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Oracle社のサイト&lt;/a&gt;から。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sudo rpm -ivh oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-devel-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-jdbc-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-sqlplus-19.6.0.0.0-1.x86_64.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;環境変数の設定&#34;&gt;環境変数の設定&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;vi .bash_profile
+
+↓下記を追記
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;source .bash_profile
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;dbdoracleのインストール&#34;&gt;DBD::Oracleのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;sudo su -
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+
+yum -y install perl-CPAN
+yum -y install libyaml-devel
+yum -y install gcc
+
+perl -MCPAN -e shell #全てEnter
+perl -MCPAN -e &#39;install DBI&#39;
+perl -MCPAN -e &#39;install DBD::Oracle&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pgのインストール&#34;&gt;ora2pgのインストール&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;sudo su - ec2-user
+sudo yum -y install git
+git clone https://github.com/darold/ora2pg.git
+cd ./ora2pg
+perl Makefile.PL
+make &amp;amp;&amp;amp; make install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ora2pgのインストール自体は以上で終了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pgの初期セッティング&#34;&gt;ora2pgの初期セッティング&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;mkdir ora2pg
+ora2pg --project_base ~/ora2pg --init_project migration_test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;ora2pgconfの設定&#34;&gt;ora2pg.confの設定&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;./config配下にora2pg.confが作成されているのでこのファイルを修正する。細かい挙動を制御するパラメータもあるが割愛。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;vi ./config/ora2pg.conf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;# Set Oracle database connection (datasource, user, password)
+ORACLE_DSN	dbi:Oracle:host=xxxxxxxxxxxxx;sid=ora19db;port=1521
+ORACLE_USER	ikotest
+ORACLE_PWD	oracle
+
+# Oracle schema/owner to use
+SCHEMA	ikotest
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;スキーマ定義の全体export実施&#34;&gt;スキーマ定義の全体export実施&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;./export_schema.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行後は「reports」、「schema」配下を重点的に確認&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;├── config
+│   └── ora2pg.conf
+├── CONSTRAINTS_output.sql
+├── data
+├── export_schema.sh
+├── import_all.sh
+├── INDEXES_output.sql
+├── reports
+│   ├── columns.txt
+│   ├── report.html
+│   └── tables.txt
+├── schema
+│   ├── dblinks
+│   ├── directories
+│   ├── functions
+│   ├── grants
+│   ├── mviews
+│   ├── packages
+│   ├── partitions
+│   ├── procedures
+│   ├── sequences
+│   ├── synonyms
+│   │   └── synonym.sql
+│   ├── tables
+│   │   ├── CONSTRAINTS_table.sql
+│   │   ├── INDEXES_table.sql
+│   │   └── table.sql
+│   ├── tablespaces
+│   ├── triggers
+│   ├── types
+│   └── views
+└── sources
+    ├── functions
+    ├── mviews
+    ├── packages
+    ├── partitions
+    ├── procedures
+    ├── triggers
+    ├── types
+    └── views
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h5 id=&#34;sql変換&#34;&gt;SQL変換&lt;/h5&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;ora2pg -c config/ora2pg.conf -i input.sql -o output.sql -t QUERY
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い</title>
+      <link>/oracle-postgresql-char-varchar-byte.html</link>
+      <pubDate>Wed, 24 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-char-varchar-byte.html</guid>
+      <description>&lt;p&gt;charとvarcharの引数指定はOracleはバイト数である一方PostgreSQLは文字数となる。UTF8環境のOracleでchar(10)とした場合は3文字しか格納出来ない。一方、PostgreSQLでchar(10)と設定した場合は、10文字格納出来る。ora2pgやSCT(schema conversion tool)ではこの非互換は変換されないので注意が必要。&lt;/p&gt;
+&lt;h3 id=&#34;oraclepostgresql共通&#34;&gt;Oracle/PostgreSQL共通&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create table chartest(a char(10));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h3&gt;
+&lt;p&gt;char(10)の列に全角10文字を格納し、長さとバイト数を確認。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres&amp;gt; insert into chartest values(&#39;１２３４５６７８９あ&#39;);                                                                                                                              
+INSERT 0 1
+Time: 0.004s
+postgres&amp;gt; SELECT LENGTH(a) from chartest;                                                                                                                                                   
++----------+
+| length   |
+|----------|
+| 10       |
++----------+
+SELECT 1
+Time: 0.017s
+postgres&amp;gt; SELECT OCTET_LENGTH(a) from chartest;                                                                                                                                             
++----------------+
+| octet_length   |
+|----------------|
+| 30             |
++----------------+
+SELECT 1
+Time: 0.017s
+#文字数オーバーなパターン
+postgres&amp;gt; insert into chartest values(&#39;１２３４５６７８９あい&#39;);                                                                                                                            
+value too long for type character(10)
+
+Time: 0.004s
+postgres&amp;gt;  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.jp/document/11/html/datatype-character.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/11/html/datatype-character.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SQLは2つの主要な文字データ型を定義しています。 &lt;code&gt;character varying(*&lt;/code&gt;n&lt;code&gt;*)&lt;/code&gt;と&lt;code&gt;character(*&lt;/code&gt;n&lt;code&gt;*)&lt;/code&gt;です。 ここで*&lt;code&gt;n&lt;/code&gt;*は正の整数です。 これらのデータ型は2つとも*&lt;code&gt;n&lt;/code&gt;*文字長（バイト数ではなく）までの文字列を保存できます。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;oracle&#34;&gt;Oracle&lt;/h3&gt;
+&lt;p&gt;同様に10バイト分のデータを入れて確認。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SQL&amp;gt; insert into chartest values(&#39;１２３&#39;);
+
+1 row inserted.
+
+SQL&amp;gt; SELECT LENGTHB(a) from chartest;
+   LENGTHB(A) 
+_____________ 
+           10 
+
+
+SQL&amp;gt; SELECT LENGTH(a) from chartest;
+   LENGTH(A) 
+____________ 
+           4 
+
+
+SQL&amp;gt; insert into chartest values(&#39;１２３４&#39;);
+
+Error starting at line : 1 in command -
+insert into chartest values(&#39;１２３４&#39;)
+Error report -
+ORA-12899: value too large for column &amp;quot;ADMIN&amp;quot;.&amp;quot;CHARTEST&amp;quot;.&amp;quot;A&amp;quot; (actual: 12, maximum: 10)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.oracle.com/cd/F19136_01/sqlrf/Data-Types.html#GUID-7B72E154-677A-4342-A1EA-C74C1EA928E6&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/F19136_01/sqlrf/Data-Types.html#GUID-7B72E154-677A-4342-A1EA-C74C1EA928E6&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Oracleの組込みデータ型&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;追記redshiftの場合&#34;&gt;追記：Redshiftの場合&lt;/h3&gt;
+&lt;p&gt;PostgreSQLベースのRedshiftはPostgreSQLと同じで文字数かー、と思っていてマニュアルを念の為に確認してみるとバイト単位だったので注意。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_Character_types.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_Character_types.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;CHAR および VARCHAR のデータ型は、文字単位でなくバイト単位で定義されます。CHAR 列にはシングルバイト文字のみを含めることができます。したがって、CHAR(10) 列には、最大 10 バイト長の文字列を含めることができます。VARCHAR にはマルチバイト文字 (1 文字あたり最大で 4 バイトまで) を含めることができます。例えば、VARCHAR(12) 列には、シングルバイト文字なら 12 個、2 バイト文字なら 6 個、3 バイト文字なら 4 個、4 バイト文字なら 3 個含めることができます。&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>ora2pgを使用したOracleからPostgreSQLへの変換結果</title>
+      <link>/aws-ora2pg-oracle-to-aurora-postgresql-conversion.html</link>
+      <pubDate>Sun, 21 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-ora2pg-oracle-to-aurora-postgresql-conversion.html</guid>
+      <description>&lt;p&gt;以前にAWS SCTで実施したOracleからAurora(PostgreSQL)への変換を今度はora2pgで実行してみた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果 | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/aws-sct-oracle-to-aurora-postgresql-conversion.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/aws-sct-oracle-to-aurora-postgresql-conversion.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;oracle&#34;&gt;Oracle&lt;/h3&gt;
+&lt;h4 id=&#34;create文&#34;&gt;CREATE文&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE &amp;quot;DATATYPES&amp;quot;(
+ &amp;quot;BFILE&amp;quot; BFILE,
+ &amp;quot;BINARY_FLOAT&amp;quot; BINARY_FLOAT,
+ &amp;quot;BINARY_DOUBLE&amp;quot; BINARY_DOUBLE,
+ &amp;quot;BLOB&amp;quot; BLOB,
+ &amp;quot;CHAR&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CHARACTER&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CLOB&amp;quot; CLOB,
+ &amp;quot;NCLOB&amp;quot; NCLOB,
+ &amp;quot;DATE&amp;quot; DATE,
+ &amp;quot;DECIMAL&amp;quot; NUMBER(3,2),
+ &amp;quot;DEC&amp;quot; NUMBER(3,2),
+ &amp;quot;DOUBLE_PRECISION&amp;quot; FLOAT(126),
+ &amp;quot;FLOAT&amp;quot; FLOAT(3),
+ &amp;quot;INTEGER&amp;quot; NUMBER(*,0),
+ &amp;quot;INT&amp;quot; NUMBER(*,0),
+ &amp;quot;INTERVAL_YEAR&amp;quot; INTERVAL YEAR(4) TO MONTH,
+ &amp;quot;INTERVAL_DAY&amp;quot; INTERVAL DAY(4) TO SECOND(4),
+ &amp;quot;LONG&amp;quot; LONG,
+ &amp;quot;NCHAR&amp;quot; NCHAR(10),
+ &amp;quot;NCHAR_VARYING&amp;quot; NVARCHAR2(10),
+ &amp;quot;NUMBER&amp;quot; NUMBER(9,9),
+ &amp;quot;NUMBER1&amp;quot; NUMBER(9,0),
+ &amp;quot;NUMBER(*)&amp;quot; NUMBER,
+ &amp;quot;NUMERIC&amp;quot; NUMBER(9,9),
+ &amp;quot;NVARCHAR2&amp;quot; NVARCHAR2(10),
+ &amp;quot;RAW&amp;quot; RAW(10),
+ &amp;quot;REAL&amp;quot; FLOAT(63),
+ &amp;quot;ROW_ID&amp;quot; ROWID,
+ &amp;quot;SMALLINT&amp;quot; NUMBER(*,0),
+ &amp;quot;TIMESTAMP&amp;quot; TIMESTAMP(5),
+ &amp;quot;TIMESTAMP WITH TIME ZONE&amp;quot; TIMESTAMP(5) WITH TIME ZONE,
+ &amp;quot;UROWID&amp;quot; UROWID(10),
+ &amp;quot;VARCHAR&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;VARCHAR2&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;XMLTYPE&amp;quot; &amp;quot;PUBLIC&amp;quot;.&amp;quot;XMLTYPE&amp;quot;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル定義&#34;&gt;テーブル定義&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;SQL&amp;gt; desc DATATYPES;
+ Name					   Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ BFILE						    BINARY FILE LOB
+ BINARY_FLOAT					BINARY_FLOAT
+ BINARY_DOUBLE					BINARY_DOUBLE
+ BLOB						    BLOB
+ CHAR						    CHAR(10)
+ CHARACTER					    CHAR(10)
+ CLOB						    CLOB
+ NCLOB						    NCLOB
+ DATE						    DATE
+ DECIMAL					    NUMBER(3,2)
+ DEC						    NUMBER(3,2)
+ DOUBLE_PRECISION				FLOAT(126)
+ FLOAT						    FLOAT(3)
+ INTEGER					    NUMBER(38)
+ INT						    NUMBER(38)
+ INTERVAL_YEAR					INTERVAL YEAR(4) TO MONTH
+ INTERVAL_DAY					INTERVAL DAY(4) TO SECOND(4)
+ LONG						    LONG
+ NCHAR						    NCHAR(10)
+ NCHAR_VARYING					NVARCHAR2(10)
+ NUMBER 					    NUMBER(9,9)
+ NUMBER1					    NUMBER(9)
+ NUMBER(* )					    NUMBER
+ NUMERIC					    NUMBER(9,9)
+ NVARCHAR2					    NVARCHAR2(10)
+ RAW						    RAW(10)
+ REAL						    FLOAT(63)
+ ROW_ID 					    ROWID
+ SMALLINT					    NUMBER(38)
+ TIMESTAMP					    TIMESTAMP(5)
+ TIMESTAMP WITH TIME ZONE		 TIMESTAMP(5) WITH TIME ZONE
+ UROWID 					    ROWID
+ VARCHAR					    VARCHAR2(10)
+ VARCHAR2					    VARCHAR2(10)
+ XMLTYPE					    PUBLIC.XMLTYPE STORAGE BINARY
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h3&gt;
+&lt;p&gt;CREATE文&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE datatypes (
+	bfile bytea,
+	binary_float double precision,
+	binary_double double precision,
+	blob bytea,
+	char char(10),
+	character char(10),
+	clob text,
+	nclob text,
+	date timestamp,
+	decimal real,
+	dec real,
+	double_precision double precision,
+	float double precision,
+	integer numeric(38),
+	int numeric(38),
+	interval_year INTERVAL YEAR TO MONTH,
+	interval_day INTERVAL DAY TO SECOND(4),
+	long text,
+	nchar char(10),
+	nchar_varying varchar(10),
+	number double precision,
+	number1 integer,
+	&amp;quot;number(*)&amp;quot; bigint,
+	numeric double precision,
+	nvarchar2 varchar(10),
+	raw bytea,
+	real double precision,
+	row_id oid,
+	smallint numeric(38),
+	timestamp timestamp,
+	&amp;quot;timestamp with time zone&amp;quot; timestamp with time zone,
+	urowid oid,
+	varchar varchar(10),
+	varchar2 varchar(10),
+	xmltype xml
+) ;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル定義-1&#34;&gt;テーブル定義&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;postgres&amp;gt; \d datatypes                                                                                                                                                                      
++--------------------------+-----------------------------+-------------+
+| Column                   | Type                        | Modifiers   |
+|--------------------------+-----------------------------+-------------|
+| bfile                    | bytea                       |             |
+| binary_float             | double precision            |             |
+| binary_double            | double precision            |             |
+| blob                     | bytea                       |             |
+| char                     | character(10)               |             |
+| character                | character(10)               |             |
+| clob                     | text                        |             |
+| nclob                    | text                        |             |
+| date                     | timestamp without time zone |             |
+| decimal                  | real                        |             |
+| dec                      | real                        |             |
+| double_precision         | double precision            |             |
+| float                    | double precision            |             |
+| integer                  | numeric(38,0)               |             |
+| int                      | numeric(38,0)               |             |
+| interval_year            | interval year to month      |             |
+| interval_day             | interval day to second(4)   |             |
+| long                     | text                        |             |
+| nchar                    | character(10)               |             |
+| nchar_varying            | character varying(10)       |             |
+| number                   | double precision            |             |
+| number1                  | integer                     |             |
+| number(*)                | bigint                      |             |
+| numeric                  | double precision            |             |
+| nvarchar2                | character varying(10)       |             |
+| raw                      | bytea                       |             |
+| real                     | double precision            |             |
+| row_id                   | oid                         |             |
+| smallint                 | numeric(38,0)               |             |
+| timestamp                | timestamp without time zone |             |
+| timestamp with time zone | timestamp with time zone    |             |
+| urowid                   | oid                         |             |
+| varchar                  | character varying(10)       |             |
+| varchar2                 | character varying(10)       |             |
+| xmltype                  | xml                         |             |
++--------------------------+-----------------------------+-------------+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;OracleとPostgreSQLを対比した結果は次の通り。一部SCTとora2pgで異なる結果が出た。SCTは下記を参照。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果 | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/aws-sct-oracle-to-aurora-postgresql-conversion.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/aws-sct-oracle-to-aurora-postgresql-conversion.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;oracleとpostgresqlの対比一覧&#34;&gt;OracleとPostgreSQLの対比一覧&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;No.&lt;/th&gt;
+&lt;th&gt;Oracle (※descの結果）&lt;/th&gt;
+&lt;th&gt;PostgreSQL (\d メタコマンド結果）&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;BINARY FILE LOB&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;BINARY_FLOAT&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;BINARY_DOUBLE&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;BLOB&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;CLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;NCLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;DATE&lt;/td&gt;
+&lt;td&gt;timestamp without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;FLOAT(126)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;FLOAT(3)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;15&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;td&gt;INTERVAL YEAR(4) TO MONTH&lt;/td&gt;
+&lt;td&gt;interval year to month&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;td&gt;INTERVAL DAY(4) TO SECOND(4)&lt;/td&gt;
+&lt;td&gt;interval day to second(4)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;18&lt;/td&gt;
+&lt;td&gt;LONG&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;19&lt;/td&gt;
+&lt;td&gt;NCHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;20&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;22&lt;/td&gt;
+&lt;td&gt;NUMBER(9)&lt;/td&gt;
+&lt;td&gt;integer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;td&gt;NUMBER&lt;/td&gt;
+&lt;td&gt;bigint&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;24&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;26&lt;/td&gt;
+&lt;td&gt;RAW(10)&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;27&lt;/td&gt;
+&lt;td&gt;FLOAT(63)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;28&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;oid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;29&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;30&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5)&lt;/td&gt;
+&lt;td&gt;timestamp without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;31&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5) WITH TIME ZONE&lt;/td&gt;
+&lt;td&gt;timestamp with time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;32&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;oid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;33&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;34&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;35&lt;/td&gt;
+&lt;td&gt;PUBLIC.XMLTYPE STORAGE BINARY&lt;/td&gt;
+&lt;td&gt;xml&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>OracleとPostgreSQLのトランザクション差異について整理する</title>
+      <link>/oracle-postgresql-transaction-different.html</link>
+      <pubDate>Tue, 02 Jun 2020 00:00:00 +0000</pubDate>
+      <guid>/oracle-postgresql-transaction-different.html</guid>
+      <description>&lt;p&gt;OracleとPostgreSQLのトランザクション分離レベルは同じREAD COMMITTEDだが、トランザクションによってはそれぞれのデータベースで動作が異なる場合がある。関数の違いや機能差異というのは試験でエラーになるが、この仕様差異はエラーにならず、データの結果差異に繋がることから非常に厄介な問題である。&lt;/p&gt;
+&lt;p&gt;トランザクション分離レベルの概要等は以前にこちらの記事で書いた。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;今回は上記で触れられなかった各DBエンジンの挙動の違いについてメモしておく。このトランザクション差異の話は有名だと思っているが、あまりネット上で「何故そうなるか？」の観点で記載された記事が無かったので、調査した内容と実機検証の結果を書き留める。（もし誤りがあればご指摘ください。）&lt;/p&gt;
+&lt;h3 id=&#34;トランザクションの結果が異なるケースについて&#34;&gt;トランザクションの結果が異なるケースについて&lt;/h3&gt;
+&lt;h4 id=&#34;writeの競合&#34;&gt;Writeの競合&lt;/h4&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;-&lt;/th&gt;
+&lt;th&gt;oracle&lt;/th&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;時系列&lt;/td&gt;
+&lt;td&gt;tx1&lt;/td&gt;
+&lt;td&gt;tx2&lt;/td&gt;
+&lt;td&gt;tx1&lt;/td&gt;
+&lt;td&gt;tx2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;begin;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;update t1 set b = b + 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;update t1 set b = b + 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;begin;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;delete from t1 where b = 3;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;delete from t1 where b = 3;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;commit;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;td&gt;select * from t1;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;実際に上記の手順を実行した場合は下記の結果となる。赤枠で囲っている箇所のトランザクションの動作が異なる。(※markdownで上手く表に出来なかったため画像にしました。)&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200601221655472&#34; srcset=&#34;
+               /image-20200601221655472_hud5536f4367590f8c28ab1326f4d05c8a_38462_30c07c7f7e7a20d2fd60a4d4dc5c3385.png 400w,
+               /image-20200601221655472_hud5536f4367590f8c28ab1326f4d05c8a_38462_fdb56d06e5a91091090932284745bb52.png 760w,
+               /image-20200601221655472_hud5536f4367590f8c28ab1326f4d05c8a_38462_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200601221655472_hud5536f4367590f8c28ab1326f4d05c8a_38462_30c07c7f7e7a20d2fd60a4d4dc5c3385.png&#34;
+               width=&#34;760&#34;
+               height=&#34;277&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h3 id=&#34;oracleの動作仕様&#34;&gt;Oracleの動作仕様&lt;/h3&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Oracleの場合は、下記マニュアルにこの動作仕様の説明が記載されている。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;コミット読取りトランザクション内での書込みの競合&lt;/p&gt;
+&lt;p&gt;コミット読取りトランザクションでは、未コミットの同時実行トランザクション(&lt;em&gt;ブロックしているトランザクション&lt;/em&gt;とも呼ばれる)によって更新された行の変更を試行すると、書込みの競合が発生します。コミット読取りトランザクションは、ブロックしているトランザクションが終了して行ロックが解除されるまで待機します。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ブロックしているトランザクションがコミットされてロックが解除された場合、待機しているトランザクションでは、新たに変更された行に対して更新が実行されます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;上記に記載されている通り、&lt;code&gt;ブロックしているトランザクションがコミットされてロックが解除された場合、待機しているトランザクションでは、新たに変更された行に対して更新が実行されます。&lt;/code&gt;とあるので、&lt;code&gt;No.6&lt;/code&gt;の&lt;code&gt;tx1&lt;/code&gt;の&lt;code&gt;Commit&lt;/code&gt;実行時に&lt;code&gt;No.5&lt;/code&gt;の&lt;code&gt;delete from t1 where b = 3;&lt;/code&gt;は&lt;code&gt;No.3&lt;/code&gt;の計算結果を踏まえて削除処理が実行される。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h3 id=&#34;postgresqlの動作仕様&#34;&gt;PostgreSQLの動作仕様&lt;/h3&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;PostgreSQLの場合は、下記がマニュアルの該当箇所となる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;13.2. トランザクションの分離 &lt;a href=&#34;https://www.postgresql.jp/document/11/html/transaction-iso.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/11/html/transaction-iso.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;UPDATE、DELETE、SELECT FOR UPDATE、およびSELECT FOR SHAREコマンドは対象行を検索する際に&lt;code&gt;SELECT&lt;/code&gt;コマンドと同じように振舞います。 これらのコマンドは、問い合わせが開始された時点で既にコミットされた対象行のみを検出します。 しかし、その対象行は、検出されるまでに、同時実行中の他のトランザクションによって、既に更新（もしくは削除あるいはロック）されてしまっているかもしれません。 このような場合更新されるべき処理は、最初の更新トランザクションが（それがまだ進行中の場合）コミットもしくはロールバックするのを待ちます。 最初の更新処理がロールバックされるとその結果は無視されて、2番目の更新処理で元々検出した行の更新を続行することができます。 最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 行が削除されなかった時の更新処理は、最初のコミットで更新された行に適用されます。 コマンドの検索条件（&lt;code&gt;WHERE&lt;/code&gt;句）は、更新された行がまだその検索条件に一致するかどうかの確認のため再評価されます。 検索条件と一致している場合、2番目の更新処理は、更新された行を使用して処理を開始します。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;code&gt;最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 行が削除されなかった時の更新処理は、最初のコミットで更新された行に適用されます。&lt;/code&gt;とあるので、&lt;code&gt;No.6&lt;/code&gt;の&lt;code&gt;tx1&lt;/code&gt;の&lt;code&gt;Commit&lt;/code&gt;実行時に&lt;code&gt;最初の更新処理により行が削除された&lt;/code&gt;ので、その行の処理についてはskipする。&lt;/p&gt;
+&lt;p&gt;上記の通り、&lt;strong&gt;OracleではSQL文が再評価（=再起動）されて実行されるのに対して、PostgreSQLでは行が削除された場合は、該当行を無視する&lt;/strong&gt;ので結果の差異が生じる。（個人的にPostgreSQLのこの挙動は分かりづらく感じる。）&lt;/p&gt;
+&lt;p&gt;次に青枠で囲っているcommitをrollbackしてみる。（&lt;code&gt;最初の更新処理がロールバックされるとその結果は無視されて、2番目の更新処理で元々検出した行の更新を続行することができます。&lt;/code&gt;という文章の確認）&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200531231932820&#34; srcset=&#34;
+               /image-20200531231932820_hu821499e6023aee85bb783b3c9bdaf087_22260_9c7a68bfa7f45429846202737cd88bac.png 400w,
+               /image-20200531231932820_hu821499e6023aee85bb783b3c9bdaf087_22260_acebf1ec63be45a94390b020cc2689cc.png 760w,
+               /image-20200531231932820_hu821499e6023aee85bb783b3c9bdaf087_22260_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200531231932820_hu821499e6023aee85bb783b3c9bdaf087_22260_9c7a68bfa7f45429846202737cd88bac.png&#34;
+               width=&#34;760&#34;
+               height=&#34;495&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;この場合は、元々の&lt;code&gt;b=3&lt;/code&gt;のデータが削除される。Oracleにおいても下記記載がある通り、同様の挙動となる。当然結果も同じとなる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;データの同時実行性と整合性 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ブロックしているトランザクションがロールバックされた場合、待機しているトランザクションでは、ブロックしているトランザクションが存在していなかったかのように、ロックされていた行が変更されます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;select-for-updateとdeleteの競合&#34;&gt;select for updateとdeleteの競合&lt;/h4&gt;
+&lt;p&gt;次にこのパターンを確認する。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;oracle&lt;/th&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;PostgreSQL&lt;/th&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;時系列&lt;/td&gt;
+&lt;td&gt;tx1&lt;/td&gt;
+&lt;td&gt;tx2&lt;/td&gt;
+&lt;td&gt;tx1&lt;/td&gt;
+&lt;td&gt;tx2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;SELECT * FROM t1 ORDER BY a;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT * FROM t1 ORDER BY a;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;BEGIN;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;BEGIN;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;DELETE FROM t1 WHERE a = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;DELETE FROM t1 WHERE a = 1;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;COMMIT;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;COMMIT;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;上記のトランザクション実行時の結果は次の通り。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200601220033176&#34; srcset=&#34;
+               /image-20200601220033176_hu010fe4d9302d5499a682e9eec4ba5229_48101_594c95532192039e3402ff5c5ee31816.png 400w,
+               /image-20200601220033176_hu010fe4d9302d5499a682e9eec4ba5229_48101_c1b03017000e3797b78483ff6eb59e7b.png 760w,
+               /image-20200601220033176_hu010fe4d9302d5499a682e9eec4ba5229_48101_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200601220033176_hu010fe4d9302d5499a682e9eec4ba5229_48101_594c95532192039e3402ff5c5ee31816.png&#34;
+               width=&#34;760&#34;
+               height=&#34;341&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;oracleの動作仕様-1&#34;&gt;Oracleの動作仕様&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;基本的な考え方はwriteの競合パターンの考え方と同一で良いと考えるが、下記マニュアルにある通り、選択した行が更新または削除された場合は再度問い合わせ文を再起動して評価をし直す。したがって、この場合はNo.7の&lt;code&gt;commit&lt;/code&gt;のタイミングで再評価され、その時点の最小データである&lt;code&gt;2&lt;/code&gt;がクエリされることになる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;アプリケーション開発者用のSQL処理 &lt;a href=&#34;https://docs.oracle.com/cd/E57425_01/121/ADFNS/adfns_sqlproc.htm#i1025003&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.oracle.com/cd/E57425_01/121/ADFNS/adfns_sqlproc.htm#i1025003&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;問合せの実行中に、&lt;code&gt;SELECT&lt;/code&gt; &lt;code&gt;FOR&lt;/code&gt; &lt;code&gt;UPDATE&lt;/code&gt;に対する結果セットが変化する場合があります。たとえば、問合せ開始後に問合せで選択された列が更新されたり、行が削除された場合です。このような場合、&lt;code&gt;SELECT&lt;/code&gt; &lt;code&gt;FOR&lt;/code&gt; &lt;code&gt;UPDATE&lt;/code&gt;は変更されなかった行でロックを取得し、このロックを使用して表の読取り一貫性スナップショットを取得してから、残りのロックを取得するために問合せを再起動します。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;h4 id=&#34;postgresqlの動作仕様-1&#34;&gt;PostgreSQLの動作仕様&lt;/h4&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;writeの競合パターンと同様に「最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 」となるので0件となる。&lt;/p&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;p&gt;SQL移行調査編 &lt;a href=&#34;https://pgecons-sec-tech.github.io/tech-report/pdf/09_SqlMigrationResearch.pdf&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://pgecons-sec-tech.github.io/tech-report/pdf/09_SqlMigrationResearch.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Oracle DBとPostgreSQLで異なる処理結果、「仕様差」問題に要注意 | 日経クロステック（xTECH） &lt;a href=&#34;https://xtech.nikkei.com/atcl/nxt/column/18/00817/061300007/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://xtech.nikkei.com/atcl/nxt/column/18/00817/061300007/&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;13.2. トランザクションの分離 &lt;a href=&#34;https://www.postgresql.jp/document/11/html/transaction-iso.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/11/html/transaction-iso.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Oracle/MySQL/PostgreSQLにおけるサブクエリを含むDMLの非互換性 - SH2の日記 &lt;a href=&#34;https://sh2.hatenablog.jp/entry/20131223&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://sh2.hatenablog.jp/entry/20131223&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;ept/hermitage: What are the differences between the transaction isolation levels in databases? This is a suite of test cases which differentiate isolation levels. &lt;a href=&#34;https://github.com/ept/hermitage&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://github.com/ept/hermitage&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</title>
+      <link>/aws-sct-oracle-to-aurora-postgresql-conversion.html</link>
+      <pubDate>Fri, 29 May 2020 00:00:00 +0000</pubDate>
+      <guid>/aws-sct-oracle-to-aurora-postgresql-conversion.html</guid>
+      <description>&lt;p&gt;AWS Schema Conversion Toolでどのように変換されるかの確認。DDL定義についてはAWSのDatabase Migration Playbookから拝借致しました。なお、対象はAurora（PostgreSQL）で実施しましたが、RDS(PostgreSQL)でも結果は変わりませんでした。&lt;/p&gt;
+&lt;h3 id=&#34;oracle&#34;&gt;Oracle&lt;/h3&gt;
+&lt;h4 id=&#34;create文&#34;&gt;CREATE文&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE &amp;quot;DATATYPES&amp;quot;(
+ &amp;quot;BFILE&amp;quot; BFILE,
+ &amp;quot;BINARY_FLOAT&amp;quot; BINARY_FLOAT,
+ &amp;quot;BINARY_DOUBLE&amp;quot; BINARY_DOUBLE,
+ &amp;quot;BLOB&amp;quot; BLOB,
+ &amp;quot;CHAR&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CHARACTER&amp;quot; CHAR(10 BYTE),
+ &amp;quot;CLOB&amp;quot; CLOB,
+ &amp;quot;NCLOB&amp;quot; NCLOB,
+ &amp;quot;DATE&amp;quot; DATE,
+ &amp;quot;DECIMAL&amp;quot; NUMBER(3,2),
+ &amp;quot;DEC&amp;quot; NUMBER(3,2),
+ &amp;quot;DOUBLE_PRECISION&amp;quot; FLOAT(126),
+ &amp;quot;FLOAT&amp;quot; FLOAT(3),
+ &amp;quot;INTEGER&amp;quot; NUMBER(*,0),
+ &amp;quot;INT&amp;quot; NUMBER(*,0),
+ &amp;quot;INTERVAL_YEAR&amp;quot; INTERVAL YEAR(4) TO MONTH,
+ &amp;quot;INTERVAL_DAY&amp;quot; INTERVAL DAY(4) TO SECOND(4),
+ &amp;quot;LONG&amp;quot; LONG,
+ &amp;quot;NCHAR&amp;quot; NCHAR(10),
+ &amp;quot;NCHAR_VARYING&amp;quot; NVARCHAR2(10),
+ &amp;quot;NUMBER&amp;quot; NUMBER(9,9),
+ &amp;quot;NUMBER1&amp;quot; NUMBER(9,0),
+ &amp;quot;NUMBER(*)&amp;quot; NUMBER,
+ &amp;quot;NUMERIC&amp;quot; NUMBER(9,9),
+ &amp;quot;NVARCHAR2&amp;quot; NVARCHAR2(10),
+ &amp;quot;RAW&amp;quot; RAW(10),
+ &amp;quot;REAL&amp;quot; FLOAT(63),
+ &amp;quot;ROW_ID&amp;quot; ROWID,
+ &amp;quot;SMALLINT&amp;quot; NUMBER(*,0),
+ &amp;quot;TIMESTAMP&amp;quot; TIMESTAMP(5),
+ &amp;quot;TIMESTAMP WITH TIME ZONE&amp;quot; TIMESTAMP(5) WITH TIME ZONE,
+ &amp;quot;UROWID&amp;quot; UROWID(10),
+ &amp;quot;VARCHAR&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;VARCHAR2&amp;quot; VARCHAR2(10 BYTE),
+ &amp;quot;XMLTYPE&amp;quot; &amp;quot;PUBLIC&amp;quot;.&amp;quot;XMLTYPE&amp;quot;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル定義&#34;&gt;テーブル定義&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;SQL&amp;gt; desc DATATYPES;
+ Name					   Null?    Type
+ ----------------------------------------- -------- ----------------------------
+ BFILE						    BINARY FILE LOB
+ BINARY_FLOAT					BINARY_FLOAT
+ BINARY_DOUBLE					BINARY_DOUBLE
+ BLOB						    BLOB
+ CHAR						    CHAR(10)
+ CHARACTER					    CHAR(10)
+ CLOB						    CLOB
+ NCLOB						    NCLOB
+ DATE						    DATE
+ DECIMAL					    NUMBER(3,2)
+ DEC						    NUMBER(3,2)
+ DOUBLE_PRECISION				FLOAT(126)
+ FLOAT						    FLOAT(3)
+ INTEGER					    NUMBER(38)
+ INT						    NUMBER(38)
+ INTERVAL_YEAR					INTERVAL YEAR(4) TO MONTH
+ INTERVAL_DAY					INTERVAL DAY(4) TO SECOND(4)
+ LONG						    LONG
+ NCHAR						    NCHAR(10)
+ NCHAR_VARYING					NVARCHAR2(10)
+ NUMBER 					    NUMBER(9,9)
+ NUMBER1					    NUMBER(9)
+ NUMBER(* )					    NUMBER
+ NUMERIC					    NUMBER(9,9)
+ NVARCHAR2					    NVARCHAR2(10)
+ RAW						    RAW(10)
+ REAL						    FLOAT(63)
+ ROW_ID 					    ROWID
+ SMALLINT					    NUMBER(38)
+ TIMESTAMP					    TIMESTAMP(5)
+ TIMESTAMP WITH TIME ZONE		 TIMESTAMP(5) WITH TIME ZONE
+ UROWID 					    ROWID
+ VARCHAR					    VARCHAR2(10)
+ VARCHAR2					    VARCHAR2(10)
+ XMLTYPE					    PUBLIC.XMLTYPE STORAGE BINARY
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgresql&#34;&gt;PostgreSQL&lt;/h3&gt;
+&lt;p&gt;CREATE文&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CREATE TABLE IF NOT EXISTS datatypes(
+    bfile CHARACTER VARYING(255),
+    binary_float REAL,
+    binary_double DOUBLE PRECISION,
+    blob BYTEA,
+    char CHARACTER(10),
+    character CHARACTER(10),
+    clob TEXT,
+    nclob TEXT,
+    date TIMESTAMP(0) WITHOUT TIME ZONE,
+    decimal NUMERIC(3,2),
+    dec NUMERIC(3,2),
+    double_precision DOUBLE PRECISION,
+    float DOUBLE PRECISION,
+    integer NUMERIC(38,0),
+    int NUMERIC(38,0),
+    interval_year INTERVAL YEAR TO MONTH,
+    interval_day INTERVAL DAY TO SECOND(4),
+    long TEXT,
+    nchar CHARACTER(10),
+    nchar_varying CHARACTER VARYING(10),
+    number NUMERIC(9,9),
+    number1 NUMERIC(9,0),
+    &amp;quot;NUMBER(*)&amp;quot; DOUBLE PRECISION,
+    numeric NUMERIC(9,9),
+    nvarchar2 CHARACTER VARYING(10),
+    raw BYTEA,
+    real DOUBLE PRECISION,
+    row_id CHARACTER(255),
+    smallint NUMERIC(38,0),
+    timestamp TIMESTAMP(5) WITHOUT TIME ZONE,
+    &amp;quot;TIMESTAMP WITH TIME ZONE&amp;quot; TIMESTAMP(5) WITH TIME ZONE,
+    urowid CHARACTER VARYING,
+    varchar CHARACTER VARYING(10),
+    varchar2 CHARACTER VARYING(10),
+    xmltype XML
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル定義-1&#34;&gt;テーブル定義&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;postgres&amp;gt; \d datatypes;                                                                                                                                                                     
++--------------------------+--------------------------------+-------------+
+| Column                   | Type                           | Modifiers   |
+|--------------------------+--------------------------------+-------------|
+| bfile                    | character varying(255)         |             |
+| binary_float             | real                           |             |
+| binary_double            | double precision               |             |
+| blob                     | bytea                          |             |
+| char                     | character(10)                  |             |
+| character                | character(10)                  |             |
+| clob                     | text                           |             |
+| nclob                    | text                           |             |
+| date                     | timestamp(0) without time zone |             |
+| decimal                  | numeric(3,2)                   |             |
+| dec                      | numeric(3,2)                   |             |
+| double_precision         | double precision               |             |
+| float                    | double precision               |             |
+| integer                  | numeric(38,0)                  |             |
+| int                      | numeric(38,0)                  |             |
+| interval_year            | interval year to month         |             |
+| interval_day             | interval day to second(4)      |             |
+| long                     | text                           |             |
+| nchar                    | character(10)                  |             |
+| nchar_varying            | character varying(10)          |             |
+| number                   | numeric(9,9)                   |             |
+| number1                  | numeric(9,0)                   |             |
+| NUMBER(*)                | double precision               |             |
+| numeric                  | numeric(9,9)                   |             |
+| nvarchar2                | character varying(10)          |             |
+| raw                      | bytea                          |             |
+| real                     | double precision               |             |
+| row_id                   | character(255)                 |             |
+| smallint                 | numeric(38,0)                  |             |
+| timestamp                | timestamp(5) without time zone |             |
+| TIMESTAMP WITH TIME ZONE | timestamp(5) with time zone    |             |
+| urowid                   | character varying              |             |
+| varchar                  | character varying(10)          |             |
+| varchar2                 | character varying(10)          |             |
+| xmltype                  | xml                            |             |
++--------------------------+--------------------------------+-------------+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;OracleとPostgreSQLを対比した結果は次の通りです。&lt;/p&gt;
+&lt;h3 id=&#34;oracleとpostgresqlの対比一覧&#34;&gt;OracleとPostgreSQLの対比一覧&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;No.&lt;/th&gt;
+&lt;th&gt;Oracle (※descの結果）&lt;/th&gt;
+&lt;th&gt;PostgreSQL (\d メタコマンド結果）&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;BINARY FILE LOB&lt;/td&gt;
+&lt;td&gt;character varying(255)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;BINARY_FLOAT&lt;/td&gt;
+&lt;td&gt;real&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;BINARY_DOUBLE&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;BLOB&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;CHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;CLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;NCLOB&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;DATE&lt;/td&gt;
+&lt;td&gt;timestamp(0) without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;numeric(3,2)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;NUMBER(3,2)&lt;/td&gt;
+&lt;td&gt;numeric(3,2)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;FLOAT(126)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;FLOAT(3)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;15&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;td&gt;INTERVAL YEAR(4) TO MONTH&lt;/td&gt;
+&lt;td&gt;interval year to month&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;td&gt;INTERVAL DAY(4) TO SECOND(4)&lt;/td&gt;
+&lt;td&gt;interval day to second(4)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;18&lt;/td&gt;
+&lt;td&gt;LONG&lt;/td&gt;
+&lt;td&gt;text&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;19&lt;/td&gt;
+&lt;td&gt;NCHAR(10)&lt;/td&gt;
+&lt;td&gt;character(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;20&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;numeric(9,9)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;22&lt;/td&gt;
+&lt;td&gt;NUMBER(9)&lt;/td&gt;
+&lt;td&gt;numeric(9,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;td&gt;NUMBER&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;24&lt;/td&gt;
+&lt;td&gt;NUMBER(9,9)&lt;/td&gt;
+&lt;td&gt;numeric(9,9)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;td&gt;NVARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;26&lt;/td&gt;
+&lt;td&gt;RAW(10)&lt;/td&gt;
+&lt;td&gt;bytea&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;27&lt;/td&gt;
+&lt;td&gt;FLOAT(63)&lt;/td&gt;
+&lt;td&gt;double precision&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;28&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;character(255)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;29&lt;/td&gt;
+&lt;td&gt;NUMBER(38)&lt;/td&gt;
+&lt;td&gt;numeric(38,0)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;30&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5)&lt;/td&gt;
+&lt;td&gt;timestamp(5) without time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;31&lt;/td&gt;
+&lt;td&gt;TIMESTAMP(5) WITH TIME ZONE&lt;/td&gt;
+&lt;td&gt;timestamp(5) with time zone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;32&lt;/td&gt;
+&lt;td&gt;ROWID&lt;/td&gt;
+&lt;td&gt;character varying&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;33&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;34&lt;/td&gt;
+&lt;td&gt;VARCHAR2(10)&lt;/td&gt;
+&lt;td&gt;character varying(10)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;35&lt;/td&gt;
+&lt;td&gt;PUBLIC.XMLTYPE STORAGE BINARY&lt;/td&gt;
+&lt;td&gt;xml&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

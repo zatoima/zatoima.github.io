@@ -1,0 +1,695 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DBPedia | my opinion is my own</title>
+    <link>/tag/dbpedia/</link>
+      <atom:link href="/tag/dbpedia/index.xml" rel="self" type="application/rss+xml" />
+    <description>DBPedia</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 27 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>DBPedia</title>
+      <link>/tag/dbpedia/</link>
+    </image>
+    
+    <item>
+      <title>SPARQLクエリ集メモ</title>
+      <link>/sparql-query-note.html</link>
+      <pubDate>Mon, 27 Jul 2020 00:00:00 +0000</pubDate>
+      <guid>/sparql-query-note.html</guid>
+      <description>&lt;p&gt;初見のSPARQLエンドポイントに向けて実行するSPARQLクエリをメモ。DBPediaのSPARQLエンドポイントでお試しください。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://ja.dbpedia.org/sparql&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://ja.dbpedia.org/sparql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;エンドポイントにどんなトリプルがあるのか&#34;&gt;エンドポイントにどんなトリプルがあるのか&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT *
+WHERE {
+  ?s ?p ?o .
+}
+LIMIT 100
+OFFSET 0 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;エンドポイントのトリプル数&#34;&gt;エンドポイントのトリプル数&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (COUNT(*) AS ?count)
+WHERE {
+  ?s ?p ?o .
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;型の確認&#34;&gt;型の確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?type WHERE {
+  ?s a ?type
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;どのようなプロパティがあるかを確認&#34;&gt;どのようなプロパティがあるかを確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?p WHERE {
+  ?s a &amp;lt;http://dbpedia.org/ontology/Anime&amp;gt; ;
+    ?p ?o.
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;名前付きグラフも合算してトリプル数を検索する&#34;&gt;名前付きグラフも合算してトリプル数を検索する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (COUNT(*) AS ?count)
+WHERE {
+  { 
+    ?s ?p ?o .
+  } UNION {
+    GRAPH ?g { 
+      ?s ?p ?o .
+    } 
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;名前付きグラフの一覧を取得する&#34;&gt;名前付きグラフの一覧を取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?g
+WHERE {
+  GRAPH ?g { 
+    ?s ?p ?o . 
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;名前付きグラフ毎の件数を集計&#34;&gt;名前付きグラフ毎の件数を集計&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT ?g count(?g) WHERE {GRAPH ?g {?s ?p ?o}} GROUP BY ?g
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;名前付きグラフのデータを検索&#34;&gt;名前付きグラフのデータを検索&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * WHERE { GRAPH &amp;lt;あるグラフ&amp;gt; {?s ?p ?o }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;プロパティの一覧を取得する&#34;&gt;プロパティの一覧を取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT DISTINCT ?p
+WHERE {
+  ?s ?p ?o .
+}
+LIMIT 100
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;プロパティの一覧を使用頻度順に取得する&#34;&gt;プロパティの一覧を使用頻度順に取得する&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT ?p (COUNT(?p) AS ?count)
+WHERE {
+  ?s ?p ?o .
+} 
+GROUP BY ?p
+ORDER BY DESC(?count)
+LIMIT 100
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;主語あたりの平均プロパティ数&#34;&gt;主語あたりの平均プロパティ数&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT (AVG(?count) AS ?average)
+WHERE {
+  SELECT ?s (COUNT(?p) as ?count)
+  WHERE {
+    ?s ?p ?o .
+  } 
+  GROUP BY ?s
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;検索データが含まれるデータを探したい主語から探す&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（主語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?s),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;検索データが含まれるデータを探したい述語から探す&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（述語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?p),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;検索データが含まれるデータを探したい目的語から探す&#34;&gt;&amp;lt;検索データ&amp;gt;が含まれるデータを探したい（目的語から探す）&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g { ?s ?p ?o . FILTER( contains(str(?o),&#39;&amp;lt;検索データ&amp;gt;&#39;) ) }}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;グラフ完全一致でデータを探す&#34;&gt;&lt;strong&gt;グラフ&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH &amp;lt;グラフ&amp;gt; {?s ?p ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;主語完全一致でデータを探す&#34;&gt;&lt;strong&gt;主語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {&amp;lt;主語&amp;gt; ?p ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;述語完全一致でデータを探す&#34;&gt;&lt;strong&gt;述語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {?s &amp;lt;述語&amp;gt; ?o}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;目的語完全一致でデータを探す&#34;&gt;&lt;strong&gt;目的語&lt;/strong&gt;完全一致でデータを探す&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * { GRAPH ?g {?s ?p &#39;目的語&#39;}}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参考サイト：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;よく使うSPARQLサンプル集 - Qiita &lt;a href=&#34;https://qiita.com/hodade/items/30158fba9e943132023f&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/hodade/items/30158fba9e943132023f&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;SPARQL入門 &lt;a href=&#34;http://www.aise.ics.saitama-u.ac.jp/~gotoh/IntroSPARQL.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://www.aise.ics.saitama-u.ac.jp/~gotoh/IntroSPARQL.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>DBpediaのデータ(turtle)をwgetで一括ダウンロード</title>
+      <link>/dbpedia-jp-wget-download.html</link>
+      <pubDate>Thu, 27 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/dbpedia-jp-wget-download.html</guid>
+      <description>&lt;h3 id=&#34;heading&#34;&gt;&lt;/h3&gt;
+&lt;p&gt;日本語版のDBpediaの現時点の最新版である &lt;a href=&#34;http://ja.dbpedia.org/dumps/20160407/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://ja.dbpedia.org/dumps/20160407/&lt;/a&gt; 配下の全データをwgetで再帰的に取得しています。「-np」は親ディレクトリを取得対象しないようにするためのオプションです。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget -r -np -R &amp;quot;index.html?*&amp;quot; http://ja.dbpedia.org/dumps/20160407/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;取得結果&#34;&gt;取得結果&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin 20160407]$ pwd
+/home/ec2-user/dbpedia/ja.dbpedia.org/dumps/20160407
+[ec2-user@bastin 20160407]$ du -sh
+4.4G	.
+[ec2-user@bastin 20160407]$ ls -l
+total 4306268
+-rw-rw-r-- 1 ec2-user ec2-user      16381 Feb 25 01:26 index.html
+-rw-rw-r-- 1 ec2-user ec2-user   64620507 Apr 27  2016 jawiki-20160407-article-categories.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   36087466 Apr 27  2016 jawiki-20160407-article-categories.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   11199701 Apr 27  2016 jawiki-20160407-article-templates-nested.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    5854138 Apr 27  2016 jawiki-20160407-article-templates-nested.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   58951338 Apr 27  2016 jawiki-20160407-article-templates.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   29388098 Apr 27  2016 jawiki-20160407-article-templates.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    2441006 Apr 27  2016 jawiki-20160407-category-labels.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    1416295 Apr 27  2016 jawiki-20160407-category-labels.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    2047854 Apr 27  2016 jawiki-20160407-disambiguations-unredirected.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    1258154 Apr 27  2016 jawiki-20160407-disambiguations-unredirected.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   35396297 Apr 27  2016 jawiki-20160407-external-links.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   24184031 Apr 27  2016 jawiki-20160407-external-links.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     586677 Apr 27  2016 jawiki-20160407-geo-coordinates-mappingbased.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     390558 Apr 27  2016 jawiki-20160407-geo-coordinates-mappingbased.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    1052110 Apr 27  2016 jawiki-20160407-geo-coordinates.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     710988 Apr 27  2016 jawiki-20160407-geo-coordinates.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    3242564 Apr 27  2016 jawiki-20160407-homepages.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    2018246 Apr 27  2016 jawiki-20160407-homepages.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   25713177 Apr 27  2016 jawiki-20160407-images.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   18660941 Apr 27  2016 jawiki-20160407-images.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user  146867252 Apr 27  2016 jawiki-20160407-infobox-properties-unredirected.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user  106114414 Apr 27  2016 jawiki-20160407-infobox-properties-unredirected.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     539768 Apr 27  2016 jawiki-20160407-infobox-property-definitions.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     257668 Apr 27  2016 jawiki-20160407-infobox-property-definitions.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user         91 Apr 27  2016 jawiki-20160407-infobox-test.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user         92 Apr 27  2016 jawiki-20160407-infobox-test.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    6749954 Apr 27  2016 jawiki-20160407-instance-types.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   20605723 Apr 27  2016 jawiki-20160407-instance-types-transitive.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   12598132 Apr 27  2016 jawiki-20160407-instance-types-transitive.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    3302762 Apr 27  2016 jawiki-20160407-instance-types.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     777393 Apr 27  2016 jawiki-20160407-interlanguage-links.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     482555 Apr 27  2016 jawiki-20160407-interlanguage-links.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   30962284 Apr 27  2016 jawiki-20160407-labels.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   19374825 Apr 27  2016 jawiki-20160407-labels.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   23766215 Apr 27  2016 jawiki-20160407-mappingbased-literals.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   14463439 Apr 27  2016 jawiki-20160407-mappingbased-literals.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   28382739 Apr 27  2016 jawiki-20160407-mappingbased-objects-uncleaned-unredirected.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   16038031 Apr 27  2016 jawiki-20160407-mappingbased-objects-uncleaned-unredirected.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   26566377 Apr 27  2016 jawiki-20160407-out-degree.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   14217551 Apr 27  2016 jawiki-20160407-out-degree.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   34738422 Apr 27  2016 jawiki-20160407-page-ids.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   19564834 Apr 27  2016 jawiki-20160407-page-ids.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   28049111 Apr 27  2016 jawiki-20160407-page-length.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   15491318 Apr 27  2016 jawiki-20160407-page-length.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user  569374886 Apr 27  2016 jawiki-20160407-page-links-unredirected.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user  367564292 Apr 27  2016 jawiki-20160407-page-links-unredirected.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   33225236 Apr 27  2016 jawiki-20160407-page_props.sql.gz
+-rw-rw-r-- 1 ec2-user ec2-user 2285740564 Apr 27  2016 jawiki-20160407-pages-articles.xml.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   12735146 Apr 27  2016 jawiki-20160407-redirects.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    8214822 Apr 27  2016 jawiki-20160407-redirects.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   36232990 Apr 27  2016 jawiki-20160407-revision-ids.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   22263076 Apr 27  2016 jawiki-20160407-revision-ids.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   38797873 Apr 27  2016 jawiki-20160407-revision-uris.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   29276720 Apr 27  2016 jawiki-20160407-revision-uris.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    7261254 Apr 27  2016 jawiki-20160407-skos-categories.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user    4328988 Apr 27  2016 jawiki-20160407-skos-categories.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     751735 Apr 27  2016 jawiki-20160407-specific-mappingbased-properties.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user     381452 Apr 27  2016 jawiki-20160407-specific-mappingbased-properties.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user      12460 Apr 27  2016 jawiki-20160407-topical-concepts-unredirected.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user       7402 Apr 27  2016 jawiki-20160407-topical-concepts-unredirected.ttl.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   60923158 Apr 27  2016 jawiki-20160407-wikipedia-links.tql.bz2
+-rw-rw-r-- 1 ec2-user ec2-user   37255115 Apr 27  2016 jawiki-20160407-wikipedia-links.ttl.bz2
+drwxrwxr-x 2 ec2-user ec2-user        214 Feb 25 01:28 links
+[ec2-user@bastin 20160407]$ 
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>SPARQLを使用して英語版DBpediaからディープインパクトの始祖を辿る</title>
+      <link>/sparql-graph-dbpedia-en-search.html</link>
+      <pubDate>Tue, 25 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/sparql-graph-dbpedia-en-search.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;下記記事のリベンジ記事です。有馬記念の勝ち馬からサラブレッドの始祖まで辿ろうとしたが、dbpedia-jp(jp.wikipedia.org)のURI誤りで途中で終わってしまった。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;日本語版DBPediaで有馬記念の勝ち馬からサラブレッドの始祖を辿る | my opinion is my own &lt;a href=&#34;https://zatoima.github.io/sparql-graph-thoroughbred-search.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/sparql-graph-thoroughbred-search.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;リベンジとして、英語版のDBPediaを使いディープインパクトを起点として始祖まで辿ろうと思います。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;競馬で走る馬はサラブレッドと呼ばれますが、血統を辿ると全て3頭の馬(ダーレーアラビアン、ゴドルフィンアラビアン、バイアリーターク)にさかのぼると言います。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;3大始祖と世界の血統：サラブレッド講座　JRA &lt;a href=&#34;http://www.jra.go.jp/kouza/thoroughbred/founder/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://www.jra.go.jp/kouza/thoroughbred/founder/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;dbpedia英語版&#34;&gt;DBpedia（英語版）&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Virtuoso SPARQL Query Editor &lt;a href=&#34;https://dbpedia.org/sparql&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://dbpedia.org/sparql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;sparqlクエリ&#34;&gt;SPARQLクエリ&lt;/h3&gt;
+&lt;p&gt;最終的にこうしました。&lt;/p&gt;
+&lt;p&gt;述語部分はsireとなります。父という意味です。リーディングサイアー (Leading Sire)と言いますね。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;PREFIX dbpedia: &amp;lt;http://dbpedia.org/ontology/&amp;gt;
+
+select ?parent_gen1_name ?parent_gen2_name ?parent_gen3_name ?parent_gen4_name ?parent_gen5_name ?parent_gen6_name ?parent_gen7_name ?parent_gen8_name ?parent_gen9_name ?parent_gen10_name ?parent_gen11_name ?parent_gen12_name ?parent_gen13_name ?parent_gen14_name ?parent_gen15_name ?parent_gen16_name ?parent_gen17_name ?parent_gen18_name ?parent_gen19_name ?parent_gen20_name ?parent_gen21_name ?parent_gen22_name ?parent_gen23_name ?parent_gen24_name ?parent_gen25_name
+where { 
+  &amp;lt;http://dbpedia.org/resource/Deep_Impact_(horse)&amp;gt; dbpedia:sire ?parent_gen1_name . 
+   ?parent_gen1_name dbpedia:sire ?parent_gen2_name . #Sunday_Silence
+   ?parent_gen2_name dbpedia:sire ?parent_gen3_name . #Halo
+   ?parent_gen3_name dbpedia:sire ?parent_gen4_name . #Hail_To_Reason
+   ?parent_gen4_name dbpedia:sire ?parent_gen5_name . #Turn-To
+   ?parent_gen5_name dbpedia:sire ?parent_gen6_name . #Royal_Charger
+   ?parent_gen6_name dbpedia:sire ?parent_gen7_name . #Nearco
+   ?parent_gen7_name dbpedia:sire ?parent_gen8_name . #Pharos
+   ?parent_gen8_name dbpedia:sire ?parent_gen9_name . #Phalaris
+   ?parent_gen9_name dbpedia:sire ?parent_gen10_name . #Polymelus
+   ?parent_gen10_name dbpedia:sire ?parent_gen11_name . #Cyllene
+   ?parent_gen11_name dbpedia:sire ?parent_gen12_name . #Bona_Vista
+   ?parent_gen12_name dbpedia:sire ?parent_gen13_name . #Bend_Or
+   ?parent_gen13_name dbpedia:sire ?parent_gen14_name . #Doncaster
+   ?parent_gen14_name dbpedia:sire ?parent_gen15_name . #The_Baron
+   ?parent_gen15_name dbpedia:sire ?parent_gen16_name . #Birdcatcher
+   ?parent_gen16_name dbpedia:wikiPageRedirects ?Birdcatcher_wpr .
+   ?Birdcatcher_wpr dbo:sire ?parent_gen17_name . #Sir_Hercules
+   ?parent_gen17_name dbpedia:sire ?parent_gen18_name . #Whalebone
+   ?parent_gen18_name dbpedia:sire ?parent_gen19_name . #Waxy
+   ?parent_gen19_name dbpedia:sire ?parent_gen20_name . #Potoooooooo
+   ?parent_gen20_name dbpedia:sire ?parent_gen21_name . #Eclipse
+   ?parent_gen21_name dbpedia:sire ?parent_gen22_name . #Marske
+   ?parent_gen22_name dbpedia:sire ?parent_gen23_name . #Squirt
+   ?parent_gen23_name dbpedia:sire ?parent_gen24_name . #Bartlets_Childers
+   ?parent_gen24_name dbpedia:wikiPageRedirects ?Bartlets_Childers .
+   ?Bartlets_Childers dbo:sire ?parent_gen25_name . #Darley_Arabian
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;補足&#34;&gt;補足&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;Birdcatcher&lt;/code&gt;と&lt;code&gt;Bartlets_Childers&lt;/code&gt;には他の競走馬にある&lt;code&gt;http://dbpedia.org/ontology/sire&lt;/code&gt;プロパティがなく、そこからは親を辿れません。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;PREFIX dbpedia: &amp;lt;http://dbpedia.org/ontology/&amp;gt;
+
+select *
+where { 
+  &amp;lt;http://dbpedia.org/resource/Birdcatcher&amp;gt; ?p ?o .
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200222161400597&#34; srcset=&#34;
+               /image-20200222161400597_huf3eb81406e48120cbe702b7ba42cbb4b_71577_0fff45d89b5db62f30847f277887b053.png 400w,
+               /image-20200222161400597_huf3eb81406e48120cbe702b7ba42cbb4b_71577_e1d2e160ffb4728f58fc817f91b3e3cc.png 760w,
+               /image-20200222161400597_huf3eb81406e48120cbe702b7ba42cbb4b_71577_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200222161400597_huf3eb81406e48120cbe702b7ba42cbb4b_71577_0fff45d89b5db62f30847f277887b053.png&#34;
+               width=&#34;760&#34;
+               height=&#34;201&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;述語が&lt;code&gt;http://dbpedia.org/ontology/wikiPageRedirects&lt;/code&gt;の&lt;code&gt;http://dbpedia.org/resource/Birdcatcher_(horse)&lt;/code&gt;に行くと&lt;code&gt;dbo:sire&lt;/code&gt;がありましたのでこちらのPropertyを使用します。&lt;/p&gt;
+&lt;p&gt;こうすることでsireを取得することが出来ました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;PREFIX dbpedia: &amp;lt;http://dbpedia.org/ontology/&amp;gt;
+
+select ?Birdcatcher_sire
+where { 
+  &amp;lt;http://dbpedia.org/resource/Birdcatcher&amp;gt; dbpedia:wikiPageRedirects ?Birdcatcher_wpr .
+  ?Birdcatcher_wpr dbo:sire ?Birdcatcher_sire
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200222165056244&#34; srcset=&#34;
+               /image-20200222165056244_hub122273dd97367be71e9fd6c7c0922c4_10344_36f6b7917ce36e4354d209894a72f246.png 400w,
+               /image-20200222165056244_hub122273dd97367be71e9fd6c7c0922c4_10344_90211bd5c4f71911f939cbe7508b34fa.png 760w,
+               /image-20200222165056244_hub122273dd97367be71e9fd6c7c0922c4_10344_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200222165056244_hub122273dd97367be71e9fd6c7c0922c4_10344_36f6b7917ce36e4354d209894a72f246.png&#34;
+               width=&#34;522&#34;
+               height=&#34;107&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;結果&#34;&gt;結果&lt;/h3&gt;
+&lt;p&gt;最終的な結果はこうなりました。ディープインパクトの始祖は&lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%80%E3%83%BC%E3%83%AC%E3%83%BC%E3%82%A2%E3%83%A9%E3%83%93%E3%82%A2%E3%83%B3&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Darley_Arabian&lt;/a&gt;となります！&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;世代&lt;/th&gt;
+&lt;th&gt;馬名&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;Sunday_Silence&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;Halo&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;Hail_To_Reason&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;Turn-To&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;Royal_Charger&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;Nearco&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;Pharos&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;Phalaris&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;Polymelus&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;Cyllene&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;Bona_Vista&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;Bend_Or&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;Doncaster&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;Stockwell&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;15&lt;/td&gt;
+&lt;td&gt;The_Baron&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;td&gt;Birdcatcher&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;td&gt;Sir_Hercules&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;18&lt;/td&gt;
+&lt;td&gt;Whalebone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;19&lt;/td&gt;
+&lt;td&gt;Waxy&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;20&lt;/td&gt;
+&lt;td&gt;Potoooooooo&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;td&gt;Eclipse&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;22&lt;/td&gt;
+&lt;td&gt;Marske&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;td&gt;Squirt&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;24&lt;/td&gt;
+&lt;td&gt;Bartlet&amp;rsquo;s_Childers&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;td&gt;Darley_Arabian&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>SPARQLを使用して日本語版DBPediaから有馬記念の勝ち馬の始祖を辿る</title>
+      <link>/sparql-graph-thoroughbred-search.html</link>
+      <pubDate>Sat, 22 Feb 2020 00:00:00 +0000</pubDate>
+      <guid>/sparql-graph-thoroughbred-search.html</guid>
+      <description>&lt;h2 id=&#34;はじめに&#34;&gt;はじめに&lt;/h2&gt;
+&lt;p&gt;DBpediaはWikipediaから情報を抽出してLOD (Linked Open Data)として公開するコミュニティプロジェクトで、英語版と日本語版があります。日本語版は&lt;code&gt;ja.wikipedia.org&lt;/code&gt;からデータを抽出しています。抽出したデータは構造化データ(RDF)として格納されています。RDFストアに対してはSPARQLというクエリ言語で情報を取得することが出来ます。今回は日本語版のDBpediaで情報を取得したいと思います。&lt;/p&gt;
+&lt;iframe src=&#34;//www.slideshare.net/slideshow/embed_code/key/8lHvTVasgBvWtE&#34; width=&#34;595&#34; height=&#34;485&#34; frameborder=&#34;0&#34; marginwidth=&#34;0&#34; marginheight=&#34;0&#34; scrolling=&#34;no&#34; style=&#34;border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;&#34; allowfullscreen&gt; &lt;/iframe&gt; &lt;div style=&#34;margin-bottom:5px&#34;&gt; &lt;strong&gt; &lt;a href=&#34;//www.slideshare.net/takeda/what-isdpbedia&#34; title=&#34;DBpedia Japaneseとは？&#34; target=&#34;_blank&#34;&gt;DBpedia Japaneseとは？&lt;/a&gt; &lt;/strong&gt; from &lt;strong&gt;&lt;a href=&#34;https://www.slideshare.net/takeda&#34; target=&#34;_blank&#34;&gt;National Institute of Informatics (NII)&lt;/a&gt;&lt;/strong&gt; &lt;/div&gt;
+## SPARQLエンドポイント
+&lt;p&gt;DBpediaのエンドポイントはこちらになります。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Virtuoso SPARQL Query Editor &lt;a href=&#34;http://ja.dbpedia.org/sparql&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://ja.dbpedia.org/sparql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;有馬記念の勝ち馬に関する情報&#34;&gt;有馬記念の勝ち馬に関する情報&lt;/h2&gt;
+&lt;h3 id=&#34;プロパティを調べる&#34;&gt;プロパティを調べる&lt;/h3&gt;
+&lt;p&gt;勝ち馬を軸にまずはどんなプロパティを持っているかどうかを調べてみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?p {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    ?p ?o .
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142308680.png&#34; alt=&#34;image-20200222142308680&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;サンプルを確認&#34;&gt;サンプルを確認&lt;/h3&gt;
+&lt;p&gt;勝ち馬を軸にまずはどんなプロパティを持っているかのサンプル値を出力する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select ?p (SAMPLE(?o) AS ?sample_value)
+WHERE {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    ?p ?o .
+} order by (?p)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142141557.png&#34; alt=&#34;image-20200222142141557&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h3 id=&#34;血統を辿る&#34;&gt;血統を辿る&lt;/h3&gt;
+&lt;p&gt;次に父の父の父の父・・・・・という感じで血統を調べていき、どこまで辿れるかやってみます。&lt;/p&gt;
+&lt;p&gt;RDBMSに格納されているデータで同じように特定の馬の父の父の父とした場合、同じテーブルに格納されている値をサブクエリ(副問合せ)で結合して取得すると思いますが、おそらく数世代先の馬を調べる時に性能限界が来ると思います。何度もjoinする必要があるので。&lt;/p&gt;
+&lt;p&gt;一方、RDFストアやSPARQLクエリは関係性を抽出することに優れた言語のため、特にリレーション抽出対象が増えたとしてもクエリの性能に影響を与えません。&lt;/p&gt;
+&lt;p&gt;ちなみに競馬で走る馬はサラブレッドと呼ばれますが、血統を辿ると全て3頭の馬(ダーレーアラビアン、ゴドルフィンアラビアン、バイアリーターク)にさかのぼると言います。**&lt;u&gt;WikipediaやDBPediaのデータが正しければ&lt;/u&gt;**おそらくこの3頭のどれかには辿り付くはずです。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;3大始祖と世界の血統：サラブレッド講座　JRA &lt;a href=&#34;http://www.jra.go.jp/kouza/thoroughbred/founder/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;http://www.jra.go.jp/kouza/thoroughbred/founder/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id=&#34;第1世代&#34;&gt;第1世代&lt;/h4&gt;
+&lt;p&gt;まずは勝ち馬の父を調べてみる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?parent_f_name (count(?parent_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222142450812.png&#34; alt=&#34;image-20200222142450812&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;第2世代&#34;&gt;第2世代&lt;/h4&gt;
+&lt;p&gt;勝ち馬の父の父を調べてみる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?parent_f_f_name (count(?parent_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222144157168.png&#34; alt=&#34;image-20200222144157168&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;第18世代&#34;&gt;第18世代&lt;/h4&gt;
+&lt;p&gt;一気に飛んで第18世代です。こんな感じでどこまで辿れるか試してみます。&lt;code&gt;ホエルボーン&lt;/code&gt;は&lt;code&gt;1807年-1831年&lt;/code&gt;のイギリス馬です。現時点で&lt;code&gt;18世代&lt;/code&gt;遡っています。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222144259529.png&#34; alt=&#34;image-20200222144259529&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;第19世代&#34;&gt;第19世代&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;
+select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222145756017.png&#34; alt=&#34;image-20200222145756017&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;第21世代&#34;&gt;第21世代&lt;/h4&gt;
+&lt;p&gt;21世代まで遡ってみると、ワクシーという一頭に絞られてしまいました。ホエールボーンの父がワクシーです。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;image-20200222150544445.png&#34; alt=&#34;image-20200222150544445&#34; style=&#34;zoom:50%;&#34; /&gt;&lt;/p&gt;
+&lt;h4 id=&#34;第22世代&#34;&gt;第22世代&lt;/h4&gt;
+&lt;p&gt;このワクシーの親を調べようとしたら出てきませんでした。&lt;a href=&#34;https://ja.wikipedia.org/wiki/%E3%83%9B%E3%82%A8%E3%83%BC%E3%83%AB%E3%83%9C%E3%83%BC%E3%83%B3&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;ホエールボーン&lt;/a&gt;の父が「&lt;a href=&#34;https://ja.wikipedia.org/wiki/%e3%83%af%e3%82%af%e3%82%b7%e3%83%bc&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;ワクシー&lt;/a&gt;」なのですが、実際のWikipediaのページは「https://ja.wikipedia.org/wiki/ワキシー」となっています。「ワクシー」と「ワキシー」でURIが異なるためこれ以上辿れないのだと推測します。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-SQL&#34;&gt;select distinct ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name (count(?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name) AS ?count) {
+  {
+    ?name prop-ja:wikiPageUsesTemplate template-ja:有馬記念勝ち馬.
+  }
+
+  ?name rdfs:label ?label ;
+    prop-ja:父 ?parent_f_name .
+   ?parent_f_name prop-ja:父 ?parent_f_f_name .
+   ?parent_f_f_name prop-ja:父 ?parent_f_f_f_name .
+   ?parent_f_f_f_name prop-ja:父 ?parent_f_f_f_f_name .
+   ?parent_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+   ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name prop-ja:父 ?parent_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_f_name .
+} ORDER BY DESC(?count)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20200222150814920&#34; srcset=&#34;
+               /image-20200222150814920_huea3e1e5862ffce312077aafd6fef1018_4666_3d59f2dc6e32f928ddb9738739d3d3f3.png 400w,
+               /image-20200222150814920_huea3e1e5862ffce312077aafd6fef1018_4666_34f3e06e46efc9e1c554279a9f177e1f.png 760w,
+               /image-20200222150814920_huea3e1e5862ffce312077aafd6fef1018_4666_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20200222150814920_huea3e1e5862ffce312077aafd6fef1018_4666_3d59f2dc6e32f928ddb9738739d3d3f3.png&#34;
+               width=&#34;760&#34;
+               height=&#34;57&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;終わりに&#34;&gt;終わりに&lt;/h3&gt;
+&lt;p&gt;次は英語版でやってみます。&lt;/p&gt;
+&lt;p&gt;今回は全て父を辿りましたが、他のプロパティを組み合わせて分析したいなと思いました。競馬の分析用途に自前のRDFストアを構築するということもやってみたいと思いました。&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

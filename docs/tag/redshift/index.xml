@@ -1,0 +1,1336 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Redshift | my opinion is my own</title>
+    <link>/tag/redshift/</link>
+      <atom:link href="/tag/redshift/index.xml" rel="self" type="application/rss+xml" />
+    <description>Redshift</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 20 Aug 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>Redshift</title>
+      <link>/tag/redshift/</link>
+    </image>
+    
+    <item>
+      <title>Redshift Spectrumのパフォーマンス確認</title>
+      <link>/aws-redshift-spectrum-performance-check/</link>
+      <pubDate>Fri, 20 Aug 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-spectrum-performance-check/</guid>
+      <description>&lt;h3 id=&#34;テストクエリ&#34;&gt;テストクエリ&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\timing
+SET enable_result_cache_for_session = off;
+
+select d_year, s_city, p_brand1, sum(lo_revenue - lo_supplycost) as profit
+from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_partkey = p_partkey
+and lo_orderdate = d_datekey
+and c_region = &#39;AMERICA&#39;
+and s_nation = &#39;UNITED STATES&#39;
+and (d_year = 1997 or d_year = 1998)
+and p_category = &#39;MFGR#14&#39;
+group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1
+LIMIT 10;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行時間実行結果&#34;&gt;実行時間、実行結果&lt;/h3&gt;
+&lt;p&gt;1分20秒程度掛かった&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select d_year, s_city, p_brand1, sum(lo_revenue - lo_supplycost) as profit
+mydb-# from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
+mydb-# where lo_custkey = c_custkey
+mydb-# and lo_suppkey = s_suppkey
+mydb-# and lo_partkey = p_partkey
+mydb-# and lo_orderdate = d_datekey
+mydb-# and c_region = &#39;AMERICA&#39;
+mydb-# and s_nation = &#39;UNITED STATES&#39;
+mydb-# and (d_year = 1997 or d_year = 1998)
+mydb-# and p_category = &#39;MFGR#14&#39;
+mydb-# group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1
+mydb-# LIMIT 10;
+ d_year |   s_city   | p_brand1  |  profit   
+--------+------------+-----------+-----------
+   1997 | UNITED ST0 | MFGR#141  | 262922467
+   1997 | UNITED ST0 | MFGR#1410 | 179590048
+   1997 | UNITED ST0 | MFGR#1411 | 215249314
+   1997 | UNITED ST0 | MFGR#1412 | 164321123
+   1997 | UNITED ST0 | MFGR#1413 | 175368488
+   1997 | UNITED ST0 | MFGR#1414 | 215494333
+   1997 | UNITED ST0 | MFGR#1415 | 148209735
+   1997 | UNITED ST0 | MFGR#1416 | 198091798
+   1997 | UNITED ST0 | MFGR#1417 | 176595141
+   1997 | UNITED ST0 | MFGR#1418 | 194768567
+(10 rows)
+
+Time: 80526.072 ms (01:20.526)
+mydb=# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;svl_s3query_summary-テーブルの確認&#34;&gt;SVL_S3QUERY_SUMMARY テーブルの確認&lt;/h3&gt;
+&lt;p&gt;テーブルには過去のクエリ実行の実際の統計が格納されるので、そこで時間が掛かったのかを知ることが出来る&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select elapsed, s3_scanned_rows, s3_scanned_bytes,
+  s3query_returned_rows, s3query_returned_bytes, files, avg_request_parallelism
+from svl_s3query_summary
+where query = pg_last_query_id()
+order by query,segment;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select elapsed, s3_scanned_rows, s3_scanned_bytes,
+mydb-#   s3query_returned_rows, s3query_returned_bytes, files, avg_request_parallelism
+mydb-# from svl_s3query_summary
+mydb-# where query = pg_last_query_id()
+mydb-# order by query,segment;
+ elapsed  | s3_scanned_rows | s3_scanned_bytes | s3query_returned_rows | s3query_returned_bytes | files | avg_request_parallelism 
+----------+-----------------+------------------+-----------------------+------------------------+-------+-------------------------
+   269908 |            2556 |            25239 |                   729 |                   1830 |     1 |                     0.1
+  1272336 |         1000000 |         34110277 |                 39991 |                 141551 |     4 |                     0.5
+  2847076 |         3000000 |        105338147 |                599689 |                1748517 |     1 |                     0.1
+   800323 |         1400000 |         34724133 |                 55855 |                 266349 |     4 |                     0.4
+ 73152028 |       600037902 |      26972503425 |                234982 |                3906264 |     8 |                     0.8
+(5 rows)
+
+Time: 558.935 ms
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftのクエリキャンセル</title>
+      <link>/aws-redshift-query-cancellation/</link>
+      <pubDate>Tue, 06 Jul 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-query-cancellation/</guid>
+      <description>&lt;h3 id=&#34;pidの取得&#34;&gt;PIDの取得&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select pid, trim(starttime) as start, duration, trim(user_name) as user,substring (query,1,40) as querytxt 
+from stv_recents
+where status = &#39;Running&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pidのkill&#34;&gt;PIDのkill&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select pg_cancel_backend(16749);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;もしくは&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;cancel 16749;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行クライアント側にはエラーメッセージが出力される&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;client 2 aborted in command 16 (SQL) of script 0; ERROR:  Query (570) cancelled on user&#39;s request
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_CANCEL.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_CANCEL.html&lt;/a&gt;
+&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/PG_CANCEL_BACKEND.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/PG_CANCEL_BACKEND.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshift Star Schema Benchmark 問い合わせクエリのサンプル</title>
+      <link>/aws-redshift-spectrum-data-query-execute/</link>
+      <pubDate>Mon, 28 Jun 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-spectrum-data-query-execute/</guid>
+      <description>&lt;p&gt;下記のスタースキーマのデータをRedshiftにぶっ込んでいるという前提。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;s3://awssampledbuswest2/ssbgz/&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Redshift Spectrumへのクエリのために、スキーマを&lt;code&gt;s3&lt;/code&gt;としているので適宜置換が必要。&lt;/p&gt;
+&lt;h1 id=&#34;star-schema-benchmark問合せ&#34;&gt;Star Schema Benchmark問合せ&lt;/h1&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select sum(lo_extendedprice*lo_discount) as revenue
+from s3.lineorder, s3.dwdate
+where lo_orderdate = d_datekey
+and d_yearmonthnum = 199401
+and lo_discount between 4 and 6
+and lo_quantity between 26 and 35;
+
+select sum(lo_extendedprice*lo_discount) as revenue
+from s3.lineorder, s3.dwdate
+where lo_orderdate = d_datekey
+and d_year = 1993
+and lo_discount between 1 and 3
+and lo_quantity &amp;lt; 25;
+
+select sum(lo_extendedprice*lo_discount) as revenue
+from s3.lineorder, s3.dwdate
+where lo_orderdate = d_datekey
+and d_yearmonthnum = 199401
+and lo_discount between 4 and 6
+and lo_quantity between 26 and 35;
+
+select sum(lo_extendedprice*lo_discount) as revenue
+from s3.lineorder, s3.dwdate
+where lo_orderdate = d_datekey
+and d_weeknuminyear = 6
+and d_year = 1994
+and lo_discount between 5 and 7
+and lo_quantity between 26 and 35;
+
+select sum(lo_revenue), d_year, p_brand1
+from s3.lineorder, s3.dwdate, s3.part, s3.supplier
+where lo_orderdate = d_datekey
+and lo_partkey = p_partkey
+and lo_suppkey = s_suppkey
+and p_category = &#39;MFGR#12&#39;
+and s_region = &#39;AMERICA&#39;
+group by d_year, p_brand1
+order by d_year, p_brand1;
+
+select sum(lo_revenue), d_year, p_brand1
+from s3.lineorder, s3.dwdate, s3.part, s3.supplier
+where lo_orderdate = d_datekey
+and lo_partkey = p_partkey
+and lo_suppkey = s_suppkey
+and p_brand1 between &#39;MFGR#2221&#39; and &#39;MFGR#2228&#39;
+and s_region = &#39;ASIA&#39;
+group by d_year, p_brand1
+order by d_year, p_brand1;
+
+select sum(lo_revenue), d_year, p_brand1
+from s3.lineorder, s3.dwdate, s3.part, s3.supplier
+where lo_orderdate = d_datekey
+and lo_partkey = p_partkey
+and lo_suppkey = s_suppkey
+and p_brand1 = &#39;MFGR#2221&#39;
+and s_region = &#39;EUROPE&#39;
+group by d_year, p_brand1
+order by d_year, p_brand1;
+
+select c_nation, s_nation, d_year, sum(lo_revenue) as revenue
+from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_orderdate = d_datekey
+and c_region = &#39;ASIA&#39; and s_region = &#39;ASIA&#39;
+and d_year &amp;gt;= 1992 and d_year &amp;lt;= 1997
+group by c_nation, s_nation, d_year
+order by d_year asc, revenue desc;
+
+select c_city, s_city, d_year, sum(lo_revenue) as revenue
+from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_orderdate = d_datekey
+and c_nation = &#39;UNITED STATES&#39;
+and s_nation = &#39;UNITED STATES&#39;
+and d_year &amp;gt;= 1992 and d_year &amp;lt;= 1997
+group by c_city, s_city, d_year
+order by d_year asc, revenue desc;
+
+select c_city, s_city, d_year, sum(lo_revenue) as revenue
+from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_orderdate = d_datekey
+and (c_city=&#39;UNITED KI1&#39; or c_city=&#39;UNITED KI5&#39;)
+and (s_city=&#39;UNITED KI1&#39; or s_city=&#39;UNITED KI5&#39;)
+and d_year &amp;gt;= 1992 and d_year &amp;lt;= 1997
+group by c_city, s_city, d_year
+order by d_year asc, revenue desc;
+
+select c_city, s_city, d_year, sum(lo_revenue) as revenue
+from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_orderdate = d_datekey
+and (c_city=&#39;UNITED KI1&#39; or c_city=&#39;UNITED KI5&#39;)
+and (s_city=&#39;UNITED KI1&#39; or s_city=&#39;UNITED KI5&#39;)
+and d_yearmonth = &#39;Dec1997&#39;
+group by c_city, s_city, d_year
+order by d_year asc, revenue desc;
+
+select d_year, c_nation, sum(lo_revenue - lo_supplycost) as profit
+from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
+where lo_custkey = c_custkey
+ and lo_suppkey = s_suppkey
+ and lo_partkey = p_partkey
+ and lo_orderdate = d_datekey
+ and c_region = &#39;AMERICA&#39;
+ and s_region = &#39;AMERICA&#39;
+ and (p_mfgr = &#39;MFGR#1&#39; or p_mfgr = &#39;MFGR#2&#39;)
+group by d_year, c_nation
+order by d_year, c_nation;
+
+select d_year, s_nation, p_category, sum(lo_revenue - lo_supplycost) as profit
+from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_partkey = p_partkey
+and lo_orderdate = d_datekey
+and c_region = &#39;AMERICA&#39;
+and s_region = &#39;AMERICA&#39;
+and (d_year = 1997 or d_year = 1998)
+and (p_mfgr = &#39;MFGR#1&#39;
+or p_mfgr = &#39;MFGR#2&#39;)
+group by d_year, s_nation, p_category order by d_year, s_nation, p_category;
+
+select d_year, s_city, p_brand1, sum(lo_revenue - lo_supplycost) as profit
+from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
+where lo_custkey = c_custkey
+and lo_suppkey = s_suppkey
+and lo_partkey = p_partkey
+and lo_orderdate = d_datekey
+and c_region = &#39;AMERICA&#39;
+and s_nation = &#39;UNITED STATES&#39;
+and (d_year = 1997 or d_year = 1998)
+and p_category = &#39;MFGR#14&#39;
+group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshift Admin Scripts</title>
+      <link>/aws-redshift-admin-script-memo/</link>
+      <pubDate>Sun, 20 Jun 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-admin-script-memo/</guid>
+      <description>&lt;h3 id=&#34;一覧&#34;&gt;一覧&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;No.&lt;/th&gt;
+&lt;th&gt;スクリプト&lt;/th&gt;
+&lt;th&gt;概要&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;commit_stats.sql&lt;/td&gt;
+&lt;td&gt;COMMIT文によるクラスタリソースの消費に関する情報を表示&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;copy_performance.sql&lt;/td&gt;
+&lt;td&gt;過去7日間で最も長く実行されたコピーを表示&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;current_session_info.sql&lt;/td&gt;
+&lt;td&gt;現在実行中のクエリを持つセッションについての情報を表示するクエリ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;filter_used.sql&lt;/td&gt;
+&lt;td&gt;スキャン時にテーブルに適用されるフィルタを返す。ソートキーの選択に役立ちます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;generate_calendar.sql&lt;/td&gt;
+&lt;td&gt;スタースキーマ結合に便利なカレンダー・ディメンジョン・テーブルの作成&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;missing_table_stats.sql&lt;/td&gt;
+&lt;td&gt;クエリには、基礎となるテーブルで「統計情報がない」というフラグを立てた EXPLAIN プランが表示&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;perf_alert.sql&lt;/td&gt;
+&lt;td&gt;アラート、テーブルスキャンとの結合、SQLテキストの上位出現率を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;table_alerts.sql&lt;/td&gt;
+&lt;td&gt;テーブルアクセスに関連するアラートの発生件数を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;predicate_columns.sql&lt;/td&gt;
+&lt;td&gt;テーブル上のプレディケート・カラムに関する情報を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;queuing_queries.sql&lt;/td&gt;
+&lt;td&gt;WLM クエリスロットで待機しているクエリの表示&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;11&lt;/td&gt;
+&lt;td&gt;queue_resources_hourly.sql&lt;/td&gt;
+&lt;td&gt;WLM クエリキューの時間ごとのリソース使用量を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;12&lt;/td&gt;
+&lt;td&gt;running_queues.sql&lt;/td&gt;
+&lt;td&gt;実行中およびキューイング中のクエリと消費されたリソースを返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;13&lt;/td&gt;
+&lt;td&gt;table_info.sql&lt;/td&gt;
+&lt;td&gt;テーブルのストレージ情報（サイズ、スキューなど）を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;14&lt;/td&gt;
+&lt;td&gt;table_inspector.sql&lt;/td&gt;
+&lt;td&gt;テーブル設計の分析」の内容に基づくテーブルの分析。table_info.sqlを補完&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;15&lt;/td&gt;
+&lt;td&gt;top_queries.sql&lt;/td&gt;
+&lt;td&gt;過去7日間で最も時間を消費したステートメントのトップ50を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;td&gt;top_queries_and_cursors.sql&lt;/td&gt;
+&lt;td&gt;過去7日間で最も時間を消費したステートメントのトップ50を返す - カーソルテキストを含む&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;td&gt;unscanned_table_summary.sql&lt;/td&gt;
+&lt;td&gt;スキャンされていないテーブルで消費されたストレージをまとめます。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;18&lt;/td&gt;
+&lt;td&gt;wlm_apex.sql&lt;/td&gt;
+&lt;td&gt;WLM クエリキューの全体的なハイウォーターマークとキューが最後に発生した時間を返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;19&lt;/td&gt;
+&lt;td&gt;wlm_apex_hourly.sql&lt;/td&gt;
+&lt;td&gt;WLM クエリキューの時間ごとのハイウォーターマークを返す&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;20&lt;/td&gt;
+&lt;td&gt;wlm_qmr_rule_candidates.sql&lt;/td&gt;
+&lt;td&gt;新しい WLM クエリ監視ルールの候補を算出&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;21&lt;/td&gt;
+&lt;td&gt;user_to_be_dropped_objs.sql&lt;/td&gt;
+&lt;td&gt;ドロップできないユーザが所有するオブジェクトの検索&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;22&lt;/td&gt;
+&lt;td&gt;user_to_be_dropped_privs.sql&lt;/td&gt;
+&lt;td&gt;ドロップできないユーザに付与されている権限の検索&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/awslabs/amazon-redshift-utils/tree/master/src/AdminScripts&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://github.com/awslabs/amazon-redshift-utils/tree/master/src/AdminScripts&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;実行&#34;&gt;実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;\i commit_stats.sql;
+\i copy_performance.sql;
+\i current_session_info.sql;
+\i filter_used.sql;
+\i generate_calendar.sql;
+\i insert_into_table_dk_mismatch.sql;
+\i lock_wait.sql;
+\i missing_table_stats.sql;
+\i perf_alert.sql;
+\i predicate_columns.sql;
+\i queue_resources_hourly.sql;
+\i queuing_queries.sql;
+\i running_queues.sql;
+\i table_alerts.sql;
+\i table_info.sql;
+\i table_inspector.sql;
+\i top_queries_and_cursors.sql;
+\i top_queries.sql;
+\i unscanned_table_summary.sql;
+\i user_to_be_dropped_objs.sql;
+\i user_to_be_dropped_privs.sql;
+\i wlm_apex_hourly.sql;
+\i wlm_apex.sql;
+\i wlm_qmr_rule_candidates.sql;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshift ショートクエリアクセラレーション（SQA）</title>
+      <link>/aws-redshift-short-query-acceleration-sqa/</link>
+      <pubDate>Tue, 15 Jun 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-short-query-acceleration-sqa/</guid>
+      <description>  &lt;iframe src=&#34;//www.slideshare.net/slideshow/embed_code/key/Efsko7wlMOc3lQ?startSlide=45&#34; width=&#34;595&#34; height=&#34;485&#34; frameborder=&#34;0&#34; marginwidth=&#34;0&#34; marginheight=&#34;0&#34; scrolling=&#34;no&#34; style=&#34;border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;&#34; allowfullscreen&gt; &lt;/iframe&gt; &lt;div style=&#34;margin-bottom:5px&#34;&gt; &lt;strong&gt; &lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan/20210127-aws-black-belt-online-seminar-amazon-redshift&#34; title=&#34;20210127 AWS Black Belt Online Seminar Amazon Redshift 運用管理&#34; target=&#34;_blank&#34;&gt;20210127 AWS Black Belt Online Seminar Amazon Redshift 運用管理&lt;/a&gt; &lt;/strong&gt; from &lt;strong&gt;&lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan&#34; target=&#34;_blank&#34;&gt;Amazon Web Services Japan&lt;/a&gt;&lt;/strong&gt; &lt;/div&gt;
+&lt;h1 id=&#34;ショートクエリアクセラレーションsqaとは&#34;&gt;ショートクエリアクセラレーション（SQA）とは&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;実行時間が短い一部のクエリを、実行時間が長いクエリよりも優先するように専用キューで実行する機能&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ロングクエリ実行中に、ショートクエリがブロックされるシチューエーションを回避出来る&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;デフォルトでは、WLM は、クラスターのワークロードの分析に基づいて、SQA 最大実行時間の値を動的に割り当て&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;特にユーザは意識する必要はない&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&#34;実機確認&#34;&gt;実機確認&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;下記クエリで動的に割り当てられたショートクエリの実行時間がわかる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select least(greatest(percentile_cont(0.7) 
+within group (order by total_exec_time / 1000000) + 2, 2), 20) 
+from stl_wlm_query 
+where userid &amp;gt;= 100
+and final_state = &#39;Completed&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# tpcds_100gb=# select least(greatest(percentile_cont(0.7) 
+mydb(# tpcds_100gb(# within group (order by total_exec_time / 1000000) + 2, 2), 20) 
+mydb(# tpcds_100gb-# from stl_wlm_query 
+mydb(# tpcds_100gb-# where userid &amp;gt;= 100
+mydb(# tpcds_100gb-# and final_state = &#39;Completed&#39;;
+mydb(#  least 
+mydb(# -------
+mydb(#    8.0
+mydb(# (1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;有効化確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select * from stv_wlm_service_class_config 
+where service_class = 14;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select * from stv_wlm_service_class_config 
+mydb-# where service_class = 14;
+-[ RECORD 1 ]------------+-----------------------------------------------------------------
+service_class            | 14
+queueing_strategy        | Predicted Time queue policy     
+num_query_tasks          | 6
+target_num_query_tasks   | 6
+evictable                | true    
+eviction_threshold       | 0
+query_working_mem        | 264
+target_query_working_mem | 264
+min_step_mem             | 5
+name                     | Short query queue                                               
+max_execution_time       | 0
+user_group_wild_card     | false   
+query_group_wild_card    | false   
+concurrency_scaling      | off                 
+query_priority           | Normal  
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;各クエリキュー (サービスクラス) を通過したクエリ確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select final_state, service_class, count(*), avg(total_exec_time), 
+percentile_cont(0.9) within group (order by total_queue_time), avg(total_queue_time) 
+from stl_wlm_query where userid &amp;gt;= 100 group by 1,2 order by 2,1; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select final_state, service_class, count(*), avg(total_exec_time), 
+mydb-# percentile_cont(0.9) within group (order by total_queue_time), avg(total_queue_time) 
+mydb-# from stl_wlm_query where userid &amp;gt;= 100 group by 1,2 order by 2,1; 
+   final_state    | service_class | count |   avg   | percentile_cont |  avg   
+------------------+---------------+-------+---------+-----------------+--------
+ Completed        |           100 |   283 | 1789760 |        550958.6 | 421287
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;SOAによって正常完了したクエリの情報&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select a.queue_start_time, a.total_exec_time,trim(querytxt)
+from stl_wlm_query a, stl_query b 
+where a.query = b.query and a.service_class = 14 and a.final_state = &#39;Completed&#39;
+order by a.queue_start_time desc limit 1;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select a.queue_start_time, a.total_exec_time,trim(querytxt)
+mydb-# from stl_wlm_query a, stl_query b 
+mydb-# where a.query = b.query and a.service_class = 14 and a.final_state = &#39;Completed&#39;
+mydb-# order by a.queue_start_time desc limit 1;
+      queue_start_time      | total_exec_time |  btrim                                                       
+ 2021-06-11 12:38:23.935373 |         1983019 | with /* TPC-DS query27a.tpl 0.16 */ results as (select i_item_id, s_state, 0 as g_state, ss_quantity agg1, ss_list_price agg2, ss_coupon_amt agg3, ss_sales_price agg4 from store_sales, customer_demographics, date_dim, 
+store, item where ss_sold_date_sk = d_date_sk and ss_item_sk = i_item_sk and ss_store_sk = s_store_sk and ss_cdemo_sk = cd_demo_sk and cd_gender = &#39;F&#39; and cd_marital_status = &#39;S&#39; and cd_education_status = &#39;Primary&#39; and d_year = 1999 and s_state in (&#39;FL&#39;,&#39;NC&#39;, &#39;MN&#39;, 
+&#39;CO&#39;, &#39;MI&#39;, &#39;SC&#39;) ) select i_item_id, s_state, g_state, agg1, agg2, agg3, agg4 from ( select i_item_id, s_state, 0 as g_state, avg(agg1) agg1, avg(agg2) agg2, avg(agg3) agg3, avg(agg4) agg4 from results group by i_item_id, s_state union all select i_item_id, NULL AS
+ s_state, 1 AS g_state, avg(agg1) agg1, avg(agg2) agg2, avg(agg3) agg3, avg(agg4) agg4 from results group by i_item_id union all select NULL AS i_item_id, NULL as s_state, 1 as g_state, avg(agg1) agg1, avg(agg2) agg2, avg(agg3) agg3, avg(agg4) agg4 from results ) fo
+o order by i_item_id, s_state limit 100;
+(1 row)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftクラスタ 停止、起動、状態確認のCLI操作</title>
+      <link>/aws-redshift-cluster-stop-start-check-status/</link>
+      <pubDate>Sat, 12 Jun 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-cluster-stop-start-check-status/</guid>
+      <description>&lt;h3 id=&#34;停止&#34;&gt;停止&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws redshift pause-cluster --cluster-identifier redshift-ra3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;起動再開&#34;&gt;起動（再開）&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws redshift resume-cluster --cluster-identifier redshift-ra3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;状態確認&#34;&gt;状態確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws redshift describe-clusters --cluster-identifier redshift-ra3
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;describe-clusters&lt;/code&gt;で必要な情報だけ取得する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws redshift describe-clusters --cluster-identifier redshift-ra3 | jq -r &#39;.Clusters[] | [ .ClusterIdentifier, .NodeType, .ClusterStatus] | @csv&#39;
+&amp;quot;redshift-ra3&amp;quot;,&amp;quot;ra3.4xlarge&amp;quot;,&amp;quot;paused&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshift RA3 と Spectrumの使い分け</title>
+      <link>/aws-redshift-ra3-spectrum.html</link>
+      <pubDate>Mon, 31 May 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-ra3-spectrum.html</guid>
+      <description>&lt;p&gt;どちらもコンピュートとストレージ層が分離されているアーキテクチャのため、どういうユースケースのときにどっちを使うべきかという疑問。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;例&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;RA3パターン
+&lt;ul&gt;
+&lt;li&gt;S3にデータをオフロードしてストレージを節約しているパターン等はRA3に&lt;/li&gt;
+&lt;li&gt;Redshift内でETLを行いデータを加工するパターン&lt;/li&gt;
+&lt;li&gt;S3上でのパーティション分割などSpectrumからのスキャン性能とかあまり気にしたくない時に&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Spectrum
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;他のAWSサービスからS3上のデータにアクセスするパターン。現時点においてもDWH上にデータを置いていないパターン等はSpectrumへ。（この場合はAthenaとの使い分けがまた悩みどころ…。）&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;EMRでデータを加工してRedshiftでデータを参照するパターン&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Redshift内のデータと組み合わせて使うパターン&lt;/p&gt;
+&lt;iframe src=&#34;//www.slideshare.net/slideshow/embed_code/key/zzxb6aeXSKNjwR?startSlide=69&#34; width=&#34;595&#34; height=&#34;485&#34; frameborder=&#34;0&#34; marginwidth=&#34;0&#34; marginheight=&#34;0&#34; scrolling=&#34;no&#34; style=&#34;border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;&#34; allowfullscreen&gt; &lt;/iframe&gt; &lt;div style=&#34;margin-bottom:5px&#34;&gt; &lt;strong&gt; &lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan/20200318-aws-black-belt-online-seminar-amazon-redshift&#34; title=&#34;20200318 AWS Black Belt Online Seminar Amazon Redshift&#34; target=&#34;_blank&#34;&gt;20200318 AWS Black Belt Online Seminar Amazon Redshift&lt;/a&gt; &lt;/strong&gt; from &lt;strong&gt;&lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan&#34; target=&#34;_blank&#34;&gt;Amazon Web Services Japan&lt;/a&gt;&lt;/strong&gt; &lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftのdecimalの数値計算時の注意点</title>
+      <link>/aws-redshift-decimal-calculate.html</link>
+      <pubDate>Thu, 13 May 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-decimal-calculate.html</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;浮動小数点演算で細かいところまで保持したい場合は&lt;code&gt;DECIMAL&lt;/code&gt;を使うことになると思うが、DECIMALを&lt;u&gt;数値計算に使用した場合&lt;/u&gt;、計算結果の有効桁数は格納先のDECIMALと異なるという。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;DECIMAL の計算結果の精度とスケール&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;精度とスケール&#34;&gt;精度とスケール&lt;/h3&gt;
+&lt;p&gt;まずは精度とスケールの基本的理解から。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;精度(Precision)：全体の桁数&lt;/li&gt;
+&lt;li&gt;スケール(Scale)：小数点以下の桁数&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;入力データ&lt;/th&gt;
+&lt;th&gt;NUMBER型の定義&lt;/th&gt;
+&lt;th&gt;格納されるデータ&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER&lt;/td&gt;
+&lt;td&gt;7456123.89&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(*,1)&lt;/td&gt;
+&lt;td&gt;7456123.9&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(9)&lt;/td&gt;
+&lt;td&gt;7456124&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(9,2)&lt;/td&gt;
+&lt;td&gt;7456123.89&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(9,1)&lt;/td&gt;
+&lt;td&gt;7456123.9&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(6)&lt;/td&gt;
+&lt;td&gt;（精度を超えているため、受け入れられない）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7,456,123.89&lt;/td&gt;
+&lt;td&gt;NUMBER(7,-2)&lt;/td&gt;
+&lt;td&gt;7456100&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;redshiftでの浮動小数点演算の仕様&#34;&gt;Redshiftでの浮動小数点演算の仕様&lt;/h3&gt;
+&lt;p&gt;例えば次のように一連のコマンドを実行する。これは&lt;code&gt;a&lt;/code&gt;というカラムが&lt;code&gt;decimal(8,2)&lt;/code&gt;、&lt;code&gt;b&lt;/code&gt;というカラムが&lt;code&gt;decimal(8,7)&lt;/code&gt;であり、このaとbに格納されている値を除算して、&lt;code&gt;c&lt;/code&gt;の&lt;code&gt;decimal(38,23)&lt;/code&gt;に格納するパターンとなる。cに格納される値は小数点23位までしっかりと格納されて欲しいが、計算が入る場合の精度とスケールは小数点23位まで保持されない。このパターンの結果は&lt;code&gt;0.33330000000000000000000&lt;/code&gt;となり、&lt;code&gt;小数点4位&lt;/code&gt;まで保持されて、以降はゼロ詰めされている。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table test;
+create table test(a decimal(8,2), b decimal(8,7),c decimal(38,23));
+insert into test values(1,3,null);
+
+select * from test;
+insert into test(c) select a/b from test;
+select * from test;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行ログは次の通り。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# drop table test;
+DROP TABLE
+mydb=# create table test(a decimal(8,2), b decimal(8,7),c decimal(38,23));
+CREATE TABLE
+mydb=# insert into test values(1,3,null);
+INSERT 0 1
+mydb=# 
+mydb=# select * from test;
+  a   |     b     | c 
+------+-----------+---
+ 1.00 | 3.0000000 |  
+(1 row)
+
+mydb=# insert into test(c) select a/b from test;
+INSERT 0 1
+mydb=# select * from test;
+  a   |     b     |             c             
+------+-----------+---------------------------
+ 1.00 | 3.0000000 |                          
+      |           | 0.33330000000000000000000
+(2 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;このような結果になるのは次の計算式が適用されるため。（マニュアルからの抜粋）&lt;/p&gt;
+&lt;p&gt;今回は除算なので、スケールは&lt;code&gt;max(4,s1+p2-s2+1)&lt;/code&gt;、精度は&lt;code&gt;p1-s1+s2+scale&lt;/code&gt;で計算する必要がある。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;オペレーション&lt;/th&gt;
+&lt;th&gt;分類&lt;/th&gt;
+&lt;th&gt;計算式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;+ または -&lt;/td&gt;
+&lt;td&gt;スケール&lt;/td&gt;
+&lt;td&gt;max(s1,s2)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;+ または -&lt;/td&gt;
+&lt;td&gt;精度&lt;/td&gt;
+&lt;td&gt;max(p1-s1,p2-s2)+1+scale&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;*&lt;/td&gt;
+&lt;td&gt;スケール&lt;/td&gt;
+&lt;td&gt;s1+s2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;*&lt;/td&gt;
+&lt;td&gt;精度&lt;/td&gt;
+&lt;td&gt;p1+p2+1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/&lt;/td&gt;
+&lt;td&gt;スケール&lt;/td&gt;
+&lt;td&gt;max(4,s1+p2-s2+1)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/&lt;/td&gt;
+&lt;td&gt;精度&lt;/td&gt;
+&lt;td&gt;p1-s1+s2+scale&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;表形式にするとこんな感じ。計算結果と格納先の&lt;code&gt;c&lt;/code&gt;で格納出来る&lt;code&gt;スケール&lt;/code&gt;、&lt;code&gt;精度&lt;/code&gt;で差異が出た。このような仕様を理解した上でデータ型を決める必要がある。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;カラム&lt;/th&gt;
+&lt;th&gt;変数&lt;/th&gt;
+&lt;th&gt;スケール、精度&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;a&lt;/td&gt;
+&lt;td&gt;p1&lt;/td&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;a&lt;/td&gt;
+&lt;td&gt;s1&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;b&lt;/td&gt;
+&lt;td&gt;p2&lt;/td&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;b&lt;/td&gt;
+&lt;td&gt;s2&lt;/td&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;計算結果&lt;/td&gt;
+&lt;td&gt;精度（全体の桁数）&lt;/td&gt;
+&lt;td&gt;17&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;計算結果&lt;/td&gt;
+&lt;td&gt;スケール（小数点以下の桁数）&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;c（格納先）&lt;/td&gt;
+&lt;td&gt;精度（全体の桁数）&lt;/td&gt;
+&lt;td&gt;38&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;c（格納先）&lt;/td&gt;
+&lt;td&gt;スケール（小数点以下の桁数）&lt;/td&gt;
+&lt;td&gt;23&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;補足&#34;&gt;補足&lt;/h3&gt;
+&lt;p&gt;各データベースで計算式が違う？下記はSQL Server。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?view=sql-server-ver15&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?view=sql-server-ver15&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;参照&#34;&gt;参照&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://tech.tvisioninsights.co.jp/entry/2018/08/22/100000&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://tech.tvisioninsights.co.jp/entry/2018/08/22/100000&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://odashinsuke.hatenablog.com/entry/20100720/1279628893&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://odashinsuke.hatenablog.com/entry/20100720/1279628893&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?redirectedfrom=MSDN&amp;amp;view=sql-server-ver15&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?redirectedfrom=MSDN&amp;view=sql-server-ver15&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftのskew tableを確認する</title>
+      <link>/aws-redshift-skew-table-check.html</link>
+      <pubDate>Wed, 12 May 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-skew-table-check.html</guid>
+      <description>&lt;p&gt;&lt;code&gt;amazon-redshift-utils&lt;/code&gt;を使用する&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;git clone https://github.com/awslabs/amazon-redshift-utils.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sql実行&#34;&gt;SQL実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ psql -h redshift-cluster.xxxxx.ap-northeast-1.redshift.amazonaws.com -U awsuser -d tickit -p 5439 -f /home/ec2-user/amazon-redshift-utils-master/src/AdminScripts/table_inspector.sql
+ schemaname | tablename | tableid | size_in_mb | has_dist_key | has_sort_key | has_col_encoding | ratio_skew_across_slices | pct_slices_populated 
+------------+-----------+---------+------------+--------------+--------------+------------------+--------------------------+----------------------
+ public     | category  |  203866 |         56 |            1 |            1 |                1 |                        0 |                  100
+ public     | date      |  203868 |         88 |            1 |            1 |                1 |                        0 |                  100
+ public     | event     |  203871 |         72 |            1 |            1 |                1 |                        0 |                  100
+ public     | listing   |  203873 |         88 |            1 |            1 |                1 |                        0 |                  100
+ public     | sales     |  203875 |        104 |            1 |            1 |                1 |                        0 |                  100
+ public     | users     |  203862 |        168 |            1 |            1 |                1 |                        0 |                  100
+ public     | venue     |  203864 |         64 |            1 |            1 |                1 |                        0 |                  100
+(7 rows)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;列の説明&#34;&gt;列の説明&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;レポート項目&lt;/th&gt;
+&lt;th&gt;意味&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;has_dist_key&lt;/td&gt;
+&lt;td&gt;テーブルに分散キーが存在するかどうかを示します。  1 はキーが存在することを示し、 0 はキーが存在しないことを示します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;has_sort_key&lt;/td&gt;
+&lt;td&gt;テーブルにソートキーが存在するかどうかを示します。  1 はキーが存在することを示し、 0 はキーが存在しないことを示します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;has_col_encoding&lt;/td&gt;
+&lt;td&gt;テーブルのいずれかの列に対して圧縮エンコードが定義されているかどうかを示します。  1 は、少なくとも 1 つの列にエンコードが定義されていることを示します。 0 は、エンコードが定義されていないことを示します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pct_skew_across_slices&lt;/td&gt;
+&lt;td&gt;データ分散スキューの割合。値が小さいほど結果は良好です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;pct_slices_populated&lt;/td&gt;
+&lt;td&gt;入力されているスライスの割合。値が大きいほど結果は良好です。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftのサンプルデータベース（TICKIT）を作る</title>
+      <link>/aws-redshift-sample-database-tickit.html</link>
+      <pubDate>Wed, 21 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-sample-database-tickit.html</guid>
+      <description>&lt;p&gt;毎回マニュアル見ている気がするので、DDLコマンド等のメモ。7 個のテーブルで構成されていて、そのうち 2 個はファクトテーブル、5 個はディメンションとなる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;サンプルデータベース - Amazon Redshift &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_sampledb.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_sampledb.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;img&#34; srcset=&#34;
+               /tickitdb_hud627402002d99724f29df60987092987_20363_6e9edd89f00da7d59f0fa12d6c4ffcaf.png 400w,
+               /tickitdb_hud627402002d99724f29df60987092987_20363_57b5697383760633beaeec6fd719ee4c.png 760w,
+               /tickitdb_hud627402002d99724f29df60987092987_20363_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/tickitdb_hud627402002d99724f29df60987092987_20363_6e9edd89f00da7d59f0fa12d6c4ffcaf.png&#34;
+               width=&#34;669&#34;
+               height=&#34;412&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h1 id=&#34;データベース作成&#34;&gt;データベース作成&lt;/h1&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create database TICKIT;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;tickitデータベースに接続しておく。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;\c tickit;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;テーブル作成&#34;&gt;テーブル作成&lt;/h1&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create table users(
+	userid integer not null distkey sortkey,
+	username char(8),
+	firstname varchar(30),
+	lastname varchar(30),
+	city varchar(30),
+	state char(2),
+	email varchar(100),
+	phone char(14),
+	likesports boolean,
+	liketheatre boolean,
+	likeconcerts boolean,
+	likejazz boolean,
+	likeclassical boolean,
+	likeopera boolean,
+	likerock boolean,
+	likevegas boolean,
+	likebroadway boolean,
+	likemusicals boolean);
+	
+create table venue(
+  venueid smallint not null distkey sortkey,
+  venuename varchar(100),
+  venuecity varchar(30),
+  venuestate char(2),
+  venueseats integer);
+
+create table category(
+	catid smallint not null distkey sortkey,
+	catgroup varchar(10),
+	catname varchar(10),
+	catdesc varchar(50));
+
+create table date(
+	dateid smallint not null distkey sortkey,
+	caldate date not null,
+	day character(3) not null,
+	week smallint not null,
+	month character(5) not null,
+	qtr character(5) not null,
+	year smallint not null,
+	holiday boolean default(&#39;N&#39;));
+
+create table event(
+	eventid integer not null distkey,
+	venueid smallint not null,
+	catid smallint not null,
+	dateid smallint not null sortkey,
+	eventname varchar(200),
+	starttime timestamp);
+
+create table listing(
+	listid integer not null distkey,
+	sellerid integer not null,
+	eventid integer not null,
+	dateid smallint not null  sortkey,
+	numtickets smallint not null,
+	priceperticket decimal(8,2),
+	totalprice decimal(8,2),
+	listtime timestamp);
+
+create table sales(
+	salesid integer not null,
+	listid integer not null distkey,
+	sellerid integer not null,
+	buyerid integer not null,
+	eventid integer not null,
+	dateid smallint not null sortkey,
+	qtysold smallint not null,
+	pricepaid decimal(8,2),
+	commission decimal(8,2),
+	saletime timestamp);
+	
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;7テーブル作成している。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;tickit=# \dt
+          List of relations
+ schema |   name   | type  |  owner  
+--------+----------+-------+---------
+ public | category | table | awsuser
+ public | date     | table | awsuser
+ public | event    | table | awsuser
+ public | listing  | table | awsuser
+ public | sales    | table | awsuser
+ public | users    | table | awsuser
+ public | venue    | table | awsuser
+(7 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;データロード&#34;&gt;データロード&lt;/h1&gt;
+&lt;p&gt;サンプル用のデータの取得&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget https://docs.aws.amazon.com/ja_jp/redshift/latest/gsg/samples/tickitdb.zip
+unzip tickitdb.zip -d tickitdb
+ls -l tickitdb
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;copyコマンドを使うので、S3にアップロードする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws s3 mb s3://20210420tickit
+aws s3 sync ./tickitdb/ s3://20210420tickit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;S3のバケットにデータが格納された&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws s3 ls s3://20210420tickit
+2021-04-20 20:34:58     445838 allevents_pipe.txt
+2021-04-20 20:34:58    5893626 allusers_pipe.txt
+2021-04-20 20:34:58        465 category_pipe.txt
+2021-04-20 20:34:58      14534 date2008_pipe.txt
+2021-04-20 20:34:58   11585036 listings_pipe.txt
+2021-04-20 20:34:58   11260097 sales_tab.txt
+2021-04-20 20:34:58       7988 venue_pipe.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;データロードコマンド&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;copy users from &#39;s3://20210420tickit/allusers_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39;;
+
+copy venue from &#39;s3://20210420tickit/venue_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39;;
+
+copy category from &#39;s3://20210420tickit/category_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39;;
+
+copy date from &#39;s3://20210420tickit/date2008_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39;;
+
+copy event from &#39;s3://20210420tickit/allevents_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39; timeformat &#39;YYYY-MM-DD HH:MI:SS&#39;;
+
+copy listing from &#39;s3://20210420tickit/listings_pipe.txt&#39; 
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;|&#39;;
+
+copy sales from &#39;s3://20210420tickit/sales_tab.txt&#39;
+iam_role &#39;arn:aws:iam::xxxxxx:role/myRedshiftRole&#39;
+delimiter &#39;\t&#39; timeformat &#39;MM/DD/YYYY HH:MI:SS&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;テーブルごとの行数確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin AdminScripts]$ pwd
+/home/ec2-user/amazon-redshift-utils-master/src/AdminScripts
+[ec2-user@bastin AdminScripts]$ ls -l
+total 112
+-rw-rw-r-- 1 ec2-user ec2-user  899 Mar 26 03:15 commit_stats.sql
+-rw-rw-r-- 1 ec2-user ec2-user 1163 Mar 26 03:15 copy_performance.sql
+-rw-rw-r-- 1 ec2-user ec2-user  527 Mar 26 03:15 current_session_info.sql
+-rw-rw-r-- 1 ec2-user ec2-user 1466 Mar 26 03:15 filter_used.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2553 Mar 26 03:15 generate_calendar.sql
+-rw-rw-r-- 1 ec2-user ec2-user 1940 Mar 26 03:15 insert_into_table_dk_mismatch.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3440 Mar 26 03:15 lock_wait.sql
+-rw-rw-r-- 1 ec2-user ec2-user  309 Mar 26 03:15 missing_table_stats.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2312 Mar 26 03:15 perf_alert.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2389 Mar 26 03:15 predicate_columns.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3019 Mar 26 03:15 queue_resources_hourly.sql
+-rw-rw-r-- 1 ec2-user ec2-user  787 Mar 26 03:15 queuing_queries.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3279 Mar 26 03:15 README.md
+-rw-rw-r-- 1 ec2-user ec2-user 2978 Mar 26 03:15 running_queues.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2054 Mar 26 03:15 table_alerts.sql
+-rw-rw-r-- 1 ec2-user ec2-user 4584 Mar 26 03:15 table_info.sql
+-rw-rw-r-- 1 ec2-user ec2-user 1688 Mar 26 03:15 table_inspector.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3504 Mar 26 03:15 top_queries_and_cursors.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2431 Mar 26 03:15 top_queries.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3060 Mar 26 03:15 unscanned_table_summary.sql
+-rw-rw-r-- 1 ec2-user ec2-user 1876 Mar 26 03:15 user_to_be_dropped_objs.sql
+-rw-rw-r-- 1 ec2-user ec2-user 5410 Mar 26 03:15 user_to_be_dropped_privs.sql
+-rw-rw-r-- 1 ec2-user ec2-user 2876 Mar 26 03:15 wlm_apex_hourly.sql
+-rw-rw-r-- 1 ec2-user ec2-user 3302 Mar 26 03:15 wlm_apex.sql
+-rw-rw-r-- 1 ec2-user ec2-user 7567 Mar 26 03:15 wlm_qmr_rule_candidates.sql
+[ec2-user@bastin AdminScripts]$ psql -h redshift-cluster.ciwori21oiel.ap-northeast-1.redshift.amazonaws.com -U awsuser -d tickit -p 5439
+psql (11.5, server 8.0.2)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &amp;quot;help&amp;quot; for help.
+
+tickit=# \i table_info.sql
+ schema |  table   | tableid | distkey |  skew  | sortkey | #sks |  rows  | mbytes | enc |        pct_enc        | pct_of_total | pct_stats_off | pct_unsorted 
+--------+----------+---------+---------+--------+---------+------+--------+--------+-----+-----------------------+--------------+---------------+--------------
+ public | users    |  203862 | userid  | 1.0000 | userid  |    1 |  49990 |    168 | Y   | 33.333333333333333300 |         0.00 |          0.00 |         0.00
+ public | sales    |  203875 | listid  | 1.0000 | dateid  |    1 | 172456 |    104 | Y   | 57.894736842105263100 |         0.00 |          0.00 |         0.00
+ public | date     |  203868 | dateid  | 1.0000 | dateid  |    1 |    365 |     88 | Y   | 47.058823529411764700 |         0.00 |          0.00 |         0.00
+ public | listing  |  203873 | listid  | 1.0000 | dateid  |    1 | 192497 |     88 | Y   | 52.941176470588235200 |         0.00 |          0.00 |         0.00
+ public | event    |  203871 | eventid | 1.0000 | dateid  |    1 |   8798 |     72 | Y   | 46.666666666666666600 |         0.00 |          0.00 |         0.00
+ public | venue    |  203864 | venueid | 1.0000 | venueid |    1 |    202 |     64 | Y   | 42.857142857142857100 |         0.00 |          0.00 |         0.00
+ public | category |  203866 | catid   | 1.0000 | catid   |    1 |     11 |     56 | Y   | 38.461538461538461500 |         0.00 |          0.00 |         0.00
+(7 rows)
+
+tickit=# 
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;サンプルクエリとして用意されているものだが、2008 年に販売されたチケット数に基づき、サンディエゴで最も販売数の多かった販売者 5 名を検出&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select sellerid, username, (firstname ||&#39; &#39;|| lastname) as name,
+city, sum(qtysold)
+from sales, date, users
+where sales.sellerid = users.userid
+and sales.dateid = date.dateid
+and year = 2008
+and city = &#39;San Diego&#39;
+group by sellerid, username, name, city
+order by 5 desc
+limit 5;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;tickit=# select sellerid, username, (firstname ||&#39; &#39;|| lastname) as name,
+tickit-# city, sum(qtysold)
+tickit-# from sales, date, users
+tickit-# where sales.sellerid = users.userid
+tickit-# and sales.dateid = date.dateid
+tickit-# and year = 2008
+tickit-# and city = &#39;San Diego&#39;
+tickit-# group by sellerid, username, name, city
+tickit-# order by 5 desc
+tickit-# limit 5;
+ sellerid | username |       name        |   city    | sum 
+----------+----------+-------------------+-----------+-----
+    49977 | JJK84WTE | Julie Hanson      | San Diego |  22
+    19750 | AAS23BDR | Charity Zimmerman | San Diego |  21
+    29069 | SVL81MEQ | Axel Grant        | San Diego |  17
+    43632 | VAG08HKW | Griffin Dodson    | San Diego |  16
+    18888 | KMQ52NVN | Joan Wright       | San Diego |  14
+(5 rows)
+
+tickit=# 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;参考&#34;&gt;参考&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;サンプルデータベース - Amazon Redshift &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_sampledb.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_sampledb.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;ステップ 6: Amazon S3 のサンプルデータをロードする - Amazon Redshift &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/gsg/rs-gsg-create-sample-db.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/gsg/rs-gsg-create-sample-db.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>RedshiftのS3へのデータアンロード</title>
+      <link>/aws-data-unload-redshift-to-s3.html</link>
+      <pubDate>Tue, 20 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-data-unload-redshift-to-s3.html</guid>
+      <description>&lt;h1 id=&#34;パラレルモードオン&#34;&gt;パラレルモードオン&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;S3のバケットにノードスライスごとにファイルが生成される&lt;/li&gt;
+&lt;li&gt;ノードスライス分、高速にアンロードが可能&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;unload (&#39;select * from unloadtest&#39;)
+to &#39;s3://dataforrs/test20210405/unloadtest_&#39; 
+iam_role &#39;arn:aws:iam::xxxxx:role/myRedshiftRole&#39;
+header
+format csv
+gzip
+allowoverwrite; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;ログ&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;mydb=# unload (&#39;select * from unloadtest&#39;)
+mydb-# to &#39;s3://unloadtest/test20210405/unloadtest_&#39; 
+mydb-# iam_role &#39;arn:aws:iam::xx:role/myRedshiftRole&#39;
+mydb-# header
+mydb-# format csv
+mydb-# gzip
+mydb-# allowoverwrite;
+INFO:  UNLOAD completed, 87701667 record(s) unloaded successfully.
+UNLOAD
+Time: 38214.953 ms (00:38.215)
+
+
+ [ec2-user@bastin ~]$ aws s3 ls s3://dataforrs/test20210405/
+ 2021-04-05 13:14:56  339563139 unloadtest_0000_part_00.gz
+ 2021-04-05 13:14:56  339528727 unloadtest_0001_part_00.gz
+ 2021-04-05 13:14:56  339460977 unloadtest_0002_part_00.gz
+ 2021-04-05 13:14:56  339543307 unloadtest_0003_part_00.gz
+ [ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;パラレルモードオフ&#34;&gt;パラレルモードオフ&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;明示的に&lt;code&gt;parallel off&lt;/code&gt;を指定する&lt;/li&gt;
+&lt;li&gt;一つのファイルに書き込むためシリアルで処理する。MPPの利点を活かせないので当然パラレルモードと比べると遅い。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;unload (&#39;select * from unloadtest&#39;)
+to &#39;s3://dataforrs/test20210406/unloadtest_&#39; 
+iam_role &#39;arn:aws:iam::xxxx:role/myRedshiftRole&#39;
+header
+format csv
+gzip
+parallel off
+allowoverwrite;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;ログ&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;mydb=# unload (&#39;select * from unloadtest&#39;)
+mydb-# to &#39;s3://dataforrs/test20210406/unloadtest_&#39; 
+mydb-# iam_role &#39;arn:aws:iam::xxxx:role/myRedshiftRole&#39;
+mydb-# header
+mydb-# format csv
+mydb-# gzip
+mydb-# parallel off
+mydb-# allowoverwrite;
+INFO:  UNLOAD completed, 87701667 record(s) unloaded successfully.
+UNLOAD
+Time: 151199.736 ms (02:31.200)
+mydb=#
+
+[ec2-user@bastin ~]$ aws s3 ls s3://dataforrs/test20210406/
+2021-04-05 13:19:18 1382206482 unloadtest_000.gz
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&#34;参考&#34;&gt;参考&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;データを Amazon S3 にアンロードする - Amazon Redshift &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/t_Unloading_tables.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/t_Unloading_tables.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>RedshiftにTPC-DSデータをロードしてクエリ実行</title>
+      <link>/aws-redshift-tpcds-dataload.html</link>
+      <pubDate>Sat, 03 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-tpcds-dataload.html</guid>
+      <description>&lt;p&gt;Redshiftのベンチマークにも使用されているTPCDSのデータロードと分析クエリの実行をやってみた。一定容量のデータ（100GBから1PBまで）が用意されていて、大容量データに対する分析用クエリを流したい時に簡易実行できる。&lt;/p&gt;
+&lt;p&gt;TPCDSベンチマークについては&lt;a href=&#34;http://www.tpc.org/tpc_documents_current_versions/pdf/tpc-ds_v2.5.0.pdf&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;こちら&lt;/a&gt;。小売製品サプライヤーの意思決定支援機能をモデル化している模様。&lt;/p&gt;
+&lt;h1 id=&#34;リソース確認&#34;&gt;リソース確認&lt;/h1&gt;
+&lt;p&gt;スクリプト系は&lt;code&gt;amazon-redshift-utils&lt;/code&gt;にまとまっている。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;amazon-redshift-utils/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS at master · awslabs/amazon-redshift-utils · GitHub &lt;a href=&#34;https://github.com/awslabs/amazon-redshift-utils/tree/master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://github.com/awslabs/amazon-redshift-utils/tree/master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;データロード用のスクリプトは、&lt;code&gt;US-EAST-1&lt;/code&gt;リージョンにあるので東京リージョンでRedshiftを実行する場合、転送オーバーヘッドには注意が必要かもしれない。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://s3.console.aws.amazon.com/s3/buckets/redshift-downloads?prefix=TPC-DS%2F&amp;amp;region=us-east-1&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://s3.console.aws.amazon.com/s3/buckets/redshift-downloads?prefix=TPC-DS%2F&amp;region=us-east-1&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id=&#34;手順概要&#34;&gt;手順概要&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;ddl.sqlを編集し、&amp;lt;USER_ACCESS_KEY_ID&amp;gt;と&amp;lt;USER_SECRET_ACCESS_KEY&amp;gt;を任意の有効なS3認証情報に置き換える。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;データセットを読み込むための新しいデータベースを作成します&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;作成したデータベースに接続し、ddl.sqlを実行&lt;/p&gt;
+&lt;p&gt;&lt;u&gt;※データの規模やデータウェアハウスのサイズによっては、数時間かかる場合があるので注意&lt;/u&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;query_0.sql等を実行して実行時間を計測する&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id=&#34;手順&#34;&gt;手順&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;h3 id=&#34;ddlsqlを編集&#34;&gt;ddl.sqlを編集&lt;/h3&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;下記部分を自分のクレデンシャル情報に書き換える。対象のddl.sqlはこちら。git cloneなどでローカルに落として上で編集。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/awslabs/amazon-redshift-utils/blob/master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS/3TB/ddl.sql&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://github.com/awslabs/amazon-redshift-utils/blob/master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS/3TB/ddl.sql&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20210403151518467&#34; srcset=&#34;
+               /image-20210403151518467_hua6e58dbd2624c8369ba8b8a6924fbd97_170028_dac3a40b3709288e24df6ae7816c5387.png 400w,
+               /image-20210403151518467_hua6e58dbd2624c8369ba8b8a6924fbd97_170028_655bb988f0d85f2385dcb47ad8790c1a.png 760w,
+               /image-20210403151518467_hua6e58dbd2624c8369ba8b8a6924fbd97_170028_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/image-20210403151518467_hua6e58dbd2624c8369ba8b8a6924fbd97_170028_dac3a40b3709288e24df6ae7816c5387.png&#34;
+               width=&#34;760&#34;
+               height=&#34;323&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;もちろんIAMロールを利用するように書き換えても大丈夫&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;copy call_center from &#39;s3://redshift-downloads/TPC-DS/2.13/3TB/call_center/&#39; iam_role &#39;arn:aws:iam::xxxxxxxxxxxxxxx:role/myRedshiftRole&#39; gzip delimiter &#39;|&#39; EMPTYASNULL region &#39;us-east-1&#39;;
+copy catalog_page from &#39;s3://redshift-downloads/TPC-DS/2.13/3TB/catalog_page/&#39; iam_role &#39;arn:aws:iam::xxxxxxxxxxxxxxx:role/myRedshiftRole&#39; gzip delimiter &#39;|&#39; EMPTYASNULL region &#39;us-east-1&#39;;
+copy catalog_returns from &#39;s3://redshift-downloads/TPC-DS/2.13/3TB/catalog_returns/&#39; iam_role &#39;arn:aws:iam::xxxxxxxxxxxxxxx:role/myRedshiftRole&#39; gzip delimiter &#39;|&#39; EMPTYASNULL region &#39;us-east-1&#39;;
+～中略～
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;2-データベースの作成&#34;&gt;2. データベースの作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;drop database tpcds_3tb;
+CREATE DATABASE tpcds_3tb;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;3-作成したデータベースに対してロードの実施&#34;&gt;3. 作成したデータベースに対してロードの実施&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;psql -h redshift-cluster.xxxxx.ap-northeast-1.redshift.amazonaws.com -U awsuser -d tpcds_3tb -p 5439 -f /home/ec2-user/amazon-redshift-utils-master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS/3TB/ddl.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;テーブル作成、データロード、件数確認が実行される。（&lt;u&gt;時間が掛かるので注意&lt;/u&gt;）&lt;/p&gt;
+&lt;h3 id=&#34;4-queryを実行&#34;&gt;4. queryを実行&lt;/h3&gt;
+&lt;p&gt;query_0.sql ～ query_10.sqlまで用意されているので、適宜実行。ベンチマークする際にはリザルトキャッシュの無効化なども忘れずに。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;psql -h redshift-cluster.xxxxx.ap-northeast-1.redshift.amazonaws.com -U awsuser -d tpcds_3tb -p 5439 -f /home/ec2-user/amazon-redshift-utils-master/src/CloudDataWarehouseBenchmark/Cloud-DWB-Derived-from-TPCDS/3TB/queries/query_0.sql
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshiftへのデータロード</title>
+      <link>/aws-redshift-dataload-from-s3.html</link>
+      <pubDate>Thu, 01 Apr 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-dataload-from-s3.html</guid>
+      <description>&lt;p&gt;IAMロールと必要なIAMロールのクラスタへのアタッチ等は完了済という想定。&lt;/p&gt;
+&lt;h3 id=&#34;ロード用のファイルをs3にアップロードする&#34;&gt;ロード用のファイルをS3にアップロードする&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws s3 cp aozora_data.csv s3://xxxx/load/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ロード用のファイルは約6G、約1億件弱。(青空文庫のテキストデータ)&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ ls -lh aozora_data.csv
+-rw-rw-r-- 1 ec2-user ec2-user 6.1G Dec 16  2012 aozora_data.csv
+[ec2-user@bastin ~]$ wc -l aozora_data.csv
+87701673 aozora_data.csv
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;redshiftにロード先のテーブルを用意&#34;&gt;Redshiftにロード先のテーブルを用意&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;CREATE TABLE aozora_data(file VARCHAR(100),num INT,row INT,word TEXT,subtype1 VARCHAR(100),subtype2 VARCHAR(100),subtype3 VARCHAR(100),subtype4 VARCHAR(100),conjtype VARCHAR(30),conjugation VARCHAR(30),basic TEXT,ruby TEXT,pronunce TEXT );
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;データロード実行&#34;&gt;データロード実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;copy aozorabunko_data from &#39;s3://xxxxx/load/aozora_data.csv&#39; 
+iam_role &#39;arn:aws:iam::xxxxx:role/myRedshiftRole&#39;
+csv;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上記の方法はアンチパターンであり、一つのスライスでしか実行されず、MPPアーキテクチャのRedshiftではリソースを有効活用出来ない。下記のベスト・プラクティスにある通り、ファイル分割、ファイル圧縮を実施した上での実行が望ましい。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon Redshift データのロードのベストプラクティス - Amazon Redshift &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;データ分割&#34;&gt;データ分割&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;split -n 8 -d aozora_data.csv part-
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
