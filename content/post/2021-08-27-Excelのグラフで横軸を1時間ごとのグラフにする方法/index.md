@@ -1,11 +1,11 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Excelで横軸を1時間ごとのグラフにする方法"
+title: "Excelのグラフで横軸を1時間ごとのグラフにする方法"
 subtitle: ""
 summary: " "
-tags: ["Excel"]
-categories: ["Excel"]
+tags: ["その他"]
+categories: ["その他"]
 url: hourly-graph-for-horizontal-axis-in-excel
 date: 2021-08-27
 featured: false
