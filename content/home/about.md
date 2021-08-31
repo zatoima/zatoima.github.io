@@ -5,7 +5,7 @@ headless = true
 active = true
 weight = 10
 
-title = "Biography"
+title = "About"
 
 author = "admin"
 
