@@ -44,7 +44,7 @@ image:
 
 [Extending Wowchemy \| Wowchemy: Free, No Code Website Builder for Hugo themes](https://wowchemy.com/docs/guide/extending-wowchemy/)
 
-> ## Customize style (CSS)
+> ##### Customize style (CSS)
 >
 > To personalize Wowchemy, you can **choose a colour theme and font set** in `config/_default/params.yaml`.
 >

@@ -24,7 +24,7 @@ image:
 
 ソースとなるOracle側に作ったテーブルはこちら。
 
-#### CREATE文
+### CREATE文
 
 ```
 CREATE TABLE "DATATYPES"(
@@ -66,7 +66,7 @@ CREATE TABLE "DATATYPES"(
 );
 ```
 
-#### テーブル定義
+### テーブル定義
 
 ```
 SQL> desc DATATYPES;
@@ -109,7 +109,7 @@ SQL> desc DATATYPES;
  XMLTYPE					    PUBLIC.XMLTYPE STORAGE BINARY
 ```
 
-#### 変換結果
+### 変換結果
 
 <img src="image-20200530231421545.png" alt="image-20200530231421545" style="zoom:150%;" />
 

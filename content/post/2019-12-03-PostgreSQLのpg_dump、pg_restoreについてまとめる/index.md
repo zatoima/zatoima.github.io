@@ -22,7 +22,7 @@ image:
 
 
 
-### はじめに
+## はじめに
 
 これから何度も調べることになりそうなので、PostgreSQLのpg_dump、pg_restoreについてまとめておく。
 
@@ -31,11 +31,11 @@ image:
 1. スクリプトファイル形式の論理バックアップ  :  psqlでリストア
 2. アーカイブファイル形式の論理バックアップ  :  pg_restoreでリストア
 
-### 基本コマンド
+## 基本コマンド
 
-#### １．スクリプトファイル形式の論理バックアップ
+### １．スクリプトファイル形式の論理バックアップ
 
-##### データベース単位のバックアップ
+#### データベース単位のバックアップ
 
 ​	`mydb`という名前のデータベースをSQLスクリプトファイルにダンプ
 
@@ -43,7 +43,7 @@ image:
 pg_dump mydb > db.sql
 ```
 
-##### テーブル単位のバックアップ
+#### テーブル単位のバックアップ
 
 `mytab`という名前の単一のテーブルをダンプ
 
@@ -51,7 +51,7 @@ pg_dump mydb > db.sql
 pg_dump -t mytab mydb > db.sql
 ```
 
-##### リストア
+#### リストア
 
 `newdb`というデータベースにdb.sqlの内容をリストア
 
@@ -61,11 +61,11 @@ psql -d newdb -f db.sql
 
 
 
-#### ２．アーカイブファイル形式の論理バックアップ
+### ２．アーカイブファイル形式の論理バックアップ
 
 この場合、圧縮されるため、データやデータ型にも依存するが一定のデータが減る。
 
-##### データベース単位のバックアップ
+#### データベース単位のバックアップ
 
 ​	`mydb`という名前のデータベースをアーカイブファイル形式にダンプ。
 
@@ -73,7 +73,7 @@ psql -d newdb -f db.sql
 pg_dump -Fc mydb > db.dump
 ```
 
-##### テーブル単位のバックアップ
+#### テーブル単位のバックアップ
 
 `mytab`という名前の単一のテーブルをアーカイブファイル形式にダンプ
 
@@ -89,9 +89,9 @@ pg_dump -t mytab -Fc mydb > db.dump
 pg_restore -d newdb db.dump
 ```
 
-### オプション
+#### オプション
 
-#### pg_dump
+##### pg_dump
 
 | 引数（省略系） | 引数                | 説明                                                         |
 | -------------- | ------------------- | ------------------------------------------------------------ |
@@ -109,7 +109,7 @@ pg_restore -d newdb db.dump
 | -p port        | --port=port         | サーバが接続を監視するTCPポート                              |
 | -U username    | --username=username | 接続ユーザ名を指定                                           |
 
-#### pg_restore
+##### pg_restore
 
 | 引数（省略系） | 引数                | 説明                                                         |
 | -------------- | ------------------- | ------------------------------------------------------------ |
@@ -130,12 +130,12 @@ pg_restore -d newdb db.dump
 
 #### 4.個人的によく使うコマンド例
 
-AWSで使う場合は`-h`オプションが必要。
+AWSのRDS等で使う場合はリモートホストに対して実行することになるので、`-h`オプションが必要。
 
 LogicalReplicationTest テーブルのデータのみ pg_dump でexport(カスタムモード)
 
 ```sh
-pg_dump -h aurorapostgresdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U <ユーザ名> -a -t LogicalReplicationTest -Fc <DB名> > rds01.custom
+pg_dump -h aurorapostgresdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U <ユーザ名> -a -t <Table名> -Fc <DB名> > rds01.custom
 ```
 
 rds01に接続してインポート前にオブジェクトを削除してインポートする
@@ -167,5 +167,4 @@ pg_restore -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U p
 > pg_dump [https://www.postgresql.jp/document/10/html/app-pgdump.html](https://www.postgresql.jp/document/10/html/app-pgdump.html)
 
 > pg_restore [https://www.postgresql.jp/document/10/html/app-pgrestore.html](https://www.postgresql.jp/document/10/html/app-pgrestore.html)
-
 
