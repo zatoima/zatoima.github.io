@@ -89,7 +89,7 @@ pg_dump -t mytab -Fc mydb > db.dump
 pg_restore -d newdb db.dump
 ```
 
-#### オプション
+### 3.コマンドのオプション
 
 ##### pg_dump
 
@@ -128,11 +128,11 @@ pg_restore -d newdb db.dump
 | -U username    | --username=username | 接続ユーザ名を指定                                           |
 | -v             | --verbose           | 冗長モードを指定                                             |
 
-#### 4.個人的によく使うコマンド例
+### 4.個人的によく使うコマンド例
 
 AWSのRDS等で使う場合はリモートホストに対して実行することになるので、`-h`オプションが必要。
 
-LogicalReplicationTest テーブルのデータのみ pg_dump でexport(カスタムモード)
+テーブルのデータのみ pg_dump でexport(カスタムモード)
 
 ```sh
 pg_dump -h aurorapostgresdb.xxxxxxx.ap-northeast-1.rds.amazonaws.com -U <ユーザ名> -a -t <Table名> -Fc <DB名> > rds01.custom
@@ -162,7 +162,7 @@ pg_restore -v -h aurorapostgresdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U
 pg_restore -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -j 8 -d tpcc tpcc.dump
 ```
 
-### 参考
+## 参考
 
 > pg_dump [https://www.postgresql.jp/document/10/html/app-pgdump.html](https://www.postgresql.jp/document/10/html/app-pgdump.html)
 
