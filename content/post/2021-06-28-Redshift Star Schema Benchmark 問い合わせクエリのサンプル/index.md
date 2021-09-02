@@ -28,7 +28,7 @@ image:
 
 Redshift Spectrumへのクエリのために、スキーマを`s3`としているので適宜置換が必要。
 
-# Star Schema Benchmark問合せ
+## Star Schema Benchmark問合せ
 
 ```sql
 select sum(lo_extendedprice*lo_discount) as revenue

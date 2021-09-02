@@ -33,7 +33,7 @@ Error: failed to download modules: exec: "go": executable file not found in %PAT
 
 [公式ドキュメント](https://wowchemy.com/docs/guide/troubleshooting/#error-go-executable-not-found)に記載があった。
 
-> ### Error: Go executable not found
+> ##### Error: Go executable not found
 >
 > [Install Hugo’s Go dependency](https://wowchemy.com/docs/getting-started/install-hugo-extended/). If you believe that Go is already installed, perhaps Hugo was unable to detect Go due to installing either Go or Hugo in an isolated way such as via Linux Snaps. Users on all major platforms have reported success installing Hugo and Go by following the [official Wowchemy installation guide](https://wowchemy.com/docs/getting-started/install-hugo-extended/). You can also browse or report issues with Hugo detecting Go on the [Hugo Forum](https://discourse.gohugo.io/).
 
