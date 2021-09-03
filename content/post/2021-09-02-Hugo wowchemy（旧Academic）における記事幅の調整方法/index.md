@@ -34,7 +34,9 @@ image:
 
 ```
 .article-container {
-    max-width: 50%;
+    width: 100%;
+    max-width: 1000px;
+    min-width: 500px;
     margin-right: auto;
     margin-left: auto;
 }
