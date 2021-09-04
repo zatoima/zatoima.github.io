@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "blogにGithubの草を表示する"
+title: "ブログにGithubのcontributions（通称：草）を表示する"
 subtitle: ""
 summary: " "
 tags: ["blog","Github"]
@@ -34,7 +34,7 @@ image:
 
 下記にアクセスする
 
-> Grass-Graph / Imaging your GitHub Contributions Graph https://grass-graph.moshimo.works/
+> Grass-Graph / Imaging your GitHub Contributions Graph https://grass-graph.appspot.com/
 
 <img src="image-20200109182025073.png" alt="image-20200109182025073" style="zoom:50%;" />
 
@@ -50,7 +50,7 @@ image:
 
 ```html
 <a href="https://github.com/zatoima" target="_blank">
-  <img src="https://grass-graph.moshimo.works/images/zatoima.png">
+  <img src="https://grass-graph.appspot.com/images/zatoima.png">
 </a>
 ```
 
