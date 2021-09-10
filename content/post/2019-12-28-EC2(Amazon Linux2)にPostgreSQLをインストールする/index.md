@@ -24,7 +24,7 @@ image:
 
 Amazon LinuxにRed hat用のリポジトリからyumでインストールしようとするとエラーになるので無理やりAmazon Linux2でYumでインストールしようという内容。
 
-ちなみに、PostgreSQLのコミュニティでは下記がYumで利用可能なプラットフォームとされています。
+ちなみに、PostgreSQLのコミュニティでは下記がYumで利用可能なプラットフォームとされていますのでご注意ください。
 
 > PostgreSQL RPM Repository (with Yum) https://yum.postgresql.org/
 >
@@ -436,5 +436,4 @@ postgres=# select version();
  PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
 (1 row)
 ```
-
 

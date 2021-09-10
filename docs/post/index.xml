@@ -5,12 +5,185 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 07 Sep 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 10 Sep 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>Redshift Spectrum用にテストデータの準備、及びクエリの実行</title>
+      <link>/aws-redshift-spectrum-data-prepare-query-execute/</link>
+      <pubDate>Fri, 10 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-spectrum-data-prepare-query-execute/</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;一定のテストデータ、及び多少の負荷が掛かるSQLをRedshift Spectrumに向けて実行したい場合の作業用メモ。&lt;/p&gt;
+&lt;h3 id=&#34;データ確認&#34;&gt;データ確認&lt;/h3&gt;
+&lt;p&gt;データは&lt;code&gt;s3://awssampledbuswest2/ssbgz/&lt;/code&gt;から自バケットに予めコピーしている&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;aws s3 ls --human-readable --recursive s3://ssbgz-spectrum/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;[ec2-user@bastin ~]$ aws s3 ls --human-readable --recursive s3://ssbgz-spectrum/
+2021-06-15 16:10:10  100.5 MiB customer/customer0002_part_00.gz
+2021-06-15 16:10:10   24.6 KiB dwdate/dwdate.tbl.gz
+2021-06-15 16:10:10    3.1 GiB lineorder/lineorder0000_part_00.gz
+2021-06-15 16:10:10    3.1 GiB lineorder/lineorder0001_part_00.gz
+2021-06-15 16:10:11    3.1 GiB lineorder/lineorder0002_part_00.gz
+2021-06-15 16:10:10    3.1 GiB lineorder/lineorder0003_part_00.gz
+2021-06-15 16:10:14    3.1 GiB lineorder/lineorder0004_part_00.gz
+2021-06-15 16:11:47    3.1 GiB lineorder/lineorder0005_part_00.gz
+2021-06-15 16:12:16    3.1 GiB lineorder/lineorder0006_part_00.gz
+2021-06-15 16:12:26    3.1 GiB lineorder/lineorder0007_part_00.gz
+2021-06-15 16:12:35    8.3 MiB part/part0000_part_00.gz
+2021-06-15 16:12:36    8.3 MiB part/part0001_part_00.gz
+2021-06-15 16:12:38    8.3 MiB part/part0002_part_00.gz
+2021-06-15 16:12:39    8.3 MiB part/part0003_part_00.gz
+2021-06-15 16:12:40   32.5 MiB supplier/supplier.tbl_0000_part_00.gz
+2021-06-15 16:12:42   20 Bytes supplier/supplier0001_part_00.gz
+2021-06-15 16:12:42   20 Bytes supplier/supplier0002_part_00.gz
+2021-06-15 16:12:42   20 Bytes supplier/supplier0003_part_00.gz
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部スキーマ定義&#34;&gt;外部スキーマ定義&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create external schema s3 from data catalog
+database &#39;s3_spectrum&#39;
+iam_role &#39;arn:aws:iam::xxxxxxxxxxx:role/myRedshiftRole&#39;
+create external database if not exists;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# create external schema s3 from data catalog
+mydb-# database &#39;s3_spectrum&#39;
+mydb-# iam_role &#39;arn:aws:iam::xxxxxxxxxxx:role/myRedshiftRole&#39;
+mydb-# create external database if not exists;
+INFO:  External database &amp;quot;s3_spectrum&amp;quot; already exists
+CREATE SCHEMA
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部表の定義&#34;&gt;外部表の定義&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table s3.part;
+CREATE EXTERNAL TABLE s3.part 
+(
+  p_partkey     INTEGER,
+  p_name        VARCHAR(22),
+  p_mfgr        VARCHAR(6),
+  p_category    VARCHAR(7),
+  p_brand1      VARCHAR(9),
+  p_color       VARCHAR(11),
+  p_type        VARCHAR(25),
+  p_size        INTEGER,
+  p_container   VARCHAR(10))
+row format delimited
+fields terminated by &#39;|&#39;
+stored as textfile
+LOCATION &#39;s3://ssbgz-spectrum/part/&#39;;
+
+drop table s3.supplier;
+CREATE EXTERNAL TABLE s3.supplier 
+(
+  s_suppkey   INTEGER,
+  s_name      VARCHAR(25),
+  s_address   VARCHAR(25),
+  s_city      VARCHAR(10),
+  s_nation    VARCHAR(15),
+  s_region    VARCHAR(12),
+  s_phone     VARCHAR(15))
+row format delimited
+fields terminated by &#39;|&#39;
+stored as textfile
+LOCATION &#39;s3://ssbgz-spectrum/supplier/&#39;;
+
+drop table s3.customer;
+CREATE EXTERNAL TABLE s3.customer 
+(
+  c_custkey      INTEGER,
+  c_name         VARCHAR(25),
+  c_address      VARCHAR(25),
+  c_city         VARCHAR(10),
+  c_nation       VARCHAR(15),
+  c_region       VARCHAR(12),
+  c_phone        VARCHAR(15),
+  c_mktsegment   VARCHAR(10))
+row format delimited
+fields terminated by &#39;|&#39;
+stored as textfile
+LOCATION &#39;s3://ssbgz-spectrum/customer/&#39;;
+
+drop table s3.dwdate;
+CREATE EXTERNAL TABLE s3.dwdate 
+(
+  d_datekey            INTEGER,
+  d_date               VARCHAR(19),
+  d_dayofweek          VARCHAR(10),
+  d_month              VARCHAR(10),
+  d_year               INTEGER,
+  d_yearmonthnum       INTEGER,
+  d_yearmonth          VARCHAR(8),
+  d_daynuminweek       INTEGER,
+  d_daynuminmonth      INTEGER,
+  d_daynuminyear       INTEGER,
+  d_monthnuminyear     INTEGER,
+  d_weeknuminyear      INTEGER,
+  d_sellingseason      VARCHAR(13),
+  d_lastdayinweekfl    VARCHAR(1),
+  d_lastdayinmonthfl   VARCHAR(1),
+  d_holidayfl          VARCHAR(1),
+  d_weekdayfl          VARCHAR(1))
+row format delimited
+fields terminated by &#39;|&#39;
+stored as textfile
+LOCATION &#39;s3://ssbgz-spectrum/dwdate/&#39;;
+
+drop table s3.lineorder;
+CREATE EXTERNAL TABLE s3.lineorder 
+(
+  lo_orderkey          INTEGER,
+  lo_linenumber        INTEGER,
+  lo_custkey           INTEGER,
+  lo_partkey           INTEGER,
+  lo_suppkey           INTEGER,
+  lo_orderdate         INTEGER,
+  lo_orderpriority     VARCHAR(15),
+  lo_shippriority      VARCHAR(1),
+  lo_quantity          INTEGER,
+  lo_extendedprice     INTEGER,
+  lo_ordertotalprice   INTEGER,
+  lo_discount          INTEGER,
+  lo_revenue           INTEGER,
+  lo_supplycost        INTEGER,
+  lo_tax               INTEGER,
+  lo_commitdate        INTEGER,
+  lo_shipmode          VARCHAR(10))
+row format delimited
+fields terminated by &#39;|&#39;
+stored as textfile
+LOCATION &#39;s3://ssbgz-spectrum/lineorder/&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;テストクエリ&#34;&gt;テストクエリ&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    c_city,
+    s_city,
+    d_year,
+    SUM(lo_revenue) AS revenue
+FROM
+    s3.customer,
+    s3.lineorder,
+    s3.supplier,
+    s3.dwdate
+WHERE
+    lo_custkey = c_custkey AND
+    lo_suppkey = s_suppkey AND
+    lo_orderdate = d_datekey AND
+    (c_city=&#39;UNITED KI1&#39; OR c_city=&#39;UNITED KI5&#39;) AND
+    (s_city=&#39;UNITED KI1&#39; OR s_city=&#39;UNITED KI5&#39;) AND
+    d_yearmonth = &#39;Dec1997&#39;
+GROUP BY
+    c_city,
+    s_city,
+    d_year
+ORDER BY
+    d_year ASC,
+    revenue DESC;
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>GCP Associate Cloud Engineer 認定試験ガイド - クラウド ソリューションの計画と構成</title>
@@ -26871,7 +27044,7 @@ postgres=# SELECT * FROM pg_logical_slot_peek_changes(&#39;decodeslot1&#39;, NUL
       <pubDate>Sat, 28 Dec 2019 00:00:00 +0000</pubDate>
       <guid>/postgresql-ec2-insatll.html</guid>
       <description>&lt;p&gt;Amazon LinuxにRed hat用のリポジトリからyumでインストールしようとするとエラーになるので無理やりAmazon Linux2でYumでインストールしようという内容。&lt;/p&gt;
-&lt;p&gt;ちなみに、PostgreSQLのコミュニティでは下記がYumで利用可能なプラットフォームとされています。&lt;/p&gt;
+&lt;p&gt;ちなみに、PostgreSQLのコミュニティでは下記がYumで利用可能なプラットフォームとされていますのでご注意ください。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;PostgreSQL RPM Repository (with Yum) &lt;a href=&#34;https://yum.postgresql.org/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://yum.postgresql.org/&lt;/a&gt;&lt;/p&gt;
 &lt;h2 id=&#34;available-platforms&#34;&gt;Available Platforms&lt;/h2&gt;
