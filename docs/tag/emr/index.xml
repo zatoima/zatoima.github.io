@@ -5,12 +5,146 @@
     <link>/tag/emr/</link>
       <atom:link href="/tag/emr/index.xml" rel="self" type="application/rss+xml" />
     <description>EMR</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 19 Jun 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 18 Sep 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>EMR</title>
       <link>/tag/emr/</link>
     </image>
+    
+    <item>
+      <title>EMR PySparkにspark-submitで実行</title>
+      <link>/aws-emr-pyspark-spark-submit-command.html</link>
+      <pubDate>Sat, 18 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-emr-pyspark-spark-submit-command.html</guid>
+      <description>&lt;h3 id=&#34;実行用ファイル作成&#34;&gt;実行用ファイル作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi test.py
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from pyspark.sql.types import *
+from pyspark.context import SparkContext
+from pyspark.sql.session import SparkSession
+sc = SparkContext(&#39;local&#39;)
+spark = SparkSession(sc)
+
+def test_pyspark_sql():
+    schema = StructType([
+            StructField(&#39;file&#39;, StringType(), False),
+            StructField(&#39;num&#39;, IntegerType(), False),
+            StructField(&#39;row&#39;, IntegerType(), False),
+            StructField(&#39;word&#39;, StringType(), False),
+            StructField(&#39;subtype1&#39;, StringType(), False),
+            StructField(&#39;subtype2&#39;, StringType(), False),
+            StructField(&#39;subtype3&#39;, StringType(), False),
+            StructField(&#39;subtype4&#39;, StringType(), False),
+            StructField(&#39;conjtype&#39;, StringType(), False),
+            StructField(&#39;conjugation&#39;, StringType(), False),
+            StructField(&#39;basic&#39;, StringType(), False),
+            StructField(&#39;ruby&#39;, StringType(), False),
+            StructField(&#39;pronunce&#39;, StringType(), False)
+         ]) 
+    df = spark.read.csv(f&#39;s3://sparkwdcnt/utf8_all.csv&#39;, schema=schema, header=True)
+    df.groupBy(&#39;word&#39;).count().sort(&#39;count&#39;, ascending=False).show(30)
+    df.write.mode(&amp;quot;overwrite&amp;quot;).option(&amp;quot;header&amp;quot;, &amp;quot;True&amp;quot;).csv(f&#39;s3://sparkwdcnt/utf8_all_count.csv&#39;)
+
+if __name__ == &amp;quot;__main__&amp;quot;:	
+    print(&amp;quot;test Start&amp;quot;)
+    test_pyspark_sql()	
+    print(&amp;quot;test end&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行&#34;&gt;実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;spark-submit --class org.apache.spark.examples.SparkPi /home/hadoop/test.py
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;spark-submitのオプション&#34;&gt;spark-submitのオプション&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[hadoop@ip-172-31-2-204 ~]$ spark-submit --help
+Usage: spark-submit [options] &amp;lt;app jar | python file | R file&amp;gt; [app arguments]
+Usage: spark-submit --kill [submission ID] --master [spark://...]
+Usage: spark-submit --status [submission ID] --master [spark://...]
+Usage: spark-submit run-example [options] example-class [example args]
+
+Options:
+  --master MASTER_URL         spark://host:port, mesos://host:port, yarn,
+                              k8s://https://host:port, or local (Default: local[*]).
+  --deploy-mode DEPLOY_MODE   Whether to launch the driver program locally (&amp;quot;client&amp;quot;) or
+                              on one of the worker machines inside the cluster (&amp;quot;cluster&amp;quot;)
+                              (Default: client).
+  --class CLASS_NAME          Your application&#39;s main class (for Java / Scala apps).
+  --name NAME                 A name of your application.
+  --jars JARS                 Comma-separated list of jars to include on the driver
+                              and executor classpaths.
+  --packages                  Comma-separated list of maven coordinates of jars to include
+                              on the driver and executor classpaths. Will search the local
+                              maven repo, then maven central and any additional remote
+                              repositories given by --repositories. The format for the
+                              coordinates should be groupId:artifactId:version.
+  --exclude-packages          Comma-separated list of groupId:artifactId, to exclude while
+                              resolving the dependencies provided in --packages to avoid
+                              dependency conflicts.
+  --repositories              Comma-separated list of additional remote repositories to
+                              search for the maven coordinates given with --packages.
+  --py-files PY_FILES         Comma-separated list of .zip, .egg, or .py files to place
+                              on the PYTHONPATH for Python apps.
+  --files FILES               Comma-separated list of files to be placed in the working
+                              directory of each executor. File paths of these files
+                              in executors can be accessed via SparkFiles.get(fileName).
+
+  --conf, -c PROP=VALUE       Arbitrary Spark configuration property.
+  --properties-file FILE      Path to a file from which to load extra properties. If not
+                              specified, this will look for conf/spark-defaults.conf.
+
+  --driver-memory MEM         Memory for driver (e.g. 1000M, 2G) (Default: 1024M).
+  --driver-java-options       Extra Java options to pass to the driver.
+  --driver-library-path       Extra library path entries to pass to the driver.
+  --driver-class-path         Extra class path entries to pass to the driver. Note that
+                              jars added with --jars are automatically included in the
+                              classpath.
+
+  --executor-memory MEM       Memory per executor (e.g. 1000M, 2G) (Default: 1G).
+
+  --proxy-user NAME           User to impersonate when submitting the application.
+                              This argument does not work with --principal / --keytab.
+
+  --help, -h                  Show this help message and exit.
+  --verbose, -v               Print additional debug output.
+  --version,                  Print the version of current Spark.
+
+ Cluster deploy mode only:
+  --driver-cores NUM          Number of cores used by the driver, only in cluster mode
+                              (Default: 1).
+
+ Spark standalone or Mesos with cluster deploy mode only:
+  --supervise                 If given, restarts the driver on failure.
+  --kill SUBMISSION_ID        If given, kills the driver specified.
+  --status SUBMISSION_ID      If given, requests the status of the driver specified.
+
+ Spark standalone and Mesos only:
+  --total-executor-cores NUM  Total cores for all executors.
+
+ Spark standalone and YARN only:
+  --executor-cores NUM        Number of cores per executor. (Default: 1 in YARN mode,
+                              or all available cores on the worker in standalone mode)
+
+ YARN-only:
+  --queue QUEUE_NAME          The YARN queue to submit to (Default: &amp;quot;default&amp;quot;).
+  --num-executors NUM         Number of executors to launch (Default: 2).
+                              If dynamic allocation is enabled, the initial number of
+                              executors will be at least NUM.
+  --archives ARCHIVES         Comma separated list of archives to be extracted into the
+                              working directory of each executor.
+  --principal PRINCIPAL       Principal to be used to login to KDC, while running on
+                              secure HDFS.
+  --keytab KEYTAB             The full path to the file that contains the keytab for the
+                              principal specified above. This keytab will be copied to
+                              the node running the Application Master via the Secure
+                              Distributed Cache, for renewing the login tickets and the
+                              delegation tokens periodically.
+      
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Submitting Applications - Spark 3.1.1 Documentation &lt;a href=&#34;https://spark.apache.org/docs/latest/submitting-applications.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://spark.apache.org/docs/latest/submitting-applications.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>EMR PySparkでWorkCount</title>

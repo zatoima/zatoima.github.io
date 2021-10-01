@@ -27,6 +27,264 @@
     </item>
     
     <item>
+      <title>Windows10でssh-keygen</title>
+      <link>/windows10-ssh-keygen-generate/</link>
+      <pubDate>Thu, 23 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>/windows10-ssh-keygen-generate/</guid>
+      <description>&lt;p&gt;OpenSSHがWindows10に標準搭載されていることでssh-keygenも使えるようになっていることに気づく。Puttyとか入れる必要が無く便利&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd /d D:\key
+ssh-keygen.exe -q -t rsa -b 4096 -C &amp;quot;&amp;quot; -N &amp;quot;&amp;quot; -f gcp-for-keypair
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;作成される鍵&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gcp-for-keypair.pub：公開鍵&lt;/li&gt;
+&lt;li&gt;gcp-for-keypair:秘密鍵&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Redshift Spectrumのベストプラクティス</title>
+      <link>/aws-redshift-spectrum-best-practice/</link>
+      <pubDate>Mon, 20 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-spectrum-best-practice/</guid>
+      <description>&lt;p&gt;殴り書きメモ&lt;/p&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon Redshift Advanced Guide − 最新ベストプラクティスとアップデート &lt;a href=&#34;https://d1.awsstatic.com/webinars/jp/pdf/services/20200729_AWS_BlackBelt_RedshiftAdvancedGuide.pdf&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://d1.awsstatic.com/webinars/jp/pdf/services/20200729_AWS_BlackBelt_RedshiftAdvancedGuide.pdf&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Amazon Redshift Spectrum 12 のベストプラクティス | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;ベストプラクティス&#34;&gt;ベストプラクティス&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;ファイル/テーブル属性&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;列志向フォーマット（Purquet）&lt;/li&gt;
+&lt;li&gt;必要な列のみを選択&lt;/li&gt;
+&lt;li&gt;最適なファイルサイズ&lt;/li&gt;
+&lt;li&gt;適切なデータ型&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;パーティションプルーニング&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不要なパーティションをSkipさせるため&lt;/li&gt;
+&lt;li&gt;コスト削減&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;Spectrum Usage Limitというアラームを上げる機能がある
+&lt;img src=&#34;image-20210610213243177.png&#34; alt=&#34;image-20210610213243177&#34; style=&#34;zoom:67%;&#34; /&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol start=&#34;3&#34;&gt;
+&lt;li&gt;
+&lt;p&gt;Min/Maxプルーニング&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Parquet, ORCなど列指向フォーマットの最小/最大値の統計を活用する&lt;/li&gt;
+&lt;li&gt;頻繁に絞り込みを行うカラムでデータをソートしておくと効果的&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Spectrum層へのプッシュダウン&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;頻繁に絞り込みを行うカラムでデータをソートしておくと効果的&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;最後に実行されたクエリの詳細を取得&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select query, segment, elapsed, s3_scanned_rows, s3_scanned_bytes, s3query_returned_rows, s3query_returned_bytes, files 
+from svl_s3query_summary 
+where query = pg_last_query_id() 
+order by query,segment;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;データレイアウト&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;データレイアウトを意識する&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;実行計画の最適化&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;テーブルプロパティのnumRowsを更新する
+&lt;ul&gt;
+&lt;li&gt;ANALYZE等で更新出来ない&lt;/li&gt;
+&lt;li&gt;ALTER TABLE spectrum_schema.eventSET TABLE PROPERTIES (&amp;lsquo;numRows&amp;rsquo;=&amp;lsquo;122857504&amp;rsquo;);
+&lt;ul&gt;
+&lt;li&gt;もしくはGlue Data Catalog側を更新&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Redshift クラスターサイズ&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;並列度を上げるためにはノード数を増やす必要がある。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;スライス数の確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select node,count(slice) from stv_slices group by node order by node;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;スライス毎のリクエストは最大10となる&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;iframe src=&#34;//www.slideshare.net/slideshow/embed_code/key/EVgGT3phwOs9fQ?startSlide=24&#34; width=&#34;595&#34; height=&#34;485&#34; frameborder=&#34;0&#34; marginwidth=&#34;0&#34; marginheight=&#34;0&#34; scrolling=&#34;no&#34; style=&#34;border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;&#34; allowfullscreen&gt; &lt;/iframe&gt; &lt;div style=&#34;margin-bottom:5px&#34;&gt; &lt;strong&gt; &lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan/20200729-aws-black-belt-online-seminar-amazon-redshift-advanced-guide&#34; title=&#34;20200729 AWS Black Belt Online Seminar Amazon Redshift Advanced Guide −最新ベストプラクティスとアップデート&#34; target=&#34;_blank&#34;&gt;20200729 AWS Black Belt Online Seminar Amazon Redshift Advanced Guide −最新ベストプラクティスとアップデート&lt;/a&gt; &lt;/strong&gt; from &lt;strong&gt;&lt;a href=&#34;//www.slideshare.net/AmazonWebServicesJapan&#34; target=&#34;_blank&#34;&gt;Amazon Web Services Japan&lt;/a&gt;&lt;/strong&gt; &lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>EMR PySparkにspark-submitで実行</title>
+      <link>/aws-emr-pyspark-spark-submit-command.html</link>
+      <pubDate>Sat, 18 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-emr-pyspark-spark-submit-command.html</guid>
+      <description>&lt;h3 id=&#34;実行用ファイル作成&#34;&gt;実行用ファイル作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;vi test.py
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from pyspark.sql.types import *
+from pyspark.context import SparkContext
+from pyspark.sql.session import SparkSession
+sc = SparkContext(&#39;local&#39;)
+spark = SparkSession(sc)
+
+def test_pyspark_sql():
+    schema = StructType([
+            StructField(&#39;file&#39;, StringType(), False),
+            StructField(&#39;num&#39;, IntegerType(), False),
+            StructField(&#39;row&#39;, IntegerType(), False),
+            StructField(&#39;word&#39;, StringType(), False),
+            StructField(&#39;subtype1&#39;, StringType(), False),
+            StructField(&#39;subtype2&#39;, StringType(), False),
+            StructField(&#39;subtype3&#39;, StringType(), False),
+            StructField(&#39;subtype4&#39;, StringType(), False),
+            StructField(&#39;conjtype&#39;, StringType(), False),
+            StructField(&#39;conjugation&#39;, StringType(), False),
+            StructField(&#39;basic&#39;, StringType(), False),
+            StructField(&#39;ruby&#39;, StringType(), False),
+            StructField(&#39;pronunce&#39;, StringType(), False)
+         ]) 
+    df = spark.read.csv(f&#39;s3://sparkwdcnt/utf8_all.csv&#39;, schema=schema, header=True)
+    df.groupBy(&#39;word&#39;).count().sort(&#39;count&#39;, ascending=False).show(30)
+    df.write.mode(&amp;quot;overwrite&amp;quot;).option(&amp;quot;header&amp;quot;, &amp;quot;True&amp;quot;).csv(f&#39;s3://sparkwdcnt/utf8_all_count.csv&#39;)
+
+if __name__ == &amp;quot;__main__&amp;quot;:	
+    print(&amp;quot;test Start&amp;quot;)
+    test_pyspark_sql()	
+    print(&amp;quot;test end&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行&#34;&gt;実行&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;spark-submit --class org.apache.spark.examples.SparkPi /home/hadoop/test.py
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;spark-submitのオプション&#34;&gt;spark-submitのオプション&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[hadoop@ip-172-31-2-204 ~]$ spark-submit --help
+Usage: spark-submit [options] &amp;lt;app jar | python file | R file&amp;gt; [app arguments]
+Usage: spark-submit --kill [submission ID] --master [spark://...]
+Usage: spark-submit --status [submission ID] --master [spark://...]
+Usage: spark-submit run-example [options] example-class [example args]
+
+Options:
+  --master MASTER_URL         spark://host:port, mesos://host:port, yarn,
+                              k8s://https://host:port, or local (Default: local[*]).
+  --deploy-mode DEPLOY_MODE   Whether to launch the driver program locally (&amp;quot;client&amp;quot;) or
+                              on one of the worker machines inside the cluster (&amp;quot;cluster&amp;quot;)
+                              (Default: client).
+  --class CLASS_NAME          Your application&#39;s main class (for Java / Scala apps).
+  --name NAME                 A name of your application.
+  --jars JARS                 Comma-separated list of jars to include on the driver
+                              and executor classpaths.
+  --packages                  Comma-separated list of maven coordinates of jars to include
+                              on the driver and executor classpaths. Will search the local
+                              maven repo, then maven central and any additional remote
+                              repositories given by --repositories. The format for the
+                              coordinates should be groupId:artifactId:version.
+  --exclude-packages          Comma-separated list of groupId:artifactId, to exclude while
+                              resolving the dependencies provided in --packages to avoid
+                              dependency conflicts.
+  --repositories              Comma-separated list of additional remote repositories to
+                              search for the maven coordinates given with --packages.
+  --py-files PY_FILES         Comma-separated list of .zip, .egg, or .py files to place
+                              on the PYTHONPATH for Python apps.
+  --files FILES               Comma-separated list of files to be placed in the working
+                              directory of each executor. File paths of these files
+                              in executors can be accessed via SparkFiles.get(fileName).
+
+  --conf, -c PROP=VALUE       Arbitrary Spark configuration property.
+  --properties-file FILE      Path to a file from which to load extra properties. If not
+                              specified, this will look for conf/spark-defaults.conf.
+
+  --driver-memory MEM         Memory for driver (e.g. 1000M, 2G) (Default: 1024M).
+  --driver-java-options       Extra Java options to pass to the driver.
+  --driver-library-path       Extra library path entries to pass to the driver.
+  --driver-class-path         Extra class path entries to pass to the driver. Note that
+                              jars added with --jars are automatically included in the
+                              classpath.
+
+  --executor-memory MEM       Memory per executor (e.g. 1000M, 2G) (Default: 1G).
+
+  --proxy-user NAME           User to impersonate when submitting the application.
+                              This argument does not work with --principal / --keytab.
+
+  --help, -h                  Show this help message and exit.
+  --verbose, -v               Print additional debug output.
+  --version,                  Print the version of current Spark.
+
+ Cluster deploy mode only:
+  --driver-cores NUM          Number of cores used by the driver, only in cluster mode
+                              (Default: 1).
+
+ Spark standalone or Mesos with cluster deploy mode only:
+  --supervise                 If given, restarts the driver on failure.
+  --kill SUBMISSION_ID        If given, kills the driver specified.
+  --status SUBMISSION_ID      If given, requests the status of the driver specified.
+
+ Spark standalone and Mesos only:
+  --total-executor-cores NUM  Total cores for all executors.
+
+ Spark standalone and YARN only:
+  --executor-cores NUM        Number of cores per executor. (Default: 1 in YARN mode,
+                              or all available cores on the worker in standalone mode)
+
+ YARN-only:
+  --queue QUEUE_NAME          The YARN queue to submit to (Default: &amp;quot;default&amp;quot;).
+  --num-executors NUM         Number of executors to launch (Default: 2).
+                              If dynamic allocation is enabled, the initial number of
+                              executors will be at least NUM.
+  --archives ARCHIVES         Comma separated list of archives to be extracted into the
+                              working directory of each executor.
+  --principal PRINCIPAL       Principal to be used to login to KDC, while running on
+                              secure HDFS.
+  --keytab KEYTAB             The full path to the file that contains the keytab for the
+                              principal specified above. This keytab will be copied to
+                              the node running the Application Master via the Secure
+                              Distributed Cache, for renewing the login tickets and the
+                              delegation tokens periodically.
+      
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Submitting Applications - Spark 3.1.1 Documentation &lt;a href=&#34;https://spark.apache.org/docs/latest/submitting-applications.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://spark.apache.org/docs/latest/submitting-applications.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
       <title>GCP Associate Cloud Engineer 合格体験記</title>
       <link>/gcp-associate-cloud-engineer-certification/</link>
       <pubDate>Tue, 14 Sep 2021 00:00:00 +0000</pubDate>
