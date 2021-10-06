@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["AWS","EMR"]
 categories: ["AWS","EMR"]
-url: aws-emr-spark-python-udf-performance.html
+url: aws-emr-spark-python-udf-performance
 date: 2021-05-23
 featured: false
 draft: false

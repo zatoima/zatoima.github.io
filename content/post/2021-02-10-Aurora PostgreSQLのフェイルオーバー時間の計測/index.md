@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["AWS","Aurora","RDS","PostgreSQL"]
 categories: ["AWS","Aurora","RDS","PostgreSQL"]
-url: aws-aurora-failover-time-test.html
+url: aws-aurora-failover-time-test
 date: 2021-02-10
 featured: false
 draft: false

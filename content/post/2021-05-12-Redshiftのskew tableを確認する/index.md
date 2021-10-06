@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["AWS","Redshift"]
 categories: ["AWS","Redshift"]
-url: aws-redshift-skew-table-check.html
+url: aws-redshift-skew-table-check
 date: 2021-05-12
 featured: false
 draft: false
