@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Glue | my opinion is my own</title>
+    <link>/category/glue/</link>
+      <atom:link href="/category/glue/index.xml" rel="self" type="application/rss+xml" />
+    <description>Glue</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 22 Oct 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>Glue</title>
+      <link>/category/glue/</link>
+    </image>
+    
+    <item>
+      <title>AthenaでParquetファイルのデータカタログ作成</title>
+      <link>/python-pyarrow-convert-csv-to-parquet-pandas/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>/python-pyarrow-convert-csv-to-parquet-pandas/</guid>
+      <description>&lt;h3 id=&#34;テスト用csvの作成&#34;&gt;テスト用CSVの作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;cat &amp;lt;&amp;lt; EOF &amp;gt; testdata.csv
+id,name,comment
+&amp;quot;1&amp;quot;,&amp;quot;test1&amp;quot;,&amp;quot;ゎぶばあちあぬナクバ&amp;quot;
+&amp;quot;2&amp;quot;,&amp;quot;test2&amp;quot;,&amp;quot;がマうひバぴじクハぺ&amp;quot;
+&amp;quot;3&amp;quot;,&amp;quot;test3&amp;quot;,&amp;quot;スみでてゥあッあけげ&amp;quot;
+EOF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;s3のフォルダのクリーンアップ&#34;&gt;S3のフォルダのクリーンアップ&lt;/h4&gt;
+&lt;p&gt;awswranglerのオプションでクリーンアップ出来たと思うが、手動で事前に削除&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws s3 rm s3://202110test/pq/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;csvparquetに変換&#34;&gt;CSV→Parquetに変換&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;import awswrangler as wr
+import pandas as pd
+
+#変換
+df = pd.read_csv(&#39;./testdata.csv&#39;)
+
+wr.s3.to_parquet(
+    df=df,
+    path=&#39;s3://202110test/pq/&#39;,
+    dataset=True,
+    partition_cols=[&#39;id&#39;]
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;athenaでデータベースデータカタログの作成&#34;&gt;Athenaでデータベース、データカタログの作成&lt;/h3&gt;
+&lt;p&gt;コンソールから実施を想定&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;DROP TABLE `catalogtest`.`testdata`;
+
+CREATE EXTERNAL TABLE `catalogtest`.`testdata`(
+  `id` string, 
+  `name` string, 
+  `comment` string
+  )
+ROW FORMAT SERDE 
+  &#39;org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe&#39; 
+STORED AS INPUTFORMAT 
+  &#39;org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat&#39; 
+OUTPUTFORMAT 
+  &#39;org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat&#39;
+LOCATION
+  &#39;s3://202110test/pq/&#39;
+TBLPROPERTIES (
+  &#39;classification&#39;=&#39;parquet&#39;, 
+  &#39;compressionType&#39;=&#39;none&#39;, 
+  &#39;objectCount&#39;=&#39;1&#39;, 
+  &#39;typeOfData&#39;=&#39;file&#39;)
+
+MSCK REPAIR TABLE catalogtest.testdata;
+
+select name,comment from testdata;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;athenacliを使用してAthenaのクエリを実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;athenacli catalogtest -e &#39;select name,comment from testdata&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@ip-10-0-1-31 pyarrow]$ athenacli catalogtest -e &#39;select name,comment from testdata&#39;
+name,comment
+test1,ゎぶばあちあぬナクバ
+test3,スみでてゥあッあけげ
+test2,がマうひバぴじクハぺ
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
