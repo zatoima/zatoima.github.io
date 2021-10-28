@@ -5,12 +5,74 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 27 Oct 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 28 Oct 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>Redshift SpectrumからGlue Data Catalogを参照する</title>
+      <link>/aws-redshift-spectrum-select-data-catalog/</link>
+      <pubDate>Thu, 28 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-spectrum-select-data-catalog/</guid>
+      <description>&lt;p&gt;Athena側で作ったGlue Data Catalog側のデータベース名、テーブル名の前提は下記記事。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://zatoima.github.io/python-pyarrow-convert-csv-to-parquet-pandas/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;AthenaでParquetファイルのデータカタログ作成 | my opinion is my own&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;データベース名：catalogtest&lt;/li&gt;
+&lt;li&gt;テーブル名：testdata&lt;/li&gt;
+&lt;li&gt;外部スキーマ名：external_schema&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;redshift側で外部スキーマを定義&#34;&gt;Redshift側で外部スキーマを定義&lt;/h3&gt;
+&lt;p&gt;データカタログ側にデータベース、テーブルがある状態であれば外部スキーマ定義を行うだけで良い。S3やGlueの権限をiam_roleとしてRedshiftにアタッチしておく必要がある。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop schema external_schema;
+create external schema external_schema from data catalog
+database &#39;catalogtest&#39;
+iam_role &#39;arn:aws:iam::xxxxxxx:role/myRedshiftRole&#39;
+create external database if not exists;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# create external schema external_schema from data catalog
+mydb-# database &#39;catalogtest&#39;
+mydb-# iam_role &#39;arn:aws:iam::xxxxxxx:role/myRedshiftRole&#39;
+mydb-# create external database if not exists;
+INFO:  External database &amp;quot;catalogtest&amp;quot; already exists
+CREATE SCHEMA
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;スキーマの確認&#34;&gt;スキーマの確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select schemaname, databasename from svv_external_schemas where schemaname=&#39;external_schema&#39;;
+   schemaname    | databasename 
+-----------------+--------------
+ external_schema | catalogtest
+(1 row)
+mydb=# select schemaname, tablename, location from SVV_EXTERNAL_TABLES where schemaname=&#39;external_schema&#39;;
+   schemaname    | tablename |      location      
+-----------------+-----------+--------------------
+ external_schema | testdata  | s3://202110test/pq
+(1 row)
+
+mydb=# select * from SVV_EXTERNAL_COLUMNS where tablename = &#39;testdata&#39;;
+   schemaname    | tablename | columnname | external_type | columnnum | part_key | is_nullable 
+-----------------+-----------+------------+---------------+-----------+----------+-------------
+ external_schema | testdata  | id         | string        |         1 |        0 | 
+ external_schema | testdata  | name       | string        |         2 |        0 | 
+ external_schema | testdata  | comment    | string        |         3 |        0 | 
+(3 rows)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;クエリを行う&#34;&gt;クエリを行う&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select name,comment from external_schema.testdata;
+ name  |       comment        
+-------+----------------------
+ test1 | ゎぶばあちあぬナクバ
+ test2 | がマうひバぴじクハぺ
+ test3 | スみでてゥあッあけげ
+(3 rows)
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする</title>
