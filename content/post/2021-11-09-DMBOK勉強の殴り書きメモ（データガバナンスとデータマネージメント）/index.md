@@ -6,8 +6,8 @@ subtitle: ""
 summary: " "
 tags: ["DMBOK"]
 categories: ["DMBOK"]
-url: how-to-know-the-update-information-of-the-site-without-rss
-date: 2021-10-13
+url: dmbok-memo-data-governance-data-management
+date: 2021-11-09
 featured: false
 draft: false
 
