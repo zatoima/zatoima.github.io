@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["DMBOK"]
 categories: ["DMBOK"]
-url: dmbok-memo-data-governance-data-management
+url: dmbok-memo-reference-data-master
 date: 2021-11-15
 featured: false
 draft: false
