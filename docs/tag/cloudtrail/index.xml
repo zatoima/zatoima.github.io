@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>CloudTrail | my opinion is my own</title>
+    <link>/tag/cloudtrail/</link>
+      <atom:link href="/tag/cloudtrail/index.xml" rel="self" type="application/rss+xml" />
+    <description>CloudTrail</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 18 Nov 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>CloudTrail</title>
+      <link>/tag/cloudtrail/</link>
+    </image>
+    
+    <item>
+      <title>AthenaでCloudTrail の証跡を分析</title>
+      <link>/aws-cloudtrail-athena-analyze-query/</link>
+      <pubDate>Thu, 18 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-cloudtrail-athena-analyze-query/</guid>
+      <description>&lt;p&gt;CloudTrailのマネージメントコンソール上には「Athenaテーブルを作成」という機能がある。ここからAthenaで検索ができるようにDDLを用意してくれているが、これに落とし穴があった。S3上のファイル自体は日付ごとに格納されてパーティション化されているが、このDDL定義がパーティションに対応していない。余計なコストを発生させないために、Partition Projectionに対応したDDLを別途用意する必要がある。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211118205236035&#34; srcset=&#34;
+               /aws-cloudtrail-athena-analyze-query/image-20211118205236035_hu691a9182eff23167d6b621a9bfebaf25_3718_d6786267e6dca831e5739511c9d14e77.png 400w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118205236035_hu691a9182eff23167d6b621a9bfebaf25_3718_6b80d7edc81c97806b305d75302f9120.png 760w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118205236035_hu691a9182eff23167d6b621a9bfebaf25_3718_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-athena-analyze-query/image-20211118205236035_hu691a9182eff23167d6b621a9bfebaf25_3718_d6786267e6dca831e5739511c9d14e77.png&#34;
+               width=&#34;452&#34;
+               height=&#34;81&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211118205206916&#34; srcset=&#34;
+               /aws-cloudtrail-athena-analyze-query/image-20211118205206916_hu2a44e74919a9a5ca15da3e4dbafb2c5d_60604_dbaef74cfe6bd0038dd4051cd3681635.png 400w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118205206916_hu2a44e74919a9a5ca15da3e4dbafb2c5d_60604_a965798ea5aef99cd36e368c050c93b9.png 760w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118205206916_hu2a44e74919a9a5ca15da3e4dbafb2c5d_60604_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-athena-analyze-query/image-20211118205206916_hu2a44e74919a9a5ca15da3e4dbafb2c5d_60604_dbaef74cfe6bd0038dd4051cd3681635.png&#34;
+               width=&#34;445&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;athenaでテーブルを作成する&#34;&gt;Athenaでテーブルを作成する&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://dev.classmethod.jp/articles/cloudtrail-athena-partition-projection-table/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;【全リージョン対応】CloudTrailのログをAthenaのPartition Projectionなテーブルで作る | DevelopersIO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://blog.serverworks.co.jp/2020/11/25/114449&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Athenaのパーティションプロジェクションを利用してCloudTrailのログ検索をする - サーバーワークスエンジニアブログ&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;drop table cloudtrail_logs;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE EXTERNAL TABLE cloudtrail_logs (
+    eventVersion STRING,
+    userIdentity STRUCT&amp;lt;
+        type: STRING,
+        principalId: STRING,
+        arn: STRING,
+        accountId: STRING,
+        invokedBy: STRING,
+        accessKeyId: STRING,
+        userName: STRING,
+        sessionContext: STRUCT&amp;lt;
+            attributes: STRUCT&amp;lt;
+                mfaAuthenticated: STRING,
+                creationDate: STRING&amp;gt;,
+            sessionIssuer: STRUCT&amp;lt;
+                type: STRING,
+                principalId: STRING,
+                arn: STRING,
+                accountId: STRING,
+                userName: STRING&amp;gt;&amp;gt;&amp;gt;,
+    eventTime STRING,
+    eventSource STRING,
+    eventName STRING,
+    awsRegion STRING,
+    sourceIpAddress STRING,
+    userAgent STRING,
+    errorCode STRING,
+    errorMessage STRING,
+    requestParameters STRING,
+    responseElements STRING,
+    additionalEventData STRING,
+    requestId STRING,
+    eventId STRING,
+    resources ARRAY&amp;lt;STRUCT&amp;lt;
+        arn: STRING,
+        accountId: STRING,
+        type: STRING&amp;gt;&amp;gt;,
+    eventType STRING,
+    apiVersion STRING,
+    readOnly STRING,
+    recipientAccountId STRING,
+    serviceEventDetails STRING,
+    sharedEventID STRING,
+    vpcEndpointId STRING
+)
+COMMENT &#39;CloudTrail table for ${BucketName} bucket&#39;
+PARTITIONED BY (region string, date string)
+ROW FORMAT SERDE &#39;com.amazon.emr.hive.serde.CloudTrailSerde&#39;
+STORED AS INPUTFORMAT &#39;com.amazon.emr.cloudtrail.CloudTrailInputFormat&#39;
+OUTPUTFORMAT &#39;org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat&#39;
+LOCATION &#39;s3://z3-cloudtrail/AWSLogs/&amp;lt;Acclout ID&amp;gt;/CloudTrail/&#39;
+TBLPROPERTIES (
+    &#39;projection.enabled&#39; = &#39;true&#39;,
+    &#39;projection.date.type&#39; = &#39;date&#39;,
+    &#39;projection.date.range&#39; = &#39;NOW-1YEARS,NOW&#39;,
+    &#39;projection.date.format&#39; = &#39;yyyy/MM/dd&#39;,
+    &#39;projection.date.interval&#39; = &#39;1&#39;,
+    &#39;projection.date.interval.unit&#39; = &#39;DAYS&#39;,
+    &#39;projection.region.type&#39; = &#39;enum&#39;,
+    &#39;projection.region.values&#39;=&#39;us-east-1,us-east-2,us-west-1,us-west-2,af-south-1,ap-east-1,ap-south-1,ap-northeast-2,ap-southeast-1,ap-southeast-2,ap-northeast-1,ca-central-1,eu-central-1,eu-west-1,eu-west-2,eu-south-1,eu-west-3,eu-north-1,me-south-1,sa-east-1&#39;,
+    &#39;storage.location.template&#39; = &#39;s3://z3-cloudtrail/AWSLogs/&amp;lt;Acclout ID&amp;gt;/CloudTrail/${region}/${date}&#39;,
+    &#39;classification&#39;=&#39;cloudtrail&#39;,
+    &#39;compressionType&#39;=&#39;gzip&#39;,
+    &#39;typeOfData&#39;=&#39;file&#39;,
+    &#39;classification&#39;=&#39;cloudtrail&#39;
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;分析クエリの発行&#34;&gt;分析クエリの発行&lt;/h3&gt;
+&lt;p&gt;東京リージョンで2021年11月に発行されたAPIでeventsource、eventnameごとに集計する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    awsregion,
+    eventsource,
+    eventname,
+    COUNT(*) as cnt
+FROM
+    cloudtrail_logs
+WHERE
+    date&amp;gt;=&#39;2021/11/01&#39; AND
+    region = &#39;ap-northeast-1&#39;    
+GROUP BY
+    awsregion,
+    eventsource,
+    eventname
+ORDER BY cnt DESC
+limit 10;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行時間も全量検索に比べて高速化している。スキャンしたデータも一部分のみ。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211118211826079&#34; srcset=&#34;
+               /aws-cloudtrail-athena-analyze-query/image-20211118211826079_hu31d9be51496ae16120d85f837d2e7f7f_4793_173fa423a5cb01c73867a5540d666e09.png 400w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118211826079_hu31d9be51496ae16120d85f837d2e7f7f_4793_8428e933c0213272003430aaba74a2ef.png 760w,
+               /aws-cloudtrail-athena-analyze-query/image-20211118211826079_hu31d9be51496ae16120d85f837d2e7f7f_4793_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-athena-analyze-query/image-20211118211826079_hu31d9be51496ae16120d85f837d2e7f7f_4793_173fa423a5cb01c73867a5540d666e09.png&#34;
+               width=&#34;482&#34;
+               height=&#34;57&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
