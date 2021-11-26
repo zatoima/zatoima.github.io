@@ -5,12 +5,163 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 25 Nov 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 26 Nov 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>CloudTrailの料金が高い場合の対応</title>
+      <link>/aws-cloudtrail-cost-high/</link>
+      <pubDate>Fri, 26 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-cloudtrail-cost-high/</guid>
+      <description>&lt;h3 id=&#34;athenaでcloudtrailのapi記録の傾向把握&#34;&gt;①AthenaでCloudTrailのAPI記録の傾向把握&lt;/h3&gt;
+&lt;p&gt;eventsourceを特定して突出して多いサービスがないか確認&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://zatoima.github.io/aws-cloudtrail-athena-analyze-query/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;AthenaでCloudTrail の証跡を分析 | my opinion is my own&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    awsregion,
+    eventsource,
+    eventname,
+    COUNT(*) as cnt
+FROM
+    cloudtrail_logs
+WHERE
+    date&amp;gt;=&#39;2021/11/24&#39; AND
+    region = &#39;ap-northeast-1&#39;    
+GROUP BY
+    awsregion,
+    eventsource,
+    eventname
+ORDER BY cnt DESC
+limit 10;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211125132257245&#34; srcset=&#34;
+               /aws-cloudtrail-cost-high/image-20211125132257245_hu5097bac8ab668c56f7c3c925d0e3ab5a_102391_8a374ec2834bd3c1e5e75820223853cb.png 400w,
+               /aws-cloudtrail-cost-high/image-20211125132257245_hu5097bac8ab668c56f7c3c925d0e3ab5a_102391_6fcd90216db757f71b8637c787bff460.png 760w,
+               /aws-cloudtrail-cost-high/image-20211125132257245_hu5097bac8ab668c56f7c3c925d0e3ab5a_102391_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-cost-high/image-20211125132257245_hu5097bac8ab668c56f7c3c925d0e3ab5a_102391_8a374ec2834bd3c1e5e75820223853cb.png&#34;
+               width=&#34;760&#34;
+               height=&#34;341&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;次は突出したeventsource、eventnameの深堀りを行う。UserIdenity要素にリクエスターの情報があるので、理由を特定する。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211125133326345&#34; srcset=&#34;
+               /aws-cloudtrail-cost-high/image-20211125133326345_hu9259a45fa1cadc485b5b8df58d8b7dab_253441_9159d1b8134593567da237f882ee5383.png 400w,
+               /aws-cloudtrail-cost-high/image-20211125133326345_hu9259a45fa1cadc485b5b8df58d8b7dab_253441_c64452330bc167cc1000b54ea07a6752.png 760w,
+               /aws-cloudtrail-cost-high/image-20211125133326345_hu9259a45fa1cadc485b5b8df58d8b7dab_253441_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-cost-high/image-20211125133326345_hu9259a45fa1cadc485b5b8df58d8b7dab_253441_9159d1b8134593567da237f882ee5383.png&#34;
+               width=&#34;760&#34;
+               height=&#34;429&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;データイベントの配信及びcloudtrail-insightsの配信の必要性の再検討及び絞り込み&#34;&gt;②データイベントの配信、及びCloudTrail Insightsの配信の必要性の再検討、及び絞り込み&lt;/h3&gt;
+&lt;p&gt;管理イベントの最初のコピーは無料だが、データイベントとInsightsの配信は有料なので注意をする。特にデータイベントのAPI数は多くなりやすい。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;機能&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;料金&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;S3 に配信された管理イベント&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;管理イベントの最初のコピーは無料で配信されます。追加のコピー: 配信された 100,000 管理イベントあたり 2.00USD&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;S3 に配信されたデータイベント&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;配信された 100,000 データイベントあたり 0.10USD&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;CloudTrail Insights&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;分析された 100,000 イベントあたり 0.35USD&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://aws.amazon.com/jp/cloudtrail/pricing/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;料金 - AWS CloudTrail | AWS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;後はどのデータイベントを記録するかという絞り込みもイベントセレクタという機能で実施出来るので、不要なデータイベントを除外できるように設計する&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;証跡のデータイベントの記録 - AWS CloudTrail&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211125133207119&#34; srcset=&#34;
+               /aws-cloudtrail-cost-high/image-20211125133207119_hubc9b0b3ad06edaa29050ab1fa7b04224_362066_8a702edebde2e106c534f7412a84c695.png 400w,
+               /aws-cloudtrail-cost-high/image-20211125133207119_hubc9b0b3ad06edaa29050ab1fa7b04224_362066_5ae730988fd38bb40ec5d65bd636215c.png 760w,
+               /aws-cloudtrail-cost-high/image-20211125133207119_hubc9b0b3ad06edaa29050ab1fa7b04224_362066_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-cloudtrail-cost-high/image-20211125133207119_hubc9b0b3ad06edaa29050ab1fa7b04224_362066_8a702edebde2e106c534f7412a84c695.png&#34;
+               width=&#34;760&#34;
+               height=&#34;428&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;重複する-cloudtrail-管理イベントをリージョン別に特定して削除する&#34;&gt;③重複する CloudTrail 管理イベントをリージョン別に特定して削除する&lt;/h3&gt;
+&lt;p&gt;下記を参照&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://aws.amazon.com/jp/premiumsupport/knowledge-center/remove-duplicate-cloudtrail-events&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;CloudTrail のコストと使用量に予期しない増加があるのはなぜですか?&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://d1.awsstatic.com/webinars/jp/pdf/services/20210119_AWSBlackbelt_CloudTrail.pdf&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;20210119_AWSBlackbelt_CloudTrail.pdf&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>CloudTrailのデータイベントはマネージメントコンソール上からは確認出来ない</title>
