@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Docker | my opinion is my own</title>
+    <link>/tag/docker/</link>
+      <atom:link href="/tag/docker/index.xml" rel="self" type="application/rss+xml" />
+    <description>Docker</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 02 Dec 2021 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>Docker</title>
+      <link>/tag/docker/</link>
+    </image>
+    
+    <item>
+      <title>EC2にDockerをインストールしてFIWAREを動かす</title>
+      <link>/aws-ec2-docker-fiware-install/</link>
+      <pubDate>Thu, 02 Dec 2021 00:00:00 +0000</pubDate>
+      <guid>/aws-ec2-docker-fiware-install/</guid>
+      <description>&lt;h2 id=&#34;事前準備編&#34;&gt;事前準備編&lt;/h2&gt;
+&lt;h3 id=&#34;dockerインストール&#34;&gt;Dockerインストール&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo yum install -y docker
+sudo systemctl start docker
+sudo usermod -a -G docker ec2-user
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;自動起動を有効にする&#34;&gt;自動起動を有効にする&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo systemctl enable docker
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;docker-composeのインストール&#34;&gt;docker-composeのインストール&lt;/h3&gt;
+&lt;p&gt;Docker compose とは、複数のコンテナから成るサービスを構築・実行する手順を自動的にし、管理を容易にする機能&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;fiwareのインストール&#34;&gt;FIWAREのインストール&lt;/h2&gt;
+&lt;p&gt;FIWAREの手順は下記の公式のgithubを参照&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/FIWARE/tutorials.Getting-Started/blob/master/README.ja.md&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;tutorials.Getting-Started/README.ja.md at master · FIWARE/tutorials.Getting-Started · GitHub&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;docker-バージョン-1803-以降と-docker-compose-129-以上を使用していることを確認&#34;&gt;Docker バージョン 18.03 以降と Docker Compose 1.29 以上を使用していることを確認&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ docker-compose -v
+docker-compose version 1.29.2, build 5becea4c
+[ec2-user@bastin ~]$ docker version
+Client:
+ Version:           20.10.7
+ API version:       1.41
+ Go version:        go1.15.14
+ Git commit:        f0df350
+ Built:             Tue Sep 28 19:55:50 2021
+ OS/Arch:           linux/amd64
+ Context:           default
+ Experimental:      true
+Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get &amp;quot;http://%2Fvar%2Frun%2Fdocker.sock/v1.24/version&amp;quot;: dial unix /var/run/docker.sock: connect: permission denied
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;コンテナの起動&#34;&gt;コンテナの起動&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;docker pull mongo:4.4
+docker pull fiware/orion
+docker network create fiware_default
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;MongoDB データベースを実行している Docker コンテナを 起動し、ネットワークに接続する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;docker run -d --name=mongo-db --network=fiware_default --expose=27017 mongo:4.4 --bind_ip_all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;fiware-orionのネットワーク接続&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;docker run -d --name fiware-orion  --network=fiware_default -p 1026:1026  fiware/orion -dbhost mongo-db
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;設定のクリーンアップ（※必要な場合に実施する）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;docker stop fiware-orion
+docker rm fiware-orion
+docker stop mongo-db
+docker rm mongo-db
+docker network rm fiware_default
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;httpリクエストの実施&#34;&gt;httpリクエストの実施&lt;/h3&gt;
+&lt;p&gt;バージョンの取得&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -X GET &#39;http://localhost:1026/version&#39;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ curl -X GET &#39;http://localhost:1026/version&#39;
+{
+&amp;quot;orion&amp;quot; : {
+  &amp;quot;version&amp;quot; : &amp;quot;3.1.0-next&amp;quot;,
+  &amp;quot;uptime&amp;quot; : &amp;quot;0 d, 0 h, 1 m, 19 s&amp;quot;,
+  &amp;quot;git_hash&amp;quot; : &amp;quot;7bd1e43514539bd65caeb30d4e3319202e0f115b&amp;quot;,
+  &amp;quot;compile_time&amp;quot; : &amp;quot;Mon Jul 26 08:19:44 UTC 2021&amp;quot;,
+  &amp;quot;compiled_by&amp;quot; : &amp;quot;root&amp;quot;,
+  &amp;quot;compiled_in&amp;quot; : &amp;quot;dae1c5e3a7d9&amp;quot;,
+  &amp;quot;release_date&amp;quot; : &amp;quot;Mon Jul 26 08:19:44 UTC 2021&amp;quot;,
+  &amp;quot;machine&amp;quot; : &amp;quot;x86_64&amp;quot;,
+  &amp;quot;doc&amp;quot; : &amp;quot;https://fiware-orion.rtfd.io/&amp;quot;,
+  &amp;quot;libversions&amp;quot;: {
+     &amp;quot;boost&amp;quot;: &amp;quot;1_66&amp;quot;,
+     &amp;quot;libcurl&amp;quot;: &amp;quot;libcurl/7.61.1 OpenSSL/1.1.1g zlib/1.2.11 nghttp2/1.33.0&amp;quot;,
+     &amp;quot;libmicrohttpd&amp;quot;: &amp;quot;0.9.70&amp;quot;,
+     &amp;quot;openssl&amp;quot;: &amp;quot;1.1&amp;quot;,
+     &amp;quot;rapidjson&amp;quot;: &amp;quot;1.1.0&amp;quot;,
+     &amp;quot;mongoc&amp;quot;: &amp;quot;1.17.4&amp;quot;,
+     &amp;quot;bson&amp;quot;: &amp;quot;1.17.4&amp;quot;
+  }
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;エンティティの作成&#34;&gt;エンティティの作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -sS http://localhost:1026/v2/entities \
+     -H &#39;Content-Type: application/json&#39; \
+     -d @- &amp;lt;&amp;lt;EOF
+{
+  &amp;quot;id&amp;quot;: &amp;quot;living&amp;quot;,
+  &amp;quot;type&amp;quot;: &amp;quot;Room&amp;quot;,
+  &amp;quot;temperature&amp;quot;: {&amp;quot;value&amp;quot;: 23, &amp;quot;type&amp;quot;: &amp;quot;Float&amp;quot;}
+}
+EOF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;エンティティの確認&#34;&gt;エンティティの確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ curl -sS http://localhost:1026/v2/entities/living?type=Room -H &#39;Accept: application/json&#39; | jq .
+{
+  &amp;quot;id&amp;quot;: &amp;quot;living&amp;quot;,
+  &amp;quot;type&amp;quot;: &amp;quot;Room&amp;quot;,
+  &amp;quot;temperature&amp;quot;: {
+    &amp;quot;type&amp;quot;: &amp;quot;Float&amp;quot;,
+    &amp;quot;value&amp;quot;: 23,
+    &amp;quot;metadata&amp;quot;: {}
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;エンティティの更新&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -sS http://localhost:1026/v2/entities/living/attrs \
+     -H &#39;Content-Type: application/json&#39; \
+     -X PATCH \
+     -d @- &amp;lt;&amp;lt;EOF
+{
+  &amp;quot;temperature&amp;quot;: {
+    &amp;quot;value&amp;quot;: 26.5,
+    &amp;quot;type&amp;quot;: &amp;quot;Float&amp;quot;
+  }
+}
+EOF
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;エンティティの確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ curl -sS http://localhost:1026/v2/entities/living?type=Room -H &#39;Accept: application/json&#39; | jq .
+{
+  &amp;quot;id&amp;quot;: &amp;quot;living&amp;quot;,
+  &amp;quot;type&amp;quot;: &amp;quot;Room&amp;quot;,
+  &amp;quot;temperature&amp;quot;: {
+    &amp;quot;type&amp;quot;: &amp;quot;Float&amp;quot;,
+    &amp;quot;value&amp;quot;: 26.5,
+    &amp;quot;metadata&amp;quot;: {}
+  }
+}
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;アトリビュートの更新&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;curl -sS http://localhost:1026/v2/entities/living/attrs/temperature/value \
+       -H &#39;Content-Type: text/plain&#39; \
+       -X PUT \
+       -d 28.5
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
