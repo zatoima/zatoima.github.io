@@ -36,26 +36,15 @@ sudo usermod -a -G docker ec2-user
 sudo systemctl enable docker
 ```
 
-### docker-composeのインストール
-
-Docker compose とは、複数のコンテナから成るサービスを構築・実行する手順を自動的にし、管理を容易にする機能
-
-```sh
-sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-```
-
 ## FIWAREのインストール
 
 FIWAREの手順は下記の公式のgithubを参照
 
 > [tutorials\.Getting\-Started/README\.ja\.md at master · FIWARE/tutorials\.Getting\-Started · GitHub](https://github.com/FIWARE/tutorials.Getting-Started/blob/master/README.ja.md)
 
-### Docker バージョン 18.03 以降と Docker Compose 1.29 以上を使用していることを確認 
+### Docker バージョン 18.03 以降を使用していることを確認 
 
 ```sh
-[ec2-user@bastin ~]$ docker-compose -v
-docker-compose version 1.29.2, build 5becea4c
 [ec2-user@bastin ~]$ docker version
 Client:
  Version:           20.10.7
@@ -66,7 +55,6 @@ Client:
  OS/Arch:           linux/amd64
  Context:           default
  Experimental:      true
-Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/version": dial unix /var/run/docker.sock: connect: permission denied
 [ec2-user@bastin ~]$ 
 ```
 
