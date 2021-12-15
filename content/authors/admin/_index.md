@@ -32,7 +32,7 @@ This blog is mainly a note for myself in the future.
 - Cloud Database
   - Aurora / RDS / Redshift / BigQuery / Spanner / DynamoDB / Bigtable / Neptune
 - Relational Database
-  - Oracle Database / GoldenGate / PostgreSQL / MySQL
+  - Oracle Database / PostgreSQL / MySQL
 - Data Engineering
   - EMR / Dataproc / Apache Hadoop / Spark / Hive / kafka 
 - Python
