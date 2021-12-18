@@ -16,7 +16,7 @@ draft: false
 # Focal points: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, Bot
 ---
 
-hugoのエラーと対応の備忘。
+Hugo Academicのエラーと対応の備忘。
 
 ### エラー
 
@@ -37,8 +37,6 @@ Error: from config: failed to resolve output format "headers" from site config
 
 https://wowchemy.com/docs/hugo-tutorials/troubleshooting/#error-file-not-found-or-failed-to-extract
 
-
-
 > Error: failed to resolve output format
 >
 > Users report a commonly occurring [Hugo issue with the integrity of the modules cache](https://github.com/gohugoio/hugo/issues/8883#issuecomment-897832769). **Consider upvoting and commenting on the issue** to show the Hugo team that you are also affected.
@@ -51,5 +49,12 @@ https://wowchemy.com/docs/hugo-tutorials/troubleshooting/#error-file-not-found-o
 >
 > Note: usually `hugo mod clean --all` should delete Hugo’s cache, however, users report a Hugo bug running the command in this situation. You can provide your feedback on the [Hugo issues](https://github.com/gohugoio/hugo/issues/new?assignees=&labels=bug&template=bug_report.md).
 
+日本語訳 by DeepL
 
-
+> モジュールキャッシュの整合性に関して、Hugoでよく発生する問題がユーザーから報告されています。Hugo チームに自分も影響を受けていることを示すために、この問題に upvoting や commenting することを検討してください。
+>
+> この Hugo の問題を解決するには、以下のいずれかを行ってください。
+>
+> (A) Hugo のデフォルトのキャッシュフォルダを手動で削除し、Hugo を再実行します。Hugoのキャッシュフォルダのデフォルトは、Mac/Linuxでは$TMPDIR/hugo_cache/、Windowsでは%TMP%hugo_cacheです。
+>
+> あるいは、(B) Hugo を実行するときに、カスタム Hugo キャッシュフォルダを設定します。例えば、 hugo server --cacheDir ./cache/ ここで ./cache/ は作成する一時フォルダのパスとなります。そうすれば、この問題が発生したときに、Hugoのキャッシュフォルダを簡単に見つけて削除することができます。
