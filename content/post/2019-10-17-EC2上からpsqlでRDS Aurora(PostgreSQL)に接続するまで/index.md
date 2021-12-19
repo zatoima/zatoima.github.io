@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "EC2上からpsqlでRDS Aurora(PostgreSQL)に接続するまで"
+title: "EC2上からpsqlでAurora(PostgreSQL)に接続するまで"
 subtitle: ""
 summary: " "
 tags: ["AWS", "EC2", "RDS", "Aurora", "PostgreSQL"]

@@ -22,17 +22,23 @@ image:
 
 
 
+### 前提
 
+jqを使用するのでyum等で別途インストールが必要。
+
+```sh
+sudo yum -y install jq
+```
 
 ### コマンド
 
-```
+```sh
 aws cloudwatch get-metric-statistics --namespace AWS/Neptune --metric-name VolumeBytesUsed --start-time 2020-05-06T00:00:00 --end-time 2020-05-07T12:00:00 --period 300 --statistics Average --dimensions Name=DBClusterIdentifier,Value=neploadtest1   | jq -r '.Datapoints[] | [ .Timestamp ,.Average ,.Unit] | @csv' | sort -t ',' -k 1
 ```
 
 ### 結果
 
-```
+```sh
 [ec2-user@bastin ~]$ aws cloudwatch get-metric-statistics --namespace AWS/Neptune --metric-name VolumeBytesUsed --start-time 2020-05-06T00:00:00 --end-time 2020-05-07T12:00:00 --period 300 --statistics Average --dimensions Name=DBClusterIdentifier,Value=neploadtest1   | jq -r '.Datapoints[] | [ .Timestamp ,.Average ,.Unit] | @csv' | sort -t ',' -k 1
 "2020-05-06T06:05:00Z",0,"Bytes"
 "2020-05-06T06:15:00Z",126189568,"Bytes"
