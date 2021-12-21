@@ -5,12 +5,89 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sun, 19 Dec 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 21 Dec 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLのpostgres_fdw拡張機能の実行</title>
+      <link>/postgres-extension-fdw-install/</link>
+      <pubDate>Tue, 21 Dec 2021 00:00:00 +0000</pubDate>
+      <guid>/postgres-extension-fdw-install/</guid>
+      <description>&lt;h2 id=&#34;postgres_fdwの実行&#34;&gt;postgres_fdwの実行&lt;/h2&gt;
+&lt;h3 id=&#34;拡張機能の有効化&#34;&gt;拡張機能の有効化&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE EXTENSION postgres_fdw;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部サーバの定義&#34;&gt;外部サーバの定義&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;test1&lt;/code&gt;データベースに対しての外部サーバを作成する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE SERVER fdw_app FOREIGN DATA WRAPPER postgres_fdw OPTIONS (dbname &#39;test1&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部サーバのユーザーマップ定義&#34;&gt;外部サーバのユーザーマップ定義&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE USER MAPPING FOR public SERVER fdw_app OPTIONS (user &#39;postgres&#39;, password &#39;postgres&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部テーブルの作成&#34;&gt;外部テーブルの作成&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;fdw_app&lt;/code&gt;外部サーバを使用して&lt;code&gt;t2&lt;/code&gt;テーブルを外部テーブルとして作成する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE FOREIGN TABLE t2 (a integer, b text,c text, d timestamp with time zone) SERVER fdw_app;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;外部テーブルの場合はtypeが&lt;code&gt;foreign table&lt;/code&gt;になる模様&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; \d
+                List of relations
+ Schema |    Name     |     Type      |  Owner   
+--------+-------------+---------------+----------
+ public | t1          | table         | postgres
+ public | t2          | foreign table | postgres
+ public | v_dblink_t1 | view          | postgres
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.jp/document/13/html/sql-importforeignschema.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;IMPORT FOREIGN SCHEMA&lt;/a&gt;を使用して外部テーブルの作成も可能。&lt;/p&gt;
+&lt;h3 id=&#34;検索&#34;&gt;検索&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select count(*) from t2;
+   count   
+-----------
+ 100000000
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;postgres_fdwの特徴&#34;&gt;postgres_fdwの特徴&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;プッシュダウン機能
+&lt;ul&gt;
+&lt;li&gt;SQL文に含まれるWHERE句（絞り込み処理）、ORDER BY句（ソート処理）などをリモート側で実行される
+&lt;ul&gt;
+&lt;li&gt;dblinkと違う明確なメリット&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;更新が可能
+&lt;ul&gt;
+&lt;li&gt;ON CONFLICT DO UPDATE句のあるINSERT文をサポートしていない&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;postgres_fdwの注意点&#34;&gt;postgres_fdwの注意点&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;トランザクションの制御
+&lt;ul&gt;
+&lt;li&gt;リモート側のCOMMITのタイミング、トランザクション分離レベルで注意が必要（詳細は参考のリンクを）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;性能面
+&lt;ul&gt;
+&lt;li&gt;通信量次第で遅くなる傾向にある&lt;/li&gt;
+&lt;li&gt;リモート実行オプションでfetch_sizeが100なので、必要に応じてチューニングする必要がある&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;F.33. postgres_fdw &lt;a href=&#34;https://www.postgresql.jp/document/13/html/postgres-fdw.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/13/html/postgres-fdw.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;PostgreSQL 9.6 の postgres_fdw について検証してみた | SIOS Tech. Lab &lt;a href=&#34;https://tech-lab.sios.jp/archives/8641#i&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://tech-lab.sios.jp/archives/8641#i&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;外部データとの連携 ～FDWで様々なデータソースとつなぐ～｜PostgreSQLインサイド : 富士通 &lt;a href=&#34;https://www.fujitsu.com/jp/products/software/resources/feature-stories/postgres/article-index/fdw-overview/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.fujitsu.com/jp/products/software/resources/feature-stories/postgres/article-index/fdw-overview/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのdblink拡張機能の実行と注意点</title>
