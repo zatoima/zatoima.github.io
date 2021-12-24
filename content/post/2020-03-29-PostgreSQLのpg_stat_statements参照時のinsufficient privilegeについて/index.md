@@ -6,7 +6,7 @@ subtitle: ""
 summary: " "
 tags: ["PostgreSQL"]
 categories: ["PostgreSQL"]
-url: postgresql-pg-stat-statements-install.html
+url: postgresql-pg-stat-statements-insuffient-priviledge
 date: 2020-03-29
 featured: false
 draft: false

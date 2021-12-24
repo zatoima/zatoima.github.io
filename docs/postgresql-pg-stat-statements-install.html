@@ -327,17 +327,17 @@
   
   <meta property="og:site_name" content="my opinion is my own" />
   <meta property="og:url" content="/postgresql-pg-stat-statements-install.html" />
-  <meta property="og:title" content="PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について | my opinion is my own" />
+  <meta property="og:title" content="PostgreSQLのpg_stat_statementsのインストール、設定方法 | my opinion is my own" />
   <meta property="og:description" content=" " /><meta property="og:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" />
     <meta property="twitter:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" /><meta property="og:locale" content="en-us" />
   
     
       <meta
         property="article:published_time"
-        content="2020-03-29T00:00:00&#43;00:00"
+        content="2020-01-30T00:00:00&#43;00:00"
       />
     
-    <meta property="article:modified_time" content="2020-03-29T00:00:00&#43;00:00">
+    <meta property="article:modified_time" content="2020-01-30T00:00:00&#43;00:00">
   
 
   
@@ -363,10 +363,10 @@
     "@type": "WebPage",
     "@id": "/postgresql-pg-stat-statements-install.html"
   },
-  "headline": "PostgreSQLのpg_stat_statements参照時の\u003cinsufficient privilege\u003eについて",
+  "headline": "PostgreSQLのpg_stat_statementsのインストール、設定方法",
   
-  "datePublished": "2020-03-29T00:00:00Z",
-  "dateModified": "2020-03-29T00:00:00Z",
+  "datePublished": "2020-01-30T00:00:00Z",
+  "dateModified": "2020-01-30T00:00:00Z",
   
   "author": {
     "@type": "Person",
@@ -397,11 +397,11 @@
 
 
 
-  <title>PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について | my opinion is my own</title>
+  <title>PostgreSQLのpg_stat_statementsのインストール、設定方法 | my opinion is my own</title>
 </head>
 
 
-<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="350207fe71926f3bdfd5591ce6970dca" >
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="5e48e3d2a655bd7274b9a8117a34ece9" >
 
   
   
@@ -628,7 +628,7 @@
   
   
 <div class="article-container pt-3">
-  <h1>PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について</h1>
+  <h1>PostgreSQLのpg_stat_statementsのインストール、設定方法</h1>
 
   
 
@@ -647,7 +647,7 @@
     
       
     
-    2020/03/29
+    2020/01/30
   </span>
   
 
@@ -656,7 +656,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    1 min read
+    3 min read
   </span>
   
 
@@ -690,43 +690,176 @@
   <div class="article-container">
 
     <div class="article-style">
-      <p>いくつか気付きがあったのでメモ。superuserではない一般ユーザでpg_stat_statementsを参照した場合に<code>insufficient privilege</code>という出力があったことに気が付いた。</p>
-<p>例えば**<u>testAユーザで実行したクエリ</u>**を**<u>testAユーザで</u>**pg_stat_statementsから確認しようとした場合、下記出力となる。</p>
-<pre><code class="language-sh">pgtest=&gt; \c - testa
-You are now connected to database &quot;pgtest&quot; as user &quot;testa&quot;.
-pgtest=&gt; \x
-Expanded display is off.
-pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total_time DESC LIMIT 20;
-                                                     query                                                     
----------------------------------------------------------------------------------------------------------------
- create table userA.pgtesttbl(id numeric primary key, name varchar)                                            
- CREATE SCHEMA userA AUTHORIZATION userA                                                                       
- SELECT query, calls, total_time, rows FROM pg_stat_statements WHERE dbid=$1 ORDER BY total_time DESC LIMIT $2 
- insert into userA.pgtesttbl values($1,$2)                                                                     
- select oid,datname from pg_database                                                                           
-(5 rows)
+      <p>contrib拡張モジュールの中にpg_stat_statementsが含まれており、このモジュールをインストールし設定することで下記のようなSQLを特定することが出来る。Oracle Databaseのv$sqlのような使い方が出来る。</p>
+<ul>
+<li>実行されたSQL</li>
+<li>実行時間が長いSQL</li>
+<li>実行回数が多いSQL</li>
+<li>キャッシュヒット率が低いSQL</li>
+</ul>
+<h3 id="バージョン">バージョン</h3>
+<pre><code class="language-sh">-bash-4.2$ psql
+psql (10.11)
+Type &quot;help&quot; for help.
+
+postgres=# select version();
+                                                 version                                                  
+----------------------------------------------------------------------------------------------------------
+ PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+(1 row)
 </code></pre>
-<p>一方、**<u>別ユーザ(testB)</u>**からこのクエリを取得しようとすると、<code>insufficient privilege</code>と出力される。</p>
-<pre><code class="language-sh">pgtest=&gt; \c - testb
-You are now connected to database &quot;pgtest&quot; as user &quot;testb&quot;.
-pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total_time DESC LIMIT 20;
-          query           | calls | total_time | rows 
---------------------------+-------+------------+------
- &lt;insufficient privilege&gt; |     1 |   5.340486 |    0
- &lt;insufficient privilege&gt; |     1 |    0.45077 |    0
- &lt;insufficient privilege&gt; |     3 |   0.288345 |   10
- &lt;insufficient privilege&gt; |     1 |   0.106162 |    1
- &lt;insufficient privilege&gt; |     1 |   0.016645 |    4
+<h3 id="前提条件">前提条件</h3>
+<h4 id="postgresql-contribがインストールされていること">postgresql-contribがインストールされていること</h4>
+<pre><code class="language-sh">-bash-4.2$ rpm -qa | grep contrib
+postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
 </code></pre>
-<p>Oracleと違い、PostgreSQLはシステムカタログ（稼働統計ビュー含む）に対する細かい権限制御が出来ない一方、こういった実行したユーザ以外にはクエリを見せないような実装になっていることを知った。</p>
+<h4 id="ライブラリの確認">ライブラリの確認</h4>
+<pre><code class="language-sh">-bash-4.2$ pg_config --libdir
+/usr/pgsql-10/lib
+-bash-4.2$ find /usr/pgsql-10/lib -name pg_stat_statements.so
+/usr/pgsql-10/lib/pg_stat_statements.so
+</code></pre>
+<h3 id="pg_stat_statementsの設定方法">pg_stat_statementsの設定方法</h3>
+<p>前提条件としてpostgresql-contrib パッケージ（pg_stat_statementsモジュールの中に含まれる）がインストールされていることが必要。</p>
+<pre><code class="language-sh">vi /var/lib/pgsql/10/data/postgresql.conf
+</code></pre>
+<p>下記パラメータを修正する。</p>
+<pre><code class="language-sh">shared_preload_libraries = 'pg_stat_statements'
+pg_stat_statements.max = 1000
+pg_stat_statements.track = top
+pg_stat_statements.save = on
+</code></pre>
+<p>※custom_variable_classesの設定は不要。9.2のバージョンまで必要だった。</p>
+<p>各パラメータの説明は下記の通り。調整すべきはpg_stat_statements.maxで保存/格納するSQL数を増やす減らすのと、pg_stat_statements.trackで再帰的なSQLも含めて保存するかどうか。</p>
+<table>
+<thead>
+<tr>
+<th>パラメータ</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>shared_preload_libraries</td>
+<td>サーバが稼働する時点で事前に読み込まれなければならない1つ以上の共有ライブラリを指定。今回の場合はpg_stat_statementsライブラリ（/usr/pgsql-10/lib/pg_stat_statements.so）を読みこむ必要があるのでpg_stat_statementsを指定。</td>
+</tr>
+<tr>
+<td>pg_stat_statements.max</td>
+<td>デフォルトは1000のSQLが記録される。記録されるSQL文の最大数を指定する。これを超えて異なるSQL文を検出した場合は、最も実行回数の低いSQL文の情報が切り捨てられる。</td>
+</tr>
+<tr>
+<td>pg_stat_statements.track</td>
+<td>どのSQL文をモジュールによって計測するかを制御          top：（直接クライアントによって発行された）最上層のSQL文を記録（デフォルト）     all：（関数の中から呼び出された文などの）入れ子になった文も記録     none：文に関する統計情報収集を無効</td>
+</tr>
+<tr>
+<td>pg_stat_statements.track_utility</td>
+<td>このモジュールがユーティリティコマンドを記録するかどうかを指定。  ユーティリティコマンドとは、 SELECT、INSERT、UPDATEおよびDELETE以外のすべて。 デフォルトはon。  この設定はスーパーユーザのみが変更可。</td>
+</tr>
+<tr>
+<td>pg_stat_statements.save</td>
+<td>サーバを終了させる際に文の統計情報を保存するかどうかを指定。  offの場合、統計情報は終了時に保存されず、サーバ開始時に再読み込みもされない。 デフォルト値はon</td>
+</tr>
+</tbody>
+</table>
+<p>パラメータ設定後にはサーバ再起動が必要。</p>
+<pre><code class="language-sh">/usr/pgsql-10/bin/pg_ctl stop --pgdata=/var/lib/pgsql/10/data
+/usr/pgsql-10/bin/pg_ctl start --pgdata=/var/lib/pgsql/10/data
+</code></pre>
+<h3 id="pg_stat_statementsの有効化">pg_stat_statementsの有効化</h3>
+<pre><code class="language-sh">postgres=&gt; \dx
+                 List of installed extensions
+  Name   | Version |   Schema   |         Description          
+---------+---------+------------+------------------------------
+ plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+(1 row)
+
+postgres=&gt; CREATE EXTENSION pg_stat_statements;
+CREATE EXTENSION
+postgres=&gt; \dx
+                                     List of installed extensions
+        Name        | Version |   Schema   |                        Description                        
+--------------------+---------+------------+-----------------------------------------------------------
+ pg_stat_statements | 1.6     | public     | track execution statistics of all SQL statements executed
+ plpgsql            | 1.0     | pg_catalog | PL/pgSQL procedural language
+(2 rows)
+postgres=&gt; 
+pgtest=&gt; SELECT * FROM pg_available_extensions WHERE name = 'pg_stat_statements';
+        name        | default_version | installed_version |                          comment                          
+--------------------+-----------------+-------------------+-----------------------------------------------------------
+ pg_stat_statements | 1.6             | 1.6               | track execution statistics of all SQL statements executed
+(1 row)
+</code></pre>
+<h3 id="パラメータ値の確認">パラメータ値の確認</h3>
+<pre><code class="language-sh">select name, setting, unit from pg_settings where name like 'pg_stat_statements%';
+
+postgres=&gt; select name, setting, unit from pg_settings where name like 'pg_stat_statements%';
+               name               | setting | unit 
+----------------------------------+---------+------
+ pg_stat_statements.max           | 5000    | 
+ pg_stat_statements.save          | on      | 
+ pg_stat_statements.track         | top     | 
+ pg_stat_statements.track_utility | on      | 
+(4 rows)
+</code></pre>
+<h3 id="pg_stat_statementsを実際に使ってみる">pg_stat_statementsを実際に使ってみる</h3>
+<h5 id="pg_stat_statements_reset関数を使用してリセットする">pg_stat_statements_reset()関数を使用してリセットする</h5>
+<pre><code class="language-sh">postgres=# SELECT pg_stat_statements_reset();
+ pg_stat_statements_reset 
+--------------------------
+</code></pre>
+<h5 id="pgbenchでサンプルクエリを実行">pgbenchでサンプルクエリを実行</h5>
+<pre><code class="language-sh">-bash-4.2$ pgbench -i postgres
+NOTICE:  table &quot;pgbench_history&quot; does not exist, skipping
+NOTICE:  table &quot;pgbench_tellers&quot; does not exist, skipping
+NOTICE:  table &quot;pgbench_accounts&quot; does not exist, skipping
+NOTICE:  table &quot;pgbench_branches&quot; does not exist, skipping
+creating tables...
+100000 of 100000 tuples (100%) done (elapsed 0.10 s, remaining 0.00 s)
+vacuum...
+set primary keys...
+done.
+</code></pre>
+<h5 id="結果確認">結果確認</h5>
+<pre><code class="language-sh">postgres=# SELECT query, calls, total_time, rows, 100.0 * shared_blks_hit /
+postgres-#                nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
+postgres-#           FROM pg_stat_statements ORDER BY total_time DESC LIMIT 5;
+-[ RECORD 1 ]---------------------------------------------------
+query       | copy pgbench_accounts from stdin
+calls       | 1
+total_time  | 107.231306
+rows        | 100000
+hit_percent | 0.36452004860267314702
+-[ RECORD 2 ]---------------------------------------------------
+query       | alter table pgbench_accounts add primary key (aid)
+calls       | 1
+total_time  | 57.199683
+rows        | 0
+hit_percent | 99.9425947187141217
+-[ RECORD 3 ]---------------------------------------------------
+query       | vacuum analyze pgbench_accounts
+calls       | 1
+total_time  | 41.366501
+rows        | 0
+hit_percent | 99.9199679871948780
+-[ RECORD 4 ]---------------------------------------------------
+query       | vacuum analyze pgbench_branches
+calls       | 1
+total_time  | 13.070895
+rows        | 0
+hit_percent | 93.0107526881720430
+-[ RECORD 5 ]---------------------------------------------------
+query       | alter table pgbench_branches add primary key (bid)
+calls       | 1
+total_time  | 1.957248
+rows        | 0
+hit_percent | 86.6197183098591549
+
+</code></pre>
+<h3 id="補足">補足</h3>
+<p>RDSやAuroraの場合は、ライブラリやパラメータの設定は特に不要で、<code>CREATE EXTENSION pg_stat_statements;</code>を実行するだけで良い。</p>
 <blockquote>
-<p>F.30. pg_stat_statements <a href="https://www.postgresql.jp/document/10/html/pgstatstatements.html" target="_blank" rel="noopener">https://www.postgresql.jp/document/10/html/pgstatstatements.html</a></p>
-<p>セキュリティ上の理由から、スーパーユーザと<code>pg_read_all_stats</code>ロールのメンバだけが、他のユーザによって実行されたSQLテキストや問い合わせの<code>queryid</code>を見ることができます。</p>
-</blockquote>
-<p>上記のマニュアルにも特定のロールがないと他のユーザによって実行されたSQLテキストは見れないよ、と記載がある。pg_monitorにpg_read_all_statsも内包されているのでスーパーユーザかpg_read_all_statsかpg_monitorさえあれば全てのテキストを見れる。監視用のユーザを作成する際には注意。</p>
-<p>ロールについてはこちらに詳しく書いてあったので合わせてどうぞ。</p>
-<blockquote>
-<p>監視用デフォルトロール - Qiita <a href="https://qiita.com/nuko_yokohama/items/6debdd3291c8f27d1da8" target="_blank" rel="noopener">https://qiita.com/nuko_yokohama/items/6debdd3291c8f27d1da8</a></p>
+<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html</a></p>
+<p>&gt; パフォーマンスメトリクス – pg_stat_statements モジュールは、デフォルトで shared_preload_libraries に含まれています。そのため、作成後すぐにインスタンスを再起動する必要はありません。ただし、この機能を使用する場合は、ステートメント CREATE EXTENSION pg_stat_statements; を実行する必要があります。また、詳細なデータを pg_stat_statements に追加できるように、track_io_timing はデフォルトで有効になっています。</p>
 </blockquote>
 
     </div>
@@ -757,7 +890,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=/postgresql-pg-stat-statements-install.html&amp;text=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=/postgresql-pg-stat-statements-install.html&amp;text=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -770,7 +903,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=/postgresql-pg-stat-statements-install.html&amp;t=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=/postgresql-pg-stat-statements-install.html&amp;t=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -783,7 +916,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="mailto:?subject=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6&amp;body=/postgresql-pg-stat-statements-install.html" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95&amp;body=/postgresql-pg-stat-statements-install.html" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -796,7 +929,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=/postgresql-pg-stat-statements-install.html&amp;title=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=/postgresql-pg-stat-statements-install.html&amp;title=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -809,7 +942,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="whatsapp://send?text=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6%20/postgresql-pg-stat-statements-install.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="whatsapp://send?text=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95%20/postgresql-pg-stat-statements-install.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -822,7 +955,7 @@ pgtest=&gt; SELECT query FROM pg_stat_statements WHERE dbid=16392 ORDER BY total
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=/postgresql-pg-stat-statements-install.html&amp;title=PostgreSQL%e3%81%aepg_stat_statements%e5%8f%82%e7%85%a7%e6%99%82%e3%81%ae&amp;lt;insufficient%20privilege&amp;gt;%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=/postgresql-pg-stat-statements-install.html&amp;title=PostgreSQL%e3%81%aepg_stat_statements%e3%81%ae%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%80%81%e8%a8%ad%e5%ae%9a%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
