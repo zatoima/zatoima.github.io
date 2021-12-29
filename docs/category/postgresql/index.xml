@@ -5,12 +5,95 @@
     <link>/category/postgresql/</link>
       <atom:link href="/category/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 21 Dec 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 29 Dec 2021 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>PostgreSQL</title>
       <link>/category/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLでバッファキャッシュ上にデータをのせる</title>
+      <link>/postgres-extension-pg-prewarm-buffer-cache/</link>
+      <pubDate>Wed, 29 Dec 2021 00:00:00 +0000</pubDate>
+      <guid>/postgres-extension-pg-prewarm-buffer-cache/</guid>
+      <description>&lt;p&gt;pg_prewarmとpg_buffercacheで確認&lt;/p&gt;
+&lt;h3 id=&#34;pg_prewarm&#34;&gt;pg_prewarm&lt;/h3&gt;
+&lt;p&gt;忘れがちだが、テーブルだけではなくインデックスも対象に出来る&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create extension pg_prewarm;
+
+SELECT
+     pg_prewarm(&#39;t1&#39;, &#39;buffer&#39;, &#39;main&#39;)
+    ,pg_prewarm(&#39;t2_delta&#39;, &#39;buffer&#39;, &#39;main&#39;)
+    ,pg_prewarm(&#39;t1_PKEY&#39;, &#39;buffer&#39;, &#39;main&#39;)
+    ; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;pg_buffercache&#34;&gt;pg_buffercache&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create extension pg_buffercache;
+
+select c.relname, count(*) as buffers
+from pg_buffercache as b
+inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+group by c.relname
+order by 2 desc
+LIMIT 30;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行ログ&#34;&gt;実行ログ&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; SELECT
+postgres-&amp;gt;      pg_prewarm(&#39;t1&#39;, &#39;buffer&#39;, &#39;main&#39;)
+postgres-&amp;gt;     ,pg_prewarm(&#39;t2_delta&#39;, &#39;buffer&#39;, &#39;main&#39;)
+postgres-&amp;gt;     ,pg_prewarm(&#39;t1_PKEY&#39;, &#39;buffer&#39;, &#39;main&#39;)
+postgres-&amp;gt;     ; 
+ pg_prewarm | pg_prewarm | pg_prewarm 
+------------+------------+------------
+    1818182 |     909091 |      54840
+(1 row)
+
+postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+              relname              | buffers 
+-----------------------------------+---------
+ t1                                | 1818687
+ t2_delta                          |  909091
+ t1_idx                            |  426172
+ t1_pkey                           |   54840
+ pg_attribute                      |      60
+ pg_toast_2619                     |      36
+ pg_class                          |      13
+ pg_proc                           |      12
+ pg_statistic                      |      11
+ pg_attribute_relid_attnum_index   |       9
+ pg_proc_oid_index                 |       8
+ pg_proc_proname_args_nsp_index    |       6
+ pg_amop                           |       6
+ pg_class_relname_nsp_index        |       5
+ pg_amproc                         |       4
+ pg_operator                       |       4
+ pg_class_oid_index                |       4
+ pg_statistic_relid_att_inh_index  |       4
+ pg_index                          |       4
+ pg_amop_opr_fam_index             |       4
+ pg_operator_oid_index             |       4
+ pg_type                           |       3
+ pg_amop_fam_strat_index           |       3
+ pg_type_oid_index                 |       3
+ pg_operator_oprname_l_r_n_index   |       3
+ pg_amproc_fam_proc_index          |       3
+ pg_depend_reference_index         |       3
+ pg_type_typname_nsp_index         |       3
+ pg_auth_members_member_role_index |       2
+ pg_cast_source_target_index       |       2
+(30 rows)
+
+postgres=&amp;gt; 
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>PostgreSQLのpostgres_fdw拡張機能の実行</title>
