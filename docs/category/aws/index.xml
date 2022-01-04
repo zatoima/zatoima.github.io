@@ -5,12 +5,201 @@
     <link>/category/aws/</link>
       <atom:link href="/category/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 30 Dec 2021 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 04 Jan 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>AWS</title>
       <link>/category/aws/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQLでMerge／Upsertを行う</title>
+      <link>/aws-postgres-merge-upsert/</link>
+      <pubDate>Tue, 04 Jan 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-postgres-merge-upsert/</guid>
+      <description>&lt;p&gt;PostgreSQLの場合はMerge文というものはなくInsert on conflictを使うことになる。昔はCTE（共通テーブル式）を使ってUPSERT処理を行っていた模様。注意点としてはon conflictのところで制約が必要なくらい。&lt;/p&gt;
+&lt;h3 id=&#34;テーブル作成&#34;&gt;テーブル作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table PRODUCT;
+CREATE TABLE PRODUCT (
+    product_name   CHARACTER VARYING(50),
+    product_type   CHARACTER VARYING (10),
+    unit_price     DOUBLE PRECISION, 
+    modified_date  TIMESTAMP
+);
+
+ALTER TABLE PRODUCT 
+    ADD CONSTRAINT PRODUCT_PKEY PRIMARY KEY(product_name, product_type);
+    
+drop table PRODUCT;
+CREATE TABLE PRODUCT_DELTA (
+    product_name   CHARACTER VARYING (50),
+    product_type   CHARACTER VARYING (10),
+    unit_price     DOUBLE PRECISION, 
+    status         CHAR(1)
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;データ準備&#34;&gt;データ準備&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;--Insert into PRODUCT table
+INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR1&#39;,  &#39;A&#39;, 10, &#39;2020-01-01&#39;);
+INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR2&#39;,  &#39;C&#39;, 10, &#39;2020-01-01&#39;);
+INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR3&#39;,  &#39;B&#39;, 10, &#39;2020-01-01&#39;);
+INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR4&#39;,  &#39;B&#39;, 10, &#39;2020-01-01&#39;);
+INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR10&#39;, &#39;A&#39;, 10, &#39;2020-01-01&#39;);
+
+-- insert into PRODUCT_DELTA table
+INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR1&#39;, &#39;A&#39;, 20, &#39;Y&#39;);
+INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR2&#39;, &#39;C&#39;, 20, &#39;N&#39;);
+INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR5&#39;, &#39;F&#39;, 20, &#39;N&#39;);
+INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR6&#39;, &#39;B&#39;, 20, &#39;N&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;upsertmerge&#34;&gt;upsert/merge&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date)
+  SELECT   src.product_name,
+         src.product_type,
+         src.unit_price,
+         now() modified_date
+  FROM ( SELECT
+         		product_name,
+           	product_type,
+           	unit_price
+        	FROM PRODUCT_DELTA
+  ) src
+ON CONFLICT(product_name, product_type)
+DO UPDATE
+       SET
+         unit_price   = excluded.unit_price,
+         modified_date = excluded.modified_date;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行ログ&#34;&gt;実行ログ&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; CREATE TABLE PRODUCT (
+postgres(&amp;gt;     product_name   CHARACTER VARYING(50),
+postgres(&amp;gt;     product_type   CHARACTER VARYING (10),
+postgres(&amp;gt;     unit_price     DOUBLE PRECISION, 
+postgres(&amp;gt;     modified_date  TIMESTAMP
+postgres(&amp;gt; );
+CREATE TABLE
+postgres=&amp;gt; ALTER TABLE PRODUCT 
+postgres-&amp;gt;     ADD CONSTRAINT PRODUCT_PKEY PRIMARY KEY(product_name, product_type);
+ALTER TABLE
+postgres=&amp;gt; CREATE TABLE PRODUCT_DELTA (
+postgres(&amp;gt;     product_name   CHARACTER VARYING (50),
+postgres(&amp;gt;     product_type   CHARACTER VARYING (10),
+postgres(&amp;gt;     unit_price     DOUBLE PRECISION, 
+postgres(&amp;gt;     status         CHAR(1)
+postgres(&amp;gt; );
+CREATE TABLE
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR1&#39;,  &#39;A&#39;, 10, &#39;2020-01-01&#39;);
+ce, modified_date) VALUES(&#39;PR10&#39;, &#39;A&#39;, 10, &#39;2020-01-01&#39;);INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR2&#39;,  &#39;C&#39;, 10, &#39;2020-01-01&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR3&#39;,  &#39;B&#39;, 10, &#39;2020-01-01&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR4&#39;,  &#39;B&#39;, 10, &#39;2020-01-01&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date) VALUES(&#39;PR10&#39;, &#39;A&#39;, 10, &#39;2020-01-01&#39;);
+INSERT 0 1
+postgres=&amp;gt; 
+postgres=&amp;gt; INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR1&#39;, &#39;A&#39;, 20, &#39;Y&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR2&#39;, &#39;C&#39;, 20, &#39;N&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR5&#39;, &#39;F&#39;, 20, &#39;N&#39;);
+INSERT 0 1
+postgres=&amp;gt; INSERT INTO PRODUCT_DELTA(product_name, product_type, unit_price, status) VALUES(&#39;PR6&#39;, &#39;B&#39;, 20, &#39;N&#39;);
+INSERT 0 1
+postgres=&amp;gt; 
+postgres=&amp;gt; 
+postgres=&amp;gt; select * from PRODUCT;
+ product_name | product_type | unit_price |    modified_date    
+--------------+--------------+------------+---------------------
+ PR1          | A            |         10 | 2020-01-01 00:00:00
+ PR2          | C            |         10 | 2020-01-01 00:00:00
+ PR3          | B            |         10 | 2020-01-01 00:00:00
+ PR4          | B            |         10 | 2020-01-01 00:00:00
+ PR10         | A            |         10 | 2020-01-01 00:00:00
+(5 rows)
+
+postgres=&amp;gt; select * from PRODUCT_DELTA;
+ product_name | product_type | unit_price | status 
+--------------+--------------+------------+--------
+ PR1          | A            |         20 | Y
+ PR2          | C            |         20 | N
+ PR5          | F            |         20 | N
+ PR6          | B            |         20 | N
+(4 rows)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date)
+postgres-&amp;gt;   SELECT   src.product_name,
+postgres-&amp;gt;          src.product_type,
+postgres-&amp;gt;          src.unit_price,
+postgres-&amp;gt;          now() modified_date
+postgres-&amp;gt;   FROM ( SELECT
+postgres(&amp;gt;          
+
+postgres(&amp;gt;          product_name,
+postgres(&amp;gt;            product_type,
+postgres(&amp;gt;            unit_price
+postgres(&amp;gt;         FROM PRODUCT_DELTA
+postgres(&amp;gt;   ) src
+postgres-&amp;gt; ON CONFLICT(product_name, product_type)
+postgres-&amp;gt; DO UPDATE
+postgres-&amp;gt;        SET
+postgres-&amp;gt;          unit_price   = excluded.unit_price,
+postgres-&amp;gt;          modified_date = excluded.modified_date;
+INSERT 0 4
+postgres=&amp;gt; 
+postgres=&amp;gt; select * from PRODUCT
+postgres-&amp;gt; ;
+ product_name | product_type | unit_price |       modified_date        
+--------------+--------------+------------+----------------------------
+ PR3          | B            |         10 | 2020-01-01 00:00:00
+ PR4          | B            |         10 | 2020-01-01 00:00:00
+ PR10         | A            |         10 | 2020-01-01 00:00:00
+ PR1          | A            |         20 | 2021-12-23 05:42:30.980878
+ PR2          | C            |         20 | 2021-12-23 05:42:30.980878
+ PR5          | F            |         20 | 2021-12-23 05:42:30.980878
+ PR6          | B            |         20 | 2021-12-23 05:42:30.980878
+(7 rows)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; explain analyze
+postgres-&amp;gt; INSERT INTO PRODUCT(product_name, product_type, unit_price, modified_date)
+postgres-&amp;gt;   SELECT   src.product_name,
+postgres-&amp;gt;          src.product_type,
+postgres-&amp;gt;          src.unit_price,
+postgres-&amp;gt;          now() modified_date
+postgres-&amp;gt;   FROM ( SELECT
+postgres(&amp;gt;          
+
+postgres(&amp;gt;          product_name,
+postgres(&amp;gt;            product_type,
+postgres(&amp;gt;            unit_price
+postgres(&amp;gt;         FROM PRODUCT_DELTA
+postgres(&amp;gt;   ) src
+postgres-&amp;gt; ON CONFLICT(product_name, product_type)
+postgres-&amp;gt; DO UPDATE
+postgres-&amp;gt;        SET
+postgres-&amp;gt;          unit_price   = excluded.unit_price,
+postgres-&amp;gt;          modified_date = excluded.modified_date;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Insert on product  (cost=0.00..16.00 rows=400 width=172) (actual time=0.115..0.116 rows=0 loops=1)
+   Conflict Resolution: UPDATE
+   Conflict Arbiter Indexes: product_pkey
+   Tuples Inserted: 0
+   Conflicting Tuples: 4
+   -&amp;gt;  Seq Scan on product_delta  (cost=0.00..16.00 rows=400 width=172) (actual time=0.014..0.016 rows=4 loops=1)
+ Planning time: 0.056 ms
+ Execution time: 0.142 ms
+(8 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参考&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://aws.amazon.com/jp/blogs/database/best-practices-for-migrating-oracle-database-merge-statements-to-amazon-aurora-postgresql-and-amazon-rds-postgresql/?utm_source=pocket_mylist&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Best practices for migrating Oracle database MERGE statements to Amazon Aurora PostgreSQL and Amazon RDS PostgreSQL | AWS Database Blog&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Amazon LinuxにMongoDB(5.x系)をインストールする</title>
