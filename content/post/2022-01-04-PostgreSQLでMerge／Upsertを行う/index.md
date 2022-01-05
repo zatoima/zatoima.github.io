@@ -4,9 +4,9 @@
 title: "PostgreSQLでMerge／Upsertを行う"
 subtitle: ""
 summary: " "
-tags: ["AWS","PostgreSQL"]
-categories: ["AWS","PostgreSQL"]
-url: aws-postgres-merge-upsert
+tags: [PostgreSQL"]
+categories: ["PostgreSQL"]
+url: postgres-merge-upsert
 date: 2022-01-04
 featured: false
 draft: false
