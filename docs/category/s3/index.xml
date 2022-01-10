@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>S3 | my opinion is my own</title>
+    <link>/category/s3/</link>
+      <atom:link href="/category/s3/index.xml" rel="self" type="application/rss+xml" />
+    <description>S3</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 10 Jan 2022 00:00:00 +0000</lastBuildDate>
+    <image>
+      <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
+      <title>S3</title>
+      <link>/category/s3/</link>
+    </image>
+    
+    <item>
+      <title>S3オブジェクトのmd5やEtagの関係性について整理する</title>
+      <link>/aws-s3-object-md5-etag/</link>
+      <pubDate>Mon, 10 Jan 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-s3-object-md5-etag/</guid>
+      <description>&lt;p&gt;色々とややこしいのでメモ。&lt;/p&gt;
+&lt;h3 id=&#34;用語&#34;&gt;用語&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;MD5&lt;/strong&gt;：特定の&lt;em&gt;ファイル&lt;/em&gt;に対してツールによって算出された 16 進数を表す文字と数字からなる 32 文字の文字列。opensslコマンド等いくつか方法はあるが、&lt;code&gt;md5sum&lt;/code&gt;コマンドだと下記の通りMD5値が出力される。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ dd if=/dev/zero of=~/test.txt bs=1M count=500
+500+0 records in
+500+0 records out
+524288000 bytes (524 MB) copied, 0.233084 s, 2.2 GB/s
+[ec2-user@bastin ~]$ md5sum test.txt
+d8b61b2c0025919d5321461045c8226f  test.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Etag&lt;/strong&gt;：HTTP のレスポンスヘッダーで、リソースの特定バージョンの識別子。URLにあるリソースに何かしらの変化があればETagも新しい値となる。&lt;/p&gt;
+&lt;p&gt;AWSにおけるETagの説明は下記の通り。&lt;u&gt;S3の暗号化方式（SSE-S3 or SSE-KMS)でETagsの値が変わってくることとMultipart Upload または Part Copy 操作によって作成されたオブジェクトは、暗号化の方法に関係なく、MD5 ダイジェストではない ETag を持つことに特に注意。&lt;/u&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Common Response Headers - Amazon Simple Storage Service&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ETag&lt;/p&gt;
+&lt;p&gt;The entity tag represents a specific version of the object. The ETag reflects changes only to the contents of an object, not its metadata. The ETag may or may not be an MD5 digest of the object data. Whether or not it is depends on how the object was created and how it is encrypted as described below:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Objects created through the AWS Management Console or by the PUT Object, POST Object, or Copy operation:
+&lt;ul&gt;
+&lt;li&gt;Objects encrypted by SSE-S3 or plaintext have ETags that are an MD5 digest of their data.&lt;/li&gt;
+&lt;li&gt;Objects encrypted by SSE-C or SSE-KMS have ETags that are not an MD5 digest of their object data.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Objects created by either the Multipart Upload or Part Copy operation have ETags that are not MD5 digests, regardless of the method of encryption.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;意訳&lt;/p&gt;
+&lt;p&gt;エンティティタグは、オブジェクトの特定のバージョンを表します。ETag は、オブジェクトの内容に対する変更のみを反映し、そのメタデータは反映しません。ETag はオブジェクトデータの MD5 ダイジェストであることもありますし、 そうでないこともあります。そうであるかどうかは、オブジェクトの作成方法と、以下に説明する暗号化の方法によって異なります。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;AWS Management Console、またはPUT Object、POST Object、Copy操作によって作成されたオブジェクト。
+&lt;ul&gt;
+&lt;li&gt;SSE-S3または平文で暗号化されたオブジェクトは、そのデータのMD5ダイジェストであるETagsを持っています。&lt;/li&gt;
+&lt;li&gt;SSE-CまたはSSE-KMSによって暗号化されたオブジェクトは、そのオブジェクトデータのMD5ダイジェストではないETagsを持ちます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Multipart Upload または Part Copy 操作によって作成されたオブジェクトは、暗号化の方法に関係なく、MD5 ダイジェストではない ETag を持ちます。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;パターンsse-s3または平文で暗号化されたオブジェクトの場合&#34;&gt;パターン①：SSE-S3または平文で暗号化されたオブジェクトの場合&lt;/h3&gt;
+&lt;h4 id=&#34;バケットの設定&#34;&gt;バケットの設定&lt;/h4&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211217222313956&#34; srcset=&#34;
+               /aws-s3-object-md5-etag/image-20211217222313956_hu94e9db5a6d453b647f886c62dd749ede_20194_9d20cf2f9e097c0e7cc871463985587a.png 400w,
+               /aws-s3-object-md5-etag/image-20211217222313956_hu94e9db5a6d453b647f886c62dd749ede_20194_d25a7abf3355fc4152c5be8a6f6bae00.png 760w,
+               /aws-s3-object-md5-etag/image-20211217222313956_hu94e9db5a6d453b647f886c62dd749ede_20194_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-s3-object-md5-etag/image-20211217222313956_hu94e9db5a6d453b647f886c62dd749ede_20194_9d20cf2f9e097c0e7cc871463985587a.png&#34;
+               width=&#34;760&#34;
+               height=&#34;151&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h4 id=&#34;マルチアップロードの場合&#34;&gt;マルチアップロードの場合&lt;/h4&gt;
+&lt;p&gt;マルチアップロードされているため、EC2側で取得したハッシュとS3上でのETagが異なる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ dd if=/dev/zero of=~/test.txt bs=1M count=500
+500+0 records in
+500+0 records out
+524288000 bytes (524 MB) copied, 0.23444 s, 2.2 GB/s
+[ec2-user@bastin ~]$ md5sum test.txt
+d8b61b2c0025919d5321461045c8226f  test.txt
+[ec2-user@bastin ~]$ aws s3 cp ~/test.txt  s3://s3-imazaj/
+upload: ./test.txt to s3://s3-imazaj/test.txt                       
+[ec2-user@bastin ~]$ aws s3api head-object --bucket s3-imazaj --key test.txt
+{
+    &amp;quot;AcceptRanges&amp;quot;: &amp;quot;bytes&amp;quot;,
+    &amp;quot;LastModified&amp;quot;: &amp;quot;Fri, 17 Dec 2021 13:11:36 GMT&amp;quot;,
+    &amp;quot;ContentLength&amp;quot;: 524288000,
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;2ab876e6e72b0fe9215ba306bea4f697-63\&amp;quot;&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;f6twG5M7LGpjOzhGSIm9Tn1lnhnlN_ia&amp;quot;,
+    &amp;quot;ContentType&amp;quot;: &amp;quot;text/plain&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;AES256&amp;quot;,
+    &amp;quot;Metadata&amp;quot;: {}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;計算したい場合は下記ツール（※非公式）を使う。s3etagで出力されたハッシュとaws s3api head-objectで取得されたETagが同じであることがわかる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ gem install s3etag
+Fetching: s3etag-0.0.1.gem (100%)
+Successfully installed s3etag-0.0.1
+Parsing documentation for s3etag-0.0.1
+Installing ri documentation for s3etag-0.0.1
+1 gem installed
+[ec2-user@bastin ~]$ s3etag
+s3etag file
+    -t, --thre[ec2-user@bastin ~]$ s3etag
+s3etag file
+    -t, --threshold threshold
+    -p, --max-parts max-parts
+    -s, --min_part_size min_part_size
+[ec2-user@bastin ~]$ s3etag -t 8388608 -s 8388608 test.txt
+2ab876e6e72b0fe9215ba306bea4f697-63
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;計算式は下記の通り。デフォルトのS3のマルチアップロード時の8MBで分割されるので&lt;code&gt;8388608&lt;/code&gt;を指定している。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://forums.aws.amazon.com/thread.jspa?messageID=456442&amp;amp;#456442&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Again on ETAG and MD5 checksum for multipart&lt;/a&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;ETag = MD5(Sum(p \in numberParts, MD5(PartBytes(p))) + &amp;quot;-&amp;quot; + numberParts
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;分割したファイルのMD5値を合算している&lt;/li&gt;
+&lt;li&gt;合算した値の末尾に – 分割数 を追記している。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;S3上のオブジェクトのMD5値を取得したい場合、下記方法もある。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ sudo yum -y install s3cmd
+[ec2-user@bastin ~]$ s3cmd ls --list-md5 s3://s3-imazaj/
+2021-12-17 13:11    524288000  2ab876e6e72b0fe9215ba306bea4f697-63  s3://s3-imazaj/test.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;マルチアップロードではないパターン&#34;&gt;マルチアップロードではないパターン&lt;/h4&gt;
+&lt;p&gt;この場合はMD5=Etagとなる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ md5sum test.txt
+d8b61b2c0025919d5321461045c8226f  test.txt
+[ec2-user@bastin ~]$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
+{
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;d8b61b2c0025919d5321461045c8226f\&amp;quot;&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;AES256&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;Einc9JkCj2itDk3BDSQJPAu1HoblkzfU&amp;quot;
+}
+[ec2-user@bastin ~]$ aws s3api head-object --bucket s3-imazaj --key test.txt
+{
+    &amp;quot;AcceptRanges&amp;quot;: &amp;quot;bytes&amp;quot;,
+    &amp;quot;LastModified&amp;quot;: &amp;quot;Fri, 17 Dec 2021 13:20:58 GMT&amp;quot;,
+    &amp;quot;ContentLength&amp;quot;: 524288000,
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;d8b61b2c0025919d5321461045c8226f\&amp;quot;&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;Einc9JkCj2itDk3BDSQJPAu1HoblkzfU&amp;quot;,
+    &amp;quot;ContentType&amp;quot;: &amp;quot;binary/octet-stream&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;AES256&amp;quot;,
+    &amp;quot;Metadata&amp;quot;: {}
+}
+[ec2-user@bastin ~]$ s3cmd ls --list-md5 s3://s3-imazaj/
+2021-12-17 13:20    524288000  d8b61b2c0025919d5321461045c8226f     s3://s3-imazaj/test.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;パターンsse-kmsによって暗号化されたオブジェクトの場合&#34;&gt;パターン②：SSE-KMSによって暗号化されたオブジェクトの場合&lt;/h3&gt;
+&lt;p&gt;S3バケットの設定&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20211217222417849&#34; srcset=&#34;
+               /aws-s3-object-md5-etag/image-20211217222417849_huee55da0b864246b1b3113f86c06aa273_50898_be92cbe7e026889be105d66ca42a6204.png 400w,
+               /aws-s3-object-md5-etag/image-20211217222417849_huee55da0b864246b1b3113f86c06aa273_50898_59cba6001508d29a225867a394cd678a.png 760w,
+               /aws-s3-object-md5-etag/image-20211217222417849_huee55da0b864246b1b3113f86c06aa273_50898_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-s3-object-md5-etag/image-20211217222417849_huee55da0b864246b1b3113f86c06aa273_50898_be92cbe7e026889be105d66ca42a6204.png&#34;
+               width=&#34;760&#34;
+               height=&#34;198&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h4 id=&#34;マルチアップロードの場合-1&#34;&gt;マルチアップロードの場合&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ md5sum test.txt
+d8b61b2c0025919d5321461045c8226f  test.txt
+[ec2-user@bastin ~]$ s3cmd ls --list-md5 s3://s3-imazaj/
+2021-12-17 13:20    524288000  d8b61b2c0025919d5321461045c8226f     s3://s3-imazaj/test.txt
+[ec2-user@bastin ~]$ md5sum test.txt
+d8b61b2c0025919d5321461045c8226f  test.txt
+[ec2-user@bastin ~]$ aws s3 cp test.txt  s3://s3-imazaj/
+upload: ./test.txt to s3://s3-imazaj/test.txt                       
+[ec2-user@bastin ~]$ aws s3api head-object --bucket s3-imazaj --key test.txt
+{
+    &amp;quot;AcceptRanges&amp;quot;: &amp;quot;bytes&amp;quot;,
+    &amp;quot;LastModified&amp;quot;: &amp;quot;Fri, 17 Dec 2021 13:24:52 GMT&amp;quot;,
+    &amp;quot;ContentLength&amp;quot;: 524288000,
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;24a147ee52b41c94f398613a46a06810-63\&amp;quot;&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;abQHe4HT0IMzx5biXy1olm6NqJKkk8Cs&amp;quot;,
+    &amp;quot;ContentType&amp;quot;: &amp;quot;text/plain&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;aws:kms&amp;quot;,
+    &amp;quot;Metadata&amp;quot;: {},
+    &amp;quot;SSEKMSKeyId&amp;quot;: &amp;quot;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&amp;quot;,
+    &amp;quot;BucketKeyEnabled&amp;quot;: true
+}
+[ec2-user@bastin ~]$ s3cmd ls --list-md5 s3://s3-imazaj/
+2021-12-17 13:24    524288000  24a147ee52b41c94f398613a46a06810-63  s3://s3-imazaj/test.txt
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;s3etag&lt;/code&gt;ツールを使ってもEtagとMD5値が合わなくなる&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ s3etag -t 8388608 -s 8388608 test.txt
+2ab876e6e72b0fe9215ba306bea4f697-63
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;マルチアップロード&#34;&gt;≠マルチアップロード&lt;/h4&gt;
+&lt;p&gt;暗号化使っている場合はマルチアップロードでないパターンでもNGとなる。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
+{
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;dd6006c0c101d532e17cb992b04658b0\&amp;quot;&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;aws:kms&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;8k7ceRD0TRNWLTmiQlaqersys_0nZgln&amp;quot;,
+    &amp;quot;SSEKMSKeyId&amp;quot;: &amp;quot;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&amp;quot;,
+    &amp;quot;BucketKeyEnabled&amp;quot;: true
+}
+[ec2-user@bastin ~]$ aws s3api head-object --bucket s3-imazaj --key test.txt
+{
+    &amp;quot;AcceptRanges&amp;quot;: &amp;quot;bytes&amp;quot;,
+    &amp;quot;LastModified&amp;quot;: &amp;quot;Fri, 17 Dec 2021 13:26:25 GMT&amp;quot;,
+    &amp;quot;ContentLength&amp;quot;: 524288000,
+    &amp;quot;ETag&amp;quot;: &amp;quot;\&amp;quot;dd6006c0c101d532e17cb992b04658b0\&amp;quot;&amp;quot;,
+    &amp;quot;VersionId&amp;quot;: &amp;quot;8k7ceRD0TRNWLTmiQlaqersys_0nZgln&amp;quot;,
+    &amp;quot;ContentType&amp;quot;: &amp;quot;binary/octet-stream&amp;quot;,
+    &amp;quot;ServerSideEncryption&amp;quot;: &amp;quot;aws:kms&amp;quot;,
+    &amp;quot;Metadata&amp;quot;: {},
+    &amp;quot;SSEKMSKeyId&amp;quot;: &amp;quot;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&amp;quot;,
+    &amp;quot;BucketKeyEnabled&amp;quot;: true
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://qiita.com/speaktech/items/0710a3de2628ef730500&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;S3へコピーしたデータが、本当にコピー元と同一かどうか検証してみた時のお話 - Qiita&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://techblog.recochoku.jp/3659&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;S3マルチパートアップロードのETagの値 | レコチョクのエンジニアブログ&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
