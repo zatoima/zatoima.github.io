@@ -29,7 +29,7 @@
   <meta name="description" content=" " />
 
   
-  <link rel="alternate" hreflang="en-us" href="/postgresql-auto-vacuum-parameter-timing.html" />
+  <link rel="alternate" hreflang="en-us" href="/postgres-disk-external-merge-sort/" />
 
   
 
@@ -309,7 +309,7 @@
   <link rel="icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_3.png" />
   <link rel="apple-touch-icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_180x180_fill_lanczos_center_3.png" />
 
-  <link rel="canonical" href="/postgresql-auto-vacuum-parameter-timing.html" />
+  <link rel="canonical" href="/postgres-disk-external-merge-sort/" />
 
   
   
@@ -326,18 +326,18 @@
   <meta property="twitter:card" content="summary" />
   
   <meta property="og:site_name" content="my opinion is my own" />
-  <meta property="og:url" content="/postgresql-auto-vacuum-parameter-timing.html" />
-  <meta property="og:title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ | my opinion is my own" />
+  <meta property="og:url" content="/postgres-disk-external-merge-sort/" />
+  <meta property="og:title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法 | my opinion is my own" />
   <meta property="og:description" content=" " /><meta property="og:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" />
     <meta property="twitter:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" /><meta property="og:locale" content="en-us" />
   
     
       <meta
         property="article:published_time"
-        content="2020-03-16T00:00:00&#43;00:00"
+        content="2022-01-20T00:00:00&#43;00:00"
       />
     
-    <meta property="article:modified_time" content="2020-03-16T00:00:00&#43;00:00">
+    <meta property="article:modified_time" content="2022-01-20T00:00:00&#43;00:00">
   
 
   
@@ -361,12 +361,12 @@
   "@type": "BlogPosting",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "/postgresql-auto-vacuum-parameter-timing.html"
+    "@id": "/postgres-disk-external-merge-sort/"
   },
-  "headline": "PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ",
+  "headline": "PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法",
   
-  "datePublished": "2020-03-16T00:00:00Z",
-  "dateModified": "2020-03-16T00:00:00Z",
+  "datePublished": "2022-01-20T00:00:00Z",
+  "dateModified": "2022-01-20T00:00:00Z",
   
   "author": {
     "@type": "Person",
@@ -397,11 +397,11 @@
 
 
 
-  <title>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ | my opinion is my own</title>
+  <title>PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法 | my opinion is my own</title>
 </head>
 
 
-<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="63e9230445fce7115c7ad333117ffcc9" >
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="50acb3d33481c3ca7358d9ef62d7a561" >
 
   
   
@@ -628,7 +628,7 @@
   
   
 <div class="article-container pt-3">
-  <h1>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</h1>
+  <h1>PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法</h1>
 
   
 
@@ -647,7 +647,7 @@
     
       
     
-    2020/03/16
+    2022/01/20
   </span>
   
 
@@ -656,7 +656,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    2 min read
+    1 min read
   </span>
   
 
@@ -690,139 +690,49 @@
   <div class="article-container">
 
     <div class="article-style">
-      <h3 id="auto-vacuumの概要">Auto Vacuumの概要</h3>
-<p>デフォルトでonになっているAuto Vacuum。Vacuumと同時にAnalyzeも実施してくれます。マニュアル的にはAuto Vacuumが推奨です。</p>
-<blockquote>
-<p>24.1. 定常的なバキューム作業 <a href="https://www.postgresql.jp/document/10/html/routine-vacuuming.html" target="_blank" rel="noopener">https://www.postgresql.jp/document/10/html/routine-vacuuming.html</a></p>
-</blockquote>
-<h3 id="auto--vacuumの実行タイミング">Auto  Vacuumの実行タイミング</h3>
-<p>バキュームの実行タイミングは</p>
-<p><code>UPDATE+DELETE回数 = 閾値 &lt; autovacuum_vacuum_threshold（デフォルト 50）+ autovacuum_vacuum_scale_factor(デフォルト0.2)  × pg_class.reltuples</code></p>
-<p>一方、Analyzeの実行タイミングは</p>
-<p><code>UPDATE+DELETE+INSERT回数 = 閾値 &lt; autovacuum_analyze_threshold（デフォルト 50）+ autovacuum_analyze_scale_factor(デフォルト0.1)  × pg_class.reltuples</code>となる。</p>
-<p>※pg_class.reltuplesはテーブル内の行数。 VACUUM、ANALYZE、CREATE INDEXなどの一部のDDLコマンドで更新される。</p>
-<h3 id="auto--vacuumのパラメータについて">Auto  Vacuumのパラメータについて</h3>
-<table>
-<thead>
-<tr>
-<th>パラメータ</th>
-<th>分類</th>
-<th>デフォルト</th>
-<th>パラメータ説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>autovacuum</td>
-<td>VACUUM</td>
-<td>on</td>
-<td>自動バキュームを行うかどうか</td>
-</tr>
-<tr>
-<td>log_autovaccum_min_duration</td>
-<td>VACUUM</td>
-<td>-1</td>
-<td>指定した時間（ミリ秒）以上に処理を行った場合にログを出力する。デフォルトでは無効</td>
-</tr>
-<tr>
-<td>autovacuum_max_workers</td>
-<td>VACUUM</td>
-<td>3</td>
-<td>自動バキュームの同時実行ワーカーの最大数</td>
-</tr>
-<tr>
-<td>autovaccum_naptime</td>
-<td>VACUUM</td>
-<td>1min</td>
-<td>自動バキュームの必要性を確認する期間</td>
-</tr>
-<tr>
-<td>autovacuum_vacuum_threshold</td>
-<td>VACUUM</td>
-<td>50</td>
-<td>VACUUMを起動するために必要な、更新もしくは削除されたタプルの最小数</td>
-</tr>
-<tr>
-<td>autovacuum_vacuum_scale_factor</td>
-<td>VACUUM</td>
-<td>0.2</td>
-<td>VACUUMを起動するか否かを決定するときに、autovacuum_vacuum_thresholdに足し算するテーブル容量の割合を指定</td>
-</tr>
-<tr>
-<td>autovacuum_analyze_threshold</td>
-<td>ANALYZE</td>
-<td>50</td>
-<td>ANALYZEを起動するために必要な、更新もしくは削除されたタプルの最小数</td>
-</tr>
-<tr>
-<td>autovacuum_analyze_scale_factor</td>
-<td>ANALYZE</td>
-<td>0.1</td>
-<td>ANALYZEを起動するか否かを決定するときに、autovacuum_vacuum_thresholdに足し算するテーブル容量の割合を指定</td>
-</tr>
-</tbody>
-</table>
-<h3 id="実行履歴の確認方法">実行履歴の確認方法</h3>
-<pre><code class="language-sql">\x
-SELECT
-    schemaname,
-    relname,
-    last_vacuum,
-    last_autovacuum,
-    last_analyze,
-    last_autoanalyze,
-    vacuum_count,
-    autovacuum_count,
-    autoanalyze_count
-FROM
-    pg_stat_user_tables;
+      <h3 id="pgbenchでデータ生成">pgbenchでデータ生成</h3>
+<p>適宜スケールファクターの数値を設定する</p>
+<pre><code class="language-sql">create database pgbench;
+pgbench -i -s 100 -U postgres -h  aurorapgsqlv1.cluster-xxx.ap-northeast-1.rds.amazonaws.com
 </code></pre>
-<h3 id="実行結果">実行結果</h3>
-<pre><code class="language-sql">-[ RECORD 1 ]-----+------------------------------
-schemaname        | public
-relname           | pgbench_tellers
-last_vacuum       | 2020-02-29 07:29:38.682063+00
-last_autovacuum   | 2020-02-29 05:40:58.708216+00
-last_analyze      | 2020-02-29 07:29:38.682594+00
-last_autoanalyze  | 2020-02-29 05:40:58.708747+00
-vacuum_count      | 8
-autovacuum_count  | 28
-autoanalyze_count | 27
--[ RECORD 2 ]-----+------------------------------
-schemaname        | public
-relname           | pgbench_history
-last_vacuum       | 2020-02-29 07:29:38.73807+00
-last_autovacuum   | 
-last_analyze      | 2020-02-29 07:29:38.747484+00
-last_autoanalyze  | 2020-02-29 05:40:58.744441+00
-vacuum_count      | 3
-autovacuum_count  | 0
-autoanalyze_count | 20
--[ RECORD 3 ]-----+------------------------------
-schemaname        | public
-relname           | pgbench_branches
-last_vacuum       | 2020-02-29 07:29:38.683765+00
-last_autovacuum   | 2020-02-29 05:40:58.721649+00
-last_analyze      | 2020-02-29 07:29:38.683963+00
-last_autoanalyze  | 2020-02-29 05:40:58.72242+00
-vacuum_count      | 8
-autovacuum_count  | 28
-autoanalyze_count | 27
--[ RECORD 4 ]-----+------------------------------
-schemaname        | public
-relname           | pgbench_accounts
-last_vacuum       | 2020-02-29 07:29:38.69804+00
-last_autovacuum   | 
-last_analyze      | 2020-02-29 07:29:38.734999+00
-last_autoanalyze  | 2020-02-27 13:24:59.247779+00
-vacuum_count      | 3
-autovacuum_count  | 0
-autoanalyze_count | 25
+<h3 id="work_memを低い数値に設定してsqlを実行">work_memを低い数値に設定してSQLを実行</h3>
+<pre><code class="language-sql">SET work_mem=1024;
+EXPLAIN (ANALYZE,BUFFERS) SELECT t1.aid,t1.bid,t1.abalance,t2.bbalance FROM pgbench_accounts t1, pgbench_branches t2 where t1.bid=t2.bid ORDER BY t1.abalance DESC;
 </code></pre>
-<p>参考</p>
-<blockquote>
-<p>19.10. 自動Vacuum作業 <a href="https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html" target="_blank" rel="noopener">https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html</a></p>
-</blockquote>
+<h3 id="実行ログ">実行ログ</h3>
+<p>external merge Diskが発生していて147秒もかかっている。大部分がSort部分。</p>
+<pre><code class="language-sql">
+pgbench=&gt; SET work_mem=1024;
+SET
+pgbench=&gt; 
+pgbench=&gt; EXPLAIN (ANALYZE,BUFFERS) SELECT t1.aid,t1.bid,t1.abalance,t2.bbalance FROM pgbench_accounts t1, pgbench_branches t2 where t1.bid=t2.bid ORDER BY t1.abalance DESC;
+                                                                           QUERY PLAN                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Merge  (cost=11000684.94..20723586.06 rows=83333334 width=16) (actual time=110248.334..141130.354 rows=100000000 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=1639508, temp read=1828307 written=1835749
+   -&gt;  Sort  (cost=10999684.91..11103851.58 rows=41666667 width=16) (actual time=109509.807..113561.825 rows=33333333 loops=3)
+         Sort Key: t1.abalance DESC
+         Sort Method: external merge  Disk: 852192kB
+         Worker 0:  Sort Method: external merge  Disk: 855776kB
+         Worker 1:  Sort Method: external merge  Disk: 836160kB
+         Buffers: shared hit=1639508, temp read=1828307 written=1835749
+         -&gt;  Hash Join  (cost=27.50..2165877.71 rows=41666667 width=16) (actual time=0.328..10296.741 rows=33333333 loops=3)
+               Hash Cond: (t1.bid = t2.bid)
+               Buffers: shared hit=1639414
+               -&gt;  Parallel Seq Scan on pgbench_accounts t1  (cost=0.00..2056011.67 rows=41666667 width=12) (actual time=0.004..4573.584 rows=33333333 loops=3)
+                     Buffers: shared hit=1639345
+               -&gt;  Hash  (cost=15.00..15.00 rows=1000 width=8) (actual time=0.272..0.273 rows=1000 loops=3)
+                     Buckets: 1024  Batches: 1  Memory Usage: 48kB
+                     Buffers: shared hit=15
+                     -&gt;  Seq Scan on pgbench_branches t2  (cost=0.00..15.00 rows=1000 width=8) (actual time=0.005..0.107 rows=1000 loops=3)
+                           Buffers: shared hit=15
+ Planning Time: 0.386 ms
+ Execution Time: 147284.085 ms
+(22 rows)
+
+</code></pre>
 
     </div>
 
@@ -852,7 +762,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=/postgresql-auto-vacuum-parameter-timing.html&amp;text=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=/postgres-disk-external-merge-sort/&amp;text=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -865,7 +775,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=/postgresql-auto-vacuum-parameter-timing.html&amp;t=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=/postgres-disk-external-merge-sort/&amp;t=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -878,7 +788,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="mailto:?subject=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf&amp;body=/postgresql-auto-vacuum-parameter-timing.html" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95&amp;body=/postgres-disk-external-merge-sort/" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -891,7 +801,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=/postgresql-auto-vacuum-parameter-timing.html&amp;title=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=/postgres-disk-external-merge-sort/&amp;title=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -904,7 +814,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="whatsapp://send?text=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf%20/postgresql-auto-vacuum-parameter-timing.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="whatsapp://send?text=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95%20/postgres-disk-external-merge-sort/" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -917,7 +827,7 @@ autoanalyze_count | 25
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=/postgresql-auto-vacuum-parameter-timing.html&amp;title=PostgreSQL%e3%81%ae%e8%87%aa%e5%8b%95Vacuum%e3%81%ae%e5%ae%9f%e8%a1%8c%e3%82%bf%e3%82%a4%e3%83%9f%e3%83%b3%e3%82%b0%e3%81%a8%e9%96%a2%e9%80%a3%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=/postgres-disk-external-merge-sort/&amp;title=PostgreSQL%e3%81%a7%e3%82%bd%e3%83%bc%e3%83%88%e3%82%92%e3%83%a1%e3%83%a2%e3%83%aa%e3%81%a7%e3%81%af%e7%84%a1%e3%81%8f%e6%95%a2%e3%81%88%e3%81%a6%e3%83%87%e3%82%a3%e3%82%b9%e3%82%af%e3%81%a7%e7%99%ba%e7%94%9f%e3%81%95%e3%81%9b%e3%82%8b%e6%96%b9%e6%b3%95" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
@@ -954,8 +864,6 @@ autoanalyze_count | 25
     <h3>Related</h3>
     <ul>
       
-      <li><a href="/postgres-disk-external-merge-sort/">PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法</a></li>
-      
       <li><a href="/oracle-postgresql-dbms-stats-analyze-sampling/">OracleとPostgreSQLの統計情報取得のサンプリング数の違いについて</a></li>
       
       <li><a href="/postgres-merge-upsert-tuning/">PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した</a></li>
@@ -963,6 +871,8 @@ autoanalyze_count | 25
       <li><a href="/postgres-extension-pg-prewarm-buffer-cache/">PostgreSQLでバッファキャッシュ上にデータをのせる</a></li>
       
       <li><a href="/postgres-extension-fdw-install/">PostgreSQLのpostgres_fdw拡張機能の実行</a></li>
+      
+      <li><a href="/postgres-extension-dblink-install-and-causion/">PostgreSQLのdblink拡張機能の実行と注意点</a></li>
       
     </ul>
   </div>
