@@ -26,8 +26,8 @@ image:
 
 ```
 head -c 200m /dev/urandom > test.txt
-hadoop fs -put test.txt /home/hadoop/data/
-hadoop fs -ls /home/hadoop/data/
+hadoop fs -put test.txt /user/hadoop/
+hadoop fs -ls /user/hadoop/
 ```
 
 ### 実行用PySparkのスクリプト
@@ -41,7 +41,7 @@ from operator import add
 sc = SparkContext.getOrCreate()
 spark = SparkSession(sc)
 
-inputFile = "/home/hadoop/data/test.txt"
+inputFile = "/user/hadoop/test.txt"
 lines = sc.textFile(inputFile)
 lines_nonempty = lines.filter( lambda x: len(x) > 0 )
 counts = lines_nonempty.flatMap(lambda x: x.split(' ')).map(lambda x: (x, 1)).reduceByKey(add)

@@ -29,7 +29,7 @@
   <meta name="description" content=" " />
 
   
-  <link rel="alternate" hreflang="en-us" href="/aws-redshift-dataload-from-s3.html" />
+  <link rel="alternate" hreflang="en-us" href="/aws-redshift-system-table-unload/" />
 
   
 
@@ -309,7 +309,7 @@
   <link rel="icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_3.png" />
   <link rel="apple-touch-icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_180x180_fill_lanczos_center_3.png" />
 
-  <link rel="canonical" href="/aws-redshift-dataload-from-s3.html" />
+  <link rel="canonical" href="/aws-redshift-system-table-unload/" />
 
   
   
@@ -326,18 +326,18 @@
   <meta property="twitter:card" content="summary" />
   
   <meta property="og:site_name" content="my opinion is my own" />
-  <meta property="og:url" content="/aws-redshift-dataload-from-s3.html" />
-  <meta property="og:title" content="Redshiftへのデータロード | my opinion is my own" />
+  <meta property="og:url" content="/aws-redshift-system-table-unload/" />
+  <meta property="og:title" content="Redshiftから特定区切り文字でファイル出力する | my opinion is my own" />
   <meta property="og:description" content=" " /><meta property="og:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" />
     <meta property="twitter:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" /><meta property="og:locale" content="en-us" />
   
     
       <meta
         property="article:published_time"
-        content="2021-04-01T00:00:00&#43;00:00"
+        content="2022-01-27T00:00:00&#43;00:00"
       />
     
-    <meta property="article:modified_time" content="2021-04-01T00:00:00&#43;00:00">
+    <meta property="article:modified_time" content="2022-01-27T00:00:00&#43;00:00">
   
 
   
@@ -361,12 +361,12 @@
   "@type": "BlogPosting",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "/aws-redshift-dataload-from-s3.html"
+    "@id": "/aws-redshift-system-table-unload/"
   },
-  "headline": "Redshiftへのデータロード",
+  "headline": "Redshiftから特定区切り文字でファイル出力する",
   
-  "datePublished": "2021-04-01T00:00:00Z",
-  "dateModified": "2021-04-01T00:00:00Z",
+  "datePublished": "2022-01-27T00:00:00Z",
+  "dateModified": "2022-01-27T00:00:00Z",
   
   "author": {
     "@type": "Person",
@@ -397,11 +397,11 @@
 
 
 
-  <title>Redshiftへのデータロード | my opinion is my own</title>
+  <title>Redshiftから特定区切り文字でファイル出力する | my opinion is my own</title>
 </head>
 
 
-<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="6666fcd1d7cb8503002d5a90ef120bda" >
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="5176b77dd1ca9916670d91a11acad123" >
 
   
   
@@ -628,7 +628,7 @@
   
   
 <div class="article-container pt-3">
-  <h1>Redshiftへのデータロード</h1>
+  <h1>Redshiftから特定区切り文字でファイル出力する</h1>
 
   
 
@@ -647,7 +647,7 @@
     
       
     
-    2021/04/01
+    2022/01/27
   </span>
   
 
@@ -690,31 +690,21 @@
   <div class="article-container">
 
     <div class="article-style">
-      <p>IAMロールと必要なIAMロールのクラスタへのアタッチ等は完了済という想定。</p>
-<h3 id="ロード用のファイルをs3にアップロードする">ロード用のファイルをS3にアップロードする</h3>
-<pre><code class="language-sh">aws s3 cp aozora_data.csv s3://xxxx/load/
+      <p>検証時にRedshiftのシステムテーブルなどのデータを抜いて退避させたい。</p>
+<p>ヘッダー出力ONで、デフォルトだとスライス数分ファイルが分割して、マージするのも面倒なためパラレルをオフにして「|」区切りにしてgzip形式で出力するコマンド。ファイル重複する場合、上書きする。</p>
+<pre><code class="language-sql">unload ('select * from svl_s3query_summary order by elapsed;')
+to 's3://ssbgz-spectrum/svl_s3query_summary_log' 
+iam_role 'arn:aws:iam::xxxxxxxxxxxx:role/myRedshiftRole'
+delimiter '|'
+header
+format csv
+gzip
+parallel off
+allowoverwrite;
 </code></pre>
-<p>ロード用のファイルは約6G、約1億件弱。(青空文庫のテキストデータ)</p>
-<pre><code>[ec2-user@bastin ~]$ ls -lh aozora_data.csv
--rw-rw-r-- 1 ec2-user ec2-user 6.1G Dec 16  2012 aozora_data.csv
-[ec2-user@bastin ~]$ wc -l aozora_data.csv
-87701673 aozora_data.csv
-</code></pre>
-<h3 id="redshiftにロード先のテーブルを用意">Redshiftにロード先のテーブルを用意</h3>
-<pre><code class="language-sh">CREATE TABLE aozora_data(file VARCHAR(100),num INT,row INT,word TEXT,subtype1 VARCHAR(100),subtype2 VARCHAR(100),subtype3 VARCHAR(100),subtype4 VARCHAR(100),conjtype VARCHAR(30),conjugation VARCHAR(30),basic TEXT,ruby TEXT,pronunce TEXT );
-</code></pre>
-<h3 id="データロード実行">データロード実行</h3>
-<pre><code class="language-sh">copy aozorabunko_data from 's3://xxxxx/load/aozora_data.csv' 
-iam_role 'arn:aws:iam::xxxxx:role/myRedshiftRole'
-csv;
-</code></pre>
-<p>上記の方法はアンチパターンであり、一つのスライスでしか実行されず、MPPアーキテクチャのRedshiftではリソースを有効活用出来ない。下記のベスト・プラクティスにある通り、ファイル分割、ファイル圧縮を実施した上での実行が望ましい。</p>
 <blockquote>
-<p>Amazon Redshift データのロードのベストプラクティス - Amazon Redshift <a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html</a></p>
+<p>区切り文字付きまたは固定幅形式でデータをアンロードする - Amazon Redshift <a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/t_unloading_fixed_width_data.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/t_unloading_fixed_width_data.html</a></p>
 </blockquote>
-<h3 id="データ分割">データ分割</h3>
-<pre><code>split -n 8 -d aozora_data.csv part-
-</code></pre>
 
     </div>
 
@@ -746,7 +736,7 @@ csv;
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=/aws-redshift-dataload-from-s3.html&amp;text=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=/aws-redshift-system-table-unload/&amp;text=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -759,7 +749,7 @@ csv;
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=/aws-redshift-dataload-from-s3.html&amp;t=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=/aws-redshift-system-table-unload/&amp;t=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -772,7 +762,7 @@ csv;
       
       
       <li>
-        <a href="mailto:?subject=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89&amp;body=/aws-redshift-dataload-from-s3.html" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b&amp;body=/aws-redshift-system-table-unload/" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -785,7 +775,7 @@ csv;
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=/aws-redshift-dataload-from-s3.html&amp;title=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=/aws-redshift-system-table-unload/&amp;title=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -798,7 +788,7 @@ csv;
       
       
       <li>
-        <a href="whatsapp://send?text=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89%20/aws-redshift-dataload-from-s3.html" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="whatsapp://send?text=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b%20/aws-redshift-system-table-unload/" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -811,7 +801,7 @@ csv;
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=/aws-redshift-dataload-from-s3.html&amp;title=Redshift%e3%81%b8%e3%81%ae%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=/aws-redshift-system-table-unload/&amp;title=Redshift%e3%81%8b%e3%82%89%e7%89%b9%e5%ae%9a%e5%8c%ba%e5%88%87%e3%82%8a%e6%96%87%e5%ad%97%e3%81%a7%e3%83%95%e3%82%a1%e3%82%a4%e3%83%ab%e5%87%ba%e5%8a%9b%e3%81%99%e3%82%8b" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
@@ -848,8 +838,6 @@ csv;
     <h3>Related</h3>
     <ul>
       
-      <li><a href="/aws-redshift-system-table-unload/">Redshiftから特定区切り文字でファイル出力する</a></li>
-      
       <li><a href="/aws-redshift-spectrum-select-data-catalog/">Redshift SpectrumからGlue Data Catalogを参照する</a></li>
       
       <li><a href="/aws-redshift-spectrum-best-practice/">Redshift Spectrumのベストプラクティス</a></li>
@@ -857,6 +845,8 @@ csv;
       <li><a href="/aws-redshift-spectrum-data-prepare-query-execute/">Redshift Spectrum用にテストデータの準備、及びクエリの実行</a></li>
       
       <li><a href="/aws-redshift-spectrum-performance-check/">Redshift Spectrumのパフォーマンス確認</a></li>
+      
+      <li><a href="/aws-redshift-query-cancellation/">Redshiftのクエリキャンセル</a></li>
       
     </ul>
   </div>

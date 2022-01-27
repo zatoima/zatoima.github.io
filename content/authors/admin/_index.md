@@ -25,19 +25,9 @@ My opinion is my own. Running on hugo hosted on github pages.
 
 This blog is mainly a note for myself in the future. 
 
-### interests:
+### interests: 
 
-- Cloud Computing
-  - AWS / Azure / GCP
-- Cloud Database
-  - Aurora / RDS / Redshift / BigQuery / Spanner / DynamoDB / Bigtable / Neptune
-- Relational Database
-  - Oracle Database / PostgreSQL / MySQL
-- Data Engineering
-  - EMR / Dataproc / Apache Hadoop / Spark / Hive / kafka 
-- Python
-
-
+- Cloud / Database / Data Engineering / Analytics / Python
 
 ### Powered by [Grass-Graph](https://grass-graph.moshimo.works/)
 
