@@ -4,8 +4,8 @@
 title: "Redshift Spectrumの同時実行性能パフォーマンス"
 subtitle: ""
 summary: " "
-tags: ["Redshift"]
-categories: ["Redshift"]
+tags: ["AWS","Redshift"]
+categories: ["AWS",""Redshift"]
 url: aws-redshift-spectrum-performance-concurrency
 date: 2022-01-29
 featured: false
@@ -46,7 +46,7 @@ RA3の場合、ra3.xlplusは「2」、ra3.4xllargeは「4」、ra3.16xlageは「
 
 ### 2.同時実行数
 
-1クエリ 1 スライスにつき最大 10 の同時実行数となっている
+1クエリ 1 スライスにつき最大 10 の同時実行数となっている。
 
 - いくつのクエリが同時に実行されているかによって、同時実行数が変わる
 - 割りあてられた同時実行数によって、S3 をスキャンするスレッド数が制限される
