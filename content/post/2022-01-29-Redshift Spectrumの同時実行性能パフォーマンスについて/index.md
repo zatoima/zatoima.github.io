@@ -5,7 +5,7 @@ title: "Redshift Spectrumの同時実行性能パフォーマンス"
 subtitle: ""
 summary: " "
 tags: ["AWS","Redshift"]
-categories: ["AWS",""Redshift"]
+categories: ["AWS","Redshift"]
 url: aws-redshift-spectrum-performance-concurrency
 date: 2022-01-29
 featured: false
