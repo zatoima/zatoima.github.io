@@ -8,6 +8,7 @@ tags: ["AWS","Aurora"]
 categories: ["AWS","Aurora"]
 url: aws-aurora-cost-io-input-output.html
 date: 2021-06-04
+lastmod : 2022-02-02
 featured: false
 draft: false
 
@@ -58,3 +59,12 @@ IO料金を下げるためのアクションとしては下記が中心となる
 - メモリを大きくしてオンメモリで処理出来るようにする
 - フルスキャン系のSQLをチューニングする
 - インデックスやパーティションを使って不要なIOを削減する
+
+### 追記（2022/02/02)
+
+次の記事も参考になる、というか2022年1月に公式から出たAWS Database Blogをしっかり読んだ方が良い。
+
+・[Planning I/O in Amazon Aurora \| AWS Database Blog](https://aws.amazon.com/jp/blogs/database/planning-i-o-in-amazon-aurora/)
+
+
+
