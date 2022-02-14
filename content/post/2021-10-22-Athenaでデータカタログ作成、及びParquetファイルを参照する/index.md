@@ -1,12 +1,12 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "AthenaでParquetファイルのデータカタログ作成"
+title: "awswranglerを使用してCSV to Parquet"
 subtitle: ""
 summary: " "
 tags: ["Athena","Glue"]
 categories: ["Athena","Glue"]
-url: python-pyarrow-convert-csv-to-parquet-pandas
+url: aws-athena-glue-awswrangler-csv-to-parquet
 date: 2021-10-22
 featured: false
 draft: false

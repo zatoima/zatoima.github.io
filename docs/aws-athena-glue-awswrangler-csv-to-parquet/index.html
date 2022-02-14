@@ -29,7 +29,7 @@
   <meta name="description" content=" " />
 
   
-  <link rel="alternate" hreflang="en-us" href="/aws-redshift-spectrum-data-query-execute/" />
+  <link rel="alternate" hreflang="en-us" href="/aws-athena-glue-awswrangler-csv-to-parquet/" />
 
   
 
@@ -309,7 +309,7 @@
   <link rel="icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_32x32_fill_lanczos_center_3.png" />
   <link rel="apple-touch-icon" type="image/png" href="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_180x180_fill_lanczos_center_3.png" />
 
-  <link rel="canonical" href="/aws-redshift-spectrum-data-query-execute/" />
+  <link rel="canonical" href="/aws-athena-glue-awswrangler-csv-to-parquet/" />
 
   
   
@@ -326,18 +326,18 @@
   <meta property="twitter:card" content="summary" />
   
   <meta property="og:site_name" content="my opinion is my own" />
-  <meta property="og:url" content="/aws-redshift-spectrum-data-query-execute/" />
-  <meta property="og:title" content="Redshift Star Schema Benchmark 問い合わせクエリのサンプル | my opinion is my own" />
+  <meta property="og:url" content="/aws-athena-glue-awswrangler-csv-to-parquet/" />
+  <meta property="og:title" content="awswranglerを使用してCSV to Parquet | my opinion is my own" />
   <meta property="og:description" content=" " /><meta property="og:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" />
     <meta property="twitter:image" content="/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png" /><meta property="og:locale" content="en-us" />
   
     
       <meta
         property="article:published_time"
-        content="2021-06-28T00:00:00&#43;00:00"
+        content="2021-10-22T00:00:00&#43;00:00"
       />
     
-    <meta property="article:modified_time" content="2021-06-28T00:00:00&#43;00:00">
+    <meta property="article:modified_time" content="2021-10-22T00:00:00&#43;00:00">
   
 
   
@@ -361,12 +361,12 @@
   "@type": "BlogPosting",
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "/aws-redshift-spectrum-data-query-execute/"
+    "@id": "/aws-athena-glue-awswrangler-csv-to-parquet/"
   },
-  "headline": "Redshift Star Schema Benchmark 問い合わせクエリのサンプル",
+  "headline": "awswranglerを使用してCSV to Parquet",
   
-  "datePublished": "2021-06-28T00:00:00Z",
-  "dateModified": "2021-06-28T00:00:00Z",
+  "datePublished": "2021-10-22T00:00:00Z",
+  "dateModified": "2021-10-22T00:00:00Z",
   
   "author": {
     "@type": "Person",
@@ -397,11 +397,11 @@
 
 
 
-  <title>Redshift Star Schema Benchmark 問い合わせクエリのサンプル | my opinion is my own</title>
+  <title>awswranglerを使用してCSV to Parquet | my opinion is my own</title>
 </head>
 
 
-<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="e48e5c746b09d1a08a8885bf767da5ef" >
+<body id="top" data-spy="scroll" data-offset="70" data-target="#TableOfContents" class="page-wrapper   " data-wc-page-id="977f1435634105d12b5e5f3fd9b86fa7" >
 
   
   
@@ -628,7 +628,7 @@
   
   
 <div class="article-container pt-3">
-  <h1>Redshift Star Schema Benchmark 問い合わせクエリのサンプル</h1>
+  <h1>awswranglerを使用してCSV to Parquet</h1>
 
   
 
@@ -647,7 +647,7 @@
     
       
     
-    2021/06/28
+    2021/10/22
   </span>
   
 
@@ -656,7 +656,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    3 min read
+    1 min read
   </span>
   
 
@@ -671,7 +671,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-categories">
-    <i class="fas fa-folder mr-1"></i><a href="/category/aws/">AWS</a>, <a href="/category/redshift/">Redshift</a></span>
+    <i class="fas fa-folder mr-1"></i><a href="/category/athena/">Athena</a>, <a href="/category/glue/">Glue</a></span>
   
 
 </div>
@@ -690,150 +690,68 @@
   <div class="article-container">
 
     <div class="article-style">
-      <p>下記のスタースキーマのデータをRedshiftにぶっ込んでいるという前提。</p>
-<blockquote>
-<p>s3://awssampledbuswest2/ssbgz/</p>
-</blockquote>
-<p>Redshift Spectrumへのクエリのために、スキーマを<code>s3</code>としているので適宜置換が必要。</p>
-<h2 id="star-schema-benchmark問合せ">Star Schema Benchmark問合せ</h2>
-<pre><code class="language-sql">select sum(lo_extendedprice*lo_discount) as revenue
-from s3.lineorder, s3.dwdate
-where lo_orderdate = d_datekey
-and d_yearmonthnum = 199401
-and lo_discount between 4 and 6
-and lo_quantity between 26 and 35;
+      <h3 id="テスト用csvの作成">テスト用CSVの作成</h3>
+<pre><code class="language-sh">cat &lt;&lt; EOF &gt; testdata.csv
+id,name,comment
+&quot;1&quot;,&quot;test1&quot;,&quot;ゎぶばあちあぬナクバ&quot;
+&quot;2&quot;,&quot;test2&quot;,&quot;がマうひバぴじクハぺ&quot;
+&quot;3&quot;,&quot;test3&quot;,&quot;スみでてゥあッあけげ&quot;
+EOF
+</code></pre>
+<h4 id="s3のフォルダのクリーンアップ">S3のフォルダのクリーンアップ</h4>
+<p>awswranglerのオプションでクリーンアップ出来たと思うが、手動で事前に削除</p>
+<pre><code class="language-sh">aws s3 rm s3://202110test/pq/
+</code></pre>
+<h3 id="csvparquetに変換">CSV→Parquetに変換</h3>
+<pre><code class="language-sh">import awswrangler as wr
+import pandas as pd
 
-select sum(lo_extendedprice*lo_discount) as revenue
-from s3.lineorder, s3.dwdate
-where lo_orderdate = d_datekey
-and d_year = 1993
-and lo_discount between 1 and 3
-and lo_quantity &lt; 25;
+#変換
+df = pd.read_csv('./testdata.csv')
 
-select sum(lo_extendedprice*lo_discount) as revenue
-from s3.lineorder, s3.dwdate
-where lo_orderdate = d_datekey
-and d_yearmonthnum = 199401
-and lo_discount between 4 and 6
-and lo_quantity between 26 and 35;
+wr.s3.to_parquet(
+    df=df,
+    path='s3://202110test/pq/',
+    dataset=True,
+    partition_cols=['id']
+)
+</code></pre>
+<h3 id="athenaでデータベースデータカタログの作成">Athenaでデータベース、データカタログの作成</h3>
+<p>コンソールから実施を想定</p>
+<pre><code class="language-sh">DROP TABLE `catalogtest`.`testdata`;
 
-select sum(lo_extendedprice*lo_discount) as revenue
-from s3.lineorder, s3.dwdate
-where lo_orderdate = d_datekey
-and d_weeknuminyear = 6
-and d_year = 1994
-and lo_discount between 5 and 7
-and lo_quantity between 26 and 35;
+CREATE EXTERNAL TABLE `catalogtest`.`testdata`(
+  `id` string, 
+  `name` string, 
+  `comment` string
+  )
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://202110test/pq/'
+TBLPROPERTIES (
+  'classification'='parquet', 
+  'compressionType'='none', 
+  'objectCount'='1', 
+  'typeOfData'='file')
 
-select sum(lo_revenue), d_year, p_brand1
-from s3.lineorder, s3.dwdate, s3.part, s3.supplier
-where lo_orderdate = d_datekey
-and lo_partkey = p_partkey
-and lo_suppkey = s_suppkey
-and p_category = 'MFGR#12'
-and s_region = 'AMERICA'
-group by d_year, p_brand1
-order by d_year, p_brand1;
+MSCK REPAIR TABLE catalogtest.testdata;
 
-select sum(lo_revenue), d_year, p_brand1
-from s3.lineorder, s3.dwdate, s3.part, s3.supplier
-where lo_orderdate = d_datekey
-and lo_partkey = p_partkey
-and lo_suppkey = s_suppkey
-and p_brand1 between 'MFGR#2221' and 'MFGR#2228'
-and s_region = 'ASIA'
-group by d_year, p_brand1
-order by d_year, p_brand1;
+select name,comment from testdata;
 
-select sum(lo_revenue), d_year, p_brand1
-from s3.lineorder, s3.dwdate, s3.part, s3.supplier
-where lo_orderdate = d_datekey
-and lo_partkey = p_partkey
-and lo_suppkey = s_suppkey
-and p_brand1 = 'MFGR#2221'
-and s_region = 'EUROPE'
-group by d_year, p_brand1
-order by d_year, p_brand1;
-
-select c_nation, s_nation, d_year, sum(lo_revenue) as revenue
-from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_orderdate = d_datekey
-and c_region = 'ASIA' and s_region = 'ASIA'
-and d_year &gt;= 1992 and d_year &lt;= 1997
-group by c_nation, s_nation, d_year
-order by d_year asc, revenue desc;
-
-select c_city, s_city, d_year, sum(lo_revenue) as revenue
-from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_orderdate = d_datekey
-and c_nation = 'UNITED STATES'
-and s_nation = 'UNITED STATES'
-and d_year &gt;= 1992 and d_year &lt;= 1997
-group by c_city, s_city, d_year
-order by d_year asc, revenue desc;
-
-select c_city, s_city, d_year, sum(lo_revenue) as revenue
-from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_orderdate = d_datekey
-and (c_city='UNITED KI1' or c_city='UNITED KI5')
-and (s_city='UNITED KI1' or s_city='UNITED KI5')
-and d_year &gt;= 1992 and d_year &lt;= 1997
-group by c_city, s_city, d_year
-order by d_year asc, revenue desc;
-
-select c_city, s_city, d_year, sum(lo_revenue) as revenue
-from s3.customer, s3.lineorder, s3.supplier, s3.dwdate
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_orderdate = d_datekey
-and (c_city='UNITED KI1' or c_city='UNITED KI5')
-and (s_city='UNITED KI1' or s_city='UNITED KI5')
-and d_yearmonth = 'Dec1997'
-group by c_city, s_city, d_year
-order by d_year asc, revenue desc;
-
-select d_year, c_nation, sum(lo_revenue - lo_supplycost) as profit
-from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
-where lo_custkey = c_custkey
- and lo_suppkey = s_suppkey
- and lo_partkey = p_partkey
- and lo_orderdate = d_datekey
- and c_region = 'AMERICA'
- and s_region = 'AMERICA'
- and (p_mfgr = 'MFGR#1' or p_mfgr = 'MFGR#2')
-group by d_year, c_nation
-order by d_year, c_nation;
-
-select d_year, s_nation, p_category, sum(lo_revenue - lo_supplycost) as profit
-from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_partkey = p_partkey
-and lo_orderdate = d_datekey
-and c_region = 'AMERICA'
-and s_region = 'AMERICA'
-and (d_year = 1997 or d_year = 1998)
-and (p_mfgr = 'MFGR#1'
-or p_mfgr = 'MFGR#2')
-group by d_year, s_nation, p_category order by d_year, s_nation, p_category;
-
-select d_year, s_city, p_brand1, sum(lo_revenue - lo_supplycost) as profit
-from s3.dwdate, s3.customer, s3.supplier, s3.part, s3.lineorder
-where lo_custkey = c_custkey
-and lo_suppkey = s_suppkey
-and lo_partkey = p_partkey
-and lo_orderdate = d_datekey
-and c_region = 'AMERICA'
-and s_nation = 'UNITED STATES'
-and (d_year = 1997 or d_year = 1998)
-and p_category = 'MFGR#14'
-group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
+</code></pre>
+<p>athenacliを使用してAthenaのクエリを実行</p>
+<pre><code class="language-sh">athenacli catalogtest -e 'select name,comment from testdata'
+</code></pre>
+<pre><code class="language-sh">[ec2-user@ip-10-0-1-31 pyarrow]$ athenacli catalogtest -e 'select name,comment from testdata'
+name,comment
+test1,ゎぶばあちあぬナクバ
+test3,スみでてゥあッあけげ
+test2,がマうひバぴじクハぺ
 </code></pre>
 
     </div>
@@ -847,9 +765,9 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
 
 <div class="article-tags">
   
-  <a class="badge badge-light" href="/tag/aws/">AWS</a>
+  <a class="badge badge-light" href="/tag/athena/">Athena</a>
   
-  <a class="badge badge-light" href="/tag/redshift/">Redshift</a>
+  <a class="badge badge-light" href="/tag/glue/">Glue</a>
   
 </div>
 
@@ -866,7 +784,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=/aws-redshift-spectrum-data-query-execute/&amp;text=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=/aws-athena-glue-awswrangler-csv-to-parquet/&amp;text=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -879,7 +797,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=/aws-redshift-spectrum-data-query-execute/&amp;t=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=/aws-athena-glue-awswrangler-csv-to-parquet/&amp;t=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -892,7 +810,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="mailto:?subject=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab&amp;body=/aws-redshift-spectrum-data-query-execute/" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet&amp;body=/aws-athena-glue-awswrangler-csv-to-parquet/" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -905,7 +823,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=/aws-redshift-spectrum-data-query-execute/&amp;title=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=/aws-athena-glue-awswrangler-csv-to-parquet/&amp;title=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -918,7 +836,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="whatsapp://send?text=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab%20/aws-redshift-spectrum-data-query-execute/" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="whatsapp://send?text=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet%20/aws-athena-glue-awswrangler-csv-to-parquet/" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -931,7 +849,7 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=/aws-redshift-spectrum-data-query-execute/&amp;title=Redshift%20Star%20Schema%20Benchmark%20%e5%95%8f%e3%81%84%e5%90%88%e3%82%8f%e3%81%9b%e3%82%af%e3%82%a8%e3%83%aa%e3%81%ae%e3%82%b5%e3%83%b3%e3%83%97%e3%83%ab" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=/aws-athena-glue-awswrangler-csv-to-parquet/&amp;title=awswrangler%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6CSV%20to%20Parquet" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
@@ -968,15 +886,11 @@ group by d_year, s_city, p_brand1 order by d_year, s_city, p_brand1;
     <h3>Related</h3>
     <ul>
       
-      <li><a href="/aws-redshift-spectrum-performance-concurrency/">Redshift Spectrumの同時実行性能パフォーマンス</a></li>
+      <li><a href="/aws-cloudtrail-athena-analyze-query/">AthenaでCloudTrail の証跡を分析</a></li>
       
-      <li><a href="/aws-redshift-system-table-unload/">Redshiftから特定区切り文字でファイル出力する</a></li>
+      <li><a href="/aws-athena-cli-query-execute/">AthenaをCLIベースで実行する（AWS CLI、athenacli）</a></li>
       
-      <li><a href="/aws-redshift-spectrum-select-data-catalog/">Redshift SpectrumからGlue Data Catalogのテーブルを参照する</a></li>
-      
-      <li><a href="/aws-redshift-spectrum-best-practice/">Redshift Spectrumのベストプラクティス</a></li>
-      
-      <li><a href="/aws-redshift-spectrum-data-prepare-query-execute/">Redshift Spectrum用にテストデータの準備、及びクエリの実行</a></li>
+      <li><a href="/aws-athena-alb-log-analitics.html">ALB(Application Load Balancer)のログをAthenaで分析</a></li>
       
     </ul>
   </div>

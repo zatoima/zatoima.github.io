@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Redshift SpectrumからGlue Data Catalogを参照する"
+title: "Redshift SpectrumからGlue Data Catalogのテーブルを参照する"
 subtitle: ""
 summary: " "
 tags: ["AWS","Redshift"]
