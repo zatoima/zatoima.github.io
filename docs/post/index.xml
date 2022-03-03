@@ -5,12 +5,250 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 24 Feb 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 03 Mar 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>RedshiftのPython UDFの同時実行数</title>
+      <link>/aws-redshift-python-udf-concurency/</link>
+      <pubDate>Thu, 03 Mar 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-redshift-python-udf-concurency/</guid>
+      <description>&lt;h3 id=&#34;python-udfとは&#34;&gt;Python UDFとは&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/udf-creating-a-scalar-udf.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;スカラー Python UDF の作成 - Amazon Redshift&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Redshiftには、関数が呼び出されると実行され、単一値を返す Python プログラムを実行出来る。&lt;/p&gt;
+&lt;p&gt;Python UDFの作成自体は&lt;code&gt;create funtion&lt;/code&gt;を使用する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create OR REPLACE function testudfpython (a float, b float)
+  returns float
+stable
+as $$  
+  import time
+  if a &amp;gt; b:
+    c = a + b
+  elif a &amp;lt; b:
+    c = a * b
+  else:
+    return 0
+  return c
+$$ language plpythonu;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;テスト用テーブルの作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;drop table testtable;
+create table testtable(a numeric,b numeric,c numeric);
+insert into testtable values(1,1,1);
+insert into testtable values(2,4,6);
+insert into testtable values(4,8,12);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select * from testtable;
+ a | b | c  
+---+---+----
+ 1 | 1 |  1
+ 2 | 4 |  6
+ 4 | 8 | 12
+(3 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Python UDFの実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select testudfpython(b,c) from testtable where a=4;
+select testudfpython(b,c) from testtable where a=2;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;実行結果&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;mydb=# select testudfpython(b,c) from testtable where a=4;
+ testudfpython 
+---------------
+            96
+(1 row)
+
+mydb=# select testudfpython(b,c) from testtable where a=2;
+ testudfpython 
+---------------
+            24
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;python-udfの制約&#34;&gt;Python UDFの制約&lt;/h3&gt;
+&lt;p&gt;Amazon Redshift Python UDF には以下の制約がある。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;Python UDF は、ネットワークにアクセスすることもファイルシステムに読み書きすることもできません。&lt;/li&gt;
+&lt;li&gt;ユーザーがインストールする Python ライブラリの合計サイズは 100 MB を超えられません。&lt;/li&gt;
+&lt;li&gt;1 つのクラスターで同時に実行できる Python UDF の数は、そのクラスターの合計同時実行レベルの 4 分の 1 に制限されています。たとえば、クラスターの同時実行レベルが 15 に設定されている場合は、最大で 3 つの UDF を同時に実行できます。この制限に達すると、UDF はワークロード管理キュー内で実行されるのを待ちます。SQL UDF に同時実行の制限はありません。詳細については、「&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/cm-c-implementing-workload-management.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;ワークロード管理の実装&lt;/a&gt;」を参照してください。&lt;/li&gt;
+&lt;li&gt;Amazon Redshift で Python UDF を使用する場合、SUPER および HLLSKETCH データタイプはサポートされせん。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;特に同時実行数に関してだが、マニュアルの記載を見ると同時実行数を設定した1/4まで実行出来るように見受けられるが、同時実行数を設定するのはManual WLMであり、デフォルトのWLMの場合がどうなのかは記載がない。&lt;/p&gt;
+&lt;p&gt;強制的にSleepするPython UDFを作成して複数クライアントから実行してみる。この状態のキューの状態も合わせて確認する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create OR REPLACE function testudfpython (a float, b float)
+  returns float
+stable
+as $$  
+  import time
+  time.sleep(90)
+  if a &amp;gt; b:
+    c = a + b
+  elif a &amp;lt; b:
+    c = a * b
+  else:
+    return 0
+  return c
+$$ language plpythonu;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;確認結果&#34;&gt;確認結果①&lt;/h4&gt;
+&lt;p&gt;Auto WLMの場合で複数セッションからPython UDFを実行した場合、同時実行数は「1」のようだ。Sleepを90秒入れているため2つめのセッションで180秒掛かっている。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220208165120122&#34; srcset=&#34;
+               /aws-redshift-python-udf-concurency/image-20220208165120122_hu5678b206780412e9b852cfb9206fe184_62335_9233d93a93edee5ab9328b020419c61c.png 400w,
+               /aws-redshift-python-udf-concurency/image-20220208165120122_hu5678b206780412e9b852cfb9206fe184_62335_15974792281498affd8b25b2cf503a48.png 760w,
+               /aws-redshift-python-udf-concurency/image-20220208165120122_hu5678b206780412e9b852cfb9206fe184_62335_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-redshift-python-udf-concurency/image-20220208165120122_hu5678b206780412e9b852cfb9206fe184_62335_9233d93a93edee5ab9328b020419c61c.png&#34;
+               width=&#34;760&#34;
+               height=&#34;254&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220208165144492&#34; srcset=&#34;
+               /aws-redshift-python-udf-concurency/image-20220208165144492_hub1cf0a75e88f2d8a279bad73827d82f5_7942_159f49611db79a8f39454eefa52e83b9.png 400w,
+               /aws-redshift-python-udf-concurency/image-20220208165144492_hub1cf0a75e88f2d8a279bad73827d82f5_7942_d1d9a9040b44f140e8e02983874d4f72.png 760w,
+               /aws-redshift-python-udf-concurency/image-20220208165144492_hub1cf0a75e88f2d8a279bad73827d82f5_7942_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-redshift-python-udf-concurency/image-20220208165144492_hub1cf0a75e88f2d8a279bad73827d82f5_7942_159f49611db79a8f39454eefa52e83b9.png&#34;
+               width=&#34;754&#34;
+               height=&#34;235&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220208165137486&#34; srcset=&#34;
+               /aws-redshift-python-udf-concurency/image-20220208165137486_hu0a087acad93c8fd17519ba5b590e9743_7938_166f2746a54994681ba616ab03427049.png 400w,
+               /aws-redshift-python-udf-concurency/image-20220208165137486_hu0a087acad93c8fd17519ba5b590e9743_7938_3a535ed5bbfbc1e53d705860b3dfb48a.png 760w,
+               /aws-redshift-python-udf-concurency/image-20220208165137486_hu0a087acad93c8fd17519ba5b590e9743_7938_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-redshift-python-udf-concurency/image-20220208165137486_hu0a087acad93c8fd17519ba5b590e9743_7938_166f2746a54994681ba616ab03427049.png&#34;
+               width=&#34;656&#34;
+               height=&#34;252&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h4 id=&#34;確認結果キューの状態とクエリの状態を確認&#34;&gt;確認結果②：キューの状態とクエリの状態を確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;psql -h redshift-ra3.ciwori21oiel.ap-northeast-1.redshift.amazonaws.com -U benchuser -d mydb -p 5439 -f /home/ec2-user/amazon-redshift-utils/src/AdminScripts/queuing_queries.sql
+psql -h redshift-ra3.ciwori21oiel.ap-northeast-1.redshift.amazonaws.com -U benchuser -d mydb -p 5439 -f /home/ec2-user/amazon-redshift-utils/src/AdminScripts/top_queries.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;該当するクエリは無し。あくまでPython UDFであり、SQLということでもないので上がってこないらしい。&lt;/p&gt;
+&lt;h4 id=&#34;確認結果マネージメントコンソールからのキューの状態&#34;&gt;確認結果③：マネージメントコンソールからのキューの状態&lt;/h4&gt;
+&lt;p&gt;実行しているSQLとしては上がってくるが、キューに入るわけではないようだ。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220208164833733&#34; srcset=&#34;
+               /aws-redshift-python-udf-concurency/image-20220208164833733_hu38947f33812803c9a40911f0f8b95c60_60252_56deb207797a1f827ec91e84f60a5869.png 400w,
+               /aws-redshift-python-udf-concurency/image-20220208164833733_hu38947f33812803c9a40911f0f8b95c60_60252_0b517ff59868e626c44395dc676b090a.png 760w,
+               /aws-redshift-python-udf-concurency/image-20220208164833733_hu38947f33812803c9a40911f0f8b95c60_60252_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-redshift-python-udf-concurency/image-20220208164833733_hu38947f33812803c9a40911f0f8b95c60_60252_56deb207797a1f827ec91e84f60a5869.png&#34;
+               width=&#34;760&#34;
+               height=&#34;128&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220208164935434&#34; srcset=&#34;
+               /aws-redshift-python-udf-concurency/image-20220208164935434_hu7b7e566d94d0fbe267db6878e70e6e70_89938_ac016232e52109e2d2a74982272f8c9b.png 400w,
+               /aws-redshift-python-udf-concurency/image-20220208164935434_hu7b7e566d94d0fbe267db6878e70e6e70_89938_6d5144ce4e57ca8a75ecf3c92ce5bc2a.png 760w,
+               /aws-redshift-python-udf-concurency/image-20220208164935434_hu7b7e566d94d0fbe267db6878e70e6e70_89938_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-redshift-python-udf-concurency/image-20220208164935434_hu7b7e566d94d0fbe267db6878e70e6e70_89938_ac016232e52109e2d2a74982272f8c9b.png&#34;
+               width=&#34;760&#34;
+               height=&#34;370&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;結論&#34;&gt;結論&lt;/h3&gt;
+&lt;p&gt;Auto WLMの場合、同時実行数は1となっている。複数クライアントから実行するようなPython UDFには注意が必要。（そもそも個人的にはデータベース側にロジックを持たせるのはあまり好きではない。こういうUDFやストアド等。）&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>RedshiftのLambda UDFの設定</title>
