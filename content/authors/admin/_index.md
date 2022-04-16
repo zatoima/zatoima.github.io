@@ -21,15 +21,19 @@ social:
 
 
 
-My opinion is my own. Running on hugo hosted on github pages.
+- My opinion is my own. 
+- Running on hugo hosted on github pages.
 
-This blog is mainly a note for myself in the future. 
+- This blog is mainly a note for myself in the future. 
+
 
 ### interests: 
 
 - Cloud / Database / Data Engineering / Analytics / Python
 
 ### Powered by [Grass-Graph](https://grass-graph.moshimo.works/)
+
+- for motivation
 
 # <a href="https://github.com/zatoima" target="_blank">
 
