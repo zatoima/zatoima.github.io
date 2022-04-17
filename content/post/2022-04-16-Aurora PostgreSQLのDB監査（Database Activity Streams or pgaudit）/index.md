@@ -22,8 +22,6 @@ image:
 
 
 
-
-
 ### 特徴
 
 ##### pgaudit
@@ -272,6 +270,8 @@ statement latencies in milliseconds:
 
 PI
 
+明確に他のケースでは出ていないような待機イベントが発生している
+
 ![image-20220414131446898](image-20220414131446898.png)
 
 Kinesis
@@ -369,3 +369,9 @@ statement latencies in milliseconds:
 ```
 
 ![image-20220414192241057](image-20220414192241057.png)
+
+### 参考
+
+> Part 1: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog https://aws.amazon.com/jp/blogs/database/part-1-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/
+>
+> Part 2: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog https://aws.amazon.com/jp/blogs/database/part-2-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/
