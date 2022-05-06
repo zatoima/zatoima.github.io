@@ -5,12 +5,456 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own 👋</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 04 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 06 May 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>my opinion is my own 👋</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト</title>
+      <link>/aws-dynamodb-to-s3-csv-transform-python-lamdba/</link>
+      <pubDate>Fri, 06 May 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-dynamodb-to-s3-csv-transform-python-lamdba/</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;p&gt;DynamoDBへの更新をS3に連携したい場合は下記の通りkinesis firehoseを経由させることで簡単にできるようになった。（従来はDynamoDB-Lamdba-Kinesisとすることが必要だった。）&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;DynamoDBからkinesis firehose経由でS3に出力 | my opinion is my own 👋 &lt;a href=&#34;https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;が、不要なレコードも一緒に出力されるので必要なものだけを抽出したい場合は、Kinesis firehoseの変換機能を使用する必要がある。Node.jsのスクリプトは公式からの提供されているが、Pythonはあまり見つけられなかった。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{&amp;quot;awsRegion&amp;quot;:&amp;quot;ap-northeast-1&amp;quot;,&amp;quot;eventID&amp;quot;:&amp;quot;1e84f1ca-438d-4837-a6bd-aa4592be6f8a&amp;quot;,&amp;quot;eventName&amp;quot;:&amp;quot;MODIFY&amp;quot;,&amp;quot;userIdentity&amp;quot;:null,&amp;quot;recordFormat&amp;quot;:&amp;quot;application/json&amp;quot;,&amp;quot;tableName&amp;quot;:&amp;quot;cities&amp;quot;,&amp;quot;dynamodb&amp;quot;:{&amp;quot;ApproximateCreationDateTime&amp;quot;:1651495525900,&amp;quot;Keys&amp;quot;:{&amp;quot;key&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;t0926&amp;quot;}},&amp;quot;NewImage&amp;quot;:{&amp;quot;population&amp;quot;:{&amp;quot;N&amp;quot;:&amp;quot;54148&amp;quot;},&amp;quot;key&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;t0926&amp;quot;},&amp;quot;name&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;下野&amp;quot;},&amp;quot;date_mod&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;1950-9-7&amp;quot;}},&amp;quot;OldImage&amp;quot;:{&amp;quot;population&amp;quot;:{&amp;quot;N&amp;quot;:&amp;quot;56148&amp;quot;},&amp;quot;key&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;t0926&amp;quot;},&amp;quot;name&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;下野&amp;quot;},&amp;quot;date_mod&amp;quot;:{&amp;quot;S&amp;quot;:&amp;quot;1950-9-7&amp;quot;}},&amp;quot;SizeBytes&amp;quot;:104},&amp;quot;eventSource&amp;quot;:&amp;quot;aws:dynamodb&amp;quot;}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;必要な設定&#34;&gt;必要な設定&lt;/h3&gt;
+&lt;p&gt;Firehose側でS3に保存時に変換したい場合は、&lt;code&gt;Transform source records with AWS Lambda&lt;/code&gt;を&lt;code&gt;enable&lt;/code&gt;に設定してLambda Functionを設定する&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220506114740632&#34; srcset=&#34;
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632_huce37ab097b8f20c144536925a3351281_23698_1522b23fe6dc143f5ece8ba4e4298515.png 400w,
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632_huce37ab097b8f20c144536925a3351281_23698_8625f5f34a482de690e7f570c3713efc.png 760w,
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632_huce37ab097b8f20c144536925a3351281_23698_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632_huce37ab097b8f20c144536925a3351281_23698_1522b23fe6dc143f5ece8ba4e4298515.png&#34;
+               width=&#34;760&#34;
+               height=&#34;150&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;dynamodb側のテーブル構造&#34;&gt;DynamoDB側のテーブル構造&lt;/h3&gt;
+&lt;p&gt;idとdatetimeだけが用意されているテーブル&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220506115206214&#34; srcset=&#34;
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214_hu58838e5b10d1775ddc080e3caeef0aea_17562_ff5985dc2cdd69f117c3b8a9b4df49f0.png 400w,
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214_hu58838e5b10d1775ddc080e3caeef0aea_17562_febfc601619e48fdafb12b12d2afe512.png 760w,
+               /aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214_hu58838e5b10d1775ddc080e3caeef0aea_17562_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214_hu58838e5b10d1775ddc080e3caeef0aea_17562_ff5985dc2cdd69f117c3b8a9b4df49f0.png&#34;
+               width=&#34;429&#34;
+               height=&#34;239&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;下記スクリプトで適当にデータを挿入する。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;for i in {0..10000}
+do
+  NOW=`date --iso-8601=seconds`
+  aws dynamodb put-item --table-name dynamotest --item &amp;quot;{ \&amp;quot;datetime\&amp;quot;: { \&amp;quot;S\&amp;quot;: \&amp;quot;${NOW}\&amp;quot; }, \&amp;quot;id\&amp;quot;: { \&amp;quot;S\&amp;quot;: \&amp;quot;${i}\&amp;quot; } }&amp;quot;
+  echo $i
+  sleep $(($RANDOM % 5))
+done
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;lambdaのpythonスクリプト&#34;&gt;LambdaのPythonスクリプト&lt;/h3&gt;
+&lt;p&gt;Kinesis Firehose側の決まりごとに沿う必要があることに注意。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon Kinesis Data Firehose のデータ変換 - Amazon Kinesis Data Firehose &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita &lt;a href=&#34;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Kinesis Data Firehoseから連携されたPayload Sizeが6MBを超えるときは、PayloadをFirehoseに戻す必要がある
+&lt;ul&gt;
+&lt;li&gt;さらに、その戻すRecord数が500を超える場合は分割する必要がある&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Transform処理が完了したデータをFirehoseに戻す際、所定フォーマットにしたがった形式で、Dataの実態はbase64でencordする必要がある&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下記のスクリプトはペイロード制限やRecord数は考慮していないので注意。更新量が多いDynamoDBに関しては要注意かもしれない。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import json
+import base64
+
+def lambda_handler(event, context):
+
+    results = []
+    records = event[&amp;quot;records&amp;quot;]
+    for record in records:
+        record_id = record.get(&#39;recordId&#39;)
+        data = json.loads(base64.b64decode(record.get(&#39;data&#39;)))
+        #print(&amp;quot;Raw Data : &amp;quot; + str(data))
+        
+        id = data[&#39;dynamodb&#39;][&#39;Keys&#39;][&#39;id&#39;][&#39;S&#39;]
+        datetime = data[&#39;dynamodb&#39;][&#39;Keys&#39;][&#39;datetime&#39;][&#39;S&#39;]
+
+        #print(&amp;quot;New Data : &amp;quot; + str(id) + str(datetime))
+        return_data = &#39;,&#39;.join([id,datetime])  + &#39;\n&#39;
+        #print(&amp;quot;return_data : &amp;quot;  +  str(return_data))
+     
+        data = base64.b64encode(return_data.encode())
+
+        results.append({
+            &amp;quot;result&amp;quot;:&amp;quot;Ok&amp;quot;,
+            &amp;quot;recordId&amp;quot;:record_id,
+            &amp;quot;data&amp;quot;:data
+        })
+        
+    return {
+        &amp;quot;records&amp;quot;:results
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;なお、DynamoDB側から流れてくるJSONデータは下記なので、こちらのJSONデータをパースして必要なものだけを抽出する。今回はカラム（&lt;code&gt;id&lt;/code&gt;と&lt;code&gt;datetime&lt;/code&gt;）に対する挿入操作をCSVで出力するようにした。&lt;/p&gt;
+&lt;p&gt;※サンプルなので、実際のカラムではないです&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+  &amp;quot;Records&amp;quot;: [
+    {
+      &amp;quot;eventID&amp;quot;: &amp;quot;c4ca4238a0b923820dcc509a6f75849b&amp;quot;,
+      &amp;quot;eventName&amp;quot;: &amp;quot;INSERT&amp;quot;,
+      &amp;quot;eventVersion&amp;quot;: &amp;quot;1.1&amp;quot;,
+      &amp;quot;eventSource&amp;quot;: &amp;quot;aws:dynamodb&amp;quot;,
+      &amp;quot;awsRegion&amp;quot;: &amp;quot;us-east-1&amp;quot;,
+      &amp;quot;dynamodb&amp;quot;: {
+        &amp;quot;Keys&amp;quot;: {
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;NewImage&amp;quot;: {
+          &amp;quot;Message&amp;quot;: {
+            &amp;quot;S&amp;quot;: &amp;quot;New item!&amp;quot;
+          },
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;ApproximateCreationDateTime&amp;quot;: 1428537600,
+        &amp;quot;SequenceNumber&amp;quot;: &amp;quot;4421584500000000017450439091&amp;quot;,
+        &amp;quot;SizeBytes&amp;quot;: 26,
+        &amp;quot;StreamViewType&amp;quot;: &amp;quot;NEW_AND_OLD_IMAGES&amp;quot;
+      },
+      &amp;quot;eventSourceARN&amp;quot;: &amp;quot;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&amp;quot;
+    },
+    {
+      &amp;quot;eventID&amp;quot;: &amp;quot;c81e728d9d4c2f636f067f89cc14862c&amp;quot;,
+      &amp;quot;eventName&amp;quot;: &amp;quot;MODIFY&amp;quot;,
+      &amp;quot;eventVersion&amp;quot;: &amp;quot;1.1&amp;quot;,
+      &amp;quot;eventSource&amp;quot;: &amp;quot;aws:dynamodb&amp;quot;,
+      &amp;quot;awsRegion&amp;quot;: &amp;quot;us-east-1&amp;quot;,
+      &amp;quot;dynamodb&amp;quot;: {
+        &amp;quot;Keys&amp;quot;: {
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;NewImage&amp;quot;: {
+          &amp;quot;Message&amp;quot;: {
+            &amp;quot;S&amp;quot;: &amp;quot;This item has changed&amp;quot;
+          },
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;OldImage&amp;quot;: {
+          &amp;quot;Message&amp;quot;: {
+            &amp;quot;S&amp;quot;: &amp;quot;New item!&amp;quot;
+          },
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;ApproximateCreationDateTime&amp;quot;: 1428537600,
+        &amp;quot;SequenceNumber&amp;quot;: &amp;quot;4421584500000000017450439092&amp;quot;,
+        &amp;quot;SizeBytes&amp;quot;: 59,
+        &amp;quot;StreamViewType&amp;quot;: &amp;quot;NEW_AND_OLD_IMAGES&amp;quot;
+      },
+      &amp;quot;eventSourceARN&amp;quot;: &amp;quot;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&amp;quot;
+    },
+    {
+      &amp;quot;eventID&amp;quot;: &amp;quot;eccbc87e4b5ce2fe28308fd9f2a7baf3&amp;quot;,
+      &amp;quot;eventName&amp;quot;: &amp;quot;REMOVE&amp;quot;,
+      &amp;quot;eventVersion&amp;quot;: &amp;quot;1.1&amp;quot;,
+      &amp;quot;eventSource&amp;quot;: &amp;quot;aws:dynamodb&amp;quot;,
+      &amp;quot;awsRegion&amp;quot;: &amp;quot;us-east-1&amp;quot;,
+      &amp;quot;dynamodb&amp;quot;: {
+        &amp;quot;Keys&amp;quot;: {
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;OldImage&amp;quot;: {
+          &amp;quot;Message&amp;quot;: {
+            &amp;quot;S&amp;quot;: &amp;quot;This item has changed&amp;quot;
+          },
+          &amp;quot;Id&amp;quot;: {
+            &amp;quot;N&amp;quot;: &amp;quot;101&amp;quot;
+          }
+        },
+        &amp;quot;ApproximateCreationDateTime&amp;quot;: 1428537600,
+        &amp;quot;SequenceNumber&amp;quot;: &amp;quot;4421584500000000017450439093&amp;quot;,
+        &amp;quot;SizeBytes&amp;quot;: 38,
+        &amp;quot;StreamViewType&amp;quot;: &amp;quot;NEW_AND_OLD_IMAGES&amp;quot;
+      },
+      &amp;quot;eventSourceARN&amp;quot;: &amp;quot;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&amp;quot;
+    }
+  ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;後日追記&#34;&gt;後日追記①：&lt;/h3&gt;
+&lt;p&gt;Node.jsであれば下記を参考&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-javascript&#34;&gt;&#39;use strict&#39;;
+console.log(&#39;Loading function&#39;);
+
+/* Stock Ticker format parser */
+const parser = /^\{\&amp;quot;TICKER_SYMBOL\&amp;quot;\:\&amp;quot;[A-Z]+\&amp;quot;\,\&amp;quot;SECTOR\&amp;quot;\:&amp;quot;[A-Z]+\&amp;quot;\,\&amp;quot;CHANGE\&amp;quot;\:[-.0-9]+\,\&amp;quot;PRICE\&amp;quot;\:[-.0-9]+\}/;
+
+exports.handler = (event, context, callback) =&amp;gt; {
+    let success = 0; // Number of valid entries found
+    let failure = 0; // Number of invalid entries found
+    let dropped = 0; // Number of dropped entries 
+
+    /* Process the list of records and transform them */
+    const output = event.records.map((record) =&amp;gt; {
+
+        const entry = (new Buffer(record.data, &#39;base64&#39;)).toString(&#39;utf8&#39;);
+        let match = parser.exec(entry);
+        if (match) {
+            let parsed_match = JSON.parse(match); 
+            var milliseconds = new Date().getTime();
+            /* Add timestamp and convert to CSV */
+            const result = `${milliseconds},${parsed_match.TICKER_SYMBOL},${parsed_match.SECTOR},${parsed_match.CHANGE},${parsed_match.PRICE}`+&amp;quot;\n&amp;quot;;
+            const payload = (new Buffer(result, &#39;utf8&#39;)).toString(&#39;base64&#39;);
+            if (parsed_match.SECTOR != &#39;RETAIL&#39;) {
+                /* Dropped event, notify and leave the record intact */
+                dropped++;
+                return {
+                    recordId: record.recordId,
+                    result: &#39;Dropped&#39;,
+                    data: record.data,
+                };
+            }
+            else {
+                /* Transformed event */
+                success++;  
+                return {
+                    recordId: record.recordId,
+                    result: &#39;Ok&#39;,
+                    data: payload,
+                };
+            }
+        }
+        else {
+            /* Failed event, notify the error and leave the record intact */
+            console.log(&amp;quot;Failed event : &amp;quot;+ record.data);
+            failure++;
+            return {
+                recordId: record.recordId,
+                result: &#39;ProcessingFailed&#39;,
+                data: record.data,
+            };
+        }
+        /* This transformation is the &amp;quot;identity&amp;quot; transformation, the data is left intact 
+        return {
+            recordId: record.recordId,
+            result: &#39;Ok&#39;,
+            data: record.data,
+        } */
+    });
+    console.log(`Processing completed.  Successful records ${output.length}.`);
+    callback(null, { records: output });
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;後日追記②：&lt;/p&gt;
+&lt;p&gt;下記を全面的に採用させていただき、そのままではエラーで動作しなかったため、一部修正して動作するようにした。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita &lt;a href=&#34;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import json
+import boto3
+import base64
+from datetime import datetime
+
+PAYLOAD_MAX_SIZE = 6000000
+MAX_RECORD_COUNT = 500
+
+def transform(data):
+    &amp;quot;&amp;quot;&amp;quot;
+    データ変換関数
+    &amp;quot;&amp;quot;&amp;quot;
+    data[&#39;NewColumn&#39;] = &#39;New Value&#39;
+    # Change Schema
+    id = data[&#39;dynamodb&#39;][&#39;Keys&#39;][&#39;id&#39;][&#39;S&#39;]
+    datetime = data[&#39;dynamodb&#39;][&#39;Keys&#39;][&#39;datetime&#39;][&#39;S&#39;]
+    print(&amp;quot;New Data : &amp;quot; + str(id) + str(datetime))
+
+    return_data = &#39;,&#39;.join([id,datetime])
+    print(&amp;quot;return_data : &amp;quot;  +  str(return_data))
+
+    return return_data
+
+
+def proceed_records(records):
+    &amp;quot;&amp;quot;&amp;quot;
+    transform each data and yield each record
+    &amp;quot;&amp;quot;&amp;quot;
+    for record in records:
+        record_id = record.get(&#39;recordId&#39;)
+        data = json.loads(base64.b64decode(record.get(&#39;data&#39;)))
+        print(&amp;quot;Raw Data : &amp;quot; + str(data))
+        try:
+            transformed_data = transform(data)
+            result = &#39;Ok&#39;
+        except Exception as e:
+            print(e)
+            transformed_data = data
+            result = &#39;ProcessingFailed&#39;
+        print(&amp;quot;New Data : &amp;quot; + str(transformed_data))
+
+        proceeded_data = json.dumps(transformed_data) + &#39;\n&#39;
+        proceeded_data = str(transformed_data) + &#39;\n&#39;
+
+        return_record = {
+            &amp;quot;recordId&amp;quot;: record_id,
+            &amp;quot;result&amp;quot;: result,
+            &amp;quot;data&amp;quot;: base64.b64encode(proceeded_data.encode(&#39;utf-8&#39;))
+        }
+
+        yield return_record
+
+
+def put_records_to_firehose(streamName, records, client):
+    print(&#39;Trying to return record to firehose&#39;)
+    print(f&#39;Item count: {len(records)}&#39;)
+    print(f&#39;Record: {str(records)}&#39;)
+    try:
+        response = client.put_record_batch(DeliveryStreamName=streamName, Records=records)
+    except Exception as e:
+        # failedRecords = records
+        errMsg = str(e)
+        print(errMsg)
+
+
+def lambda_handler(event, context):
+    invocation_id = event.get(&#39;invocationId&#39;)
+    event_records = event.get(&#39;records&#39;)
+    # Transform Data
+    records = list(proceed_records(event_records))
+
+    # Check Data
+    projected_size = 0 # Responseサイズが6MBを超えない様制御
+    data_by_record_id = {rec[&#39;recordId&#39;]: _create_reingestion_record(rec) for rec in event[&#39;records&#39;]}
+    total_records_to_be_reingested = 0
+    records_to_reingest = []
+    put_record_batches = []
+    for idx, rec in enumerate(records):
+        if rec[&#39;result&#39;] != &#39;Ok&#39;:
+            continue
+        projected_size += len(rec[&#39;data&#39;]) + len(rec[&#39;recordId&#39;])
+        if projected_size &amp;gt; PAYLOAD_MAX_SIZE:
+            &amp;quot;&amp;quot;&amp;quot;
+            Lambda 同期呼び出しモードには、リクエストとレスポンスの両方について、
+            ペイロードサイズに 6 MB の制限があります。
+            https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html
+            &amp;quot;&amp;quot;&amp;quot;
+            print(f&amp;quot;Payload size has been exceeded over {PAYLOAD_MAX_SIZE/1000/1000}MB&amp;quot;)
+            total_records_to_be_reingested += 1
+            records_to_reingest.append(
+                _get_reingestion_record(data_by_record_id[rec[&#39;recordId&#39;]])
+            )
+            records[idx][&#39;result&#39;] = &#39;Dropped&#39;
+            del(records[idx][&#39;data&#39;])
+
+        if len(records_to_reingest) == MAX_RECORD_COUNT:
+            &amp;quot;&amp;quot;&amp;quot;
+            Each PutRecordBatch request supports up to 500 records.
+            https://docs.aws.amazon.com/firehose/latest/APIReference/API_PutRecordBatch.html
+            &amp;quot;&amp;quot;&amp;quot;
+            print(f&#39;Records count has been exceeded over {MAX_RECORD_COUNT}&#39;)
+            put_record_batches.append(records_to_reingest)
+            records_to_reingest = []
+
+    if len(records_to_reingest) &amp;gt; 0:
+        # add the last batch
+        put_record_batches.append(records_to_reingest)
+
+    # iterate and call putRecordBatch for each group
+    records_reingested_already = 0
+    stream_arn = event[&#39;deliveryStreamArn&#39;]
+    region = stream_arn.split(&#39;:&#39;)[3]
+    stream_name = stream_arn.split(&#39;/&#39;)[1]
+    if len(put_record_batches) &amp;gt; 0:
+        client = boto3.client(&#39;firehose&#39;, region_name=region)
+        for record_batch in put_record_batches:
+            put_records_to_firehose(stream_name, record_batch, client)
+            records_reingested_already += len(record_batch)
+            print(f&#39;Reingested {records_reingested_already}/{total_records_to_be_reingested} records out of {len(event[&amp;quot;records&amp;quot;])}&#39;)
+    else:
+        print(&#39;No records to be reingested&#39;)
+
+
+    # Return records to Firehose
+    return_records = {
+        &#39;records&#39;: records
+    }
+    print(str(return_records))
+    return return_records
+
+
+# Transform method for temporary data
+def _create_reingestion_record(original_record):
+    return {&#39;data&#39;: base64.b64decode(original_record[&#39;data&#39;])}
+
+def _get_reingestion_record(re_ingestion_record):
+    return {&#39;Data&#39;: re_ingestion_record[&#39;data&#39;]}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;Amazon Kinesis Firehose Data Transformation with AWS Lambda | AWS Compute Blog &lt;a href=&#34;https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita &lt;a href=&#34;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Amazon DynamoDB ストリームを使用して、順序付けされたデータをアプリケーション間でレプリケーションする方法 | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>DynamoDBからkinesis firehose経由でS3に出力</title>
