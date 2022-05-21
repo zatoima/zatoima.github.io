@@ -5,12 +5,204 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 17 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 21 May 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>AWS SAM CLI を使用したLambdaのデプロイ</title>
+      <link>/aws-lambda-sam-deploy/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-lambda-sam-deploy/</guid>
+      <description>&lt;h3 id=&#34;sam-cliのインストール&#34;&gt;SAM CLIのインストール&lt;/h3&gt;
+&lt;h5 id=&#34;コマンド&#34;&gt;コマンド&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+unzip aws-sam-cli-linux-x86_64.zip -d sam-installation
+sudo ./sam-installation/install
+sam --version
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;事前準備&#34;&gt;事前準備&lt;/h3&gt;
+&lt;p&gt;Python3.8系がインストールされていないとエラーになったのでインストール&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[ec2-user@bastin test-sam]$ sam build
+Building codeuri: /home/ec2-user/test-sam/function runtime: python3.8 metadata: {} architecture: x86_64 functions: [&amp;lsquo;Function&amp;rsquo;]&lt;/p&gt;
+&lt;p&gt;Build Failed
+Error: PythonPipBuilder:Validation - Binary validation failed for python, searched for python in following locations  : [&#39;/usr/bin/python&#39;] which did not satisfy constraints for runtime: python3.8. Do you have python for runtime: python3.8 on your PATH?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;sudo amazon-linux-extras install python3.8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;ディレクトリデプロイ用のファイル準備&#34;&gt;ディレクトリ/デプロイ用のファイル準備&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin test-sam]$ tree
+.
+├── function
+│   ├── function.py
+│   └── requirements.txt
+├── samconfig.toml
+└── template.yaml
+
+1 directory, 4 files
+[ec2-user@bastin test-sam]$ cat function/function.py 
+import json
+import requests
+
+def lambda_handler(event, context):
+
+    print(requests.get(&#39;https://google.com&#39;))
+    return {
+        &#39;statusCode&#39;: 200,
+        &#39;body&#39;: json.dumps(&#39;Hello from Lambda!&#39;)
+    }
+
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat function/requirements.txt 
+requests
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat samconfig.toml 
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = &amp;quot;test-sam-app&amp;quot;
+s3_bucket = &amp;quot;zatoima&amp;quot;
+s3_prefix = &amp;quot;test-sam-app&amp;quot;
+region = &amp;quot;ap-northeast-1&amp;quot;
+capabilities = &amp;quot;CAPABILITY_IAM&amp;quot;
+
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat template.yaml 
+AWSTemplateFormatVersion: &#39;2010-09-09&#39;
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for test-sam-app
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: test-sam-app
+      CodeUri: function/
+      Handler: function.lambda_handler
+      Runtime: python3.8
+
+Outputs:
+  Function:
+    Description: &amp;quot;test-sam-app Lambda Function ARN&amp;quot;
+    Value: !GetAtt Function.Arn
+  FunctionIamRole:
+    Description: &amp;quot;Implicit IAM Role created for test-sam-app function&amp;quot;
+    Value: !GetAtt FunctionRole.Arn
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ビルド、デプロイ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin test-sam]$ sam build
+Building codeuri: /home/ec2-user/test-sam/function runtime: python3.8 metadata: {} architecture: x86_64 functions: [&#39;Function&#39;]
+Running PythonPipBuilder:ResolveDependencies
+Running PythonPipBuilder:CopySource
+
+Build Succeeded
+
+Built Artifacts  : .aws-sam/build
+Built Template   : .aws-sam/build/template.yaml
+
+Commands you can use next
+=========================
+[*] Validate SAM template: sam validate
+[*] Invoke Function: sam local invoke
+[*] Test Function in the Cloud: sam sync --stack-name {stack-name} --watch
+[*] Deploy: sam deploy --guided
+        
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ sam deploy
+Uploading to test-sam-app/70531b5489f5a99ab4c62e4acc57d0ef  452386 / 452386  (100.00%)
+
+	Deploying with following values
+	===============================
+	Stack name                   : test-sam-app
+	Region                       : ap-northeast-1
+	Confirm changeset            : False
+	Disable rollback             : False
+	Deployment s3 bucket         : zatoima
+	Capabilities                 : [&amp;quot;CAPABILITY_IAM&amp;quot;]
+	Parameter overrides          : {}
+	Signing Profiles             : {}
+
+Initiating deployment
+=====================
+Uploading to test-sam-app/ba13ca287976cbfe7f0c7cda0b66556e.template  725 / 725  (100.00%)
+
+Waiting for changeset to be created..
+
+～省略～
+
+Successfully created/updated stack - test-sam-app in ap-northeast-1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;CloudFormation&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220517135429286&#34; srcset=&#34;
+               /aws-lambda-sam-deploy/image-20220517135429286_huae74bbdabb05fcd45efa03591c399459_81875_0a70a0a2208db9eef83183fe4a230ffb.png 400w,
+               /aws-lambda-sam-deploy/image-20220517135429286_huae74bbdabb05fcd45efa03591c399459_81875_a74f7388030d158db723544b37fc8ed3.png 760w,
+               /aws-lambda-sam-deploy/image-20220517135429286_huae74bbdabb05fcd45efa03591c399459_81875_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-deploy/image-20220517135429286_huae74bbdabb05fcd45efa03591c399459_81875_0a70a0a2208db9eef83183fe4a230ffb.png&#34;
+               width=&#34;760&#34;
+               height=&#34;394&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;Lambda&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220517135449222&#34; srcset=&#34;
+               /aws-lambda-sam-deploy/image-20220517135449222_hua87c8e83a1492ae92f5cc887f4a9bba3_98348_898188bde265aaa8f43b419d398cec55.png 400w,
+               /aws-lambda-sam-deploy/image-20220517135449222_hua87c8e83a1492ae92f5cc887f4a9bba3_98348_80143929dc282e64957fcf86b75ecb64.png 760w,
+               /aws-lambda-sam-deploy/image-20220517135449222_hua87c8e83a1492ae92f5cc887f4a9bba3_98348_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-deploy/image-20220517135449222_hua87c8e83a1492ae92f5cc887f4a9bba3_98348_898188bde265aaa8f43b419d398cec55.png&#34;
+               width=&#34;760&#34;
+               height=&#34;465&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Lambdaからawslambda-psycopg2を使用してAurora PostgreSQLに接続</title>
