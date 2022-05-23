@@ -5,12 +5,230 @@
     <link>/tag/postgresql/</link>
       <atom:link href="/tag/postgresql/index.xml" rel="self" type="application/rss+xml" />
     <description>PostgreSQL</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 16 Apr 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sun, 22 May 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>PostgreSQL</title>
       <link>/tag/postgresql/</link>
     </image>
+    
+    <item>
+      <title>PostgreSQL のテーブルをリネームした場合、統計情報やインデックス、バッファキャッシュはどうなるか？</title>
+      <link>/aws-postgresql-rename-table-index-analyze-buffer/</link>
+      <pubDate>Sun, 22 May 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-postgresql-rename-table-index-analyze-buffer/</guid>
+      <description>&lt;h3 id=&#34;結論&#34;&gt;結論&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;バッファキャッシュ、インデックス、統計情報はリネーム先に引き継がれる&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;コマンド&#34;&gt;コマンド&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- テーブル準備
+create table t1_work(a numeric primary key,b varchar(20));
+insert into t1_work values(1,&#39;test&#39;);
+
+-- pg_buffercacheの有効化
+create extension pg_buffercache;
+
+-- 統計情報の確認
+analyze t1_work;
+select * from pg_stat_user_tables where relname=&#39;t1_work&#39;;
+
+-- インデックス情報の確認
+select * from pg_indexes where tablename=&#39;t1_work&#39;;
+
+-- キャッシュ情報の確認
+select c.relname, count(*) as buffers
+from pg_buffercache as b
+inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+where c.relname=&#39;t1_work&#39;
+group by c.relname
+order by 2 desc
+LIMIT 30;
+
+-- テーブル名の変更
+ALTER TABLE t1_work RENAME TO t1;
+
+-- 統計情報の確認
+select * from pg_stat_user_tables where relname=&#39;t1&#39;;
+
+-- インデックス情報の確認
+select * from pg_indexes where tablename=&#39;t1&#39;;
+
+-- キャッシュ確認
+select c.relname, count(*) as buffers
+from pg_buffercache as b
+inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+where c.relname=&#39;t1&#39;
+group by c.relname
+order by 2 desc
+LIMIT 30;
+
+-- テーブル削除
+drop table t1;
+drop table t1_work;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;バッファキャッシュ&#34;&gt;バッファキャッシュ&lt;/h3&gt;
+&lt;h5 id=&#34;リネーム前&#34;&gt;リネーム前&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; where c.relname=&#39;t1_work&#39;
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+ relname | buffers 
+---------+---------
+ t1_work |       1
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;リネーム後&#34;&gt;リネーム後&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; where c.relname=&#39;t1&#39;
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+ relname | buffers 
+---------+---------
+ t1      |       1
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;統計情報&#34;&gt;統計情報&lt;/h3&gt;
+&lt;h5 id=&#34;リネーム前-1&#34;&gt;リネーム前&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select * from pg_stat_user_tables where relname=&#39;t1_work&#39;;
+ relid | schemaname | relname | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum |         last_analyze          | last_autoanalyze | vacuum_count | autovacuum_c
+ount | analyze_count | autoanalyze_count 
+-------+------------+---------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------+--------------------+-------------+-----------------+-------------------------------+------------------+--------------+-------------
+-----+---------------+-------------------
+ 24688 | public     | t1_work |        1 |            0 |        0 |             0 |         1 |         0 |         0 |             0 |          1 |          0 |                   0 |                  1 |             |                 | 2022-05-18 04:21:08.540609+00 |                  |            0 |             
+   0 |             1 |                 0
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;リネーム後-1&#34;&gt;リネーム後&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select * from pg_stat_user_tables where relname=&#39;t1&#39;;
+ relid | schemaname | relname | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum |         last_analyze          | last_autoanalyze | vacuum_count | autovacuum_c
+ount | analyze_count | autoanalyze_count 
+-------+------------+---------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------+--------------------+-------------+-----------------+-------------------------------+------------------+--------------+-------------
+-----+---------------+-------------------
+ 24688 | public     | t1      |        1 |            0 |        0 |             0 |         1 |         0 |         0 |             0 |          1 |          0 |                   0 |                  1 |             |                 | 2022-05-18 04:21:08.540609+00 |                  |            0 |             
+   0 |             1 |                 0
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;インデックス&#34;&gt;インデックス&lt;/h5&gt;
+&lt;h5 id=&#34;リネーム前-2&#34;&gt;リネーム前&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select * from pg_indexes where tablename=&#39;t1_work&#39;;
+ schemaname | tablename |  indexname   | tablespace |                              indexdef                              
+------------+-----------+--------------+------------+--------------------------------------------------------------------
+ public     | t1_work   | t1_work_pkey |            | CREATE UNIQUE INDEX t1_work_pkey ON public.t1_work USING btree (a)
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h5 id=&#34;リネーム後-2&#34;&gt;リネーム後&lt;/h5&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select * from pg_indexes where tablename=&#39;t1&#39;;
+ schemaname | tablename |  indexname   | tablespace |                           indexdef                            
+------------+-----------+--------------+------------+---------------------------------------------------------------
+ public     | t1        | t1_work_pkey |            | CREATE UNIQUE INDEX t1_work_pkey ON public.t1 USING btree (a)
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;実行ログ&#34;&gt;実行ログ&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;postgres=&amp;gt; create table t1_work(a numeric primary key,b varchar(20));
+CREATE TABLE
+postgres=&amp;gt; insert into t1_work values(1,&#39;test&#39;);
+INSERT 0 1
+postgres=&amp;gt; create extension pg_buffercache;
+ERROR:  extension &amp;quot;pg_buffercache&amp;quot; already exists
+postgres=&amp;gt; \dx
+                            List of installed extensions
+      Name      | Version |   Schema   |                 Description                 
+----------------+---------+------------+---------------------------------------------
+ aws_commons    | 1.2     | public     | Common data types across AWS services
+ aws_s3         | 1.1     | public     | AWS S3 extension for importing data from S3
+ pg_buffercache | 1.3     | public     | examine the shared buffer cache
+ plpgsql        | 1.0     | pg_catalog | PL/pgSQL procedural language
+(4 rows)
+
+postgres=&amp;gt; analyze t1_work;
+ANALYZE
+postgres=&amp;gt; select * from pg_stat_user_tables where relname=&#39;t1_work&#39;;
+ relid | schemaname | relname | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum |         last_analyze          | last_autoanalyze | vacuum_count | autovacuum_c
+ount | analyze_count | autoanalyze_count 
+-------+------------+---------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------+--------------------+-------------+-----------------+-------------------------------+------------------+--------------+-------------
+-----+---------------+-------------------
+ 24688 | public     | t1_work |        1 |            0 |        0 |             0 |         1 |         0 |         0 |             0 |          1 |          0 |                   0 |                  1 |             |                 | 2022-05-18 04:21:08.540609+00 |                  |            0 |             
+   0 |             1 |                 0
+(1 row)
+
+postgres=&amp;gt; select * from pg_indexes where tablename=&#39;t1_work&#39;;
+ schemaname | tablename |  indexname   | tablespace |                              indexdef                              
+------------+-----------+--------------+------------+--------------------------------------------------------------------
+ public     | t1_work   | t1_work_pkey |            | CREATE UNIQUE INDEX t1_work_pkey ON public.t1_work USING btree (a)
+(1 row)
+
+postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; where c.relname=&#39;t1_work&#39;
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+ relname | buffers 
+---------+---------
+ t1_work |       1
+(1 row)
+
+postgres=&amp;gt; ALTER TABLE t1_work RENAME TO t1;
+ALTER TABLE
+postgres=&amp;gt; select * from pg_stat_user_tables where relname=&#39;t1&#39;;
+ relid | schemaname | relname | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze | n_ins_since_vacuum | last_vacuum | last_autovacuum |         last_analyze          | last_autoanalyze | vacuum_count | autovacuum_c
+ount | analyze_count | autoanalyze_count 
+-------+------------+---------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------+--------------------+-------------+-----------------+-------------------------------+------------------+--------------+-------------
+-----+---------------+-------------------
+ 24688 | public     | t1      |        1 |            0 |        0 |             0 |         1 |         0 |         0 |             0 |          1 |          0 |                   0 |                  1 |             |                 | 2022-05-18 04:21:08.540609+00 |                  |            0 |             
+   0 |             1 |                 0
+(1 row)
+
+postgres=&amp;gt; select * from pg_indexes where tablename=&#39;t1&#39;;
+ schemaname | tablename |  indexname   | tablespace |                           indexdef                            
+------------+-----------+--------------+------------+---------------------------------------------------------------
+ public     | t1        | t1_work_pkey |            | CREATE UNIQUE INDEX t1_work_pkey ON public.t1 USING btree (a)
+(1 row)
+
+postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; where c.relname=&#39;t1&#39;
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+ relname | buffers 
+---------+---------
+ t1      |       1
+(1 row)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; 
+postgres=&amp;gt; select c.relname, count(*) as buffers
+postgres-&amp;gt; from pg_buffercache as b
+postgres-&amp;gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database()))
+postgres-&amp;gt; where c.relname like &#39;t1%&#39;
+postgres-&amp;gt; group by c.relname
+postgres-&amp;gt; order by 2 desc
+postgres-&amp;gt; LIMIT 30;
+   relname    | buffers 
+--------------+---------
+ t1_work_pkey |       2
+ t1           |       1
+(2 rows)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; drop table t1;
+DROP TABLE
+postgres=&amp;gt; drop table t1_work;
+ERROR:  table &amp;quot;t1_work&amp;quot; does not exist
+postgres=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）</title>
