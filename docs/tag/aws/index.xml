@@ -5,12 +5,186 @@
     <link>/tag/aws/</link>
       <atom:link href="/tag/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 21 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 25 May 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>AWS</title>
       <link>/tag/aws/</link>
     </image>
+    
+    <item>
+      <title>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード</title>
+      <link>/aws-aurora-postgres-lambda-s3-event/</link>
+      <pubDate>Wed, 25 May 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgres-lambda-s3-event/</guid>
+      <description>&lt;p&gt;※RDS Proxyやパスワードの外出し等やるべきことやっていません。&lt;/p&gt;
+&lt;h3 id=&#34;s3のイベント構造&#34;&gt;S3のイベント構造&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;Amazon S3 がイベントを発行する場合のJSONはこちら。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;イベントメッセージの構造 - Amazon Simple Storage Service &lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/notification-content-structure.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/notification-content-structure.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{  
+   &amp;quot;Records&amp;quot;:[  
+      {  
+         &amp;quot;eventVersion&amp;quot;:&amp;quot;2.2&amp;quot;,
+         &amp;quot;eventSource&amp;quot;:&amp;quot;aws:s3&amp;quot;,
+         &amp;quot;awsRegion&amp;quot;:&amp;quot;us-west-2&amp;quot;,
+         &amp;quot;eventTime&amp;quot;:&amp;quot;The time, in ISO-8601 format, for example, 1970-01-01T00:00:00.000Z, when Amazon S3 finished processing the request&amp;quot;,
+         &amp;quot;eventName&amp;quot;:&amp;quot;event-type&amp;quot;,
+         &amp;quot;userIdentity&amp;quot;:{  
+            &amp;quot;principalId&amp;quot;:&amp;quot;Amazon-customer-ID-of-the-user-who-caused-the-event&amp;quot;
+         },
+         &amp;quot;requestParameters&amp;quot;:{  
+            &amp;quot;sourceIPAddress&amp;quot;:&amp;quot;ip-address-where-request-came-from&amp;quot;
+         },
+         &amp;quot;responseElements&amp;quot;:{  
+            &amp;quot;x-amz-request-id&amp;quot;:&amp;quot;Amazon S3 generated request ID&amp;quot;,
+            &amp;quot;x-amz-id-2&amp;quot;:&amp;quot;Amazon S3 host that processed the request&amp;quot;
+         },
+         &amp;quot;s3&amp;quot;:{  
+            &amp;quot;s3SchemaVersion&amp;quot;:&amp;quot;1.0&amp;quot;,
+            &amp;quot;configurationId&amp;quot;:&amp;quot;ID found in the bucket notification configuration&amp;quot;,
+            &amp;quot;bucket&amp;quot;:{  
+               &amp;quot;name&amp;quot;:&amp;quot;bucket-name&amp;quot;,
+               &amp;quot;ownerIdentity&amp;quot;:{  
+                  &amp;quot;principalId&amp;quot;:&amp;quot;Amazon-customer-ID-of-the-bucket-owner&amp;quot;
+               },
+               &amp;quot;arn&amp;quot;:&amp;quot;bucket-ARN&amp;quot;
+            },
+            &amp;quot;object&amp;quot;:{  
+               &amp;quot;key&amp;quot;:&amp;quot;object-key&amp;quot;,
+               &amp;quot;size&amp;quot;:&amp;quot;object-size in bytes&amp;quot;,
+               &amp;quot;eTag&amp;quot;:&amp;quot;object eTag&amp;quot;,
+               &amp;quot;versionId&amp;quot;:&amp;quot;object version if bucket is versioning-enabled, otherwise null&amp;quot;,
+               &amp;quot;sequencer&amp;quot;: &amp;quot;a string representation of a hexadecimal value used to determine event sequence, only used with PUTs and DELETEs&amp;quot;
+            }
+         },
+         &amp;quot;glacierEventData&amp;quot;: {
+            &amp;quot;restoreEventData&amp;quot;: {
+               &amp;quot;lifecycleRestorationExpiryTime&amp;quot;: &amp;quot;The time, in ISO-8601 format, for example, 1970-01-01T00:00:00.000Z, of Restore Expiry&amp;quot;,
+               &amp;quot;lifecycleRestoreStorageClass&amp;quot;: &amp;quot;Source storage class for restore&amp;quot;
+            }
+         }
+      }
+   ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;lambda側でトリガーを追加&#34;&gt;Lambda側でトリガーを追加&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507204915194&#34; srcset=&#34;
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204915194_hud5a6303e6dfef1d2d3b0fc8df35b8d9b_103549_156f199b9ef381eecdb7c3a8eeaa9f31.png 400w,
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204915194_hud5a6303e6dfef1d2d3b0fc8df35b8d9b_103549_804b686d8fad49fc47a408d404d26d13.png 760w,
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204915194_hud5a6303e6dfef1d2d3b0fc8df35b8d9b_103549_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-aurora-postgres-lambda-s3-event/image-20220507204915194_hud5a6303e6dfef1d2d3b0fc8df35b8d9b_103549_156f199b9ef381eecdb7c3a8eeaa9f31.png&#34;
+               width=&#34;690&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507204835813&#34; srcset=&#34;
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204835813_huc9eb04ad05e46c1307a71b59a5d750b5_22626_3b0dd176be8dbac8e8e704dc525f95ce.png 400w,
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204835813_huc9eb04ad05e46c1307a71b59a5d750b5_22626_7d8d3c59248c97d5ae63cb53256c02d8.png 760w,
+               /aws-aurora-postgres-lambda-s3-event/image-20220507204835813_huc9eb04ad05e46c1307a71b59a5d750b5_22626_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-aurora-postgres-lambda-s3-event/image-20220507204835813_huc9eb04ad05e46c1307a71b59a5d750b5_22626_3b0dd176be8dbac8e8e704dc525f95ce.png&#34;
+               width=&#34;760&#34;
+               height=&#34;297&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;lamdba-pythonスクリプト&#34;&gt;Lamdba Pythonスクリプト&lt;/h3&gt;
+&lt;hr&gt;
+&lt;p&gt;S3へのCSVファイルのPUTを検知してAurora PostgreSQLのテーブルにロードをする簡易スクリプト。特にエラーハンドリング等は実施していないので注意。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import psycopg2
+import psycopg2.extras
+import time
+import datetime
+import logging
+import boto3
+import sys
+import os
+
+def lambda_handler(event, context):
+
+    print(&#39;event: {}&#39;.format(event))
+    print(&#39;context: {}&#39;.format(context))
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    s3_client = boto3.client(&#39;s3&#39;)
+    conn = psycopg2.connect(&amp;quot;host=auroraserverlessv2.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&amp;quot;)
+
+    for record in event[&#39;Records&#39;]:
+        bucket = record[&#39;s3&#39;][&#39;bucket&#39;][&#39;name&#39;]
+        key = record[&#39;s3&#39;][&#39;object&#39;][&#39;key&#39;]
+        s3location = &#39;s3://&#39; + bucket + &#39;/&#39; + key
+        logger.info(s3location)
+        logger.info(bucket)
+        logger.info(key)
+        
+        cur = conn.cursor()
+        logger.info(&amp;quot;SUCCESS: Connection to RDS Aurora instance succeeded&amp;quot;)
+
+        sql = &amp;quot;SELECT aws_s3.table_import_from_s3(&#39;ddb&#39;, &#39;&#39;, &#39;(format csv)&#39;,  %s  , %s , &#39;ap-northeast-1&#39;);&amp;quot;
+        logger.info(sql)
+
+        with conn.cursor() as cur:
+                cur.execute(sql, (bucket, key))
+                conn.commit()
+                logger.info(&#39;Data loaded from S3 into Aurora&#39;)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;補足&#34;&gt;補足&lt;/h4&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;code&gt;aws_s3.table_import_from_s3&lt;/code&gt;を使っているのでAurora側にIAMロールの設定や拡張機能の設定が必要となることに注意。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://zatoima.github.io/aws-aurora-rds-s3-import.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする | my opinion is my own 👋&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>AWS SAM CLI を使用したLambdaのデプロイ</title>
