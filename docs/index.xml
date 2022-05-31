@@ -5,12 +5,369 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own 👋</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 25 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 31 May 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>my opinion is my own 👋</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>API Gateway&#43;LambdaのSAMでCanaryデプロイを実施</title>
+      <link>/aws-lambda-sam-api-canary-deploy/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-lambda-sam-api-canary-deploy/</guid>
+      <description>&lt;h3 id=&#34;前提条件&#34;&gt;前提条件&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;SAM CLIがインストールされていること&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;sam-init&#34;&gt;SAM INIT&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin test]$ sam init
+
+You can preselect a particular runtime or package type when using the `sam init` experience.
+Call `sam init --help` to learn more.
+
+Which template source would you like to use?
+	1 - AWS Quick Start Templates
+	2 - Custom Template Location
+Choice: 1
+
+Choose an AWS Quick Start application template
+	1 - Hello World Example
+	2 - Multi-step workflow
+	3 - Serverless API
+	4 - Scheduled task
+	5 - Standalone function
+	6 - Data processing
+	7 - Infrastructure event management
+	8 - Machine Learning
+Template: 1
+
+Use the most popular runtime and package type? (Python and zip) [y/N]: y
+
+Would you like to enable X-Ray tracing on the function(s) in your application?  [y/N]: y
+X-Ray will incur an additional cost. View https://aws.amazon.com/xray/pricing/ for more details
+
+Project name [sam-app]: 
+
+Cloning from https://github.com/aws/aws-sam-cli-app-templates (process may take a moment)
+
+
+    -----------------------
+    Generating application:
+    -----------------------
+    Name: sam-app
+    Runtime: python3.9
+    Architectures: x86_64
+    Dependency Manager: pip
+    Application Template: hello-world
+    Output Directory: .
+    
+    Next steps can be found in the README file at ./sam-app/README.md
+        
+
+    Commands you can use next
+    =========================
+    [*] Create pipeline: cd sam-app &amp;amp;&amp;amp; sam pipeline init --bootstrap
+    [*] Validate SAM template: sam validate
+    [*] Test Function in the Cloud: sam sync --stack-name {stack-name} --watch
+   
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;作成されたtemplateyaml&#34;&gt;作成されたtemplate.yaml&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;Runtime: python3.8&lt;/code&gt;だけ実環境に合わせて修正&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ cat template.yaml 
+AWSTemplateFormatVersion: &#39;2010-09-09&#39;
+Transform: AWS::Serverless-2016-10-31
+Description: &amp;gt;
+  sam-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Architectures:
+        - x86_64
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: &amp;quot;API Gateway endpoint URL for Prod stage for Hello World function&amp;quot;
+    Value: !Sub &amp;quot;https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/&amp;quot;
+  HelloWorldFunction:
+    Description: &amp;quot;Hello World Lambda Function ARN&amp;quot;
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: &amp;quot;Implicit IAM Role created for Hello World function&amp;quot;
+    Value: !GetAtt HelloWorldFunctionRole.Arn
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sam-build&#34;&gt;SAM BUILD&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ sam build
+Your template contains a resource with logical ID &amp;quot;ServerlessRestApi&amp;quot;, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
+Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: {} architecture: x86_64 functions: [&#39;HelloWorldFunction&#39;]
+Running PythonPipBuilder:ResolveDependencies
+Running PythonPipBuilder:CopySource
+
+Build Succeeded
+
+Built Artifacts  : .aws-sam/build
+Built Template   : .aws-sam/build/template.yaml
+
+Commands you can use next
+=========================
+[*] Validate SAM template: sam validate
+[*] Invoke Function: sam local invoke
+[*] Test Function in the Cloud: sam sync --stack-name {stack-name} --watch
+[*] Deploy: sam deploy --guided
+        
+[ec2-user@bastin sam-app]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sam-deploy&#34;&gt;SAM DEPLOY&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ sam deploy --guided
+
+Configuring SAM deploy
+======================
+
+	Looking for config file [samconfig.toml] :  Not found
+
+	Setting default arguments for &#39;sam deploy&#39;
+	=========================================
+	Stack Name [sam-app]: 
+	AWS Region [ap-northeast-1]: 
+	#Shows you resources changes to be deployed and require a &#39;Y&#39; to initiate deploy
+	Confirm changes before deploy [y/N]: n
+	#SAM needs permission to be able to create roles to connect to the resources in your template
+	Allow SAM CLI IAM role creation [Y/n]: y
+	#Preserves the state of previously provisioned resources when an operation fails
+	Disable rollback [y/N]: n
+	HelloWorldFunction may not have authorization defined, Is this okay? [y/N]: y
+	Save arguments to configuration file [Y/n]: y
+	SAM configuration file [samconfig.toml]:  
+	SAM configuration environment [default]: 
+
+	Looking for resources needed for deployment:
+	Creating the required resources...
+	Successfully created!
+	 Managed S3 bucket: aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+	 A different default S3 bucket can be set in samconfig.toml
+
+	Saved arguments to config file
+	Running &#39;sam deploy&#39; for future deployments will use the parameters saved above.
+	The above parameters can be changed by modifying samconfig.toml
+	Learn more about samconfig.toml syntax at 
+	https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+
+Uploading to sam-app/abd834336b3b9a077d1ef4926a7e0945  458806 / 458806  (100.00%)
+
+	Deploying with following values
+	===============================
+	Stack name                   : sam-app
+	Region                       : ap-northeast-1
+	Confirm changeset            : False
+	Disable rollback             : False
+	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+	Capabilities                 : [&amp;quot;CAPABILITY_IAM&amp;quot;]
+	Parameter overrides          : {}
+	Signing Profiles             : {}
+
+Initiating deployment
+=====================
+Uploading to sam-app/3c45e542dd42c86b02969d562b823531.template  1199 / 1199  (100.00%)
+
+Waiting for changeset to be created..
+
+～省略～
+
+Successfully created/updated stack - sam-app in ap-northeast-1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;試しに実行&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ for i in {1..10}; do curl -w &#39;\n&#39; https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; done
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world&amp;quot;}
+[ec2-user@bastin sam-app]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Pythonコードを一部修正。&lt;code&gt;&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;,&lt;/code&gt;に。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ cat hello_world/app.py 
+import json
+
+# import requests
+
+
+def lambda_handler(event, context):
+    &amp;quot;&amp;quot;&amp;quot;Sample pure Lambda function
+
+    Parameters
+    ----------
+    event: dict, required
+        API Gateway Lambda Proxy Input Format
+
+        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
+
+    context: object, required
+        Lambda Context runtime methods and attributes
+
+        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
+
+    Returns
+    ------
+    API Gateway Lambda Proxy Output Format: dict
+
+        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
+    &amp;quot;&amp;quot;&amp;quot;
+
+    # try:
+    #     ip = requests.get(&amp;quot;http://checkip.amazonaws.com/&amp;quot;)
+    # except requests.RequestException as e:
+    #     # Send some context about this error to Lambda Logs
+    #     print(e)
+
+    #     raise e
+
+    return {
+        &amp;quot;statusCode&amp;quot;: 200,
+        &amp;quot;body&amp;quot;: json.dumps({
+            &amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;,
+            # &amp;quot;location&amp;quot;: ip.text.replace(&amp;quot;\n&amp;quot;, &amp;quot;&amp;quot;)
+        }),
+    }
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;SAMテンプレートを修正&lt;/p&gt;
+&lt;p&gt;下記を追加&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;pre&gt;&lt;code&gt;  AutoPublishAlias: live
+  DeploymentPreference:
+    Type: Linear10PercentEvery10Minutes
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ cat template.yaml 
+AWSTemplateFormatVersion: &#39;2010-09-09&#39;
+Transform: AWS::Serverless-2016-10-31
+Description: &amp;gt;
+  sam-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Architectures:
+        - x86_64
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type: Linear10PercentEvery10Minutes
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;sam-builddeploy&#34;&gt;sam build＆Deploy&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-app]$ sam build
+Your template contains a resource with logical ID &amp;quot;ServerlessRestApi&amp;quot;, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
+Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: {} architecture: x86_64 functions: [&#39;HelloWorldFunction&#39;]
+Running PythonPipBuilder:ResolveDependencies
+Running PythonPipBuilder:CopySource
+
+Build Succeeded
+
+Built Artifacts  : .aws-sam/build
+Built Template   : .aws-sam/build/template.yaml
+
+Commands you can use next
+=========================
+[*] Validate SAM template: sam validate
+[*] Invoke Function: sam local invoke
+[*] Test Function in the Cloud: sam sync --stack-name {stack-name} --watch
+[*] Deploy: sam deploy --guided
+[ec2-user@bastin sam-app]$ sam deploy
+Uploading to sam-app/81d9b12cbf5541a6c9ff2fcf17671808  458809 / 458809  (100.00%)
+
+	Deploying with following values
+	===============================
+	Stack name                   : sam-app
+	Region                       : ap-northeast-1
+	Confirm changeset            : False
+	Disable rollback             : False
+	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+	Capabilities                 : [&amp;quot;CAPABILITY_IAM&amp;quot;]
+	Parameter overrides          : {}
+	Signing Profiles             : {}
+
+Initiating deployment
+=====================
+Uploading to sam-app/5e5bb4c759ce5a0dac0216a727528b16.template  1300 / 1300  (100.00%)
+
+Waiting for changeset to be created..
+
+~省略~
+
+Successfully created/updated stack - sam-app in ap-northeast-1
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;&lt;u&gt;DeploymentPreference直後はエイリアス管理されていないので2回ほどコードを修正して動作を確認する。&lt;/u&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ for i in {1..20}; do curl -w &#39;\n&#39; https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; done
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v3&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+{&amp;quot;message&amp;quot;: &amp;quot;hello world v2&amp;quot;}
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード</title>
