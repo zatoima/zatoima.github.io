@@ -5,12 +5,671 @@
     <link>/tag/aws/</link>
       <atom:link href="/tag/aws/index.xml" rel="self" type="application/rss+xml" />
     <description>AWS</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 31 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 11 Jun 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>AWS</title>
       <link>/tag/aws/</link>
     </image>
+    
+    <item>
+      <title>SAMを使用したLambdaのデプロイをCodePipelineに組み込む</title>
+      <link>/aws-lambda-sam-codepipeline-deploy/</link>
+      <pubDate>Sat, 11 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-lambda-sam-codepipeline-deploy/</guid>
+      <description>&lt;h3 id=&#34;前提条件&#34;&gt;前提条件&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;SAM CLIがインストールされていること&lt;/li&gt;
+&lt;li&gt;CodeCommit用のユーザが事前作成されていること
+&lt;ul&gt;
+&lt;li&gt;AWSCodeCommitPowerUserを付与する&lt;/li&gt;
+&lt;li&gt;AWS CodeCommit の HTTPS Git 認証情報を控えておく。（IAMの認証情報から生成）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518111531147&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518111531147_hu2dca834ee911a98d3894649927278f58_61723_f6def196212ab06cfba393c7a351e6ae.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518111531147_hu2dca834ee911a98d3894649927278f58_61723_de6c3c88bde3a80e434699845c60e02e.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518111531147_hu2dca834ee911a98d3894649927278f58_61723_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518111531147_hu2dca834ee911a98d3894649927278f58_61723_f6def196212ab06cfba393c7a351e6ae.png&#34;
+               width=&#34;760&#34;
+               height=&#34;492&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;sam用のディレクトリデプロイ用のファイル準備&#34;&gt;SAM用のディレクトリ/デプロイ用のファイル準備&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;[ec2-user@bastin test-sam]$ tree
+.
+├── function
+│   ├── function.py
+│   └── requirements.txt
+├── samconfig.toml
+└── template.yaml
+
+1 directory, 4 files
+[ec2-user@bastin test-sam]$ cat function/function.py 
+import json
+import requests
+
+def lambda_handler(event, context):
+
+    print(requests.get(&#39;https://google.com&#39;))
+    return {
+        &#39;statusCode&#39;: 200,
+        &#39;body&#39;: json.dumps(&#39;Hello from Lambda!&#39;)
+    }
+
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat function/requirements.txt 
+requests
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat samconfig.toml 
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = &amp;quot;test-sam-app&amp;quot;
+s3_bucket = &amp;quot;zatoima&amp;quot;
+s3_prefix = &amp;quot;test-sam-app&amp;quot;
+region = &amp;quot;ap-northeast-1&amp;quot;
+capabilities = &amp;quot;CAPABILITY_IAM&amp;quot;
+
+[ec2-user@bastin test-sam]$ 
+[ec2-user@bastin test-sam]$ cat template.yaml 
+AWSTemplateFormatVersion: &#39;2010-09-09&#39;
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for test-sam-app
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: test-sam-app
+      CodeUri: function/
+      Handler: function.lambda_handler
+      Runtime: python3.8
+
+Outputs:
+  Function:
+    Description: &amp;quot;test-sam-app Lambda Function ARN&amp;quot;
+    Value: !GetAtt Function.Arn
+  FunctionIamRole:
+    Description: &amp;quot;Implicit IAM Role created for test-sam-app function&amp;quot;
+    Value: !GetAtt FunctionRole.Arn
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;buildspecyamlの準備&#34;&gt;buildspec.yamlの準備&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;sam package&lt;/code&gt;でパッケージングするBuildspec.yamlを準備&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;version: 0.2
+phases:
+  install:
+    runtime-versions:
+        python: 3.8
+  build:
+    commands:
+      - sam package --template-file template.yaml --s3-bucket zatoima --output-template-file packaged-template.yml
+artifacts:
+  files:
+    - packaged-template.yml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;codecommitの設定&#34;&gt;CodeCommitの設定&lt;/h3&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518110655334&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110655334_huf0db405e7c8aef4eab29fbf48fbc34de_50151_b6a11053891d5c99852e544f6987cc30.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110655334_huf0db405e7c8aef4eab29fbf48fbc34de_50151_d554e28c79ee92a9f2d576f808f28a63.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110655334_huf0db405e7c8aef4eab29fbf48fbc34de_50151_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518110655334_huf0db405e7c8aef4eab29fbf48fbc34de_50151_b6a11053891d5c99852e544f6987cc30.png&#34;
+               width=&#34;760&#34;
+               height=&#34;693&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518110753934&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110753934_hu530104e57fe14831ebbad0d28e2d4ae4_109042_99c0c6a20f4cd4f6b0ea41a2796d950d.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110753934_hu530104e57fe14831ebbad0d28e2d4ae4_109042_1e818c15b91ca81274841ce9f4780755.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518110753934_hu530104e57fe14831ebbad0d28e2d4ae4_109042_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518110753934_hu530104e57fe14831ebbad0d28e2d4ae4_109042_99c0c6a20f4cd4f6b0ea41a2796d950d.png&#34;
+               width=&#34;760&#34;
+               height=&#34;273&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;リポジトリをクローンする&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;git clone https://git-codecommit.ap-northeast-1.amazonaws.com/v1/repos/sam-codecommit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin ~]$ git clone https://git-codecommit.ap-northeast-1.amazonaws.com/v1/repos/sam-codecommit
+Cloning into &#39;sam-codecommit&#39;...
+Username for &#39;https://git-codecommit.ap-northeast-1.amazonaws.com&#39;: codecommituser-at-xxxxxxxxxxxxx
+Password for &#39;https://codecommituser-at-xxxxxxxxxxxxx@git-codecommit.ap-northeast-1.amazonaws.com&#39;: 
+remote: Counting objects: 3, done.
+Unpacking objects: 100% (3/3), 349 bytes | 349.00 KiB/s, done.
+[ec2-user@bastin ~]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;SAMのデプロイ用のファイルをリポジトリにPushする。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[ec2-user@bastin sam-codecommit]$ git push
+Username for &#39;https://git-codecommit.ap-northeast-1.amazonaws.com&#39;: codecommituser-at-xxxxxxxxxxxxx
+Password for &#39;https://codecommituser-at-xxxxxxxxxxxxx@git-codecommit.ap-northeast-1.amazonaws.com&#39;: 
+Enumerating objects: 8, done.
+Counting objects: 100% (8/8), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (6/6), done.
+Writing objects: 100% (7/7), 1.05 KiB | 1.05 MiB/s, done.
+Total 7 (delta 0), reused 0 (delta 0), pack-reused 0
+To https://git-codecommit.ap-northeast-1.amazonaws.com/v1/repos/sam-codecommit
+   aed7fe9..70c2d27  main -&amp;gt; main
+[ec2-user@bastin sam-codecommit]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;こんな感じの状態になる。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518112610396&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518112610396_hu7aef46afd5ae3b826f8d6b9dd9815c72_20157_f942eeb7d37b75a6c89e4caa59cdbe94.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518112610396_hu7aef46afd5ae3b826f8d6b9dd9815c72_20157_3c942b11a35489a1f6d2eecf5f5a2fb6.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518112610396_hu7aef46afd5ae3b826f8d6b9dd9815c72_20157_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518112610396_hu7aef46afd5ae3b826f8d6b9dd9815c72_20157_f942eeb7d37b75a6c89e4caa59cdbe94.png&#34;
+               width=&#34;760&#34;
+               height=&#34;457&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;codebuild&#34;&gt;CodeBuild&lt;/h3&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518113315796&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113315796_huba63750621b6d54ad7790534ee83f6f2_62290_1bcab382697af96a245eecdf7081fad6.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113315796_huba63750621b6d54ad7790534ee83f6f2_62290_dd0289bc74f4ee1bb8127995061a5524.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113315796_huba63750621b6d54ad7790534ee83f6f2_62290_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518113315796_huba63750621b6d54ad7790534ee83f6f2_62290_1bcab382697af96a245eecdf7081fad6.png&#34;
+               width=&#34;637&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518113344990&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113344990_hubb2494334a3aae1f9342a42884f825be_71089_d8999c6543eefc114e0014e0c40f46c6.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113344990_hubb2494334a3aae1f9342a42884f825be_71089_1a29eb387491bf8749092f1f5e6c155c.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113344990_hubb2494334a3aae1f9342a42884f825be_71089_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518113344990_hubb2494334a3aae1f9342a42884f825be_71089_d8999c6543eefc114e0014e0c40f46c6.png&#34;
+               width=&#34;634&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518113411754&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113411754_hu59a957640d86cfa74fd096328bbe4e60_62902_8501101b56b45872b3654a5bd0c9d333.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113411754_hu59a957640d86cfa74fd096328bbe4e60_62902_ce91e606d879d8cacc65af0df9ce5dff.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113411754_hu59a957640d86cfa74fd096328bbe4e60_62902_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518113411754_hu59a957640d86cfa74fd096328bbe4e60_62902_8501101b56b45872b3654a5bd0c9d333.png&#34;
+               width=&#34;760&#34;
+               height=&#34;727&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518113525305&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113525305_hue8c9edc3e2b0dca473099257ea9acb4a_73634_6ab374f677cb75f800112f18e92fad81.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113525305_hue8c9edc3e2b0dca473099257ea9acb4a_73634_b3508a09cbd8fc6dc8094c8f6306af3a.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113525305_hue8c9edc3e2b0dca473099257ea9acb4a_73634_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518113525305_hue8c9edc3e2b0dca473099257ea9acb4a_73634_6ab374f677cb75f800112f18e92fad81.png&#34;
+               width=&#34;643&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518113557389&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113557389_huc8c7312138c3db266a761df0b3eebeee_54189_8edfd02cd70f6bb59c544fe4df9941c5.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113557389_huc8c7312138c3db266a761df0b3eebeee_54189_6d3e9592c17f8b8df7aa29abd98fd28c.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518113557389_huc8c7312138c3db266a761df0b3eebeee_54189_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518113557389_huc8c7312138c3db266a761df0b3eebeee_54189_8edfd02cd70f6bb59c544fe4df9941c5.png&#34;
+               width=&#34;760&#34;
+               height=&#34;248&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;成功後に&lt;code&gt;packaged-template.yml&lt;/code&gt;がS3に生成&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518114931617&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518114931617_huf117cbc7872f2e56525ac6b9a9124826_81625_fd84cf3636fb8769901bb94c4181687e.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518114931617_huf117cbc7872f2e56525ac6b9a9124826_81625_d6d547ec224a906391d3c1b3b1cf67e5.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518114931617_huf117cbc7872f2e56525ac6b9a9124826_81625_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518114931617_huf117cbc7872f2e56525ac6b9a9124826_81625_fd84cf3636fb8769901bb94c4181687e.png&#34;
+               width=&#34;760&#34;
+               height=&#34;229&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h2 id=&#34;codepipelineの設定&#34;&gt;CodePipelineの設定&lt;/h2&gt;
+&lt;p&gt;CodeCommit-&amp;gt;CodeBuild-&amp;gt;CloudFormation&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518115050445&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115050445_hudab3e5e860c275acb39fae0b685b46ac_49485_4d7ba55020a7eca89c8eb83b765bce1e.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115050445_hudab3e5e860c275acb39fae0b685b46ac_49485_41e3b3b83dbaa863d40b397773cbf891.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115050445_hudab3e5e860c275acb39fae0b685b46ac_49485_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518115050445_hudab3e5e860c275acb39fae0b685b46ac_49485_4d7ba55020a7eca89c8eb83b765bce1e.png&#34;
+               width=&#34;760&#34;
+               height=&#34;569&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518115109985&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115109985_huf3625a4a05f058eb8fa17111ac898eee_78111_9644dd40453eec640012d7806249382a.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115109985_huf3625a4a05f058eb8fa17111ac898eee_78111_ebb81a7877bd8dccfa6f5dba7f5829e6.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115109985_huf3625a4a05f058eb8fa17111ac898eee_78111_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518115109985_huf3625a4a05f058eb8fa17111ac898eee_78111_9644dd40453eec640012d7806249382a.png&#34;
+               width=&#34;760&#34;
+               height=&#34;659&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518115130631&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115130631_hu32ccf6564ccfc27ded7fe5ef9eef48ec_60656_fe7f77fb9dc39d5551a3910e72ee4cad.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115130631_hu32ccf6564ccfc27ded7fe5ef9eef48ec_60656_845070661c43681f80056b86caa5b4ac.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115130631_hu32ccf6564ccfc27ded7fe5ef9eef48ec_60656_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518115130631_hu32ccf6564ccfc27ded7fe5ef9eef48ec_60656_fe7f77fb9dc39d5551a3910e72ee4cad.png&#34;
+               width=&#34;760&#34;
+               height=&#34;666&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518115253564&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115253564_hueef3a7ae8f419501117779480d9bbf81_58835_0fb7773f28f9a2e90d15351c5126e90e.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115253564_hueef3a7ae8f419501117779480d9bbf81_58835_6cfc244c8af0e7ac4771a8409236577f.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518115253564_hueef3a7ae8f419501117779480d9bbf81_58835_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518115253564_hueef3a7ae8f419501117779480d9bbf81_58835_0fb7773f28f9a2e90d15351c5126e90e.png&#34;
+               width=&#34;760&#34;
+               height=&#34;725&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;アクションモードにいくつか種類があるので適切なものを選ぶ&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518134838292&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518134838292_hub6318916300da72779586737b6f6cf68_19202_0a5185fb79cad009f76658a46d0339e3.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518134838292_hub6318916300da72779586737b6f6cf68_19202_293de946b5c8d6d79650d16109ef7dbf.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518134838292_hub6318916300da72779586737b6f6cf68_19202_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518134838292_hub6318916300da72779586737b6f6cf68_19202_0a5185fb79cad009f76658a46d0339e3.png&#34;
+               width=&#34;525&#34;
+               height=&#34;225&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;パイプラインの実行&#34;&gt;パイプラインの実行&lt;/h3&gt;
+&lt;p&gt;コードを1行だけ追加。&lt;code&gt;print(&amp;quot;test&amp;quot;)&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin function]$ cat function.py 
+import json
+import requests
+
+def lambda_handler(event, context):
+    print(&amp;quot;test&amp;quot;)
+    print(requests.get(&#39;https://google.com&#39;))
+    return {
+        &#39;statusCode&#39;: 200,
+        &#39;body&#39;: json.dumps(&#39;Hello from Lambda!&#39;)
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;codecommitへpush&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;cd /home/ec2-user/sam-codecommit
+git add .
+git commit -m &amp;quot;Update commit&amp;quot;
+git push
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518125920274&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518125920274_hu19e20ed16d74787f1e47667f2b9cc890_66604_f5d69f8c03e1582aa0274b90aa31b952.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518125920274_hu19e20ed16d74787f1e47667f2b9cc890_66604_806473ec92fadddccb4fcb8a225520ef.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518125920274_hu19e20ed16d74787f1e47667f2b9cc890_66604_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518125920274_hu19e20ed16d74787f1e47667f2b9cc890_66604_f5d69f8c03e1582aa0274b90aa31b952.png&#34;
+               width=&#34;486&#34;
+               height=&#34;760&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h5 id=&#34;cloudformation&#34;&gt;CloudFormation&lt;/h5&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518130039900&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130039900_hue36d18a0b0a63b35c91f1373d8e309a9_75363_50c9f8ccb40105c42723419122927cc5.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130039900_hue36d18a0b0a63b35c91f1373d8e309a9_75363_0a72da4acd8a3d1e23cb2a3268cc6815.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130039900_hue36d18a0b0a63b35c91f1373d8e309a9_75363_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518130039900_hue36d18a0b0a63b35c91f1373d8e309a9_75363_50c9f8ccb40105c42723419122927cc5.png&#34;
+               width=&#34;760&#34;
+               height=&#34;365&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h5 id=&#34;lambda&#34;&gt;Lambda&lt;/h5&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220518130130169&#34; srcset=&#34;
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130130169_hua987ad958b732bc801781764aa4714ed_35335_fa217849886cc17a7ba94762d68004be.png 400w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130130169_hua987ad958b732bc801781764aa4714ed_35335_e0617e6354ecb75244f98f3cec3adb14.png 760w,
+               /aws-lambda-sam-codepipeline-deploy/image-20220518130130169_hua987ad958b732bc801781764aa4714ed_35335_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-lambda-sam-codepipeline-deploy/image-20220518130130169_hua987ad958b732bc801781764aa4714ed_35335_fa217849886cc17a7ba94762d68004be.png&#34;
+               width=&#34;760&#34;
+               height=&#34;208&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://dev.classmethod.jp/articles/codepipeline-deploy-sam-api-gateway/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;CodePipelineを使ってSAMでシンプルなAPI Gatewayをデプロイしてみた | DevelopersIO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://dev.classmethod.jp/articles/codepipeline/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;CodePipelineを step by step でやってみた | DevelopersIO&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>API Gateway&#43;LambdaのSAMでCanaryデプロイを実施</title>
