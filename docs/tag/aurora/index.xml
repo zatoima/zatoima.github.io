@@ -5,12 +5,342 @@
     <link>/tag/aurora/</link>
       <atom:link href="/tag/aurora/index.xml" rel="self" type="application/rss+xml" />
     <description>Aurora</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 09 May 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 05 Jul 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Aurora</title>
       <link>/tag/aurora/</link>
     </image>
+    
+    <item>
+      <title>Aurora PostgreSQLでPostGIS(位置情報）を使用する</title>
+      <link>/aws-aurora-postgresql-postgis/</link>
+      <pubDate>Tue, 05 Jul 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-postgresql-postgis/</guid>
+      <description>&lt;h3 id=&#34;事前準備&#34;&gt;事前準備&lt;/h3&gt;
+&lt;hr&gt;
+&lt;h4 id=&#34;参考資料&#34;&gt;参考資料&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.PostGIS.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;PostGIS 拡張機能を使用した空間データの管理 - Amazon Relational Database Service&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id=&#34;拡張機能の有効化&#34;&gt;拡張機能の有効化&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE EXTENSION postgis;
+CREATE EXTENSION fuzzystrmatch;
+CREATE EXTENSION postgis_tiger_geocoder;
+CREATE EXTENSION postgis_topology;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; CREATE EXTENSION postgis;
+
+CREATE EXTENSION
+postgres=&amp;gt; CREATE EXTENSION fuzzystrmatch;
+CREATE EXTENSION
+postgres=&amp;gt; CREATE EXTENSION postgis_tiger_geocoder;
+CREATE EXTENSION
+postgres=&amp;gt; CREATE EXTENSION postgis_topology;
+CREATE EXTENSION
+postgres=&amp;gt; 
+postgres=&amp;gt; 
+postgres=&amp;gt; \dx
+                                              List of installed extensions
+          Name          | Version |   Schema   |                              Description                               
+------------------------+---------+------------+------------------------------------------------------------------------
+ aws_commons            | 1.2     | public     | Common data types across AWS services
+ aws_s3                 | 1.1     | public     | AWS S3 extension for importing data from S3
+ fuzzystrmatch          | 1.1     | public     | determine similarities and distance between strings
+ pg_buffercache         | 1.3     | public     | examine the shared buffer cache
+ pg_stat_statements     | 1.8     | public     | track planning and execution statistics of all SQL statements executed
+ plpgsql                | 1.0     | pg_catalog | PL/pgSQL procedural language
+ postgis                | 3.1.5   | public     | PostGIS geometry and geography spatial types and functions
+ postgis_tiger_geocoder | 3.1.5   | tiger      | PostGIS tiger geocoder and reverse geocoder
+ postgis_topology       | 3.1.5   | topology   | PostGIS topology spatial types and functions
+(9 rows)
+
+postgres=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;バージョン確認&#34;&gt;バージョン確認&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; select * from postgis_version();
+            postgis_version            
+---------------------------------------
+ 3.1 USE_GEOS=1 USE_PROJ=1 USE_STATS=1
+(1 row)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;権限変更&#34;&gt;権限変更&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;ALTER SCHEMA tiger OWNER TO rds_superuser;
+ALTER SCHEMA tiger_data OWNER TO rds_superuser; 
+ALTER SCHEMA topology OWNER TO rds_superuser;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; \dn
+       List of schemas
+    Name     |     Owner     
+-------------+---------------
+ aws_commons | rds_superuser
+ aws_s3      | rds_superuser
+ public      | postgres
+ tiger       | rdsadmin
+ tiger_data  | rdsadmin
+ topology    | rdsadmin
+(6 rows)
+
+postgres=&amp;gt; ALTER SCHEMA tiger OWNER TO rds_superuser;
+ALTER SCHEMA
+postgres=&amp;gt; ALTER SCHEMA tiger_data OWNER TO rds_superuser; 
+ALTER SCHEMA
+postgres=&amp;gt; ALTER SCHEMA topology OWNER TO rds_superuser;
+ALTER SCHEMA
+postgres=&amp;gt; \dn
+       List of schemas
+    Name     |     Owner     
+-------------+---------------
+ aws_commons | rds_superuser
+ aws_s3      | rds_superuser
+ public      | postgres
+ tiger       | rds_superuser
+ tiger_data  | rds_superuser
+ topology    | rds_superuser
+(6 rows)
+
+postgres=&amp;gt; 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;rds_superuser&lt;/code&gt; ロールにオブジェクトの所有権を転送&lt;/p&gt;
+&lt;p&gt;ALTER文を生成してくれるので実行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE FUNCTION exec(text) returns text language plpgsql volatile AS $f$ BEGIN EXECUTE $1; RETURN $1; END; $f$;
+SELECT exec(&#39;ALTER TABLE &#39; || quote_ident(s.nspname) || &#39;.&#39; || quote_ident(s.relname) || &#39; OWNER TO rds_superuser;&#39;)
+  FROM (
+    SELECT nspname, relname
+    FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid) 
+    WHERE nspname in (&#39;tiger&#39;,&#39;topology&#39;) AND
+    relkind IN (&#39;r&#39;,&#39;S&#39;,&#39;v&#39;) ORDER BY relkind = &#39;S&#39;)
+s;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; CREATE FUNCTION exec(text) returns text language plpgsql volatile AS $f$ BEGIN EXECUTE $1; RETURN $1; END; $f$;
+CREATE FUNCTION
+postgres=&amp;gt; 
+postgres=&amp;gt; SELECT exec(&#39;ALTER TABLE &#39; || quote_ident(s.nspname) || &#39;.&#39; || quote_ident(s.relname) || &#39; OWNER TO rds_superuser;&#39;)
+postgres-&amp;gt;   FROM (
+postgres(&amp;gt;     SELECT nspname, relname
+postgres(&amp;gt;     FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid) 
+postgres(&amp;gt;     WHERE nspname in (&#39;tiger&#39;,&#39;topology&#39;) AND
+postgres(&amp;gt;     relkind IN (&#39;r&#39;,&#39;S&#39;,&#39;v&#39;) ORDER BY relkind = &#39;S&#39;)
+postgres-&amp;gt; s;
+                                exec                                
+--------------------------------------------------------------------
+ ALTER TABLE tiger.loader_variables OWNER TO rds_superuser;
+ ALTER TABLE tiger.loader_lookuptables OWNER TO rds_superuser;
+ ALTER TABLE tiger.zip_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.tract OWNER TO rds_superuser;
+ ALTER TABLE tiger.geocode_settings_default OWNER TO rds_superuser;
+ ALTER TABLE tiger.tabblock OWNER TO rds_superuser;
+ ALTER TABLE tiger.county OWNER TO rds_superuser;
+ ALTER TABLE tiger.bg OWNER TO rds_superuser;
+ ALTER TABLE tiger.direction_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_gaz OWNER TO rds_superuser;
+ ALTER TABLE tiger.geocode_settings OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_lex OWNER TO rds_superuser;
+ ALTER TABLE tiger.state OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_rules OWNER TO rds_superuser;
+ ALTER TABLE tiger.secondary_unit_lookup OWNER TO rds_superuser;
+ ALTER TABLE topology.topology OWNER TO rds_superuser;
+ ALTER TABLE topology.layer OWNER TO rds_superuser;
+ ALTER TABLE tiger.place OWNER TO rds_superuser;
+ ALTER TABLE tiger.zip_state OWNER TO rds_superuser;
+ ALTER TABLE tiger.zip_state_loc OWNER TO rds_superuser;
+ ALTER TABLE tiger.state_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.cousub OWNER TO rds_superuser;
+ ALTER TABLE tiger.street_type_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.edges OWNER TO rds_superuser;
+ ALTER TABLE tiger.place_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.addrfeat OWNER TO rds_superuser;
+ ALTER TABLE tiger.county_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.faces OWNER TO rds_superuser;
+ ALTER TABLE tiger.countysub_lookup OWNER TO rds_superuser;
+ ALTER TABLE tiger.featnames OWNER TO rds_superuser;
+ ALTER TABLE tiger.zip_lookup_all OWNER TO rds_superuser;
+ ALTER TABLE tiger.addr OWNER TO rds_superuser;
+ ALTER TABLE tiger.zip_lookup_base OWNER TO rds_superuser;
+ ALTER TABLE tiger.zcta5 OWNER TO rds_superuser;
+ ALTER TABLE tiger.tabblock20 OWNER TO rds_superuser;
+ ALTER TABLE tiger.loader_platform OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_lex_id_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.county_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.state_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.place_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.cousub_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.edges_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.addrfeat_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.faces_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.featnames_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.addr_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.zcta5_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.tract_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.tabblock_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.bg_gid_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_gaz_id_seq OWNER TO rds_superuser;
+ ALTER TABLE tiger.pagc_rules_id_seq OWNER TO rds_superuser;
+ ALTER TABLE topology.topology_id_seq OWNER TO rds_superuser;
+(53 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;postgisを使用して実行&#34;&gt;PostGISを使用して実行&lt;/h3&gt;
+&lt;hr&gt;
+&lt;h4 id=&#34;テスト&#34;&gt;テスト①&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; CREATE TABLE t1 (id int primary key);
+CREATE TABLE
+postgres=&amp;gt; 
+postgres=&amp;gt; SELECT addGeometryColumn(&#39;t1&#39;, &#39;p1&#39;, 4326, &#39;POINT&#39;, 2);
+             addgeometrycolumn             
+-------------------------------------------
+ public.t1.p1 SRID:4326 TYPE:POINT DIMS:2 
+(1 row)
+
+postgres=&amp;gt; \d t1
+                       Table &amp;quot;public.t1&amp;quot;
+ Column |         Type         | Collation | Nullable | Default 
+--------+----------------------+-----------+----------+---------
+ id     | integer              |           | not null | 
+ p1     | geometry(Point,4326) |           |          | 
+Indexes:
+    &amp;quot;t1_pkey&amp;quot; PRIMARY KEY, btree (id)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; INSERT INTO t1 VALUES (1, ST_GeomFromText(&#39;POINT(139 36)&#39;,4326));
+INSERT 0 1
+postgres=&amp;gt; SELECT id, ST_AsText(p1) FROM t1;
+ id |   st_astext   
+----+---------------
+  1 | POINT(139 36)
+(1 row)
+
+postgres=&amp;gt; 
+postgres=&amp;gt; 
+postgres=&amp;gt; SELECT id,
+postgres-&amp;gt;   ST_Transform(p1, 32654) &amp;lt;-&amp;gt;
+postgres-&amp;gt;   ST_Transform(ST_GeomFromText(&#39;POINT(139.11234 35.998765)&#39;, 4326), 32654)
+postgres-&amp;gt;   AS distance FROM t1 ORDER BY distance ;
+ id |      distance      
+----+--------------------
+  1 | 10129.774748121428
+(1 row)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テスト-1&#34;&gt;テスト②&lt;/h4&gt;
+&lt;h4 id=&#34;テーブル作成&#34;&gt;テーブル作成&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE geo_sample (
+ id integer PRIMARY KEY,
+ name varchar(255),
+ geom geometry(POINT, 4326)
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;データ投入&#34;&gt;データ投入&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;INSERT INTO geo_sample VALUES (1, &#39;表参道駅&#39;, ST_GeomFromText(&#39;POINT(139.712288 35.664342)&#39;,4326));
+INSERT INTO geo_sample VALUES (2, &#39;青山一丁目駅&#39;, ST_GeomFromText(&#39;POINT(139.725146 35.672963)&#39;,4326));
+INSERT INTO geo_sample VALUES (3, &#39;赤坂駅&#39;, ST_GeomFromText(&#39;POINT(139.7365419 35.671949)&#39;,4326));
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;2点間の距離を求める-st_distance&#34;&gt;2点間の距離を求める: ST_Distance()&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select a.name || &#39; to &#39; || b.name,
+ST_Distance(
+ ST_Transform(a.geom, 2163),
+ ST_Transform(b.geom, 2163))
+from geo_sample a, geo_sample b
+where a.name = &#39;表参道駅&#39; and b.name = &#39;青山一丁目駅&#39;;
+
+postgres=&amp;gt; select a.name || &#39; to &#39; || b.name,
+postgres-&amp;gt; ST_Distance(
+postgres(&amp;gt;  ST_Transform(a.geom, 2163),
+postgres(&amp;gt;  ST_Transform(b.geom, 2163))
+postgres-&amp;gt; from geo_sample a, geo_sample b
+postgres-&amp;gt; where a.name = &#39;表参道駅&#39; and b.name = &#39;青山一丁目駅&#39;;
+         ?column?         |    st_distance     
+--------------------------+--------------------
+ 表参道駅 to 青山一丁目駅 | 1184.3450716154289
+(1 row)
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;pgadminで確認&#34;&gt;PgAdminで確認&lt;/h4&gt;
+&lt;p&gt;簡単にPgAdminを使用してさっくり確認も出来る。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220705172110215&#34; srcset=&#34;
+               /aws-aurora-postgresql-postgis/image-20220705172110215_hu69239db7969c2d3b1883569353f9c8df_1193421_51208680376374671f9f1fe4da9ce0c0.png 400w,
+               /aws-aurora-postgresql-postgis/image-20220705172110215_hu69239db7969c2d3b1883569353f9c8df_1193421_11d8fbe8c63a820470e7b41a90f97470.png 760w,
+               /aws-aurora-postgresql-postgis/image-20220705172110215_hu69239db7969c2d3b1883569353f9c8df_1193421_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-aurora-postgresql-postgis/image-20220705172110215_hu69239db7969c2d3b1883569353f9c8df_1193421_51208680376374671f9f1fe4da9ce0c0.png&#34;
+               width=&#34;760&#34;
+               height=&#34;449&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h4 id=&#34;テスト-2&#34;&gt;テスト③&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE geotable (
+    id   SERIAL NOT NULL PRIMARY KEY,
+    name varchar (255) NOT NULL,
+    geom geography(POINT, 4326) NOT NULL
+);
+
+-- データの挿入
+INSERT INTO geotable (name, geom) VALUES
+(&#39;上野駅&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.777254 35.713768)&#39;)),
+(&#39;西郷隆盛像&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.774029 35.711846)&#39;)),
+(&#39;上野の森美術館&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.774744 35.712737)&#39;)),
+(&#39;不忍池弁財天&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.770872 35.712351)&#39;)),
+(&#39;野口英世博士像&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.775696 35.716293)&#39;)),
+(&#39;国立西洋美術館&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.775803 35.71542)&#39;)),
+(&#39;国立科学博物館&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.776544 35.716319)&#39;)),
+(&#39;東京都美術館&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.772776 35.717186)&#39;)),
+(&#39;東京国立博物館&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.776462 35.718883)&#39;)),
+(&#39;花やしき&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.794547 35.71528)&#39;)),
+(&#39;雷門&#39;, ST_GeographyFromText(&#39;SRID=4326;POINT(139.792692 35.710635)&#39;));
+
+-- 空間インデックスの作成
+CREATE INDEX gist_geotable on geotable USING GIST (geom);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT
+    name,
+    ST_AsText(geom),
+    ST_Distance(&#39;SRID=4326;POINT(139.777254 35.713768)&#39;, geom) as dist
+FROM geotable
+WHERE ST_DWithin(geom, ST_GeographyFromText(&#39;SRID=4326;POINT(139.777254 35.713768)&#39;), 500.0)
+ORDER BY dist;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;postgres=&amp;gt; SELECT
+postgres-&amp;gt;     name,
+postgres-&amp;gt;     ST_AsText(geom),
+postgres-&amp;gt;     ST_Distance(&#39;SRID=4326;POINT(139.777254 35.713768)&#39;, geom) as dist
+postgres-&amp;gt; FROM geotable
+postgres-&amp;gt; WHERE ST_DWithin(geom, ST_GeographyFromText(&#39;SRID=4326;POINT(139.777254 35.713768)&#39;), 500.0)
+postgres-&amp;gt; ORDER BY dist;
+      name      |          st_astext          |     dist     
+----------------+-----------------------------+--------------
+ 上野駅         | POINT(139.777254 35.713768) |            0
+ 国立西洋美術館 | POINT(139.775803 35.71542)  | 225.46891659
+ 上野の森美術館 | POINT(139.774744 35.712737) | 254.30812788
+ 国立科学博物館 | POINT(139.776544 35.716319) | 290.24270722
+ 野口英世博士像 | POINT(139.775696 35.716293) | 313.62968599
+ 西郷隆盛像     | POINT(139.774029 35.711846) | 361.44255611
+(6 rows)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;PostGIS（地理情報システムを実現するための拡張モジュール） &lt;a href=&#34;https://www.sraoss.co.jp/tech-blog/pgsql/postgis/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.sraoss.co.jp/tech-blog/pgsql/postgis/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://note.com/kotarai/n/nd2bfbafbef6e&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;位置情報を可視化しよう！[PostGIS入門]｜kota｜note&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>pgAdmin4からAurora PostgreSQLへ踏み台サーバのポートフォワード経由で接続する</title>
