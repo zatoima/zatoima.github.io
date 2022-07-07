@@ -487,8 +487,7 @@ PL/SQL procedure successfully completed.
       <link>/oracle-postgresql-sequence-cache-incompatible.html</link>
       <pubDate>Fri, 30 Apr 2021 00:00:00 +0000</pubDate>
       <guid>/oracle-postgresql-sequence-cache-incompatible.html</guid>
-      <description>&lt;p&gt;OracleとPostgreSQLのシーケンスキャッシュを使用した場合の動作差異についてメモ。PostgreSQLの&lt;code&gt;cache&lt;/code&gt;はデフォルト1なので、変更しない限りは同じような採番になるはずだが、基本的な構文がOracleとPostgreSQLで同じなので、そのまま使わないように注意。&lt;/p&gt;
-&lt;p&gt;ここではPostgreSQLのCache値を変更した場合の注意点を記載。&lt;/p&gt;
+      <description>&lt;p&gt;OracleとPostgreSQLのシーケンスキャッシュを使用した場合の動作差異についてメモ。PostgreSQLの&lt;code&gt;cache&lt;/code&gt;はデフォルト1なので、変更しない限りは同じような採番になると思われるが、実際はそうはならない。ここではPostgreSQLのCache値を変更した場合の注意点を記載。&lt;/p&gt;
 &lt;h3 id=&#34;シーケンスの作成&#34;&gt;シーケンスの作成&lt;/h3&gt;
 &lt;p&gt;OracleとPostgreSQL両方ともシーケンスの始まりを「1」、キャッシュを「20」と設定。&lt;/p&gt;
 &lt;h5 id=&#34;oracle&#34;&gt;Oracle&lt;/h5&gt;
@@ -594,8 +593,22 @@ create sequence pgsqlseq1 start with 1 increment by 1 cache 20;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;h3 id=&#34;最後に&#34;&gt;最後に&lt;/h3&gt;
-&lt;p&gt;Oracleでは特定事象が起きないとシーケンスは飛び番にはならないと思っているが、Cache値をデフォルトから変更すると、PostgreSQLは安易に起こりうる。連番ではなく、一意を保証という点では良いかもしれない。そもそもキャッシュしている時点で連番になることを保証するのはOracleでも難しいはず。Oracleのインスタンス障害や共有プールからのエージアウト等があった場合にはキャッシュ分は飛ぶので。&lt;/p&gt;
-&lt;p&gt;PostgreSQLでシーケンスをキャッシュすると、複数セッションからシーケンスを取る場合に連番とはならないので注意が必要。連番を保証したい場合は、シーケンスのキャッシュ値をデフォルトの「1」のままにするか、SERIALデータ型を使うか、になると考えられる。&lt;/p&gt;
+&lt;p&gt;Oracleでは特定事象が起きないとシーケンスは飛び番にはならないと思っているが、Cache値をデフォルトから変更すると、PostgreSQLは安易に起こりうる。**&lt;u&gt;連番ではなく、一意を保証という点でで使うべき&lt;/u&gt;**である。そもそもキャッシュしている時点で連番になることを保証するのはOracleでも難しいはず。Oracleのインスタンス障害や共有プールからのエージアウト等があった場合にはキャッシュ分は飛ぶので。&lt;/p&gt;
+&lt;p&gt;下記の通り、マニュアルでも欠番のないシーケンス用途では使えないと書かれている。トランザクションのロールバックを行った場合、nextval や setval はロールバックされないので欠番になるし、再起動にもメモリ上に格納されたキャッシュは消えてしまう。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;9.17. シーケンス操作関数 &lt;a href=&#34;https://www.postgresql.jp/document/13/html/functions-sequence.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/13/html/functions-sequence.html&lt;/a&gt;
+&lt;ul&gt;
+&lt;li&gt;従って、PostgreSQLのシーケンスオブジェクトは*「欠番のない」シーケンスを得るために使うことはできません*。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;CREATE SEQUENCE &lt;a href=&#34;https://www.postgresql.jp/document/13/html/sql-createsequence.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.postgresql.jp/document/13/html/sql-createsequence.html&lt;/a&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;nextval&lt;/code&gt;と&lt;code&gt;setval&lt;/code&gt;の呼び出しは決してロールバックされないので、シーケンスの番号について「欠番のない」割り当てが必要な場合には、シーケンスオブジェクトを使うことはできません。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
 </description>
     </item>
     
