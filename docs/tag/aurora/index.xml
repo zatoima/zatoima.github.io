@@ -5,12 +5,172 @@
     <link>/tag/aurora/</link>
       <atom:link href="/tag/aurora/index.xml" rel="self" type="application/rss+xml" />
     <description>Aurora</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Tue, 05 Jul 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 20 Jul 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Aurora</title>
       <link>/tag/aurora/</link>
     </image>
+    
+    <item>
+      <title>Aurora PostgreSQLにパッチを適用した際のダウンタイムログ</title>
+      <link>/aws-aurora-patch-apply-downtime-log/</link>
+      <pubDate>Wed, 20 Jul 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-patch-apply-downtime-log/</guid>
+      <description>&lt;p&gt;パッチの中身に依存するので参考までに。この時のパッチ適用の実質的なダウンタイムは約7秒だった。&lt;/p&gt;
+&lt;h4 id=&#34;スクリプト&#34;&gt;スクリプト&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;import psycopg2
+import psycopg2.extras
+import time
+import datetime
+
+for i in range(20000):
+  try:
+    dt_now = datetime.datetime.now()
+    conn = psycopg2.connect(&amp;quot;host=auroraserverlessv2.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&amp;quot;)
+    cur = conn.cursor()
+    cur.execute(&amp;quot;insert into zdptest (time) values (current_timestamp)&amp;quot;)
+    print(dt_now)
+    time.sleep(1)
+    conn.commit()
+    cur.close()
+    conn.close()
+  except:
+    pass
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ログ&#34;&gt;ログ&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;2022-06-28 13:52:53 UTC::@:[31196]:LOG:  starting PostgreSQL 13.6 on aarch64-unknown-linux-gnu, compiled by aarch64-unknown-linux-gnu-gcc (GCC) 7.4.0, 64-bit
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv4 address &amp;quot;0.0.0.0&amp;quot;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv6 address &amp;quot;::&amp;quot;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on Unix socket &amp;quot;/tmp/.s.PGSQL.5432&amp;quot;
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  Waiting for runtime initialization complete...
+2022-06-28 13:52:54 UTC:[local]:rdsadmin@rdsadmin:[31354]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC::@:[31352]:LOG:  database system was interrupted; last known up at 2022-06-28 13:52:19 UTC
+2022-06-28 13:52:54 UTC:10.0.1.31(34296):postgres@postgres:[31353]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34298):postgres@postgres:[31368]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34300):postgres@postgres:[31382]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34302):postgres@postgres:[31386]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34304):postgres@postgres:[31402]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34306):postgres@postgres:[31440]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34308):postgres@postgres:[31448]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34310):postgres@postgres:[31457]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34312):postgres@postgres:[31467]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34314):postgres@postgres:[31478]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC::@:[31196]:LOG:  database system is ready to accept connections
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;unix_socket_permissions&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;shared_buffers&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;apg_critical_insights_enabled&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  configuration file &amp;quot;/rdsdbdata/config/postgresql.conf&amp;quot; contains errors; unaffected changes were applied
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;unix_socket_permissions&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;shared_buffers&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;rds.enable_buffer_pin_conflict_forking&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;rds.apg_space_reclaim_thread_enabled&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  configuration file &amp;quot;/rdsdbdata/config/postgresql.conf&amp;quot; contains errors; unaffected changes were applied
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル&#34;&gt;テーブル&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt; 321 | 2022-06-28 13:52:39.452956
+ 322 | 2022-06-28 13:52:40.483377
+ 323 | 2022-06-28 13:52:41.516449
+ 324 | 2022-06-28 13:52:42.54735
+ 325 | 2022-06-28 13:52:43.579139
+ 326 | 2022-06-28 13:52:44.610785
+ 327 | 2022-06-28 13:52:45.642509
+ 328 | 2022-06-28 13:52:46.673966
+ 329 | 2022-06-28 13:52:47.705797
+ 330 | 2022-06-28 13:52:48.738429 ★←約10秒弱書き込めていない
+ 331 | 2022-06-28 13:52:55.153238
+ 332 | 2022-06-28 13:52:56.194006
+ 333 | 2022-06-28 13:52:57.228373
+ 334 | 2022-06-28 13:52:58.263974
+ 335 | 2022-06-28 13:52:59.317474
+ 336 | 2022-06-28 13:53:00.347215
+ 337 | 2022-06-28 13:53:01.379734
+ 338 | 2022-06-28 13:53:02.417656
+ 339 | 2022-06-28 13:53:03.451107
+ 340 | 2022-06-28 13:53:04.487402
+ 341 | 2022-06-28 13:53:05.522603
+ 342 | 2022-06-28 13:53:06.554656
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;auroraクラスタ側のイベント情報&#34;&gt;Auroraクラスタ側のイベント情報&lt;/h4&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220628230154200&#34; srcset=&#34;
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_7c96a66c84127377bf545021b3bb4c49.png 400w,
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_65433a5674aa949a972390cc33487a3d.png 760w,
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_7c96a66c84127377bf545021b3bb4c49.png&#34;
+               width=&#34;760&#34;
+               height=&#34;102&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQLでPostGIS(位置情報）を使用する</title>

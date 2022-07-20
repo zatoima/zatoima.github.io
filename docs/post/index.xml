@@ -5,12 +5,426 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 08 Jul 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Wed, 20 Jul 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>Aurora PostgreSQLにパッチを適用した際のダウンタイムログ</title>
+      <link>/aws-aurora-patch-apply-downtime-log/</link>
+      <pubDate>Wed, 20 Jul 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-aurora-patch-apply-downtime-log/</guid>
+      <description>&lt;p&gt;パッチの中身に依存するので参考までに。この時のパッチ適用の実質的なダウンタイムは約7秒だった。&lt;/p&gt;
+&lt;h4 id=&#34;スクリプト&#34;&gt;スクリプト&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;import psycopg2
+import psycopg2.extras
+import time
+import datetime
+
+for i in range(20000):
+  try:
+    dt_now = datetime.datetime.now()
+    conn = psycopg2.connect(&amp;quot;host=auroraserverlessv2.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&amp;quot;)
+    cur = conn.cursor()
+    cur.execute(&amp;quot;insert into zdptest (time) values (current_timestamp)&amp;quot;)
+    print(dt_now)
+    time.sleep(1)
+    conn.commit()
+    cur.close()
+    conn.close()
+  except:
+    pass
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ログ&#34;&gt;ログ&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;2022-06-28 13:52:53 UTC::@:[31196]:LOG:  starting PostgreSQL 13.6 on aarch64-unknown-linux-gnu, compiled by aarch64-unknown-linux-gnu-gcc (GCC) 7.4.0, 64-bit
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv4 address &amp;quot;0.0.0.0&amp;quot;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv6 address &amp;quot;::&amp;quot;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on Unix socket &amp;quot;/tmp/.s.PGSQL.5432&amp;quot;
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  Waiting for runtime initialization complete...
+2022-06-28 13:52:54 UTC:[local]:rdsadmin@rdsadmin:[31354]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC::@:[31352]:LOG:  database system was interrupted; last known up at 2022-06-28 13:52:19 UTC
+2022-06-28 13:52:54 UTC:10.0.1.31(34296):postgres@postgres:[31353]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34298):postgres@postgres:[31368]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34300):postgres@postgres:[31382]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34302):postgres@postgres:[31386]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34304):postgres@postgres:[31402]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34306):postgres@postgres:[31440]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34308):postgres@postgres:[31448]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34310):postgres@postgres:[31457]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34312):postgres@postgres:[31467]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34314):postgres@postgres:[31478]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC::@:[31196]:LOG:  database system is ready to accept connections
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;unix_socket_permissions&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;shared_buffers&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &amp;quot;apg_critical_insights_enabled&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  configuration file &amp;quot;/rdsdbdata/config/postgresql.conf&amp;quot; contains errors; unaffected changes were applied
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;unix_socket_permissions&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;shared_buffers&amp;quot; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;rds.enable_buffer_pin_conflict_forking&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &amp;quot;rds.apg_space_reclaim_thread_enabled&amp;quot; changed to &amp;quot;on&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  configuration file &amp;quot;/rdsdbdata/config/postgresql.conf&amp;quot; contains errors; unaffected changes were applied
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/config/recovery.conf&amp;quot;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &amp;quot;/rdsdbdata/db/postgresql.auto.conf&amp;quot;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;テーブル&#34;&gt;テーブル&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt; 321 | 2022-06-28 13:52:39.452956
+ 322 | 2022-06-28 13:52:40.483377
+ 323 | 2022-06-28 13:52:41.516449
+ 324 | 2022-06-28 13:52:42.54735
+ 325 | 2022-06-28 13:52:43.579139
+ 326 | 2022-06-28 13:52:44.610785
+ 327 | 2022-06-28 13:52:45.642509
+ 328 | 2022-06-28 13:52:46.673966
+ 329 | 2022-06-28 13:52:47.705797
+ 330 | 2022-06-28 13:52:48.738429 ★←約10秒弱書き込めていない
+ 331 | 2022-06-28 13:52:55.153238
+ 332 | 2022-06-28 13:52:56.194006
+ 333 | 2022-06-28 13:52:57.228373
+ 334 | 2022-06-28 13:52:58.263974
+ 335 | 2022-06-28 13:52:59.317474
+ 336 | 2022-06-28 13:53:00.347215
+ 337 | 2022-06-28 13:53:01.379734
+ 338 | 2022-06-28 13:53:02.417656
+ 339 | 2022-06-28 13:53:03.451107
+ 340 | 2022-06-28 13:53:04.487402
+ 341 | 2022-06-28 13:53:05.522603
+ 342 | 2022-06-28 13:53:06.554656
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;auroraクラスタ側のイベント情報&#34;&gt;Auroraクラスタ側のイベント情報&lt;/h4&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220628230154200&#34; srcset=&#34;
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_7c96a66c84127377bf545021b3bb4c49.png 400w,
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_65433a5674aa949a972390cc33487a3d.png 760w,
+               /aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-aurora-patch-apply-downtime-log/image-20220628230154200_hu0dfa70cb317110bd4c23c90fef3566a4_15894_7c96a66c84127377bf545021b3bb4c49.png&#34;
+               width=&#34;760&#34;
+               height=&#34;102&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>snowsqlのインストール</title>
+      <link>/snowflake-snowsql-install-howto/</link>
+      <pubDate>Fri, 15 Jul 2022 00:00:00 +0000</pubDate>
+      <guid>/snowflake-snowsql-install-howto/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;リポジトリ&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/index.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/index.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;rpmのダウンロード&#34;&gt;rpmのダウンロード&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ wget https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowflake-snowsql-1.2.9-1.x86_64.rpm
+--2022-07-11 21:25:48--  https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowflake-snowsql-1.2.9-1.x86_64.rpm
+Resolving sfc-repo.snowflakecomputing.com (sfc-repo.snowflakecomputing.com)... 65.9.42.106, 65.9.42.8, 65.9.42.36, ...
+Connecting to sfc-repo.snowflakecomputing.com (sfc-repo.snowflakecomputing.com)|65.9.42.106|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 25164112 (24M) [binary/octet-stream]
+Saving to: ‘snowflake-snowsql-1.2.9-1.x86_64.rpm’
+
+100%[==================================================================================================================================================================================================&amp;gt;] 25,164,112  20.0MB/s   in 1.2s   
+
+2022-07-11 21:25:50 (20.0 MB/s) - ‘snowflake-snowsql-1.2.9-1.x86_64.rpm’ saved [25164112/25164112]
+
+[ec2-user@bastin ~]$ ls -l snowflake-snowsql-1.2.9-1.x86_64.rpm 
+-rw-rw-r-- 1 ec2-user ec2-user 25164112 Aug  7  2020 snowflake-snowsql-1.2.9-1.x86_64.rpm
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;rpmからインストール&#34;&gt;rpmからインストール&lt;/h3&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ sudo rpm -ivh snowflake-snowsql-1.2.9-1.x86_64.rpm
+Preparing...                          ################################# [100%]
+Updating / installing...
+   1:snowflake-snowsql-1.2.9-1        ################################# [100%]
+[ec2-user@bastin ~]$ snowsql -v
+Version: 1.2.9
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ヘルプ&lt;/p&gt;
+&lt;hr&gt;
+&lt;pre&gt;&lt;code&gt;[ec2-user@bastin ~]$ snowsql --help
+Usage: snowsql [OPTIONS]
+
+Options:
+  -a, --accountname TEXT          Name assigned to your Snowflake account. If
+                                  you are not on us-west-2 or AWS deployement,
+                                  append the region and platform to the end,
+                                  e.g., &amp;lt;account&amp;gt;.&amp;lt;region&amp;gt; or
+                                  &amp;lt;account&amp;gt;.&amp;lt;region&amp;gt;.&amp;lt;platform&amp;gt;Honors
+                                  $SNOWSQL_ACCOUNT.
+  -u, --username TEXT             Username to connect to Snowflake. Honors
+                                  $SNOWSQL_USER.
+  -d, --dbname TEXT               Database to use. Honors $SNOWSQL_DATABASE.
+  -s, --schemaname TEXT           Schema in the database to use. Honors
+                                  $SNOWSQL_SCHEMA.
+  -r, --rolename TEXT             Role name to use. Honors $SNOWSQL_ROLE.
+  -w, --warehouse TEXT            Warehouse to use. Honors $SNOWSQL_WAREHOUSE.
+  -h, --host TEXT                 Host address for the connection. Honors
+                                  $SNOWSQL_HOST.
+  -p, --port INTEGER              Port number for the connection. Honors
+                                  $SNOWSQL_PORT.
+  --region TEXT                   (DEPRECATED) Append the region or any sub
+                                  domains before snowflakecomputing.com to the
+                                  end of accountname parameter after a dot.
+                                  e.g., accountname=&amp;lt;account&amp;gt;.&amp;lt;region&amp;gt;
+  -m, --mfa-passcode TEXT         Token to use for multi-factor authentication
+                                  (MFA)
+  --mfa-passcode-in-password      Appends the MFA passcode to the end of the
+                                  password.
+  --abort-detached-query          Aborts a query if the connection between the
+                                  client and server is lost. By default, it
+                                  won&#39;t abort even if the connection is lost.
+  --probe-connection              Test connectivity to Snowflake. This option
+                                  is mainly used to print out the TLS/SSL
+                                  certificate chain.
+  --proxy-host TEXT               (DEPRECATED. Use HTTPS_PROXY and HTTP_PROXY
+                                  environment variables.) Proxy server
+                                  hostname. Honors $SNOWSQL_PROXY_HOST.
+  --proxy-port INTEGER            (DEPRECATED. Use HTTPS_PROXY and HTTP_PROXY
+                                  environment variables.) Proxy server port
+                                  number. Honors $SNOWSQL_PROXY_PORT.
+  --proxy-user TEXT               (DEPRECATED. Use HTTPS_PROXY and HTTP_PROXY
+                                  environment variables.) Proxy server
+                                  username. Honors $SNOWSQL_PROXY_USER. Set
+                                  $SNOWSQL_PROXY_PWD for the proxy server
+                                  password.
+  --authenticator TEXT            Authenticator: &#39;snowflake&#39;,
+                                  &#39;externalbrowser&#39; (to use any IdP and a web
+                                  browser), &#39;oauth&#39;, or
+                                  https://&amp;lt;your_okta_account_name&amp;gt;.okta.com
+                                  (to use Okta natively).
+  -v, --version                   Shows the current SnowSQL version, or uses a
+                                  specific version if provided as a value.
+  --noup                          Disables auto-upgrade for this run. If no
+                                  version is specified for -v, the latest
+                                  version in ~/.snowsql/ is used.
+  -D, --variable TEXT             Sets a variable to be referred by &amp;amp;&amp;lt;var&amp;gt;. -D
+                                  tablename=CENUSTRACKONE or --variable
+                                  db_key=$DB_KEY
+  -o, --option TEXT               Set SnowSQL options. See the options
+                                  reference in the Snowflake documentation.
+  -f, --filename PATH             File to execute.
+  -q, --query TEXT                Query to execute.
+  --config PATH                   Path and name of the SnowSQL configuration
+                                  file. By default, ~/.snowsql/config.
+  -P, --prompt                    Forces a password prompt. By default,
+                                  $SNOWSQL_PWD is used to set the password.
+  -M, --mfa-prompt                Forces a prompt for the second token for
+                                  MFA.
+  -c, --connection TEXT           Named set of connection parameters to use.
+  --single-transaction            Connects with autocommit disabled. Wraps
+                                  BEGIN/COMMIT around statements to execute
+                                  them as a single transaction, ensuring all
+                                  commands complete successfully or no change
+                                  is applied.
+  --private-key-path PATH         Path to private key file in PEM format used
+                                  for key pair authentication. Private key
+                                  file is required to be encrypted and
+                                  passphrase is required to be specified in
+                                  environment variable
+                                  $SNOWSQL_PRIVATE_KEY_PASSPHRASE
+  -U, --upgrade                   Force upgrade of SnowSQL to the latest
+                                  version.
+  -K, --client-session-keep-alive
+                                  Keep the session active indefinitely, even
+                                  if there is no activity from the user..
+  --disable-request-pooling       Disable request pooling. This can help speed
+                                  up connection failover
+  --token TEXT                    The token to be used with oauth
+                                  authentication method
+  -?, --help                      Show this message and exit.
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;参考&#34;&gt;参考&lt;/h4&gt;
+&lt;hr&gt;
+&lt;blockquote&gt;
+&lt;p&gt;SnowSQL のインストール — Snowflake Documentation &lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/snowsql-install-config.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://docs.snowflake.com/ja/user-guide/snowsql-install-config.html&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>GISの殴り書きメモ</title>
+      <link>/other-geographic-information-system-desc/</link>
+      <pubDate>Mon, 11 Jul 2022 00:00:00 +0000</pubDate>
+      <guid>/other-geographic-information-system-desc/</guid>
+      <description>&lt;p&gt;用語のメモ。GISは奥が深い…GIS屋という職業が存在するわけだ&lt;/p&gt;
+&lt;hr&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;GIS&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Geographic Information System&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;民間のWeb地図には著作権の壁がある&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;オープンな地図データ
+&lt;ul&gt;
+&lt;li&gt;OpenStreetMap（OSM）
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.openstreetmap.org&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.openstreetmap.org&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;国土地理院の地理院地図
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://maps.gsi.go.jp/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://maps.gsi.go.jp/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;位置情報を使用した有名なWebサービス&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://flightradars24.info/ja/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://flightradars24.info/ja/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.marinetraffic.com/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.marinetraffic.com/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;GISのデータ構造&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;ベクター形式&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;点、線、多角形&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ポイント（点）&lt;/li&gt;
+&lt;li&gt;ライン（線）&lt;/li&gt;
+&lt;li&gt;ポリゴン（面）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220705180458220&#34; srcset=&#34;
+               /other-geographic-information-system-desc/image-20220705180458220_hub9a0c8775d3ba4b50a204e9ad9825051_32436_de0557eae610657e6e2685c9850e6596.png 400w,
+               /other-geographic-information-system-desc/image-20220705180458220_hub9a0c8775d3ba4b50a204e9ad9825051_32436_ce0042039d9c57092e9b672bd0237106.png 760w,
+               /other-geographic-information-system-desc/image-20220705180458220_hub9a0c8775d3ba4b50a204e9ad9825051_32436_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/other-geographic-information-system-desc/image-20220705180458220_hub9a0c8775d3ba4b50a204e9ad9825051_32436_de0557eae610657e6e2685c9850e6596.png&#34;
+               width=&#34;516&#34;
+               height=&#34;178&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ラスター形式&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;行と列の格子状（グリッド状）に並んだセル（ピクセル）で構成されるデータ
+&lt;ul&gt;
+&lt;li&gt;地図と組み合わせてデータを表示したい場合に使われる
+&lt;ul&gt;
+&lt;li&gt;降水量や気温、標高データなど&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;アドレスマッチング&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;逆GEO&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;ジオコーダー&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://qiita.com/uhey22e/items/69285a14b4476dc73664&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://qiita.com/uhey22e/items/69285a14b4476dc73664&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</description>
+    </item>
     
     <item>
       <title>Kinesis Data Streamsのホットシャードを見つけるツール</title>
