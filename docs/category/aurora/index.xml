@@ -5,12 +5,376 @@
     <link>/category/aurora/</link>
       <atom:link href="/category/aurora/index.xml" rel="self" type="application/rss+xml" />
     <description>Aurora</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sun, 31 Jul 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 25 Aug 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Aurora</title>
       <link>/category/aurora/</link>
     </image>
+    
+    <item>
+      <title>DynamoDBからAurora PostgreSQLへのデータレプリケーション環境を作成する</title>
+      <link>/aws-dynamodb-to-aurora-postgresql-replication/</link>
+      <pubDate>Thu, 25 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>/aws-dynamodb-to-aurora-postgresql-replication/</guid>
+      <description>&lt;h3 id=&#34;はじめに&#34;&gt;はじめに&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Amazon DynamoDB からのデータストリームを AWS Lambda と Amazon Kinesis Firehose を活用して Amazon Aurora に格納する | Amazon Web Services ブログ &lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/how-to-stream-data-from-amazon-dynamodb-aws-lambda-amazon-kinesis-firehose/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://aws.amazon.com/jp/blogs/news/how-to-stream-data-from-amazon-dynamodb-aws-lambda-amazon-kinesis-firehose/&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;2017年のこの記事を参考にしつつ、色々と実現方式も変わっているのでイチから環境構築等を行うメモ。Glue Elastic ViewsがGAになれば置き換わるかもしれない。単純なレプリケーションのみであることに注意。更新、削除の場合はAuroraへのロード方式を変更する必要がある。&lt;/p&gt;
+&lt;h3 id=&#34;dynamodbからauroraへのデータレプリケーション方式について&#34;&gt;DynamoDBからAuroraへのデータレプリケーション方式について&lt;/h3&gt;
+&lt;p&gt;DynamoDBからAuroraへの連携についてはいくつかパターンがあるので適切な方式を選択した方が良い。下記参考。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/stream-data-into-an-aurora-postgresql-database-using-aws-dms-and-amazon-kinesis-data-firehose/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;AWS DMS と Amazon Kinesis Data Firehose を利用した Aurora PostgreSQL データベースへのストリームデータのロード | Amazon Web Services ブログ&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Amazon DynamoDB ストリームを使用して、順序付けされたデータをアプリケーション間でレプリケーションする方法 | Amazon Web Services ブログ&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Amazon Kinesis Firehose Data Transformation with AWS Lambda | AWS Compute Blog&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;今回は&lt;code&gt;①DynamoDB-&amp;gt;②DynamoDB Streams-&amp;gt; ③Amazon Kinesis Data Stream-&amp;gt; ④Amazon Kinesis Firehose-&amp;gt;⑤Lambda-&amp;gt;⑥S3-&amp;gt;⑦Lambda-&amp;gt;⑧Aurora&lt;/code&gt;となる。&lt;/p&gt;
+&lt;p&gt;S3に配置する前段階の⑤のLambdaでストリーミングで流れてくるJSONをCSVにデータ変換を行い、⑥のS3のイベント通知で⑦のLambdaを発火させ、Aurora PostgreSQLにデータロードを行う。&lt;/p&gt;
+&lt;p&gt;⑤Lambdaを挟まずとも④のKinesis FirehoseからS3に対してはデータを送れるが、CSV形式で格納し、データロードをしたかったので⑤のLamdbaを挟むことにした。&lt;/p&gt;
+&lt;h3 id=&#34;dynamodb&#34;&gt;①DynamoDB&lt;/h3&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507213949409&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507213949409_hu23ac353cb49600bc0a48eea5983ede8d_16127_e6cea2b115bf00afc07b484eef9b3ec5.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507213949409_hu23ac353cb49600bc0a48eea5983ede8d_16127_3a45076d723403046c0151c985a8cb16.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507213949409_hu23ac353cb49600bc0a48eea5983ede8d_16127_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507213949409_hu23ac353cb49600bc0a48eea5983ede8d_16127_e6cea2b115bf00afc07b484eef9b3ec5.png&#34;
+               width=&#34;760&#34;
+               height=&#34;42&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;aws dynamodb create-table \
+    --table-name dynamotest \
+    --attribute-definitions \
+      AttributeName=id,AttributeType=S \
+      AttributeName=datetime,AttributeType=S \
+    --key-schema AttributeName=id,KeyType=HASH AttributeName=datetime,KeyType=RANGE \
+    --billing-mode PAY_PER_REQUEST
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;dynamodb-streams&#34;&gt;②DynamoDB Streams&lt;/h3&gt;
+&lt;p&gt;データストリームを有効化する&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507214257374&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214257374_hueaf77025c4d8946b71d650c8ce6930ec_66796_95b812d9a2119d4861bc1df26c9c5613.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214257374_hueaf77025c4d8946b71d650c8ce6930ec_66796_f6c3a6aa419c673e5e05c4b0ee8f2750.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214257374_hueaf77025c4d8946b71d650c8ce6930ec_66796_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507214257374_hueaf77025c4d8946b71d650c8ce6930ec_66796_95b812d9a2119d4861bc1df26c9c5613.png&#34;
+               width=&#34;760&#34;
+               height=&#34;516&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507214151509&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214151509_hu89b540b4f6d631747995a023abf29cbc_56521_34c7072c2e3591a762472ae18e85bfbc.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214151509_hu89b540b4f6d631747995a023abf29cbc_56521_c82914dce8cbcc74f29d7685e1bb29d2.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214151509_hu89b540b4f6d631747995a023abf29cbc_56521_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507214151509_hu89b540b4f6d631747995a023abf29cbc_56521_34c7072c2e3591a762472ae18e85bfbc.png&#34;
+               width=&#34;760&#34;
+               height=&#34;534&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;amazon-kinesis-data-stream&#34;&gt;③Amazon Kinesis Data Stream&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;オンデマンド&lt;/code&gt;、もしくは&lt;code&gt;シャード数の指定&lt;/code&gt;。&lt;code&gt;データ保持期間&lt;/code&gt;等を事前に決めておく。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507214421947&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214421947_hu26c3ab7f1d3802b5269479a0ded5c097_58591_6a3c44d48d2b39153e408b758c056948.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214421947_hu26c3ab7f1d3802b5269479a0ded5c097_58591_48a5f5fe562b51bea03d71e1343acc1b.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214421947_hu26c3ab7f1d3802b5269479a0ded5c097_58591_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507214421947_hu26c3ab7f1d3802b5269479a0ded5c097_58591_6a3c44d48d2b39153e408b758c056948.png&#34;
+               width=&#34;760&#34;
+               height=&#34;311&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507214452638&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214452638_hu0b7d4d3b45d1187c9e7438659c158c81_63743_d278dca6fb57080836e81b5c315e68d6.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214452638_hu0b7d4d3b45d1187c9e7438659c158c81_63743_cfec560647516ce60054de6e594f8027.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507214452638_hu0b7d4d3b45d1187c9e7438659c158c81_63743_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507214452638_hu0b7d4d3b45d1187c9e7438659c158c81_63743_d278dca6fb57080836e81b5c315e68d6.png&#34;
+               width=&#34;760&#34;
+               height=&#34;361&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;amazon-kinesis-firehose&#34;&gt;④Amazon Kinesis Firehose&lt;/h3&gt;
+&lt;p&gt;バックアップの有無やバッファサイズやインターバルは適宜変更した方が良さそう。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215024717&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215024717_hua1492dfaef1154dcac234f043e2dbd3e_61019_05b2a32224e225460575b85bee73f3bf.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215024717_hua1492dfaef1154dcac234f043e2dbd3e_61019_5d8084344b3f8b98207267e3c5ee1b7a.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215024717_hua1492dfaef1154dcac234f043e2dbd3e_61019_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215024717_hua1492dfaef1154dcac234f043e2dbd3e_61019_05b2a32224e225460575b85bee73f3bf.png&#34;
+               width=&#34;759&#34;
+               height=&#34;745&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Transform source records with AWS Lambda&lt;/code&gt;でLamdbaを指定する。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215121697&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215121697_hu3dcf0cca3efe0c4c5afa865061e2ab36_116724_7796e3846fbcc3bf9e25ccedc64177ca.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215121697_hu3dcf0cca3efe0c4c5afa865061e2ab36_116724_77a9afb9f4828e1947d63b6f74044050.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215121697_hu3dcf0cca3efe0c4c5afa865061e2ab36_116724_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215121697_hu3dcf0cca3efe0c4c5afa865061e2ab36_116724_7796e3846fbcc3bf9e25ccedc64177ca.png&#34;
+               width=&#34;760&#34;
+               height=&#34;734&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215152970&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215152970_hud8d29d04e8b439c42745595407b0a300_98818_f6f54a008c150a825f75ccf706f4ea02.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215152970_hud8d29d04e8b439c42745595407b0a300_98818_76cb86559ed9fb51686f7732f3cc199f.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215152970_hud8d29d04e8b439c42745595407b0a300_98818_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215152970_hud8d29d04e8b439c42745595407b0a300_98818_f6f54a008c150a825f75ccf706f4ea02.png&#34;
+               width=&#34;754&#34;
+               height=&#34;733&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215212733&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215212733_hucc2e6f80730089c6677c56c2ca4b3d15_82162_148e5fab44fda065f2b4be7e6fddcc68.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215212733_hucc2e6f80730089c6677c56c2ca4b3d15_82162_ac8b6c36f27922e663e61e07a179ad54.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215212733_hucc2e6f80730089c6677c56c2ca4b3d15_82162_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215212733_hucc2e6f80730089c6677c56c2ca4b3d15_82162_148e5fab44fda065f2b4be7e6fddcc68.png&#34;
+               width=&#34;663&#34;
+               height=&#34;664&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215227709&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215227709_hu671941780ae8b85d7bec0df396f7792d_14634_f0c5371a3db1bd09835f92e851a78c29.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215227709_hu671941780ae8b85d7bec0df396f7792d_14634_349d6489e50b95321fcfcdacd732fd37.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215227709_hu671941780ae8b85d7bec0df396f7792d_14634_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215227709_hu671941780ae8b85d7bec0df396f7792d_14634_f0c5371a3db1bd09835f92e851a78c29.png&#34;
+               width=&#34;660&#34;
+               height=&#34;172&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220507215243982&#34; srcset=&#34;
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215243982_huf82ea1bfca9866080d595a8babc53f3e_91583_6bddde99239a391b920769a1a1a37341.png 400w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215243982_huf82ea1bfca9866080d595a8babc53f3e_91583_336d0cc366e5f05cae3385f28537d259.png 760w,
+               /aws-dynamodb-to-aurora-postgresql-replication/image-20220507215243982_huf82ea1bfca9866080d595a8babc53f3e_91583_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/aws-dynamodb-to-aurora-postgresql-replication/image-20220507215243982_huf82ea1bfca9866080d595a8babc53f3e_91583_6bddde99239a391b920769a1a1a37341.png&#34;
+               width=&#34;663&#34;
+               height=&#34;644&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;lambda&#34;&gt;⑤Lambda&lt;/h3&gt;
+&lt;p&gt;下記ブログの通り&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://zatoima.github.io/aws-dynamodb-to-s3-csv-transform-python-lamdba/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト | my opinion is my own 👋&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;s3&#34;&gt;⑥S3&lt;/h3&gt;
+&lt;p&gt;特に変わったところはなし&lt;/p&gt;
+&lt;h3 id=&#34;lambdaaurora&#34;&gt;⑦Lambda、⑧Aurora&lt;/h3&gt;
+&lt;p&gt;下記ブログの通り&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://zatoima.github.io/aws-aurora-postgres-lambda-s3-event/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード | my opinion is my own 👋&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://zatoima.github.io/aws-aurora-postgres-psycopg2-lambda/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Lambdaからawslambda-psycopg2を使用してAurora PostgreSQLに接続 | my opinion is my own 👋&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>Aurora PostgreSQLでpg_settingsをCSVで出力する</title>
