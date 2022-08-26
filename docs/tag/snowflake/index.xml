@@ -5,12 +5,239 @@
     <link>/tag/snowflake/</link>
       <atom:link href="/tag/snowflake/index.xml" rel="self" type="application/rss+xml" />
     <description>Snowflake</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Fri, 15 Jul 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 25 Aug 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Snowflake</title>
       <link>/tag/snowflake/</link>
     </image>
+    
+    <item>
+      <title>SnowflakeのTime Travel</title>
+      <link>/snowflake-timetravel-summary/</link>
+      <pubDate>Thu, 25 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>/snowflake-timetravel-summary/</guid>
+      <description>&lt;p&gt;SnowPro Core 認定試験ガイドの6.2向けの勉強メモ&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Snowflake 認定資格 | Snowflake 【スノーフレイク】 &lt;a href=&#34;https://www.snowflake.com/certifications/?lang=ja&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.snowflake.com/certifications/?lang=ja&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;6.2 Snowflakeによる継続的なデータ保護の概要を説明する。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Time Travel&lt;/li&gt;
+&lt;li&gt;Fail Safe&lt;/li&gt;
+&lt;li&gt;データ暗号化&lt;/li&gt;
+&lt;li&gt;クローニング&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;time-travelの概要&#34;&gt;Time Travelの概要&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;テーブル、スキーマ、データベース、について定義された期間の間の任意の時点で履歴データにアクセスできる機能。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;通常、テーブルをDROPした場合、バックアップから戻すことが必要となるが、Time Travel機能を使用することで簡単に復元することが出来る&lt;/li&gt;
+&lt;li&gt;テーブルだけではなく、スキーマやデータベース単位と広い論理範囲で戻すことが出来る&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;エディションによる戻せる期間の差異&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Standard：最大1日&lt;/li&gt;
+&lt;li&gt;Enterprise以上：最大90日&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;テーブルの種類による戻せる期間の差異&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Transient及びTemporaryテーブルは最大1日&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;設定方法&#34;&gt;設定方法&lt;/h3&gt;
+&lt;p&gt;設定値の確認&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SHOW PARAMETERS like &#39;%DATA_RETENTION_TIME_IN_DAYS%&#39; in account;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;アカウントレベルの設定（※危険）&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;ALTER ACCOUNT SET DATA_RETENTION_TIME_IN_DAYS=5;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;テーブル単位の設定&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE TABLE my_table (c1 int) SET DATA_RETENTION_TIME_IN_DAYS=90
+ALTER TABLE my_table SET DATA_RETENTION_TIME_IN_DAYS=30
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;time-travelの実行方法&#34;&gt;Time Travelの実行方法&lt;/h3&gt;
+&lt;p&gt;復元、クエリ、クローンの3種類がある&lt;/p&gt;
+&lt;h4 id=&#34;復元&#34;&gt;復元&lt;/h4&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;-- データベースの復元
+UNDROP DATABASE &amp;lt;name&amp;gt;;
+-- スキーマの復元
+UNDROP SCHEMA &amp;lt;name&amp;gt;;
+-- テーブルの復元
+UNDROP TABLE &amp;lt;name&amp;gt;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;クエリ&#34;&gt;クエリ&lt;/h4&gt;
+&lt;p&gt;標準時からマイナス7時間とした上で、2015年5月1日16時20分時点のmy_tableのデータを取得する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM my_table AT(timestamp =&amp;gt; &#39;Fri, 01 May 2015 16:20:00 -0700&#39;::timestamp_tz);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;10分前の時点のmy_tableのデータを取得する。offsetには秒単位で入れるため、「60秒×10」で10分を表す&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM my_table AT((offset =&amp;gt; -60*10);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;指定したクエリIDのクエリが実行される前の状態の、my_tableのデータを取得する&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;SELECT * FROM my_table BEFORE(statement =&amp;gt; &#39;&amp;lt;クエリID&amp;gt;&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;クローニング&#34;&gt;クローニング&lt;/h4&gt;
+&lt;p&gt;指定されたタイムスタンプで表される日付と時刻のテーブルのクローンを作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create table restored_table clone my_table
+  at(timestamp =&amp;gt; &#39;Sat, 09 May 2015 01:01:00 +0300&#39;::timestamp_tz);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;現在時刻の1時間前に存在していたスキーマとそのすべてのオブジェクトのクローンを作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create schema restored_schema clone my_schema at(offset =&amp;gt; -3600);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;指定されたステートメントの完了前に存在していたデータベースとそのすべてのオブジェクトのクローンを作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;create database restored_db clone my_db
+  before(statement =&amp;gt; &#39;8e5d0ca9-005e-44e6-b858-a8f5b37c5726&#39;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;time-travelの使用量について&#34;&gt;Time Travelの使用量について&lt;/h4&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/sql-reference/info-schema/table_storage_metrics.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;TABLE_STORAGE_METRICS ビュー — Snowflake Documentation&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;上記ビューから確認が可能&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;select
+    TABLE_CATALOG,
+    TABLE_NAME,
+    ((ACTIVE_BYTES / 1024) / 1024) / 1024 as storage_usage_gb,
+    ((TIME_TRAVEL_BYTES / 1024) / 1024) / 1024 as timetravel_usage_gb
+from
+    &amp;quot;INFORMATION_SCHEMA&amp;quot;.table_storage_metrics
+where
+    TABLE_NAME in(&#39;T1&#39;)
+;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;参考&#34;&gt;参考&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/data-time-travel.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Time Travelの理解と使用 — Snowflake Documentation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/data-cdp-storage-costs.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Time TravelおよびFail-safeのストレージコスト — Snowflake Documentation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.classmethod.jp/articles/snowflake-timetravel-useful-command/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Snowflakeのタイムトラベル関連でよく使いそうなコマンドを試してみた #SnowflakeDB | DevelopersIO&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://dev.classmethod.jp/articles/snowflake-time-travel/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Snowflakeのタイムトラベル機能であの頃（の状態のデータ）に戻ろう | DevelopersIO&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>SnowflakeのFail-safe</title>
+      <link>/snowflake-failsafe-summary/</link>
+      <pubDate>Sat, 20 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>/snowflake-failsafe-summary/</guid>
+      <description>&lt;p&gt;SnowPro Core 認定試験ガイドの6.2向けの勉強メモ&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Snowflake 認定資格 | Snowflake 【スノーフレイク】 &lt;a href=&#34;https://www.snowflake.com/certifications/?lang=ja&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://www.snowflake.com/certifications/?lang=ja&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;6.2 Snowflakeによる継続的なデータ保護の概要を説明する。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Time Travel&lt;/li&gt;
+&lt;li&gt;Fail Safe&lt;/li&gt;
+&lt;li&gt;データ暗号化&lt;/li&gt;
+&lt;li&gt;クローニング&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;概要&#34;&gt;概要&lt;/h3&gt;
+&lt;p&gt;Time Travel保持期間が終了した直後にFail-safeにデータが移行される。Snowflakeによって履歴データを回復できる可能性のある期間（構成不可能）は7日間となる。&amp;ldquo;可能性のある期間&amp;quot;というメッセージがマニュアルにある通り、ベストエフォート方式で提供されるデータ回復サービスとなる。&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img src=&#34;https://docs.snowflake.com/ja/_images/cdp-lifecycle-fs.png&#34; alt=&#34;Fail-safe in Continuous Data Protection lifecycle&#34; loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;設定方法&#34;&gt;設定方法&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;特になし&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Time Travelのようにエディションによって条件が分かれているとかではない&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;使用量の確認&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select
+    TABLE_CATALOG,
+    TABLE_NAME,
+    ((ACTIVE_BYTES / 1024) / 1024) / 1024 as storage_usage_gb,
+    ((FAILSAFE_BYTES / 1024) / 1024) / 1024 as failsage_usage_gb,
+    ((TIME_TRAVEL_BYTES / 1024) / 1024) / 1024 as timetravel_usage_gb
+from
+    &amp;quot;INFORMATION_SCHEMA&amp;quot;.table_storage_metrics
+where
+    TABLE_NAME in(&#39;T1&#39;)
+;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;使用量はコンソールからも確認できる&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220818161355147&#34; srcset=&#34;
+               /snowflake-failsafe-summary/image-20220818161355147_hu404e7011657ae9b249b45b17a6387993_68840_5748dad92bfefc3a376bf84d98b77a54.png 400w,
+               /snowflake-failsafe-summary/image-20220818161355147_hu404e7011657ae9b249b45b17a6387993_68840_843e0567430993f506eb138a94e90967.png 760w,
+               /snowflake-failsafe-summary/image-20220818161355147_hu404e7011657ae9b249b45b17a6387993_68840_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/snowflake-failsafe-summary/image-20220818161355147_hu404e7011657ae9b249b45b17a6387993_68840_5748dad92bfefc3a376bf84d98b77a54.png&#34;
+               width=&#34;760&#34;
+               height=&#34;427&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;注意事項&#34;&gt;注意事項&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;完了するまでに数時間から数日かかる場合がある&lt;/li&gt;
+&lt;li&gt;サポートに連絡して復旧してもらう必要がある&lt;/li&gt;
+&lt;li&gt;ベストエフォート方式で提供されるデータ回復サービス
+&lt;ul&gt;
+&lt;li&gt;Fail-safeは、Time Travel保持期間が終了した後に履歴データにアクセスする手段としては提供されていません&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;いつのまにかFailsafe用の領域が溜まりがちなのでオペレーションやテーブルの種類に注意が必要だな、と思った。何も考えずにいるとテーブル作成→テストデータ生成→DropでFailsafe用の領域がたくさんになってしまうという未来が見える。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;参照&#34;&gt;参照&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/data-failsafe.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Fail-safeの理解と表示 — Snowflake Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>snowsqlのインストール</title>
