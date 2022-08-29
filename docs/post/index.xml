@@ -5,12 +5,269 @@
     <link>/post/</link>
       <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 27 Aug 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Mon, 29 Aug 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>/post/</link>
     </image>
+    
+    <item>
+      <title>S3(外部ステージ)からSnowflakeにデータロードする</title>
+      <link>/snowflake-dataload-from-s3-to-snowflake/</link>
+      <pubDate>Mon, 29 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>/snowflake-dataload-from-s3-to-snowflake/</guid>
+      <description>&lt;p&gt;S3(外部ステージ)からSnowflakeにデータロードしてみる。&lt;/p&gt;
+&lt;h3 id=&#34;iamポリシーの作成&#34;&gt;IAMポリシーの作成&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;sf_policy&lt;/code&gt;として作成&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+    &amp;quot;Version&amp;quot;: &amp;quot;2012-10-17&amp;quot;,
+    &amp;quot;Statement&amp;quot;: [
+        {
+            &amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+            &amp;quot;Action&amp;quot;: [
+                &amp;quot;s3:PutObject&amp;quot;,
+                &amp;quot;s3:GetObject&amp;quot;,
+                &amp;quot;s3:GetObjectVersion&amp;quot;,
+                &amp;quot;s3:DeleteObject&amp;quot;,
+                &amp;quot;s3:DeleteObjectVersion&amp;quot;
+            ],
+            &amp;quot;Resource&amp;quot;: &amp;quot;arn:aws:s3:::snowflake-bucket-work/*&amp;quot;
+        },
+        {
+            &amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+            &amp;quot;Action&amp;quot;: [
+                &amp;quot;s3:ListBucket&amp;quot;,
+                &amp;quot;s3:GetBucketLocation&amp;quot;
+            ],
+            &amp;quot;Resource&amp;quot;: &amp;quot;arn:aws:s3:::snowflake-bucket-work&amp;quot;
+        }
+    ]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;iamロールの作成&#34;&gt;IAMロールの作成&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;sf_role&lt;/code&gt;として作成&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;AWSアカウントを選択&lt;/li&gt;
+&lt;li&gt;別のAWSアカウントを選択して自分の AWS アカウントID を一時的に入力
+&lt;ul&gt;
+&lt;li&gt;なお、後で信頼関係を変更し、Snowflakeへのアクセスを許可する&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;外部IDを要求する&amp;quot;をクリックしてダミーのIDを入力しておく
+&lt;ul&gt;
+&lt;li&gt;後で信頼関係を変更し、Snowflakeステージの外部 ID を指定します。AWS リソース（つまり、S3）へのアクセスをサードパーティ（つまり、Snowflake）に対して許可するには、外部 ID が必要&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;上記で作成した&lt;code&gt;sf_policy&lt;/code&gt;をアタッチする&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220824142339311&#34; srcset=&#34;
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142339311_huff07258be946aed069b0f7d760020029_138227_c41b31a03110f8c986210dda29a6435f.png 400w,
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142339311_huff07258be946aed069b0f7d760020029_138227_4b383fa6f4056ee0e7307b18669d9490.png 760w,
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142339311_huff07258be946aed069b0f7d760020029_138227_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/snowflake-dataload-from-s3-to-snowflake/image-20220824142339311_huff07258be946aed069b0f7d760020029_138227_c41b31a03110f8c986210dda29a6435f.png&#34;
+               width=&#34;760&#34;
+               height=&#34;381&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220824142551527&#34; srcset=&#34;
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142551527_hue63032b973e4327ff30daf59f992b353_54743_062d0bc1580c86a47d0f20ccb8b10100.png 400w,
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142551527_hue63032b973e4327ff30daf59f992b353_54743_6cceb8c9c6a0e3132f5610cbc6d4dc5a.png 760w,
+               /snowflake-dataload-from-s3-to-snowflake/image-20220824142551527_hue63032b973e4327ff30daf59f992b353_54743_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/snowflake-dataload-from-s3-to-snowflake/image-20220824142551527_hue63032b973e4327ff30daf59f992b353_54743_062d0bc1580c86a47d0f20ccb8b10100.png&#34;
+               width=&#34;760&#34;
+               height=&#34;262&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;h3 id=&#34;snowflake側でクラウドストレージ統合を作成&#34;&gt;Snowflake側でクラウドストレージ統合を作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE STORAGE INTEGRATION snowflake_and_s3_integration
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = S3
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = &#39;arn:aws:iam::&amp;lt;AWSアカウント&amp;gt;:role/sf_role&#39;
+  STORAGE_ALLOWED_LOCATIONS = (&#39;s3://snowflake-bucket-work/&#39;)
+;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;※本コマンドを実行できるのはアカウント管理者（ ACCOUNTADMIN ロールを持つユーザー）またはグローバル CREATE INTEGRATION 権限を持つロールのみ&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;CREATE STORAGE INTEGRATION snowflake_and_s3_integration
+                                   TYPE = EXTERNAL_STAGE
+                                   STORAGE_PROVIDER = S3
+                                   ENABLED = TRUE
+                                   STORAGE_AWS_ROLE_ARN = &#39;arn:aws:iam::&amp;lt;AWSアカウント&amp;gt;:role/sf_role&#39;
+                                   STORAGE_ALLOWED_LOCATIONS = (&#39;s3://snowflake-bucket-work/&#39;)
+                                 ;
++----------------------------------------------------------------+              
+| status                                                         |
+|----------------------------------------------------------------|
+| Integration SNOWFLAKE_AND_S3_INTEGRATION successfully created. |
++----------------------------------------------------------------+
+1 Row(s) produced. Time Elapsed: 1.015s
+zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;desc integration snowflake_and_s3_integration;
++---------------------------+---------------+------------------------------------------------+------------------+
+| property                  | property_type | property_value                                 | property_default |
+|---------------------------+---------------+------------------------------------------------+------------------|
+| ENABLED                   | Boolean       | true                                           | false            |
+| STORAGE_PROVIDER          | String        | S3                                             |                  |
+| STORAGE_ALLOWED_LOCATIONS | List          | s3://snowflake-bucket-work/                    | []               |
+| STORAGE_BLOCKED_LOCATIONS | List          |                                                | []               |
+| STORAGE_AWS_IAM_USER_ARN  | String        | arn:aws:iam::xxxxxxxxx:user/qvl6-s-jpss8756 |                  |
+| STORAGE_AWS_ROLE_ARN      | String        | arn:aws:iam::&amp;lt;AWSアカウント&amp;gt;:role/sf_role         |                  |
+| STORAGE_AWS_EXTERNAL_ID   | String        | &amp;lt;Snowflakeアカウント&amp;gt;_SFCRole=3_ZGmPmtzjlkklddeysL+zqym2qW8= |                  |
+| COMMENT                   | String        |                                                |                  |
++---------------------------+---------------+------------------------------------------------+------------------+
+8 Row(s) produced. Time Elapsed: 0.713s
+zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;STORAGE_AWS_IAM_USER_ARN&lt;/code&gt;と&lt;code&gt;STORAGE_AWS_EXTERNAL_ID&lt;/code&gt;の値を控えておく&lt;/p&gt;
+&lt;h3 id=&#34;iamロールの信頼関係の修正&#34;&gt;IAMロールの信頼関係の修正&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-json&#34;&gt;{
+	&amp;quot;Version&amp;quot;: &amp;quot;2012-10-17&amp;quot;,
+	&amp;quot;Statement&amp;quot;: [
+		{
+			&amp;quot;Effect&amp;quot;: &amp;quot;Allow&amp;quot;,
+			&amp;quot;Principal&amp;quot;: {
+				&amp;quot;AWS&amp;quot;: &amp;quot;&amp;lt;STORAGE_AWS_IAM_USER_ARN&amp;gt;&amp;quot;
+			},
+			&amp;quot;Action&amp;quot;: &amp;quot;sts:AssumeRole&amp;quot;,
+			&amp;quot;Condition&amp;quot;: {
+				&amp;quot;StringEquals&amp;quot;: {
+					&amp;quot;sts:ExternalId&amp;quot;: &amp;quot;&amp;lt;STORAGE_AWS_EXTERNAL_ID&amp;gt;&amp;quot;
+				}
+			}
+		}
+	]
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;外部ステージの作成&#34;&gt;外部ステージの作成&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;CREATE STAGE s3_ext_stage STORAGE_INTEGRATION = snowflake_and_s3_integration URL = &#39;s3://snowflake-bucket-work/&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;CREATE STAGE s3_ext_stage STORAGE_INTEGRATION = snowflake_and_s3_integration URL = &#39;s3://snowflake-bucket-work/&#39;;
++-----------------------------------------------+                               
+| status                                        |
+|-----------------------------------------------|
+| Stage area S3_EXT_STAGE successfully created. |
++-----------------------------------------------+
+zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;show stages;
++-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+| created_on                    | name         | database_name | schema_name | url                         | has_credentials | has_encryption_key | owner        | comment | region         | type     | cloud | notification_channel | storage_integration          |
+|-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------|
+| 2022-08-23 22:45:45.523 -0700 | S3_EXT_STAGE | TESTDB        | PUBLIC      | s3://snowflake-bucket-work/ | N               | N                  | ACCOUNTADMIN |         | ap-northeast-1 | EXTERNAL | AWS   | NULL                 | SNOWFLAKE_AND_S3_INTEGRATION |
++-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+1 Row(s) produced. Time Elapsed: 0.098s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&#34;データロード&#34;&gt;データロード&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;copy into t1 from @s3_ext_stage pattern=&#39;test.csv&#39;;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;copy into t1 from @s3_ext_stage pattern=&#39;test.csv&#39;;
++-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+| file                                | status | rows_parsed | rows_loaded | error_limit | errors_seen | first_error | first_error_line | first_error_character | first_error_column_name |
+|-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------|
+| s3://snowflake-bucket-work/test.csv | LOADED |          10 |          10 |           1 |           0 | NULL        |             NULL |                  NULL | NULL                    |
++-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+1 Row(s) produced. Time Elapsed: 2.675s
+zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;select * from t1;
++---+--------+--------+----+-------------------------------+                    
+| A | B      | C      |  D | E                             |
+|---+--------+--------+----+-------------------------------|
+| 0 | 111111 | 222222 |  1 | 2022-08-23 22:47:44.214 -0700 |
+| 1 | 111111 | 222222 |  2 | 2022-08-23 22:47:44.214 -0700 |
+| 2 | 111111 | 222222 |  3 | 2022-08-23 22:47:44.214 -0700 |
+| 3 | 111111 | 222222 |  4 | 2022-08-23 22:47:44.214 -0700 |
+| 4 | 111111 | 222222 |  5 | 2022-08-23 22:47:44.214 -0700 |
+| 5 | 111111 | 222222 |  6 | 2022-08-23 22:47:44.214 -0700 |
+| 6 | 111111 | 222222 |  7 | 2022-08-23 22:47:44.214 -0700 |
+| 7 | 111111 | 222222 |  8 | 2022-08-23 22:47:44.214 -0700 |
+| 8 | 111111 | 222222 |  9 | 2022-08-23 22:47:44.214 -0700 |
+| 9 | 111111 | 222222 | 10 | 2022-08-23 22:47:44.214 -0700 |
++---+--------+--------+----+-------------------------------+
+10 Row(s) produced. Time Elapsed: 0.198s
+zatoima#COMPUTE_WH@TESTDB.PUBLIC&amp;gt;
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id=&#34;ロード時のオプション&#34;&gt;ロード時のオプション&lt;/h4&gt;
+&lt;p&gt;ON_ERRORオプション&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;CONTINUE&lt;/th&gt;
+&lt;th&gt;エラーが見つかった場合は、ファイルのロードを続行します。エラーが見つかった行はロードされません。&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;SKIP_FILE&lt;/td&gt;
+&lt;td&gt;エラーが見つかった場合はファイルをスキップします。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SKIP_FILE_数値&lt;/td&gt;
+&lt;td&gt;ファイル内で見つかったエラー行の数が指定された数以上の場合は、ファイルをスキップします。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SKIP_FILE_数値%&lt;/td&gt;
+&lt;td&gt;ファイル内で見つかったエラー行の割合が指定された割合を超えた場合は、ファイルをスキップします。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ABORT_STATEMENT&lt;/td&gt;
+&lt;td&gt;データファイルでエラーが見つかった場合は、ロード操作を中止します。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/sql-reference/sql/copy-into-table.html#copy-options-copyoptions&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;COPY INTO &amp;lt;テーブル&amp;gt; — Snowflake Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;データアンロード&#34;&gt;データアンロード&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;copy into @s3_ext_stage/unload/ from t1;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;デフォルトでは圧縮された状態でアンロードされる。&lt;/p&gt;
+&lt;h3 id=&#34;参照&#34;&gt;参照&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/data-load-s3-config-storage-integration.html&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;オプション1：Amazon S3にアクセスするためのSnowflakeストレージ統合の構成 — Snowflake Documentation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;https://docs.snowflake.com/ja/user-guide/data-unload-s3.html#unloading-into-amazon-s3&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Amazon S3へのアンロード — Snowflake Documentation&lt;/a&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>SnowPro Core認定の試験ガイド対策</title>
