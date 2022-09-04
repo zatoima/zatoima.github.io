@@ -28,6 +28,8 @@ image:
 
 ### 該当ページ
 
+IAMユーザにAdministratorAccess権限が付与されていてもコスト管理のページは見れない模様
+
 > [アクセス許可の管理の概要 \- AWS 請求](https://docs.aws.amazon.com/ja_jp/awsaccountbilling/latest/aboutv2/control-access-billing.html)
 >
 > IAM アクセスをアクティベートするだけでは、これらの請求ンソールページに必要な許可は IAM ユーザーとロールに付与されません。IAM アクセスのアクティベートに加えて、必要な IAM ポリシーをこれらのユーザーまたはロールにアタッチする必要があります。詳細については、「[AWS Billing でアイデンティティベースのポリシー (IAM ポリシー) を使用する](https://docs.aws.amazon.com/ja_jp/awsaccountbilling/latest/aboutv2/billing-permissions-ref.html)」を参照してください。
