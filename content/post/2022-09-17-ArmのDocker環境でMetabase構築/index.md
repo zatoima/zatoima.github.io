@@ -162,7 +162,7 @@ d15ea2032f2d        docker_metabase           "/app/run_metabase.sh"   5 seconds
 
 - 接続確認
 
-> http://<Public IP>:3000/auth/login
+> http://"Public IP":3000/auth/login
 
 ![image-20220917100318190](image-20220917100318190.png)
 
