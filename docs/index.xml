@@ -5,12 +5,192 @@
     <link>/</link>
       <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <description>my opinion is my own</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 15 Sep 2022 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 17 Sep 2022 00:00:00 +0000</lastBuildDate>
     <image>
       <url>/media/icon_hu0b7a4cb9992c9ac0e91bd28ffd38dd00_9727_512x512_fill_lanczos_center_3.png</url>
       <title>my opinion is my own</title>
       <link>/</link>
     </image>
+    
+    <item>
+      <title>ArmのDocker環境でMetabase構築</title>
+      <link>/docker-metabase-arm-postgresql-env/</link>
+      <pubDate>Sat, 17 Sep 2022 00:00:00 +0000</pubDate>
+      <guid>/docker-metabase-arm-postgresql-env/</guid>
+      <description>&lt;p&gt;以前、MetabaseをEC2のt2.microで構築したのだが、メモリ系が辛いので移行を検討。そして、metabaseとpostgresをサクサクと動かしたかったので、Oracle Cloudのalways free環境（4OCPU、24GB、Arm）を使ってみる。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;シェイプの構成&lt;/p&gt;
+&lt;p&gt;シェイプ: VM.Standard.A1.Flex&lt;/p&gt;
+&lt;p&gt;OCPU数: 4&lt;/p&gt;
+&lt;p&gt;ネットワーク帯域幅(Gbps): 4&lt;/p&gt;
+&lt;p&gt;メモリー(GB): 24&lt;/p&gt;
+&lt;p&gt;ローカル・ディスク: ブロック・ストレージのみ&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[opc@oci-arm metabase]$ cat /etc/os-release 
+NAME=&amp;quot;Oracle Linux Server&amp;quot;
+VERSION=&amp;quot;7.9&amp;quot;
+ID=&amp;quot;ol&amp;quot;
+ID_LIKE=&amp;quot;fedora&amp;quot;
+VARIANT=&amp;quot;Server&amp;quot;
+VARIANT_ID=&amp;quot;server&amp;quot;
+VERSION_ID=&amp;quot;7.9&amp;quot;
+PRETTY_NAME=&amp;quot;Oracle Linux Server 7.9&amp;quot;
+ANSI_COLOR=&amp;quot;0;31&amp;quot;
+CPE_NAME=&amp;quot;cpe:/o:oracle:linux:7:9:server&amp;quot;
+HOME_URL=&amp;quot;https://linux.oracle.com/&amp;quot;
+BUG_REPORT_URL=&amp;quot;https://bugzilla.oracle.com/&amp;quot;
+
+ORACLE_BUGZILLA_PRODUCT=&amp;quot;Oracle Linux 7&amp;quot;
+ORACLE_BUGZILLA_PRODUCT_VERSION=7.9
+ORACLE_SUPPORT_PRODUCT=&amp;quot;Oracle Linux&amp;quot;
+ORACLE_SUPPORT_PRODUCT_VERSION=7.9
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Docker&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[opc@oci-arm metabase]$ docker-compose -v
+docker-compose version 1.29.2, build unknown
+[opc@oci-arm metabase]$ docker -v
+Docker version 19.03.11-ol, build 9bb540d
+[opc@oci-arm metabase]$ 
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ディレクトリ構造&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[opc@oci-arm docker]$ tree
+.
+├── docker-compose.yaml
+├── metabase
+│   ├── data
+│   └── Dockerfile
+└── postgres
+    ├── data
+    └── init
+        └── create_db.sql
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;docker-compose.yaml&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;version: &#39;3&#39;
+
+services:
+  metabase:
+    build: ./metabase
+    container_name: metabase
+    ports:
+      - 3000:3000
+    volumes:
+      - ./metabase/data:/metabase-data
+    environment:
+      - MB_DB_FILE=/metabase-data/metabase.db
+
+  postgres:
+    image: arm32v7/postgres:latest
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;metabaseのDockerfile&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Armなのですんなりとはいかなかった。下記のgithubの記載を参考に。リンク先のDockerfileではubuntuのバージョンが古く、apt-getが動作しなかったので、バージョンを最新にした。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/metabase/metabase/issues/13119#issuecomment-1000350647&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;https://github.com/metabase/metabase/issues/13119#issuecomment-1000350647&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;FROM ubuntu:latest
+
+ENV FC_LANG en-US LC_CTYPE en_US.UTF-8
+
+# dependencies
+RUN apt-get update -yq &amp;amp;&amp;amp; apt-get install -yq bash fonts-dejavu-core fonts-dejavu-extra fontconfig curl openjdk-11-jre-headless &amp;amp;&amp;amp; \
+    apt-get clean &amp;amp;&amp;amp; \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/ &amp;amp;&amp;amp; \
+    mkdir -p /app/certs &amp;amp;&amp;amp; \
+    curl https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem -o /app/certs/rds-combined-ca-bundle.pem  &amp;amp;&amp;amp; \
+    keytool -noprompt -import -trustcacerts -alias aws-rds -file /app/certs/rds-combined-ca-bundle.pem -keystore /etc/ssl/certs/java/cacerts -keypass changeit -storepass changeit &amp;amp;&amp;amp; \
+    curl https://cacerts.digicert.com/DigiCertGlobalRootG2.crt.pem -o /app/certs/DigiCertGlobalRootG2.crt.pem  &amp;amp;&amp;amp; \
+    keytool -noprompt -import -trustcacerts -alias azure-cert -file /app/certs/DigiCertGlobalRootG2.crt.pem -keystore /etc/ssl/certs/java/cacerts -keypass changeit -storepass changeit &amp;amp;&amp;amp; \
+    mkdir -p /plugins &amp;amp;&amp;amp; chmod a+rwx /plugins &amp;amp;&amp;amp; \
+    useradd --shell /bin/bash metabase
+
+
+WORKDIR /app
+
+# copy app from the offical image
+COPY --from=metabase/metabase:latest /app /app
+
+RUN chown -R metabase /app
+
+USER metabase
+# expose our default runtime port
+EXPOSE 3000
+
+# run it
+ENTRYPOINT [&amp;quot;/app/run_metabase.sh&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;docker-compose&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[opc@oci-arm metabase]$ docker-compose up -d
+Creating network &amp;quot;docker_default&amp;quot; with the default driver
+Creating docker_postgres_1 ... done
+Creating metabase          ... done
+[opc@oci-arm metabase]$ docker ps
+CONTAINER ID        IMAGE                     COMMAND                  CREATED             STATUS              PORTS                    NAMES
+c74acd420716        arm32v7/postgres:latest   &amp;quot;docker-entrypoint.s…&amp;quot;   5 seconds ago       Up 4 seconds        0.0.0.0:5432-&amp;gt;5432/tcp   docker_postgres_1
+d15ea2032f2d        docker_metabase           &amp;quot;/app/run_metabase.sh&amp;quot;   5 seconds ago       Up 4 seconds        0.0.0.0:3000-&amp;gt;3000/tcp   metabase
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;接続確認&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;http://&lt;Public IP&gt;:3000/auth/login&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;figure  &gt;
+  &lt;div class=&#34;d-flex justify-content-center&#34;&gt;
+    &lt;div class=&#34;w-100&#34; &gt;&lt;img alt=&#34;image-20220917100318190&#34; srcset=&#34;
+               /docker-metabase-arm-postgresql-env/image-20220917100318190_hu9332ac48107a16580d941f01c8381864_29871_e23457c0c4ebeb5621c29266d2fa9b89.png 400w,
+               /docker-metabase-arm-postgresql-env/image-20220917100318190_hu9332ac48107a16580d941f01c8381864_29871_df378df812f5ae6ce2db9031cfbea0e7.png 760w,
+               /docker-metabase-arm-postgresql-env/image-20220917100318190_hu9332ac48107a16580d941f01c8381864_29871_1200x1200_fit_lanczos_3.png 1200w&#34;
+               src=&#34;/docker-metabase-arm-postgresql-env/image-20220917100318190_hu9332ac48107a16580d941f01c8381864_29871_e23457c0c4ebeb5621c29266d2fa9b89.png&#34;
+               width=&#34;760&#34;
+               height=&#34;734&#34;
+               loading=&#34;lazy&#34; data-zoomable /&gt;&lt;/div&gt;
+  &lt;/div&gt;&lt;/figure&gt;
+&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;PostgreSQLの設定変更&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;postgresql.conf&lt;/code&gt;でパラメータ変更&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;[root@oci-arm data]# grep &amp;quot;share&amp;quot; postgresql.conf
+shared_buffers = 2048MB			# min 128kB
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class=&#34;language-sql&#34;&gt;metabase=# show shared_buffers;
+ shared_buffers 
+----------------
+ 2GB
+(1 row)
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>AWSのエンコードされたエラーメッセージを見る方法</title>
