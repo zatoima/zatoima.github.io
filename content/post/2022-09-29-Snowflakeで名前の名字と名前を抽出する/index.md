@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Snowflakeで名前の名字と名前を抽出する"
+title: "Snowflakeで名字と名前を抽出する(POSITION関数)"
 subtitle: ""
 summary: " "
 tags: ["Snowflake","SQL"]
