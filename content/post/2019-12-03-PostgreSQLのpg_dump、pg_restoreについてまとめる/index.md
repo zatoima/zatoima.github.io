@@ -162,6 +162,8 @@ pg_restore -v -h aurorapostgresdb.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U
 pg_restore -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -j 8 -d tpcc tpcc.dump
 ```
 
+
+
 ## 参考
 
 > pg_dump [https://www.postgresql.jp/document/10/html/app-pgdump.html](https://www.postgresql.jp/document/10/html/app-pgdump.html)
