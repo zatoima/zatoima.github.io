@@ -154,6 +154,8 @@ sudo systemctl enable docker
 
 - [Docker Compose CLI プラグインのインストール — Docker\-docs\-ja 20\.10 ドキュメント](https://docs.docker.jp/compose/install/compose-plugin.html#compose-install-the-plugin-manually)
 
+この環境はarmなのでaarch64のバイナリを取得しているが、intel系の場合はここを別に変える必要あり。
+
 ```
 curl -SL https://github.com/docker/compose/releases/download/v2.11.2/docker-compose-linux-aarch64 -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
