@@ -29,7 +29,7 @@ image:
 ### スクリプト実行環境
 
 ```sh
-jimazato@M1MBA snowflake_benchmark % sw_vers
+zatoima@M1MBA snowflake_benchmark % sw_vers
 ProductName:		macOS
 ProductVersion:		13.0
 BuildVersion:		22A380
@@ -106,7 +106,7 @@ pip install snowflake.connector,logzero
 
 ### 下記の通りファイルを配置する
 ```sh
-jimazato@M1MBA snowflake_benchmark % tree
+zatoima@M1MBA snowflake_benchmark % tree
 .
 ├── tpch.py
 └── tpch.sql
@@ -875,7 +875,7 @@ python3 tpch.py
 `results.txt`に出力される
 
 ```bash
-jimazato@M1MBA snowflake_benchmark % cat results.txt
+zatoima@M1MBA snowflake_benchmark % cat results.txt
 Test	Time
 TPC-H 1	113.73667
 TPC-H 2	99.42642
