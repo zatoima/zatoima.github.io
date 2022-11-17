@@ -193,9 +193,8 @@ https://www.snowflake.com/certifications/?lang=ja
 - Materialized Views, Views and Secure Views
 - Staging layers and tables
   - [Loading Data into Snowflake — Snowflake Documentation](https://docs.snowflake.com/en/user-guide-data-load.html)
-  - [COPY INTO <table> — Snowflake Documentation](https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html#optional-parameters)
   - [Unloading Data from Snowflake — Snowflake Documentation](https://docs.snowflake.com/en/user-guide-data-unload.html)
-
+  
 - Querying semi-structured data
   - [Semi\-structured Data — Snowflake Documentation](https://docs.snowflake.com/en/user-guide/semistructured-concepts.html)
   - [Semi\-structured Data Types — Snowflake Documentation](https://docs.snowflake.com/en/sql-reference/data-types-semistructured.html)
@@ -276,3 +275,6 @@ https://www.snowflake.com/certifications/?lang=ja
 - [Automating Data Pipelines to Drive Marketing Analytics with Snowflake & Fivetran](https://quickstarts.snowflake.com/guide/vhol_fivetran/index.html?index=..%2F..index#0)
 - [Building a Data Application](https://quickstarts.snowflake.com/guide/data_app/index.html?index=..%2F..index#0)
 - [DevOps: Database Change Management with schemachange and GitHub](https://quickstarts.snowflake.com/guide/devops_dcm_schemachange_github/index.html?index=..%2F..index#0)
+
+
+
