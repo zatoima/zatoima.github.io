@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "本ブログへのアクセス数メモ 202210月まで"
+title: "本ブログへのアクセス数メモ 2022年10月"
 subtitle: ""
 summary: " "
 tags: ["Hugo"]
