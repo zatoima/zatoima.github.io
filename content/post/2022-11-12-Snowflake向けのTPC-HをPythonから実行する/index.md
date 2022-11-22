@@ -24,6 +24,11 @@ image:
 
 この[Githubのスクリプト](https://github.com/SatoriCyber/snowflake-tpch-timing)を参考にしつつ動くようにしました。
 
+### 参考資料
+
+- TPC BENCHMARKTM H https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-h_v3.0.1.pdf
+- TPC Download Current Specs/Source https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp?utm_source=pocket_saves
+
 ## 事前準備
 
 ### スクリプト実行環境
