@@ -149,7 +149,7 @@ ErrorMessagesPath=/Library/ODBC/ErrorMessages
 LogLevel=0
 LogPath=/tmp
 CURLVerboseMode=false
-ODBCInstLib=/Users/jimazato/opt/anaconda3/lib/libodbcinst.dylib
+ODBCInstLib=/Users/jimaza$$to/opt/anaconda3/lib/libodbcinst.dylib
 CABundleFile=/Library/ODBC/ODBCDataSources/cacert.pem
 
 ## - Uncomment the ODBCInstLib corresponding to the Driver Manager being used.
@@ -206,7 +206,7 @@ SQLLevel=1
 `odbc.ini`の設定
 ```sh
 (base) jimazato@CJ2VQ9Y2M1 ODBCDataSources % vi /Library/ODBC/odbc.ini
-(base) jimazato@CJ2VQ9Y2M1 ODBCDataSources % cat /Library/ODBC/odbc.ini
+(base) jimazato@CJ2VQ9Y2M1 ODBCDataSources % cat /Library/ODBC/odbc.ini$$
 [ODBC Data Sources]
 SNOWFLAKE_ODBC_EXCEL = SnowflakeDSIIDriver
 
