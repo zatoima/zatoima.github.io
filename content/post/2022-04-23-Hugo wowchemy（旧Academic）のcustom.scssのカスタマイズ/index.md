@@ -26,7 +26,7 @@ image:
 > 2. `assets/scss/` フォルダの中に `custom.scss` という名前のファイルを作成する。
 > 3. 作成したファイルにカスタムCSSコードを追加し、Hugoを再実行して変更を確認する。
 
-```json
+```python
 
 .article-container {
     width: 100%;
