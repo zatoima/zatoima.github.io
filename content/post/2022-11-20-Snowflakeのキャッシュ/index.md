@@ -28,10 +28,9 @@ image:
 
 コンパイルキャッシュは存在せず常にコンパイルが必要
 
-### キャッシュを使用しないようにするためには？？
+### キャッシュを使用しないようにするためには？？jkdk]結果キャッシュ
 
-- 結果キャッシュ
-  - `USE_CACHED_RESULT`を`FALSE`に
+- - `USE_CACHED_RESULT`を`FALSE`に
 - メタデータキャッシュ
   - 方法無し
 - データキャッシュ
@@ -47,7 +46,17 @@ image:
 > 通常、次の条件の **すべて** が満たされる場合、クエリ結果が再利用されます。
 >
 > - 新しいクエリは、以前に実行したクエリと構文的に一致する。
-> - クエリには、実行時に評価する必要のある関数が含まれていない（例: [CURRENT_TIMESTAMP()](https://docs.snowflake.com/ja/sql-reference/functions/current_timestamp.html) および [UUID_STRING()](https://docs.snowflake.com/ja/sql-reference/functions/uuid_string.html)）。 [CURRENT_DATE()](https://docs.snowflake.com/ja/sql-reference/functions/current_date.html) 関数はこのルールの例外です。CURRENT_DATE() は実行時に評価されますが、 CURRENT_DATE() を使用するクエリは、クエリ再利用機能を引き続き使用できます。
+> - クエリには、実行時に評価する必要のあ.//
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
+> - 
+> - ,;bbb る関数が含まれていない（例: [CURRENT_TIMESTAMP()](https://docs.snowflake.com/ja/sql-reference/functions/current_timestamp.html) および [UUID_STRING()](https://docs.snowflake.com/ja/sql-reference/functions/uuid_string.html)）。 [CURRENT_DATE()](https://docs.snowflake.com/ja/sql-reference/functions/current_date.html) 関数はこのルールの例外です。CURRENT_DATE() は実行時に評価されますが、 CURRENT_DATE() を使用するクエリは、クエリ再利用機能を引き続き使用できます。
 > - クエリには、 [ユーザー定義関数（UDFs）](https://docs.snowflake.com/ja/sql-reference/udf-overview.html) または [外部関数](https://docs.snowflake.com/ja/sql-reference/external-functions.html) が含まれていない。
 > - クエリ結果に寄与するテーブルデータが変更されていない。
 > - 以前のクエリの永続化された結果が引き続き利用可能である。
