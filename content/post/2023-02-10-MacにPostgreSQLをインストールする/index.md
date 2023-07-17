@@ -56,7 +56,7 @@ Homebrewがすでにシステムにインストールされていることを前
 
 PostgreSQLが正しくインストールされたら、AWSのRDSに接続して、pgbenchを使ってパフォーマンステスト（データ生成のみ）を行うことができる。pgbenchはPostgreSQLの性能評価ツールで、事前に大量のテストデータを作成したり、一定の負荷をかけて性能を評価することができる。
 
-まずは、RDSに接続するためのコマンドを以下に示す。
+まずは、RDSに接続するためのコマンドを以下に記載する。
 
 ```sh
 (base) jimazato@XXXXXXXX ~ % psql -h xxxx-rds-pgsql.xxxxxx.us-west-1.rds.amazonaws.com -U postgres -d postgres
