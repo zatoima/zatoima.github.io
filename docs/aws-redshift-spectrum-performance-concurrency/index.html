@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Redshift Spectrumの同時実行性能パフォーマンス | my opinion is my own</title>
+<meta name="title" content="Redshift Spectrumの同時実行性能パフォーマンス" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Redshift," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-redshift-spectrum-performance-concurrency/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Redshift Spectrumの同時実行性能パフォーマンス">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-01-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-01-29T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Redshift">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Redshift Spectrumの同時実行性能パフォーマンス">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Redshift Spectrumの同時実行性能パフォーマンス">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-01-29T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-01-29T00:00:00+00:00">
+  <meta itemprop="wordCount" content="202">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Redshift">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Redshift Spectrumの同時実行性能パフォーマンス</h1>
+
+<p>
+  <i>
+    <time datetime='2022-01-29' pubdate>
+      2022-01-29
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>Redshift Spectrumの同時実行性能がどのように決まるのかをメモ。</p>
+<h3 id="1スライス数">1.スライス数</h3>
+<p>この要素自体はSpectrumに限らず通常のRedshiftでも重要な概念となる。</p>
+<p>スライス数は１つ目の要素としてインスタンスタイプ（インスタンスサイズ）によって決まる。各スライスは、ノードのメモリとディスク容量の一部を割り当てられ、ノードに割り当てられたワークロードの一部分を処理する。リーダーノードは、スライスへのデータの分散を管理し、クエリまたは他のデータベース操作のワークロードをスライスに分配して、各スライスはそれぞれがワークロードを担当する。下記のように各ノードには複数のスライスが存在する。</p>
+<p>参照元：<a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_high_level_system_architecture.html">データウェアハウスシステムのアーキテクチャ - Amazon Redshift</a></p>
+<p><img src="image-20220125220158344.png" alt="image-20220125220158344"></p>
+<p>このスライス数はノードごとのデフォルトスライスとしてノードサイズによって事前に決まっている。</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-clusters.html#rs-node-type-info">Amazon Redshift クラスター - Amazon Redshift - ノードタイプの詳細</a></p>
+</blockquote>
+<p>RA3の場合、ra3.xlplusは「2」、ra3.4xllargeは「4」、ra3.16xlageは「16」となる。</p>
+<p><img src="image-20220125220543750.png" alt="image-20220125220543750"></p>
+<p>ノードサイズのサイズ変更の仕方によってスライス数が変更されないこともあるのでオペレーション時には注意した方が良いというハマリポイントがある。</p>
+<blockquote>
+<p>[Amazon Redshift クラスター - Amazon Redshift - ノードタイプの詳細](<a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-clusters.html#rs-node-type-info">Amazon Redshift クラスター - Amazon Redshift</a>)</p>
+<ul>
+<li><em>ノードあたりのスライスの数</em>は、従来のサイズ変更でクラスターを作成またはサイズ変更するときに、コンピューティングノードがパーティション分割されるデフォルトのスライス数です。</li>
+<li>伸縮自在なリサイズを使用してクラスターのサイズを変更すると、ノードあたりのスライス数が変わる可能性があります。 ただし、クラスターのすべてのコンピューティングノードのスライスの総数は、伸縮自在なサイズ変更後も変わりません。</li>
+<li>スナップショットからの復元操作を使用してクラスターを作成する場合、ノードタイプを変更すると、元のクラスターから生成されるクラスターのスライスの数が変わることがあります。</li>
+</ul>
+</blockquote>
+<h3 id="2同時実行数">2.同時実行数</h3>
+<p>1クエリ 1 スライスにつき最大 10 の同時実行数となっている。</p>
+<ul>
+<li>いくつのクエリが同時に実行されているかによって、同時実行数が変わる</li>
+<li>割りあてられた同時実行数によって、S3 をスキャンするスレッド数が制限される</li>
+</ul>
+<p>※「最大」となっているのもおそらく注意点であるし、かつ確認する限りマニュアルにもSpectrum層-S3の同時実行数の記載がないところにも注意。ユーザ側には意識させないところだとは思われるが、明確には仕様が示されていない。</p>
+<blockquote>
+<p>参照先：<a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/">Amazon Redshift Spectrum 12 のベストプラクティス | Amazon Web Services ブログ</a></p>
+</blockquote>
+<h3 id="spectrumのパフォーマンスについて">Spectrumのパフォーマンスについて</h3>
+<p>「1.スライス数」と「2.同時実行数」の話をまとめるとこのようになると考えられる。</p>
+<p><img src="image-20220125223220627.png" alt="image-20220125223220627"></p>
+<h3 id="spectrumの同時実行の確認方法について">Spectrumの同時実行の確認方法について</h3>
+<p><code>SVL_S3QUERY_SUMMARY</code>表を確認。スライスで処理するファイル数や並列リクエストなどの統計もあるのでここで確認する</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html">SVL_S3QUERY_SUMMARY - Amazon Redshift</a></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>列名</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>files</td>
+<td>この Redshift Spectrum  クエリで処理されたファイル数。ファイル数が少ないと、並列処理の利点は制限されます。</td>
+</tr>
+<tr>
+<td>files_max</td>
+<td>1 つのスライスで処理されるファイルの最大数。</td>
+</tr>
+<tr>
+<td>files_avg</td>
+<td>1 つのスライスで処理されるファイルの平均数。</td>
+</tr>
+<tr>
+<td>splits</td>
+<td>このセグメントで処理された分割の数。このスライスで処理された分割の数。例えば分割可能なデータファイルの容量が大きい場合  (約 512 MB を超えるデータファイルなど)、Redshift Spectrum はファイルを複数の S3 リクエストに分割し、並列処理を試みます。</td>
+</tr>
+<tr>
+<td>splits_max</td>
+<td>このスライスで処理された分割の最大数。</td>
+</tr>
+<tr>
+<td>splits_avg</td>
+<td>このスライスで処理された分割の平均数。</td>
+</tr>
+<tr>
+<td>total_split_size</td>
+<td>処理されたすべての分割の合計サイズ。</td>
+</tr>
+<tr>
+<td>max_split_size</td>
+<td>処理された分割の最大サイズ (単位: バイト)。</td>
+</tr>
+<tr>
+<td>avg_split_size</td>
+<td>処理された分割の平均サイズ (単位: バイト)。</td>
+</tr>
+<tr>
+<td>total_retries</td>
+<td>個別の処理ファイルでの再試行の総数。</td>
+</tr>
+<tr>
+<td>max_retries</td>
+<td>処理ファイルでの再試行の最大数。</td>
+</tr>
+<tr>
+<td>max_request_duration</td>
+<td>個別ファイルリクエストの最長時間  (マイクロ秒)。実行時間の長いクエリはボトルネックの可能性があります。</td>
+</tr>
+<tr>
+<td>avg_request_duration</td>
+<td>ファイルリクエストの平均時間 (マイクロ秒)。</td>
+</tr>
+<tr>
+<td>max_request_parallelism</td>
+<td>Redshift Spectrum クエリでの 1  つのスライスの並列リクエストの最大数。</td>
+</tr>
+<tr>
+<td>avg_request_parallelism</td>
+<td>Redshift Spectrum クエリでの 1  つのスライスの並列リクエストの平均数。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="spectrumの同時実行性能のパフォーマンスを最大化するためには">Spectrumの同時実行性能のパフォーマンスを最大化するためには？</h3>
+<p>ここにある通りS3側にある分割されたファイル数と同時実行数が最適なバランスになっているかを確認する必要がある。</p>
+<blockquote>
+<p>・<a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/">Amazon Redshift Spectrum 12 のベストプラクティス | Amazon Web Services ブログ</a></p>
+<p>ファイル総数 &lt;= クエリごとの同時実行性能 (例えば 10) * クラスターのスライス数、といった簡単な計算ができます。。ただしクラスターのノード数を増やしても、必ずしもパフォーマンスが向上するとは限りません。最適なクラスターのノード数は、以下のようにして決めてください。まず Redshift Spectrum の外部テーブルに、いくつのファイルが含まれているかを確認してください。続いてクラスターのサイズを大きくしていって（クラスターに含まれるスライス数を増やすということです）、ノード数が増えてもパフォーマンスがこれ以上伸びなくなるというポイントを探してください。そのときのノードタイプにおける、最適な Redshift のクラスターサイズは、それ以上のパフォーマンス向上が起こらなくなるところです。</p>
+</blockquote>
+<p>力技であればRedshiftのクラスタを複数台並べてクエリを掛けることで更に並列度自体は挙げられる。ストレージとコンピュートが分離されているSpectrumの利点の一つだと思う。クラスタを複数を立ててそれぞれのクラスタから同じS3のファイルにクエリすることも出来る。</p>
+<h3 id="補足redshift-spectrumのconcurrency-scaling">補足：Redshift SpectrumのConcurrency Scaling</h3>
+<p>Redshift Spectrum自体もConcurrency Scalingは対象の模様。以前はSpectrumのConcurrency Scalingは対象外だった模様。マニュアルは少々分かりづらい記載になっているが、Forumの方では記載があった。（※実際には試していない）</p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/concurrency-scaling.html">同時実行スケーリングを使用する - Amazon Redshift</a>
+<ul>
+<li>制限のあるネットワークまたは仮想プライベートクラウド (VPC) 構成で保護されている、外部リソースにアクセスするクエリはサポートされません。</li>
+</ul>
+</li>
+<li><a href="https://forums.aws.amazon.com/thread.jspa?start=100&amp;threadID=132076&amp;tstart=0">AWS Developer Forums: Amazon Redshift Announcements ...</a>
+<ul>
+<li><strong>Redshift Spectrum</strong>: UNLOAD and queries that use Spectrum to reference external tables are now eligible for Concurrency Scaling</li>
+</ul>
+</li>
+</ul>
+<h3 id="参考">参考</h3>
+<ul>
+<li><a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/">Amazon Redshift Spectrum 12 のベストプラクティス | Amazon Web Services ブログ</a></li>
+<li><a href="https://aws.amazon.com/jp/premiumsupport/knowledge-center/redshift-elastic-resize">Amazon Redshift で伸縮自在なサイズ変更を使用する</a></li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-redshift-system-table-unload/">Redshiftから特定区切り文字でファイル出力する</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-select-data-catalog/">Redshift SpectrumからGlue Data Catalogのテーブルを参照する</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-best-practice/">Redshift Spectrumのベストプラクティス</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-data-prepare-query-execute/">Redshift Spectrum用にテストデータの準備、及びクエリの実行</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-performance-check/">Redshift Spectrumのパフォーマンス確認</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/redshift/">#Redshift</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQLのSQL実行計画の可視化（pev、gocmdpev） | my opinion is my own</title>
+<meta name="title" content="PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-postgresql-execute-plan-visualization/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-08-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-08-08T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-08-08T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-08-08T00:00:00+00:00">
+  <meta itemprop="wordCount" content="528">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）</h1>
+
+<p>
+  <i>
+    <time datetime='2021-08-08' pubdate>
+      2021-08-08
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>まずはgocmdpevを使ってみる</p>
+<h3 id="goをインストール">goをインストール</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ sudo yum -y install go
+</span></span><span style="display:flex;"><span>Loaded plugins: langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>amzn2-core                                                                                                                                                                                        | 3.7 kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">228</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>~省略~
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  golang.x86_64 0:1.15.14-1.amzn2.0.1                                                                                                                                                                                    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  apr.x86_64 0:1.6.3-5.amzn2.0.2        apr-util.x86_64 0:1.6.1-5.amzn2.0.2     apr-util-bdb.x86_64 0:1.6.1-5.amzn2.0.2     golang-bin.x86_64 0:1.15.14-1.amzn2.0.1     golang-src.noarch 0:1.15.14-1.amzn2.0.1         
+</span></span><span style="display:flex;"><span>  mercurial.x86_64 0:2.6.2-10.amzn2     neon.x86_64 0:0.30.0-3.amzn2.0.2        pakchois.x86_64 0:0.4-10.amzn2.0.2          subversion.x86_64 0:1.7.14-16.amzn2.0.1     subversion-libs.x86_64 0:1.7.14-16.amzn2.0.1    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ go version
+</span></span><span style="display:flex;"><span>go version go1.15.14 linux/amd64
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ go get -u github.com/simon-engledew/gocmdpev
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ echo $?
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ ./go/bin/gocmdpev --version
+</span></span><span style="display:flex;"><span>1.0.0
+</span></span></code></pre></div><h3 id="可視化のためのテスト用のデータ生成">可視化のためのテスト用のデータ生成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pgbench -i -s <span style="color:#ae81ff">100</span> -U postgres -h xxxx.cluster-xxxx.ap-northeast-1.rds.amazonaws.com pgbench
+</span></span></code></pre></div><h3 id="テスト用のsql">テスト用のSQL</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>EXPLAIN <span style="color:#f92672">(</span>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON<span style="color:#f92672">)</span> SELECT t1.aid,t1.bid,t1.abalance,t2.bbalance FROM pgbench_accounts t1, pgbench_branches t2 where t1.bid<span style="color:#f92672">=</span>t2.bid ORDER BY t1.abalance DESC;
+</span></span></code></pre></div><p>こんな感じのSQLになります。ソートやジョイン等で問題がありそうなSQLとなっている</p>
+<p><img src="image-20210806144117978.png" alt="image-20210806144117978"></p>
+<p>FORMAT指定等があり、gocmdpevに渡すための実行計画を生成する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>vi explain.sql
+</span></span></code></pre></div><p>下記SQLを<code>explain.sql</code>に記載する。<code>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON</code>をEXPLAINのオプションに指定する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">EXPLAIN</span> (<span style="color:#66d9ef">ANALYZE</span>, COSTS, <span style="color:#66d9ef">VERBOSE</span>, BUFFERS, FORMAT JSON) <span style="color:#66d9ef">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#66d9ef">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#66d9ef">where</span> t1.bid<span style="color:#f92672">=</span>t2.bid <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> t1.abalance <span style="color:#66d9ef">DESC</span>;
+</span></span></code></pre></div><p>SQLを実行して実行計画を<code>analyze.json</code>に出力する</p>
+<pre tabindex="0"><code>psql -h auroraserverlessv1.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench -qAt -f explain.sql &gt; analyze.json
+</code></pre><p>出力された<code>analyze.json</code>をgocmdpevに渡す</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat analyze.json | gocmdpev
+</span></span></code></pre></div><p>下記のような出力となる。どこに時間が掛かっているか等が色付きで表示されるので、解析しやすくなる。</p>
+<p><img src="image-20210806144714670.png" alt="image-20210806144714670"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ cat analyze.json | gocmdpev
+</span></span><span style="display:flex;"><span>○ Total Cost: 1,790,852.84
+</span></span><span style="display:flex;"><span>○ Planning Time: 53.45 ms
+</span></span><span style="display:flex;"><span>○ Execution Time: 7.92 s
+</span></span><span style="display:flex;"><span>┬
+</span></span><span style="display:flex;"><span>│
+</span></span><span style="display:flex;"><span>└─⌠ Gather Merge  costliest   largest 
+</span></span><span style="display:flex;"><span>  │ 
+</span></span><span style="display:flex;"><span>  │ ○ Duration: 2.03 s <span style="color:#f92672">(</span>26%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  │ ○ Cost: 962,873.54 <span style="color:#f92672">(</span>54%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  │ ○ Rows: 10,000,000
+</span></span><span style="display:flex;"><span>  │   rows Underestimated by 1.20x
+</span></span><span style="display:flex;"><span>  ├►  t1.aid + t1.bid + t1.abalance + t2.bbalance
+</span></span><span style="display:flex;"><span>  │
+</span></span><span style="display:flex;"><span>  └─⌠ Sort  slowest 
+</span></span><span style="display:flex;"><span>    │ Sorts a record set based on the specified sort key.
+</span></span><span style="display:flex;"><span>    │ ○ Duration: 6.60 s <span style="color:#f92672">(</span>83%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    │ ○ Cost: 610,973.3400000001 <span style="color:#f92672">(</span>34%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    │ ○ Rows: 3,333,333
+</span></span><span style="display:flex;"><span>    │   rows Overestimated by 1.25x
+</span></span><span style="display:flex;"><span>    ├►  t1.aid + t1.bid + t1.abalance + t2.bbalance
+</span></span><span style="display:flex;"><span>    │
+</span></span><span style="display:flex;"><span>    └─⌠ Hash Join 
+</span></span><span style="display:flex;"><span>      │ Joins to record sets by hashing one of them <span style="color:#f92672">(</span>using
+</span></span><span style="display:flex;"><span>      │ a Hash Scan<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>      │ ○ Duration: 4.88 s <span style="color:#f92672">(</span>62%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │ ○ Cost: 11,402.289999999979 <span style="color:#f92672">(</span>1%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │ ○ Rows: 3,333,333
+</span></span><span style="display:flex;"><span>      │   Inner join
+</span></span><span style="display:flex;"><span>      │   on <span style="color:#f92672">(</span>t1.bid <span style="color:#f92672">=</span> t2.bid<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │   rows Overestimated by 1.25x
+</span></span><span style="display:flex;"><span>      ├►  t1.aid + t1.bid + t1.abalance + t2.bbalance
+</span></span><span style="display:flex;"><span>      │
+</span></span><span style="display:flex;"><span>      ├─⌠ Seq Scan 
+</span></span><span style="display:flex;"><span>      │ │ Finds relevant records by sequentially
+</span></span><span style="display:flex;"><span>      │ │ scanning the input record set. When reading
+</span></span><span style="display:flex;"><span>      │ │ from a table, Seq Scans <span style="color:#f92672">(</span>unlike Index Scans<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │ │ perform a single read operation <span style="color:#f92672">(</span>only the
+</span></span><span style="display:flex;"><span>      │ │ table is read<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>      │ │ ○ Duration: 5.12 s <span style="color:#f92672">(</span>65%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │ │ ○ Cost: 205,601.67 <span style="color:#f92672">(</span>11%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      │ │ ○ Rows: 3,333,333
+</span></span><span style="display:flex;"><span>      │ │   on public.pgbench_accounts
+</span></span><span style="display:flex;"><span>      │ │   rows Overestimated by 1.25x
+</span></span><span style="display:flex;"><span>      │ ⌡► t1.aid + t1.bid + t1.abalance
+</span></span><span style="display:flex;"><span>      │
+</span></span><span style="display:flex;"><span>      └─⌠ Hash 
+</span></span><span style="display:flex;"><span>        │ Generates a hash table from the records in the
+</span></span><span style="display:flex;"><span>        │ input recordset. Hash is used by Hash Join.
+</span></span><span style="display:flex;"><span>        │ ○ Duration: &lt;<span style="color:#ae81ff">1</span> ms <span style="color:#f92672">(</span>0%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        │ ○ Cost: <span style="color:#ae81ff">0</span> <span style="color:#f92672">(</span>0%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        │ ○ Rows: <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>        ├►  t2.bbalance + t2.bid
+</span></span><span style="display:flex;"><span>        │
+</span></span><span style="display:flex;"><span>        └─⌠ Seq Scan 
+</span></span><span style="display:flex;"><span>          │ Finds relevant records by sequentially
+</span></span><span style="display:flex;"><span>          │ scanning the input record set. When reading
+</span></span><span style="display:flex;"><span>          │ from a table, Seq Scans <span style="color:#f92672">(</span>unlike Index Scans<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>          │ perform a single read operation <span style="color:#f92672">(</span>only the
+</span></span><span style="display:flex;"><span>          │ table is read<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>          │ ○ Duration: &lt;<span style="color:#ae81ff">1</span> ms <span style="color:#f92672">(</span>0%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>          │ ○ Cost: <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span>0%<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>          │ ○ Rows: <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>          │   on public.pgbench_branches
+</span></span><span style="display:flex;"><span>          ⌡► t2.bbalance + t2.bid
+</span></span></code></pre></div><p>pevという実行計画の可視化ツールもある。こちらの方が直感的で見やすいかもしれない。CLIで確認したいのかGUIベースで確認したいのかで使い分けても良い。gocmdpevと同じで<code>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON</code>を読み込ませることで可視化が出来る。</p>
+<blockquote>
+<p><a href="https://github.com/AlexTatiyants/pev">https://github.com/AlexTatiyants/pev</a></p>
+<p><a href="http://tatiyants.com/pev/#/plans/new">http://tatiyants.com/pev/#/plans/new</a></p>
+</blockquote>
+<p>下記の通り、ローカルで処理すると記載はしているが念の為に用心した方が良いかもしれない</p>
+<blockquote>
+<p>DISCLAIMER: Pev stores your plans locally (localStorage) and will not send them anywhere.</p>
+</blockquote>
+<p><img src="image-20210806145019217.png" alt="image-20210806145019217"></p>
+<p><img src="image-20210806145035249.png" alt="image-20210806145035249"></p>
+<blockquote>
+<p>pev, gocmdpevでPostgreSQLのEXPLAINを見やすくする | gocmdpev <a href="https://wonderwall.hatenablog.com/entry/2017/09/13/220000">https://wonderwall.hatenablog.com/entry/2017/09/13/220000</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-rds-postgresql-pg_proctab-extention/">PostgreSQLの拡張機能 pg_proctab をAurora/RDSから触ってみる</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-pg-collector.html">awslabsのpg-collectorについて</a></li>
+  
+  <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-nologging-load.html">PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

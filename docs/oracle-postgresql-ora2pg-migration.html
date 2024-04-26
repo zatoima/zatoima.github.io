@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施 | my opinion is my own</title>
+<meta name="title" content="ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,PostgreSQL,DB Migration," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/oracle-postgresql-ora2pg-migration.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-07-06T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-07-06T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="DB Migration">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-07-06T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-07-06T00:00:00+00:00">
+  <meta itemprop="wordCount" content="242">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Oracle,PostgreSQL,DB Migration">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施</h1>
+
+<p>
+  <i>
+    <time datetime='2020-07-06' pubdate>
+      2020-07-06
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>ora2pgのセットアップ、変換作業の実施。インストール手順は<a href="http://ora2pg.darold.net/documentation.html">ora2pgのサイト</a>を参照。</p>
+<ul>
+<li>
+<h4 id="instant-client-packageのインストール">Instant Client Packageのインストール</h4>
+</li>
+</ul>
+<p>Instant Clientのrpmダウンロードは<a href="https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html">Oracle社のサイト</a>から。</p>
+<pre tabindex="0"><code>sudo rpm -ivh oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-devel-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-jdbc-19.6.0.0.0-1.x86_64.rpm
+sudo rpm -ivh oracle-instantclient19.6-sqlplus-19.6.0.0.0-1.x86_64.rpm
+</code></pre><ul>
+<li>
+<h4 id="環境変数の設定">環境変数の設定</h4>
+</li>
+</ul>
+<pre tabindex="0"><code>vi .bash_profile
+
+↓下記を追記
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+</code></pre><pre tabindex="0"><code>source .bash_profile
+</code></pre><ul>
+<li>
+<h4 id="dbdoracleのインストール">DBD::Oracleのインストール</h4>
+</li>
+</ul>
+<pre tabindex="0"><code>sudo su -
+export LD_LIBRARY_PATH=/usr/lib/oracle/19.6/client64/lib
+export ORACLE_HOME=/usr/lib/oracle/19.6/client64/lib
+
+yum -y install perl-CPAN
+yum -y install libyaml-devel
+yum -y install gcc
+
+perl -MCPAN -e shell #全てEnter
+perl -MCPAN -e &#39;install DBI&#39;
+perl -MCPAN -e &#39;install DBD::Oracle&#39;
+</code></pre><ul>
+<li>
+<h4 id="ora2pgのインストール">ora2pgのインストール</h4>
+</li>
+</ul>
+<pre tabindex="0"><code>sudo su - ec2-user
+sudo yum -y install git
+git clone https://github.com/darold/ora2pg.git
+cd ./ora2pg
+perl Makefile.PL
+make &amp;&amp; make install
+</code></pre><p>ora2pgのインストール自体は以上で終了。</p>
+<ul>
+<li>
+<h4 id="ora2pgの初期セッティング">ora2pgの初期セッティング</h4>
+</li>
+</ul>
+<pre tabindex="0"><code>mkdir ora2pg
+ora2pg --project_base ~/ora2pg --init_project migration_test
+</code></pre><ul>
+<li>
+<h4 id="ora2pgconfの設定">ora2pg.confの設定</h4>
+</li>
+</ul>
+<p>./config配下にora2pg.confが作成されているのでこのファイルを修正する。細かい挙動を制御するパラメータもあるが割愛。</p>
+<pre tabindex="0"><code>vi ./config/ora2pg.conf
+</code></pre><pre tabindex="0"><code># Set Oracle database connection (datasource, user, password)
+ORACLE_DSN	dbi:Oracle:host=xxxxxxxxxxxxx;sid=ora19db;port=1521
+ORACLE_USER	ikotest
+ORACLE_PWD	oracle
+
+# Oracle schema/owner to use
+SCHEMA	ikotest
+</code></pre><ul>
+<li>
+<h4 id="スキーマ定義の全体export実施">スキーマ定義の全体export実施</h4>
+</li>
+</ul>
+<pre tabindex="0"><code>./export_schema.sh
+</code></pre><p>実行後は「reports」、「schema」配下を重点的に確認</p>
+<pre tabindex="0"><code>├── config
+│   └── ora2pg.conf
+├── CONSTRAINTS_output.sql
+├── data
+├── export_schema.sh
+├── import_all.sh
+├── INDEXES_output.sql
+├── reports
+│   ├── columns.txt
+│   ├── report.html
+│   └── tables.txt
+├── schema
+│   ├── dblinks
+│   ├── directories
+│   ├── functions
+│   ├── grants
+│   ├── mviews
+│   ├── packages
+│   ├── partitions
+│   ├── procedures
+│   ├── sequences
+│   ├── synonyms
+│   │   └── synonym.sql
+│   ├── tables
+│   │   ├── CONSTRAINTS_table.sql
+│   │   ├── INDEXES_table.sql
+│   │   └── table.sql
+│   ├── tablespaces
+│   ├── triggers
+│   ├── types
+│   └── views
+└── sources
+    ├── functions
+    ├── mviews
+    ├── packages
+    ├── partitions
+    ├── procedures
+    ├── triggers
+    ├── types
+    └── views
+</code></pre><ul>
+<li>
+<h5 id="sql変換">SQL変換</h5>
+</li>
+</ul>
+<pre tabindex="0"><code>ora2pg -c config/ora2pg.conf -i input.sql -o output.sql -t QUERY
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/oracle-postgresql-char-varchar-byte.html">OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い</a></li>
+  
+  <li><a href="/aws-ora2pg-oracle-to-aurora-postgresql-conversion.html">ora2pgを使用したOracleからPostgreSQLへの変換結果</a></li>
+  
+  <li><a href="/oracle-postgresql-transaction-different.html">OracleとPostgreSQLのトランザクション差異について整理する</a></li>
+  
+  <li><a href="/aws-sct-oracle-to-aurora-postgresql-conversion.html">AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</a></li>
+  
+  <li><a href="/oracle-mysql-postgresql-isolation-level.html">トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="https://zatoima.github.io/blog/db-migration/">#DB Migration</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する | my opinion is my own</title>
+<meta name="title" content="PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-about-pg_buffercache.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-03-05T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-03-05T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-03-05T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-03-05T00:00:00+00:00">
+  <meta itemprop="wordCount" content="587">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する</h1>
+
+<p>
+  <i>
+    <time datetime='2020-03-05' pubdate>
+      2020-03-05
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="はじめに">はじめに</h3>
+<p>contribモジュールにpg_buffercacheというPostgreSQLのバッファ・キャッシュの使用状況を確認できる拡張機能がありますので使ってみます。Oracleでいうところのx$bh表かな、と思っています。</p>
+<h3 id="バージョンについて">バージョンについて</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select version();</span>
+</span></span><span style="display:flex;"><span>                                                 version                                                  
+</span></span><span style="display:flex;"><span>----------------------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span> PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc <span style="color:#f92672">(</span>GCC<span style="color:#f92672">)</span> 4.8.5 <span style="color:#ae81ff">20150623</span> <span style="color:#f92672">(</span>Red Hat 4.8.5-39<span style="color:#f92672">)</span>, 64-bit
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> row<span style="color:#f92672">)</span>
+</span></span></code></pre></div><h3 id="pg_buffercacheのインストール">pg_buffercacheのインストール</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># CREATE EXTENSION pg_buffercache;</span>
+</span></span><span style="display:flex;"><span>CREATE EXTENSION
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># \dx</span>
+</span></span><span style="display:flex;"><span>                                     List of installed extensions
+</span></span><span style="display:flex;"><span>        Name        | Version |   Schema   |                        Description                        
+</span></span><span style="display:flex;"><span>--------------------+---------+------------+-----------------------------------------------------------
+</span></span><span style="display:flex;"><span> pg_buffercache     | 1.3     | public     | examine the shared buffer cache
+</span></span><span style="display:flex;"><span> pg_stat_statements | 1.6     | public     | track execution statistics of all SQL statements executed
+</span></span><span style="display:flex;"><span> plpgsql            | 1.0     | pg_catalog | PL/pgSQL procedural language
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> rows<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># </span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># \dx+</span>
+</span></span><span style="display:flex;"><span>Objects in extension <span style="color:#e6db74">&#34;pg_buffercache&#34;</span>
+</span></span><span style="display:flex;"><span>       Object description        
+</span></span><span style="display:flex;"><span>---------------------------------
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">function</span> pg_buffercache_pages<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span> view pg_buffercache
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> rows<span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>pg_buffercacheはcontribモジュールの一つなので必要に応じてcontribのインストールも実施が必要です。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum -y install postgresql10-devel postgresql10-contrib
+</span></span></code></pre></div><h2 id="使用方法">使用方法</h2>
+<p>pg_buffercacheは1行ごとに各バッファの情報が記載されます。したがって、1バッファページは<code>8KB単位</code>となるので、<code>shared_buffers</code>が<code>128MB</code>の場合はページ数は<code>16384</code>となります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">show</span> shared_buffers;
+</span></span><span style="display:flex;"><span> shared_buffers 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#ae81ff">128</span>MB
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">FROM</span> pg_buffercache;
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">count</span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#ae81ff">16384</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span></code></pre></div><p>pg_buffercacheビューの各列の説明は次の通りです。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#960050;background-color:#1e0010">\</span>d pg_buffercache
+</span></span><span style="display:flex;"><span>                 <span style="color:#66d9ef">View</span> <span style="color:#e6db74">&#34;public.pg_buffercache&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">Column</span>      <span style="color:#f92672">|</span>   <span style="color:#66d9ef">Type</span>   <span style="color:#f92672">|</span> <span style="color:#66d9ef">Collation</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">Nullable</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">Default</span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------+----------+-----------+----------+---------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> bufferid         <span style="color:#f92672">|</span> integer  <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> relfilenode      <span style="color:#f92672">|</span> oid      <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> reltablespace    <span style="color:#f92672">|</span> oid      <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> reldatabase      <span style="color:#f92672">|</span> oid      <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> relforknumber    <span style="color:#f92672">|</span> smallint <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> relblocknumber   <span style="color:#f92672">|</span> bigint   <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> isdirty          <span style="color:#f92672">|</span> boolean  <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> usagecount       <span style="color:#f92672">|</span> smallint <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> pinning_backends <span style="color:#f92672">|</span> integer  <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span></code></pre></div><table>
+<thead>
+<tr>
+<th>名前</th>
+<th>型</th>
+<th>参照</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bufferid</td>
+<td>integer</td>
+<td></td>
+<td>1からshared_buffersまでの範囲で示されるID</td>
+</tr>
+<tr>
+<td>relfilenode</td>
+<td>oid</td>
+<td>pg_class.relfilenode</td>
+<td>リレーションのファイルノード番号</td>
+</tr>
+<tr>
+<td>reltablespace</td>
+<td>oid</td>
+<td>pg_tablespace.oid</td>
+<td>リレーションのテーブル空間OID</td>
+</tr>
+<tr>
+<td>reldatabase</td>
+<td>oid</td>
+<td>pg_database.oid</td>
+<td>リレーションのデータベースOID</td>
+</tr>
+<tr>
+<td>relforknumber</td>
+<td>smallint</td>
+<td></td>
+<td>リレーション内のフォーク番号。include/common/relpath.h参照</td>
+</tr>
+<tr>
+<td>relblocknumber</td>
+<td>bigint</td>
+<td></td>
+<td>リレーション内のページ番号</td>
+</tr>
+<tr>
+<td>isdirty</td>
+<td>boolean</td>
+<td></td>
+<td>ダーティページかどうか</td>
+</tr>
+<tr>
+<td>usagecount</td>
+<td>smallint</td>
+<td></td>
+<td>Clock-sweepアクセスカウント</td>
+</tr>
+<tr>
+<td>pinning_backends</td>
+<td>integer</td>
+<td></td>
+<td>このバッファをピン留めしているバックエンドの数</td>
+</tr>
+</tbody>
+</table>
+<h5 id="テーブルごとのバッファページ数を集計">テーブルごとのバッファページ数を集計</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">c</span>.relname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">COUNT</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">AS</span> buffers
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    pg_buffercache b
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">INNER</span> <span style="color:#66d9ef">JOIN</span>
+</span></span><span style="display:flex;"><span>        pg_class <span style="color:#66d9ef">c</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ON</span>  b.relfilenode <span style="color:#f92672">=</span> pg_relation_filenode(<span style="color:#66d9ef">c</span>.oid)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">AND</span> b.reldatabase <span style="color:#66d9ef">IN</span>(<span style="color:#ae81ff">0</span>,(
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>                    oid
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>                    pg_database
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>                    datname <span style="color:#f92672">=</span> current_database()
+</span></span><span style="display:flex;"><span>            ))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#66d9ef">c</span>.relname
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">2</span> <span style="color:#66d9ef">DESC</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>;
+</span></span></code></pre></div><h5 id="出力結果">出力結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>        relname        | buffers 
+</span></span><span style="display:flex;"><span>-----------------------+---------
+</span></span><span style="display:flex;"><span> pgbench_accounts      |    <span style="color:#ae81ff">1644</span>
+</span></span><span style="display:flex;"><span> pgbench_accounts_pkey |     <span style="color:#ae81ff">276</span>
+</span></span><span style="display:flex;"><span> pg_proc               |      <span style="color:#ae81ff">78</span>
+</span></span><span style="display:flex;"><span> pg_depend             |      <span style="color:#ae81ff">59</span>
+</span></span><span style="display:flex;"><span> pg_toast_2618         |      <span style="color:#ae81ff">56</span>
+</span></span><span style="display:flex;"><span> pg_attribute          |      <span style="color:#ae81ff">53</span>
+</span></span><span style="display:flex;"><span> pg_collation          |      <span style="color:#ae81ff">53</span>
+</span></span><span style="display:flex;"><span> pg_description        |      <span style="color:#ae81ff">43</span>
+</span></span><span style="display:flex;"><span> test                  |      <span style="color:#ae81ff">35</span>
+</span></span><span style="display:flex;"><span> pg_statistic          |      <span style="color:#ae81ff">35</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span> rows<span style="color:#f92672">)</span>
+</span></span></code></pre></div><h5 id="データベーステーブルごとのバッファページ数を集計">データベース、テーブルごとのバッファページ数を集計</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    d.datname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">c</span>.relname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    pg_buffercache b
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">OUTER</span> <span style="color:#66d9ef">JOIN</span>
+</span></span><span style="display:flex;"><span>        (
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>                oid,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>                pg_database
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>                oid <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">OR</span>  datname <span style="color:#f92672">=</span> current_database()
+</span></span><span style="display:flex;"><span>        ) <span style="color:#66d9ef">AS</span> d
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ON</span>  b.reldatabase <span style="color:#f92672">=</span> d.oid
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">OUTER</span> <span style="color:#66d9ef">JOIN</span>
+</span></span><span style="display:flex;"><span>        pg_class <span style="color:#66d9ef">c</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ON</span>  b.relfilenode <span style="color:#f92672">=</span> <span style="color:#66d9ef">c</span>.relfilenode
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    d.datname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">c</span>.relname
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    d.datname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">c</span>.relname
+</span></span><span style="display:flex;"><span>;
+</span></span></code></pre></div><h5 id="出力結果-1">出力結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span> datname  |                 relname                  | count 
+</span></span><span style="display:flex;"><span>----------+------------------------------------------+-------
+</span></span><span style="display:flex;"><span> postgres | pg_aggregate                             |     <span style="color:#ae81ff">6</span>
+</span></span><span style="display:flex;"><span> postgres | pg_aggregate_fnoid_index                 |     <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span> postgres | pg_am                                    |     <span style="color:#ae81ff">5</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amop                                  |    <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amop_fam_strat_index                  |     <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amop_opr_fam_index                    |     <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amproc                                |     <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amproc_fam_proc_index                 |     <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span> postgres | pg_amproc_oid_index                      |     <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span> postgres | pg_attrdef_adrelid_adnum_index           |     <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><h5 id="ダーティー状態でまだ書き込まれていないバッファ情報を取得">ダーティー状態でまだ書き込まれていないバッファ情報を取得</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">c</span>.relname, <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">AS</span> buffers
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">FROM</span> pg_buffercache b <span style="color:#66d9ef">INNER</span> <span style="color:#66d9ef">JOIN</span> pg_class <span style="color:#66d9ef">c</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ON</span> b.relfilenode <span style="color:#f92672">=</span> pg_relation_filenode(<span style="color:#66d9ef">c</span>.oid) <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>          b.reldatabase <span style="color:#66d9ef">IN</span> (<span style="color:#ae81ff">0</span>, (<span style="color:#66d9ef">SELECT</span> oid <span style="color:#66d9ef">FROM</span> pg_database <span style="color:#66d9ef">WHERE</span> datname <span style="color:#f92672">=</span> current_database()))
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>          b.isdirty <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#66d9ef">c</span>.relname
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">2</span> <span style="color:#66d9ef">DESC</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">100</span>;
+</span></span></code></pre></div><h5 id="出力結果-2">出力結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>              relname              | buffers 
+</span></span><span style="display:flex;"><span>-----------------------------------+---------
+</span></span><span style="display:flex;"><span> pgbench_accounts                  |    <span style="color:#ae81ff">1645</span>
+</span></span><span style="display:flex;"><span> pgbench_accounts_pkey             |     <span style="color:#ae81ff">274</span>
+</span></span><span style="display:flex;"><span> pgbench_history                   |      <span style="color:#ae81ff">51</span>
+</span></span><span style="display:flex;"><span> pgbench_branches                  |      <span style="color:#ae81ff">13</span>
+</span></span><span style="display:flex;"><span> pgbench_tellers                   |      <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span> pg_class                          |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pgbench_tellers_pkey              |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_class_oid_index                |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_class_relname_nsp_index        |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_class_tblspc_relfilenode_index |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pgbench_branches_pkey             |       <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">11</span> rows<span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>checkpoint を発行すると当然ダーティーページはなくなります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">checkpoint</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CHECKPOINT</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> 
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">c</span>.relname, <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">AS</span> buffers
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">FROM</span> pg_buffercache b <span style="color:#66d9ef">INNER</span> <span style="color:#66d9ef">JOIN</span> pg_class <span style="color:#66d9ef">c</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ON</span> b.relfilenode <span style="color:#f92672">=</span> pg_relation_filenode(<span style="color:#66d9ef">c</span>.oid) <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>          b.reldatabase <span style="color:#66d9ef">IN</span> (<span style="color:#ae81ff">0</span>, (<span style="color:#66d9ef">SELECT</span> oid <span style="color:#66d9ef">FROM</span> pg_database <span style="color:#66d9ef">WHERE</span> datname <span style="color:#f92672">=</span> current_database()))
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>          b.isdirty <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> <span style="color:#66d9ef">c</span>.relname
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">2</span> <span style="color:#66d9ef">DESC</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">100</span>;
+</span></span><span style="display:flex;"><span> relname <span style="color:#f92672">|</span> buffers 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------+---------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>(<span style="color:#ae81ff">0</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> 
+</span></span></code></pre></div><h5 id="どのくらいの共有バッファが未使用か">どのくらいの共有バッファが未使用か</h5>
+<p>未使用のバッファはnullなのでcountの引数を変えることで確認可能なはず。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">as</span> shared_buffer_count, <span style="color:#66d9ef">COUNT</span>(relfilenode) <span style="color:#66d9ef">as</span> free_in_use_count, <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#f92672">-</span> <span style="color:#66d9ef">COUNT</span>(relfilenode) <span style="color:#66d9ef">as</span> free_buffer_count <span style="color:#66d9ef">from</span> pg_buffercache;
+</span></span><span style="display:flex;"><span> shared_buffer_count <span style="color:#f92672">|</span> free_in_use_count <span style="color:#f92672">|</span> free_buffer_count 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------------------+-------------------+-------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>               <span style="color:#ae81ff">16384</span> <span style="color:#f92672">|</span>              <span style="color:#ae81ff">7093</span> <span style="color:#f92672">|</span>              <span style="color:#ae81ff">9291</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span></code></pre></div><h3 id="参考">参考</h3>
+<blockquote>
+<p>F.25. pg_buffercache <a href="https://www.postgresql.jp/document/10/html/pgbuffercache.html">https://www.postgresql.jp/document/10/html/pgbuffercache.html</a></p>
+</blockquote>
+<blockquote>
+<p>PostgreSQL Deep Dive: pg_buffercacheで共有バッファを覗いてみる <a href="http://pgsqldeepdive.blogspot.com/2012/12/pgbuffercache.html">http://pgsqldeepdive.blogspot.com/2012/12/pgbuffercache.html</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-how-to-install-and-use-pgstattuple/">PostgreSQLのpgstattupleのインストールと使用方法</a></li>
+  
+  <li><a href="/postgresql-about-auto_explain.html">PostgreSQLのauto_explainで特定クエリの実行計画を出力する</a></li>
+  
+  <li><a href="/postgresql-pg-stat-statements-install.html">PostgreSQLのpg_stat_statementsのインストール、設定方法</a></li>
+  
+  <li><a href="/postgresql-monitoring-sql.html">PostgreSQLの稼働状況確認用SQL</a></li>
+  
+  <li><a href="/postgresql-pgBadger-test.html">PostgreSQLのログ分析ツール pgBadgerを試す</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

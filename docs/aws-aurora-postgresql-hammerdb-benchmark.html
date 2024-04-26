@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Aurora PostgreSQLにHammerDBのTPC-Cを実行 | my opinion is my own</title>
+<meta name="title" content="Aurora PostgreSQLにHammerDBのTPC-Cを実行" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-aurora-postgresql-hammerdb-benchmark.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Aurora PostgreSQLにHammerDBのTPC-Cを実行">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-11-13T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-11-13T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Aurora PostgreSQLにHammerDBのTPC-Cを実行">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Aurora PostgreSQLにHammerDBのTPC-Cを実行">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-11-13T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-11-13T00:00:00+00:00">
+  <meta itemprop="wordCount" content="968">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Aurora PostgreSQLにHammerDBのTPC-Cを実行</h1>
+
+<p>
+  <i>
+    <time datetime='2020-11-13' pubdate>
+      2020-11-13
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>Auroraを対象にHammerDBのTPC-Cを使ってみましたが、（当然ですが、）ほぼ普通のPostgreSQL と同じ手順。</p>
+<h3 id="はじめに">はじめに</h3>
+<p>CLI実行とのことで、下記のHammerDBのドキュメントを参考</p>
+<blockquote>
+<p>Chapter 8. Command Line Interface (CLI) <a href="https://hammerdb.com/docs/ch08.html">https://hammerdb.com/docs/ch08.html</a></p>
+</blockquote>
+<h3 id="事前準備">事前準備</h3>
+<p>PostgreSQL関連のライブラリが既にインストールされていることを前提。無ければ下記でインストールしておく。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum -y install postgresql
+</span></span><span style="display:flex;"><span>sudo yum -y install postgresql-contrib
+</span></span></code></pre></div><h3 id="hammerdbのインストーラーダウンロード">HammerDBのインストーラーダウンロード</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>wget https://github.com/TPC-Council/HammerDB/releases/download/v3.3/HammerDB-3.3-Linux.tar.gz
+</span></span><span style="display:flex;"><span>tar xvzf HammerDB-3.3-Linux.tar.gz
+</span></span><span style="display:flex;"><span>cd HammerDB-3.3
+</span></span></code></pre></div><blockquote>
+<p>HammerDB <a href="https://hammerdb.com/download.html">https://hammerdb.com/download.html</a></p>
+</blockquote>
+<h3 id="ライブラリ確認">ライブラリ確認</h3>
+<p>PostgreSQLのライブラリのチェックのSuccessを確認する。</p>
+<pre tabindex="0"><code>Checking database library for PostgreSQL
+Success ... loaded library Pgtcl for PostgreSQL
+</code></pre><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin HammerDB-3.3<span style="color:#f92672">]</span>$ ls -l
+</span></span><span style="display:flex;"><span>total <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">19</span> Oct <span style="color:#ae81ff">18</span>  <span style="color:#ae81ff">2019</span> agent
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">37</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> bin
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user <span style="color:#ae81ff">29218</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> ChangeLog
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user   <span style="color:#ae81ff">178</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> config
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">7274</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdb
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">3167</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdbcli
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">2508</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdbws
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">39</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> images
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> include
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">21</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> lib
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user <span style="color:#ae81ff">34666</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> license
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> modules
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user   <span style="color:#ae81ff">116</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> readme
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">10</span> ec2-user ec2-user   <span style="color:#ae81ff">126</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> src
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin HammerDB-3.3<span style="color:#f92672">]</span>$ ./hammerdbcli
+</span></span><span style="display:flex;"><span>HammerDB CLI v3.3
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 2003-2019 Steve Shaw
+</span></span><span style="display:flex;"><span>Type <span style="color:#e6db74">&#34;help&#34;</span> <span style="color:#66d9ef">for</span> a list of commands
+</span></span><span style="display:flex;"><span>The xml is well-formed, applying configuration
+</span></span><span style="display:flex;"><span>hammerdb&gt;librarycheck
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Error: failed to load Oratcl - can<span style="color:#e6db74">&#39;t read &#34;env(ORACLE_HOME)&#34;: no such variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Ensure that Oracle client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Checking database library for MSSQLServer
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Error: failed to load tdbc::odbc - couldn&#39;</span>t load file <span style="color:#e6db74">&#34;libiodbc.so&#34;</span>: libiodbc.so: cannot open shared object file: No such file or directory
+</span></span><span style="display:flex;"><span>Ensure that MSSQLServer client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Db2
+</span></span><span style="display:flex;"><span>Error: failed to load db2tcl - couldn<span style="color:#e6db74">&#39;t load file &#34;/home/ec2-user/HammerDB-3.3/lib/db2tcl2.0.0/libdb2tcl.so.0.0.1&#34;: libdb2.so.1: cannot open shared object file: No such file or directory
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Ensure that Db2 client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Checking database library for MySQL
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Error: failed to load mysqltcl - couldn&#39;</span>t load file <span style="color:#e6db74">&#34;/home/ec2-user/HammerDB-3.3/lib/mysqltcl-3.052/libmysqltcl3.052.so&#34;</span>: libmysqlclient.so.21: cannot open shared object file: No such file or directory
+</span></span><span style="display:flex;"><span>Ensure that MySQL client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>Success ... loaded library Pgtcl <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Redis
+</span></span><span style="display:flex;"><span>Success ... loaded library redis <span style="color:#66d9ef">for</span> Redis
+</span></span></code></pre></div><h3 id="hammerdbのパラメータ設定">HammerDBのパラメータ設定</h3>
+<h5 id="接続dbをpostgresql-指定">接続DBをPostgreSQL 指定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; dbset db pg
+</span></span></code></pre></div><h5 id="対象ベンチマークをtpc-cに設定する">対象ベンチマークをTPC-Cに設定する</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; dbset bm TPC-C
+</span></span></code></pre></div><h5 id="接続先ホスト名の設定">接続先ホスト名の設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset connection pg_host aurorapgsqlv1.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com		
+</span></span></code></pre></div><h5 id="superuserのユーザ名パスワードの設定">superuserのユーザ名、パスワードの設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_superuser postgres
+</span></span><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_superuserpass postgres
+</span></span></code></pre></div><h5 id="pg_driverの変更">pg_driverの変更</h5>
+<p>環境整整備、動作検証までは「test」を、実計測時は「timed」を指定</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_driver timed
+</span></span></code></pre></div><h5 id="pg_timeprofileの変更">pg_timeprofileの変更</h5>
+<p>trueにすると、10秒間隔での応答時間のパーセンタイル、完了時の累積値がレポート</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_timeprofile true
+</span></span></code></pre></div><h5 id="pg_total_iterationsの変更">pg_total_iterationsの変更</h5>
+<p>トランザクションの実行回数を指定（デフォルト 1000000)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_total_iterations <span style="color:#ae81ff">100000</span>
+</span></span></code></pre></div><h5 id="pg_count_wareスケールファクターの設定">pg_count_ware（スケールファクター）の設定</h5>
+<p>データ容量を調整する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_count_ware <span style="color:#ae81ff">10</span>
+</span></span></code></pre></div><h5 id="pg_num_vu同時実行ユーザの設定">pg_num_vu（同時実行ユーザ）の設定</h5>
+<p>データ容量を調整する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpcc pg_num_vu <span style="color:#ae81ff">4</span>
+</span></span></code></pre></div><h5 id="設定値を確認">設定値を確認</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; print dict
+</span></span><span style="display:flex;"><span>hammerdb&gt;print dict
+</span></span><span style="display:flex;"><span>Dictionary Settings <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>connection <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> pg_host <span style="color:#f92672">=</span> aurorapgsqlv1.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com
+</span></span><span style="display:flex;"><span> pg_port <span style="color:#f92672">=</span> <span style="color:#ae81ff">5432</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>tpcc       <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> pg_count_ware       <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span> pg_num_vu           <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_superuser        <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_superuserpass    <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_defaultdbase     <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_user             <span style="color:#f92672">=</span> tpcc
+</span></span><span style="display:flex;"><span> pg_pass             <span style="color:#f92672">=</span> tpcc
+</span></span><span style="display:flex;"><span> pg_dbase            <span style="color:#f92672">=</span> tpcc
+</span></span><span style="display:flex;"><span> pg_vacuum           <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_dritasnap        <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_oracompat        <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_storedprocs      <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_total_iterations <span style="color:#f92672">=</span> <span style="color:#ae81ff">100000</span>
+</span></span><span style="display:flex;"><span> pg_raiseerror       <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_keyandthink      <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_driver           <span style="color:#f92672">=</span> timed
+</span></span><span style="display:flex;"><span> pg_rampup           <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span> pg_duration         <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>
+</span></span><span style="display:flex;"><span> pg_allwarehouse     <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_timeprofile      <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span> pg_async_scale      <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_async_client     <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span> pg_async_verbose    <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_async_delay      <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><h3 id="スキーマ作成">スキーマ作成</h3>
+<h5 id="スキーマ作成及びテストデータの投入">スキーマ作成、及び、テストデータの投入</h5>
+<p>データロードが走るので時間が掛かる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;buildschema
+</span></span><span style="display:flex;"><span>Script cleared
+</span></span><span style="display:flex;"><span>Building <span style="color:#ae81ff">1</span> Warehouses<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> with <span style="color:#ae81ff">1</span> Virtual User
+</span></span><span style="display:flex;"><span>Ready to create a <span style="color:#ae81ff">1</span> Warehouse PostgreSQL TPC-C schema
+</span></span><span style="display:flex;"><span>in host xxxxxx.CLUSTER-xxxxxxxx.AP-NORTHEAST-1.RDS.AMAZONAWS.COM:5432 under user TPCC in database TPCC?
+</span></span><span style="display:flex;"><span>Enter yes or no: replied yes
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">1</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>RUNNING - TPC-C creation
+</span></span><span style="display:flex;"><span>Vuser 1:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 1:CREATING TPCC SCHEMA
+</span></span><span style="display:flex;"><span>Vuser 1:CREATING DATABASE tpcc under OWNER tpcc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>～省略～
+</span></span><span style="display:flex;"><span>Vuser 1:GATHERING SCHEMA STATISTICS
+</span></span><span style="display:flex;"><span>Vuser 1:TPCC SCHEMA COMPLETE
+</span></span><span style="display:flex;"><span>Vuser 1:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>ALL VIRTUAL USERS COMPLETE
+</span></span><span style="display:flex;"><span>                          TPC-C Driver Script
+</span></span><span style="display:flex;"><span>hammerdb&gt;
+</span></span></code></pre></div><p>スケールファクタを10倍に設定して、完了後にPostgreSQL側のtpccデータベースにログインして確認すれば9つのテーブルが作成されていることがわかる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres@aurorapgsqlv1:tpcc&gt; <span style="color:#ae81ff">\d</span>t+                                                                                                   
+</span></span><span style="display:flex;"><span>+----------+------------+--------+---------+---------+---------------+
+</span></span><span style="display:flex;"><span>| Schema   | Name       | Type   | Owner   | Size    | Description   |
+</span></span><span style="display:flex;"><span>|----------+------------+--------+---------+---------+---------------|
+</span></span><span style="display:flex;"><span>| public   | customer   | table  | tpcc    | <span style="color:#ae81ff">371</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | district   | table  | tpcc    | <span style="color:#ae81ff">168</span> kB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | history    | table  | tpcc    | <span style="color:#ae81ff">56</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | item       | table  | tpcc    | <span style="color:#ae81ff">21</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | new_order  | table  | tpcc    | <span style="color:#ae81ff">7864</span> kB | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | order_line | table  | tpcc    | <span style="color:#ae81ff">656</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | orders     | table  | tpcc    | <span style="color:#ae81ff">43</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | stock      | table  | tpcc    | <span style="color:#ae81ff">710</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | warehouse  | table  | tpcc    | <span style="color:#ae81ff">40</span> kB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>+----------+------------+--------+---------+---------+---------------+
+</span></span><span style="display:flex;"><span>SELECT <span style="color:#ae81ff">9</span>
+</span></span><span style="display:flex;"><span>Time: 0.021s
+</span></span></code></pre></div><h5 id="ロード用のクライアントプロセスをkillする">ロード用のクライアントプロセスをkillする</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vudestroy
+</span></span><span style="display:flex;"><span>Destroying Virtual Users
+</span></span><span style="display:flex;"><span>Virtual Users Destroyed
+</span></span><span style="display:flex;"><span>vudestroy success
+</span></span></code></pre></div><h5 id="スクリプトのロード">スクリプトのロード</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;loadscript
+</span></span><span style="display:flex;"><span>TPC-C Driver Script
+</span></span><span style="display:flex;"><span>Script loaded, Type <span style="color:#e6db74">&#34;print script&#34;</span> to view
+</span></span></code></pre></div><h4 id="テスト実行用クライアントvirtual-userの設定作成">テスト実行用クライアント（Virtual User）の設定、作成</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vuset vu <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset logtotemp <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset showoutput <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset unique <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset timestamps <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;print vuconf
+</span></span><span style="display:flex;"><span>Virtual Users <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>User Delay<span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>Repeat Delay<span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>Iterations <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Show Output <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Log Output <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Unique Log Name <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>No Log Buffer <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>Log Timestamps <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;
+</span></span><span style="display:flex;"><span>hammerdb&gt; vucreate
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">1</span> created MONITOR - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">2</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">3</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">4</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">5</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Logging activated
+</span></span><span style="display:flex;"><span>to /tmp/hammerdb_5FADF0FE5B3F03E293835333.log
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5</span> Virtual Users Created with Monitor VU
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vustatus
+</span></span><span style="display:flex;"><span>1 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>2 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>3 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>4 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>5 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span></code></pre></div><h3 id="hammerdbの実行">HammerDBの実行</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; vurun
+</span></span></code></pre></div><h5 id="実行結果">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>～省略～
+</span></span><span style="display:flex;"><span>Vuser 1:TEST RESULT : System achieved <span style="color:#ae81ff">14999</span> PostgreSQL TPM at <span style="color:#ae81ff">6461</span> NOPM
+</span></span><span style="display:flex;"><span>～省略～
+</span></span></code></pre></div><blockquote>
+<p>TPM = Transactions Per Minute=トランザクション数／分</p>
+<p>NOPM = New Order Per Minute=TPC-Cのシナリオにおける新規オーダー（注文）数／分</p>
+</blockquote>
+<h3 id="クリーンアップ">クリーンアップ</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vucomplete
+</span></span><span style="display:flex;"><span>true
+</span></span><span style="display:flex;"><span>hammerdb&gt;vudestroy
+</span></span><span style="display:flex;"><span>Destroying Virtual Users
+</span></span><span style="display:flex;"><span>Virtual Users Destroyed
+</span></span><span style="display:flex;"><span>vudestroy success
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;clearscript
+</span></span><span style="display:flex;"><span>Script cleared
+</span></span></code></pre></div><h3 id="参考">参考</h3>
+<blockquote>
+<p>HammerDBを使用してPostgreSQLのベンチマークを実施する - Qiita <a href="https://qiita.com/mkyz08/items/a9f224dbf4ea7b83e2e9">https://qiita.com/mkyz08/items/a9f224dbf4ea7b83e2e9</a></p>
+<p>HammerDBをCLIで使うなど（３）：PostgreSQLにTPC-Cを実行してみる - なからなLife <a href="https://atsuizo.hatenadiary.jp/entry/2019/08/28/090000">https://atsuizo.hatenadiary.jp/entry/2019/08/28/090000</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-postgresql-rdsproxy-failover.html">RDS Proxyを使用してAurora PostgreSQLのフェイルオーバーを実行する</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-ssl-connect.html">Aurora（PostgreSQL）へのSSL接続について</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-iam-connect.html">IAM認証を使用したAurora(PostgreSQL)への接続</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-parameter-store-connect.html">Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理</a></li>
+  
+  <li><a href="/aws-aurora-bytea-insert-binary-data.html">Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

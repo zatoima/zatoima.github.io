@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする | my opinion is my own</title>
+<meta name="title" content="PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-database-logical-backup-restore-table/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-10-27T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-10-27T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-10-27T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-10-27T00:00:00+00:00">
+  <meta itemprop="wordCount" content="510">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする</h1>
+
+<p>
+  <i>
+    <time datetime='2021-10-27' pubdate>
+      2021-10-27
+    </time>
+  </i>
+</p>
+
+<content>
+  <h2 id="コマンド">コマンド</h2>
+<h3 id="pg_dumpによりデータベース全体をバックアップ">pg_dumpによりデータベース全体をバックアップ</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pg_dump -Fc -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres pgbench &gt; pgbench.dump
+</span></span></code></pre></div><h3 id="pg_restoreにより特定テーブルのみをリストア">pg_restoreにより&quot;特定テーブルのみ&quot;をリストア</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style="color:#e6db74">&#34;create database pgbench_restore&#34;</span>
+</span></span><span style="display:flex;"><span>pg_restore -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench_restore -t pgbench_accounts pgbench.dump
+</span></span></code></pre></div><h2 id="実行ログ">実行ログ</h2>
+<h3 id="バックアップ">バックアップ</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ pg_dump -Fc -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres pgbench &gt; pgbench.dump
+</span></span><span style="display:flex;"><span>pg_dump: last built-in OID is <span style="color:#ae81ff">16383</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading extensions
+</span></span><span style="display:flex;"><span>pg_dump: identifying extension members
+</span></span><span style="display:flex;"><span>pg_dump: reading schemas
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined tables
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined functions
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined types
+</span></span><span style="display:flex;"><span>pg_dump: reading procedural languages
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined aggregate functions
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operators
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined access methods
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operator classes
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operator families
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search parsers
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search templates
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search dictionaries
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search configurations
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined foreign-data wrappers
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined foreign servers
+</span></span><span style="display:flex;"><span>pg_dump: reading default privileges
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined collations
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined conversions
+</span></span><span style="display:flex;"><span>pg_dump: reading type casts
+</span></span><span style="display:flex;"><span>pg_dump: reading transforms
+</span></span><span style="display:flex;"><span>pg_dump: reading table inheritance information
+</span></span><span style="display:flex;"><span>pg_dump: reading event triggers
+</span></span><span style="display:flex;"><span>pg_dump: finding extension tables
+</span></span><span style="display:flex;"><span>pg_dump: finding inheritance relationships
+</span></span><span style="display:flex;"><span>pg_dump: reading column info <span style="color:#66d9ef">for</span> interesting tables
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#e6db74">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#e6db74">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#e6db74">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#e6db74">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: flagging inherited columns in subtables
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: flagging indexes in partitioned tables
+</span></span><span style="display:flex;"><span>pg_dump: reading extended statistics
+</span></span><span style="display:flex;"><span>pg_dump: reading constraints
+</span></span><span style="display:flex;"><span>pg_dump: reading triggers
+</span></span><span style="display:flex;"><span>pg_dump: reading rewrite rules
+</span></span><span style="display:flex;"><span>pg_dump: reading policies
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#66d9ef">for</span> table <span style="color:#e6db74">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading publications
+</span></span><span style="display:flex;"><span>pg_dump: reading publication membership
+</span></span><span style="display:flex;"><span>pg_dump: reading subscriptions
+</span></span><span style="display:flex;"><span>pg_dump: reading large objects
+</span></span><span style="display:flex;"><span>pg_dump: reading dependency data
+</span></span><span style="display:flex;"><span>pg_dump: saving encoding <span style="color:#f92672">=</span> UTF8
+</span></span><span style="display:flex;"><span>pg_dump: saving standard_conforming_strings <span style="color:#f92672">=</span> on
+</span></span><span style="display:flex;"><span>pg_dump: saving search_path <span style="color:#f92672">=</span> 
+</span></span><span style="display:flex;"><span>pg_dump: saving database definition
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#e6db74">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#e6db74">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#e6db74">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#e6db74">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><h3 id="リストア用のデータベース作成">リストア用のデータベース作成</h3>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;create database pgbench_restore&#34;
+CREATE DATABASE
+</code></pre><h3 id="リストア用データベースに個別のテーブルをリストア">リストア用データベースに個別のテーブルをリストア</h3>
+<p>pgbench_accountsだけをリストア</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ pg_restore -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench_restore -t pgbench_accounts pgbench.dump
+pg_restore: connecting to database for restore
+pg_restore: creating TABLE &#34;public.pgbench_accounts&#34;
+pg_restore: processing data for table &#34;public.pgbench_accounts&#34;
+[ec2-user@bastin ~]$ psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench_restore -U postgres
+psql (11.12, server 10.14)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES128-GCM-SHA256, bits: 128, compression: off)
+Type &#34;help&#34; for help.
+
+pgbench_restore=&gt; \conninfo
+You are connected to database &#34;pgbench_restore&#34; as user &#34;postgres&#34; on host &#34;auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com&#34; at port &#34;5432&#34;.
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES128-GCM-SHA256, bits: 128, compression: off)
+pgbench_restore=&gt; \d
+              List of relations
+ Schema |       Name       | Type  |  Owner   
+--------+------------------+-------+----------
+ public | pgbench_accounts | table | postgres
+(1 row)
+
+pgbench_restore=&gt; 
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-postgresql-execute-plan-visualization/">PostgreSQLのSQL実行計画の可視化（pev、gocmdpev）</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-pg_proctab-extention/">PostgreSQLの拡張機能 pg_proctab をAurora/RDSから触ってみる</a></li>
+  
+  <li><a href="/postgresql-pgbench-performance-sql-test/">pgbenchで任意のSQLを使って負荷掛け</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-pg-collector.html">awslabsのpg-collectorについて</a></li>
+  
+  <li><a href="/oracle-postgresql-sequence-cache-incompatible.html">OracleとPostgreSQLのシーケンスキャッシュの動作差異</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

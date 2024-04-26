@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQLの監視のためのログ設定について | my opinion is my own</title>
+<meta name="title" content="PostgreSQLの監視のためのログ設定について" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-about-monitoring-log.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLの監視のためのログ設定について">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-03-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-03-08T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLの監視のためのログ設定について">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLの監視のためのログ設定について">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-03-08T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-03-08T00:00:00+00:00">
+  <meta itemprop="wordCount" content="324">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLの監視のためのログ設定について</h1>
+
+<p>
+  <i>
+    <time datetime='2020-03-08' pubdate>
+      2020-03-08
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="はじめに">はじめに</h3>
+<p>監視には「レスポンス問題発生の予測」、「問題発生時の原因特定」という大きな目的があります。定期的なデータベース稼働に関するヘルスチェックを行う場合に、必要な情報が取得出来ていなければなりません。今回はログ出力の観点から代表的なPostgreSQLのログ管理の代表的なパラメータをまとめてみます。</p>
+<h3 id="バージョン情報">バージョン情報</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pgbench<span style="color:#f92672">=</span><span style="color:#75715e"># select version();</span>
+</span></span><span style="display:flex;"><span>                                                 version                                                  
+</span></span><span style="display:flex;"><span>----------------------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span> PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc <span style="color:#f92672">(</span>GCC<span style="color:#f92672">)</span> 4.8.5 <span style="color:#ae81ff">20150623</span> <span style="color:#f92672">(</span>Red Hat 4.8.5-39<span style="color:#f92672">)</span>, 64-bit
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> row<span style="color:#f92672">)</span>
+</span></span></code></pre></div><h3 id="log関連の代表的なパラメータ一覧">log関連の代表的なパラメータ一覧</h3>
+<table>
+<thead>
+<tr>
+<th>パラメータ名</th>
+<th>観点</th>
+<th>デフォルト値</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>log_destination</td>
+<td>ログ取得・配置</td>
+<td>stderr</td>
+<td>stderr,csvlog,syslogの設定</td>
+</tr>
+<tr>
+<td>logging_collector</td>
+<td>ログ取得・配置</td>
+<td>on</td>
+<td>stderr,csvlogの内容をリダイレクトするかどうか</td>
+</tr>
+<tr>
+<td>log_directory</td>
+<td>ログ取得・配置</td>
+<td>log</td>
+<td>どのディレクトリにログ・ファイルを格納するか</td>
+</tr>
+<tr>
+<td>log_filename</td>
+<td>ログ取得・配置</td>
+<td>postgresql-%a.log</td>
+<td>ファイル名の指定</td>
+</tr>
+<tr>
+<td>client_min_messages</td>
+<td>ログ取得タイミング</td>
+<td>notice</td>
+<td>クライアントに送信するレベル設定。DEBUG5、 DEBUG4、DEBUG3、DEBUG2、  DEBUG1、LOG、NOTICE、 WARNING、ERROR、FATAL、およびPANICから選ぶ。</td>
+</tr>
+<tr>
+<td>log_min_messages</td>
+<td>ログ取得タイミング</td>
+<td>warning</td>
+<td>サーバログに書き込むためのレベル設定。DEBUG5、  DEBUG4、DEBUG3、DEBUG2、 DEBUG1、LOG、NOTICE、 WARNING、ERROR、FATAL、およびPANICから選ぶ。</td>
+</tr>
+<tr>
+<td>log_min_error_statement</td>
+<td>ログ取得タイミング</td>
+<td>error</td>
+<td>サーバログにエラーとなったSQLを書き込む際のレベル設定</td>
+</tr>
+<tr>
+<td>log_min_duration_statement</td>
+<td>ログ取得タイミング</td>
+<td>-1</td>
+<td>指定した以上に実行に時間が掛かったSQLをサーバログに書き込むための設定。単位はミリ秒。</td>
+</tr>
+<tr>
+<td>log_temp_files</td>
+<td>ログ取得タイミング</td>
+<td>-1</td>
+<td>指定したサイズ以上の一時ファイルが作成された場合ログに記録。単位はKB。</td>
+</tr>
+<tr>
+<td>log_statement</td>
+<td>ログ取得タイミング</td>
+<td>-1</td>
+<td>どのSQL文をログに記録するかを制御します。 有効な値は、none（off）、ddl、mod、およびall（全てのメッセージ）。modは、全てのddl文に加え、INSERT、UPDATE、DELETE、TRUNCATE、およびCOPY FROMといった、データ変更文をログに記録。 PREPAREとEXPLAIN ANALYZEコマンドも、そこに含まれるコマンドが適切な種類であればログが取得。</td>
+</tr>
+<tr>
+<td>log_checkpoints</td>
+<td>ログ取得対象</td>
+<td>off</td>
+<td>チェックポイントに関する情報を出力する</td>
+</tr>
+<tr>
+<td>log_connections/log_disconnections</td>
+<td>ログ取得対象</td>
+<td>off</td>
+<td>サーバへの接続/切断情報を記載する</td>
+</tr>
+<tr>
+<td>log_lock_waits</td>
+<td>ログ取得対象</td>
+<td>off</td>
+<td>ロック獲得のために一定時間待たされた場合に出力する。時間はdeadlock_timeoutパラメータで指定。</td>
+</tr>
+<tr>
+<td>log_line_prefix</td>
+<td>ログ取得対象</td>
+<td>%m [%p]</td>
+<td>各ログの先頭に出力する情報を設定。  %u:ユーザ名、%d:データベース名、%r:ホスト名/IPアドレス、ポート番号、%m:ミリ秒付きタイムスタンプ</td>
+</tr>
+<tr>
+<td>log_rotation_age</td>
+<td>ログメンテナンス</td>
+<td>1d</td>
+<td>指定した時間でログ・ファイルをハウスキーピングする</td>
+</tr>
+<tr>
+<td>log_rotation_size</td>
+<td>ログメンテナンス</td>
+<td>0</td>
+<td>指定したサイズでログ・ファイルをハウスキーピングする</td>
+</tr>
+<tr>
+<td>log_truncate_on_rotation</td>
+<td>ログメンテナンス</td>
+<td>on</td>
+<td>ハウスキーピング時に同じログ・ファイルが存在する場合に追記するか上書きするか設定</td>
+</tr>
+<tr>
+<td>log_file_mode</td>
+<td>その他</td>
+<td>600</td>
+<td>ログ・ファイルのパーミッションを指定</td>
+</tr>
+</tbody>
+</table>
+<p>全パラメータはマニュアルをご参照ください。</p>
+<blockquote>
+<p>19.8. エラー報告とログ取得 <a href="https://www.postgresql.jp/document/10/html/runtime-config-logging.html">https://www.postgresql.jp/document/10/html/runtime-config-logging.html</a></p>
+</blockquote>
+<h3 id="postgresqlconf">postgresql.conf</h3>
+<p>デフォルトの監視設定は最低限です。スロークエリの監視、チェックポイント頻度の監視、接続情報、一時ファイルの生成頻度、生成量の監視は必要かと思います。あとはファイル名、及びファイルに書き込まれる接頭辞は必要に応じて変更してもらえれば良いと思います。&quot;#&ldquo;にてコメントしているところはデフォルトから変更しているところとなります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>log_destination<span style="color:#f92672">=</span>stderr
+</span></span><span style="display:flex;"><span>logging_collector<span style="color:#f92672">=</span>on
+</span></span><span style="display:flex;"><span>log_directory<span style="color:#f92672">=</span>log
+</span></span><span style="display:flex;"><span>log_filename<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;postgresql-%Y%m%d.log&#39;</span> <span style="color:#75715e">#ファイル名の変更</span>
+</span></span><span style="display:flex;"><span>client_min_messages<span style="color:#f92672">=</span>notice
+</span></span><span style="display:flex;"><span>log_min_messages<span style="color:#f92672">=</span>warning
+</span></span><span style="display:flex;"><span>log_min_error_statement<span style="color:#f92672">=</span>error
+</span></span><span style="display:flex;"><span>log_min_duration_statement<span style="color:#f92672">=</span><span style="color:#ae81ff">3000</span> <span style="color:#75715e">#スロークエリの検知</span>
+</span></span><span style="display:flex;"><span>log_checkpoints<span style="color:#f92672">=</span>on <span style="color:#75715e">#チェックポイントの頻度の確認のために有効化</span>
+</span></span><span style="display:flex;"><span>log_connections<span style="color:#f92672">=</span>on <span style="color:#75715e">#クライアントからの接続情報をログに書き込む</span>
+</span></span><span style="display:flex;"><span>log_disconnections<span style="color:#f92672">=</span>on <span style="color:#75715e">#クライアントからの切断情報をログに書き込む</span>
+</span></span><span style="display:flex;"><span>log_temp_files<span style="color:#f92672">=</span><span style="color:#ae81ff">1024</span> <span style="color:#75715e">#一時ファイル生成時にログに書き込む</span>
+</span></span><span style="display:flex;"><span>log_statement<span style="color:#f92672">=</span>ddl <span style="color:#75715e">#DDLの実行をログに書き込む</span>
+</span></span><span style="display:flex;"><span>log_lock_waits<span style="color:#f92672">=</span>off
+</span></span><span style="display:flex;"><span>log_line_prefix<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;[%t]%u %d %p[%l] &#39;</span> <span style="color:#75715e">#接頭辞のカスタマイズ</span>
+</span></span><span style="display:flex;"><span>log_rotation_age<span style="color:#f92672">=</span>1d
+</span></span><span style="display:flex;"><span>log_rotation_size<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>log_truncate_on_rotation<span style="color:#f92672">=</span>on
+</span></span><span style="display:flex;"><span>log_file_mode<span style="color:#f92672">=</span><span style="color:#ae81ff">0644</span> <span style="color:#75715e">#postgresユーザ以外に読取り権限を付与。ログ監視を想定。</span>
+</span></span></code></pre></div><p>デフォルトから変更した一つ一つパラメータの効果を見ていきます。</p>
+<h5 id="ファイル名の変更--log_filenamepostgresql-ymdlog">ファイル名の変更 ▶ log_filename=&lsquo;postgresql-%Y%m%d.log&rsquo;</h5>
+<p>ファイル名に日付が付くようになりました。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> postgres postgres    <span style="color:#ae81ff">534</span> Mar  <span style="color:#ae81ff">3</span> 03:05 postgresql-20200303.log
+</span></span></code></pre></div><h5 id="スロークエリの検知--log_min_duration_statement3000">スロークエリの検知 ▶ log_min_duration_statement=3000</h5>
+<p>設定した3000ミリ秒（3秒）以上のクエリを実行した場合、下記のようにSQL文とdurationが出力されます。実行計画を合わせて確認したい場合は、auro_explainの拡張機能と合わせてどうぞ。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:15:03 UTC<span style="color:#f92672">]</span>postgres postgres 2457<span style="color:#f92672">[</span>13<span style="color:#f92672">]</span> LOG:  duration: 6695.655 ms  statement: <span style="color:#66d9ef">select</span> count<span style="color:#f92672">(</span>*<span style="color:#f92672">)</span> from t1,t2;
+</span></span></code></pre></div><blockquote>
+<p>PostgreSQLのauto_explainで特定クエリの実行計画を出力する | my opinion is my own <a href="https://zatoima.github.io/postgresql-about-auto_explain.html">https://zatoima.github.io/postgresql-about-auto_explain.html</a></p>
+</blockquote>
+<h5 id="チェックポイントの頻度の確認のために有効化--log_checkpoints">チェックポイントの頻度の確認のために有効化 ▶ log_checkpoints</h5>
+<p>チェックポイントに関する情報が出力されます。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:40:43 UTC<span style="color:#f92672">]</span>  2558<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> LOG:  checkpoint starting: time
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:41:12 UTC<span style="color:#f92672">]</span>  2558<span style="color:#f92672">[</span>4<span style="color:#f92672">]</span> LOG:  checkpoint complete: wrote <span style="color:#ae81ff">289</span> buffers <span style="color:#f92672">(</span>1.8%<span style="color:#f92672">)</span>; <span style="color:#ae81ff">0</span> WAL file<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> added, <span style="color:#ae81ff">0</span> removed, <span style="color:#ae81ff">0</span> recycled; write<span style="color:#f92672">=</span>28.864 s, sync<span style="color:#f92672">=</span>0.000 s, total<span style="color:#f92672">=</span>28.869 s; sync files<span style="color:#f92672">=</span>24, longest<span style="color:#f92672">=</span>0.000 s, average<span style="color:#f92672">=</span>0.000 s; distance<span style="color:#f92672">=</span><span style="color:#ae81ff">3312</span> kB, estimate<span style="color:#f92672">=</span><span style="color:#ae81ff">3312</span> kB
+</span></span></code></pre></div><h5 id="クライアントからの接続情報--log_connections">クライアントからの接続情報 ▶ log_connections</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:13:20 UTC<span style="color:#f92672">][</span>unknown<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>unknown<span style="color:#f92672">]</span> 2450<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  connection received: host<span style="color:#f92672">=[</span>local<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:13:20 UTC<span style="color:#f92672">]</span>postgres postgres 2450<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  connection authorized: user<span style="color:#f92672">=</span>postgres database<span style="color:#f92672">=</span>postgres
+</span></span></code></pre></div><p>クライアントからの切断情報 ▶ log_disconnections</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:14:04 UTC<span style="color:#f92672">]</span>postgres postgres 2450<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> LOG:  disconnection: session time: 0:00:44.331 user<span style="color:#f92672">=</span>postgres database<span style="color:#f92672">=</span>postgres host<span style="color:#f92672">=[</span>local<span style="color:#f92672">]</span>
+</span></span></code></pre></div><h5 id="一時ファイル生成時にログに書き込む--log_temp_files">一時ファイル生成時にログに書き込む ▶ log_temp_files</h5>
+<p>省略。</p>
+<h5 id="ddlの実行をログに書き込む--log_statement">DDLの実行をログに書き込む ▶ log_statement</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:23:12 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>11<span style="color:#f92672">]</span> LOG:  statement: create table t3<span style="color:#f92672">(</span>a numeric<span style="color:#f92672">)</span>;
+</span></span></code></pre></div><h5 id="接頭辞のカスタマイズ--log_line_prefix">接頭辞のカスタマイズ ▶ log_line_prefix</h5>
+<p><code>[2020-03-03 03:13:20 UTC]postgres postgres 2450[2]</code>が出るようになった。接続元が仮に多い場合はホスト名も出るように設定しても良いかも。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:13:20 UTC<span style="color:#f92672">]</span>postgres postgres 2450<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  connection authorized: user<span style="color:#f92672">=</span>postgres database<span style="color:#f92672">=</span>postgres
+</span></span></code></pre></div><h5 id="postgresユーザ以外に読取り権限を付与--log_file_mode">postgresユーザ以外に読取り権限を付与 ▶ log_file_mode</h5>
+<p>groupに読取り権限が付くようになりました。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> postgres postgres    <span style="color:#ae81ff">534</span> Mar  <span style="color:#ae81ff">3</span> 03:05 postgresql-20200303.log
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-postgres-extention-list/">Aurora(PostgreSQL互換)で使用可能な拡張機能一覧</a></li>
+  
+  <li><a href="/postgresql-how-to-use-oid2name/">PostgreSQLのoid2nameの使用方法</a></li>
+  
+  <li><a href="/postgresql-about-pg_buffercache.html">PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する</a></li>
+  
+  <li><a href="/postgresql-how-to-install-and-use-pgstattuple/">PostgreSQLのpgstattupleのインストールと使用方法</a></li>
+  
+  <li><a href="/postgresql-about-auto_explain.html">PostgreSQLのauto_explainで特定クエリの実行計画を出力する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

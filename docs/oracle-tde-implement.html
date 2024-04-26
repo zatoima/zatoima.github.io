@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う | my opinion is my own</title>
+<meta name="title" content="Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/oracle-tde-implement.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-02-23T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-02-23T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-02-23T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-02-23T00:00:00+00:00">
+  <meta itemprop="wordCount" content="522">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Oracle">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う</h1>
+
+<p>
+  <i>
+    <time datetime='2019-02-23' pubdate>
+      2019-02-23
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>今回は、Oracle Database 12cR1 において設定を行います。</p>
+<p>透過的データベース暗号化(Transparent Data Encryption(TDE))は、データベース内の保存データを暗号化することによって、機密データを保護します。</p>
+<p>データベースの物理ファイルを暗号化することにより、保存データを暗号化します。</p>
+<p>データはストレージに書き込まれる前に自動的に暗号化され、ストレージから読み込まれる時に自動的に複合化されます。</p>
+<p>マニュアルはこちら</p>
+<blockquote>
+<p>Oracle® Database Advanced Securityガイド 12cリリース1 (12.1)
+<a href="https://docs.oracle.com/cd/E57425_01/121/ASOAG/toc.htm">https://docs.oracle.com/cd/E57425_01/121/ASOAG/toc.htm</a></p>
+</blockquote>
+<p>概要説明はこちら</p>
+<blockquote>
+<p>Transparent Data Encryption <a href="https://www.oracle.com/technetwork/jp/database/security/index-099011-ja.html">https://www.oracle.com/technetwork/jp/database/security/index-099011-ja.html</a></p>
+<p><a href="https://www.oracle.com/technetwork/jp/database/options/advanced-security/index.html">Oracle Advanced Security</a>の透過的データベース暗号化（Transparent Data Encryption（TDE））は、保存されているデータをデータベース・レイヤーで暗号化することで、潜在的な攻撃者がデータベースをバイパスしてストレージから機密情報を読み取ることを阻止します。</p>
+<p>データベース認証が済んだアプリケーションおよびユーザーは、（アプリケーション・コードまたは構成変更なしで）透過的にアプリケーション・データへのアクセスを維持することができますが、表領域ファイルから機密データを読み取ろうとするOSユーザーによる攻撃や、盗み取ったディスクまたはバックアップから情報を読み取ろうとする窃盗犯の攻撃によるクリアテキスト・データへのアクセスは拒否されます。</p>
+<p>暗号化鍵アーキテクチャは2層に分かれているため、鍵の管理が容易で、鍵と暗号化データの明確な分離が可能です。また、アシスト付き鍵ローテーション機能があり、データを再暗号化する必要はありません。キーストアの管理には、Oracle Enterprise Managerの便利なWebコンソールまたはコマンドラインを使用できます。</p>
+</blockquote>
+<h4 id="keystoreを格納するディレクトリ作成"><strong>keystoreを格納するディレクトリ作成</strong></h4>
+<p>今回は同サーバ上にディレクトリを作成します。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>su -
+</span></span><span style="display:flex;"><span>mkdir -p /keystore/dbvms
+</span></span><span style="display:flex;"><span>chown -R oracle:oinstall /keystore
+</span></span><span style="display:flex;"><span>chmod -R <span style="color:#ae81ff">755</span> /keystore
+</span></span></code></pre></div><h4 id="sqlnetoraに記載する"><strong>sqlnet.oraに記載する</strong></h4>
+<p>ENCRYPTION_WALLET_LOCATIONを記載します。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>vi $ORACLE_HOME/network/admin/sqlnet.ora
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ENCRYPTION_WALLET_LOCATION<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">(</span>SOURCE<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">(</span>METHOD<span style="color:#f92672">=</span>FILE<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">(</span>METHOD_DATA<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">(</span>DIRECTORY<span style="color:#f92672">=</span>/keystore/$ORACLE_UNQNAME<span style="color:#f92672">)))</span>
+</span></span></code></pre></div><h4 id="環境変数に-oracle_unqname-を記載する"><strong>環境変数に ORACLE_UNQNAME を記載する。</strong></h4>
+<p>※ $ORACLE_UNQNAMEをENCRYPTION_WALLET_LOCATIONに使用しているため設定しています。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>vi .oraenv_dbvms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>export ORACLE_UNQNAME<span style="color:#f92672">=</span>dbvms
+</span></span></code></pre></div><h4 id="tdeキーストアの作成"><strong>TDEキーストアの作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>. <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>.oraenv_dbvms
+</span></span><span style="display:flex;"><span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span>administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">create</span> keystore <span style="color:#e6db74">&#39;/keystore/dbvms&#39;</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">create</span> keystore <span style="color:#e6db74">&#39;/keystore/dbvms&#39;</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">キーストアが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="tdeキーストアのオープン"><strong>TDEキーストアのオープン</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">set</span> keystore <span style="color:#66d9ef">open</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">set</span> keystore <span style="color:#66d9ef">open</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">キーストアが変更されました。</span>
+</span></span></code></pre></div><h4 id="tdeキーストアのオープン確認"><strong>TDEキーストアのオープン確認</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">set</span> pages <span style="color:#ae81ff">2000</span> lin <span style="color:#ae81ff">2000</span>
+</span></span><span style="display:flex;"><span>col WRL_TYPE      <span style="color:#66d9ef">for</span> a8
+</span></span><span style="display:flex;"><span>col WRL_PARAMETER <span style="color:#66d9ef">for</span> a30
+</span></span><span style="display:flex;"><span>col STATUS        <span style="color:#66d9ef">for</span> a30
+</span></span><span style="display:flex;"><span>col WALLET_TYPE   <span style="color:#66d9ef">for</span> a30
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> INST_ID, WRL_TYPE, WRL_PARAMETER, STATUS, WALLET_TYPE <span style="color:#66d9ef">from</span> GV$ENCRYPTION_WALLET <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   INST_ID WRL_TYPE WRL_PARAMETER                  STATUS                         WALLET_TYPE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------- -------- ------------------------------ ------------------------------ ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>         <span style="color:#ae81ff">1</span> FILE     <span style="color:#f92672">/</span>keystore<span style="color:#f92672">/</span>dbvms<span style="color:#f92672">/</span>             OPEN_NO_MASTER_KEY             PASSWORD
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="tdeマスター暗号化鍵の作成"><strong>TDEマスター暗号化鍵の作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">set</span> <span style="color:#66d9ef">key</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span> <span style="color:#66d9ef">with</span> backup <span style="color:#66d9ef">using</span> <span style="color:#e6db74">&#39;deploy&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">set</span> <span style="color:#66d9ef">key</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span> <span style="color:#66d9ef">with</span> backup <span style="color:#66d9ef">using</span> <span style="color:#e6db74">&#39;deploy&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">キーストアが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="tdeマスター暗号化鍵の確認"><strong>TDEマスター暗号化鍵の確認</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> nls_timestamp_tz_format <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;yyyy/mm/dd hh24:mi:ss&#39;</span>;
+</span></span><span style="display:flex;"><span>col CREATOR_DBNAME  <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span>col KEY_ID          <span style="color:#66d9ef">for</span> a60
+</span></span><span style="display:flex;"><span>col CREATION_TIME   <span style="color:#66d9ef">for</span> a20
+</span></span><span style="display:flex;"><span>col ACTIVATION_TIME <span style="color:#66d9ef">for</span> a20
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> CREATOR_DBNAME, KEY_ID, CREATION_TIME, ACTIVATION_TIME <span style="color:#66d9ef">from</span> V$ENCRYPTION_KEYS <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span>CREATOR_DBNAME  KEY_ID                                                       CREATION_TIME        ACTIVATION_TIME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------------- ------------------------------------------------------------ -------------------- --------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dbvms         AccLZFJI<span style="color:#f92672">/</span>U95v<span style="color:#f92672">/</span>XKfMIdMWIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA         <span style="color:#ae81ff">2019</span><span style="color:#f92672">/</span><span style="color:#ae81ff">03</span><span style="color:#f92672">/</span><span style="color:#ae81ff">08</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">52</span>:<span style="color:#ae81ff">37</span>  <span style="color:#ae81ff">2019</span><span style="color:#f92672">/</span><span style="color:#ae81ff">03</span><span style="color:#f92672">/</span><span style="color:#ae81ff">08</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">52</span>:<span style="color:#ae81ff">37</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="自動ログインキーストア作成"><strong>自動ログイン・キーストア作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>administer <span style="color:#66d9ef">key</span> management <span style="color:#66d9ef">create</span> auto_login keystore <span style="color:#66d9ef">from</span> keystore <span style="color:#e6db74">&#39;/keystore/dbvms&#39;</span> identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span></code></pre></div><h4 id="db再起動"><strong>DB再起動</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>shutdown <span style="color:#66d9ef">immediate</span>
+</span></span><span style="display:flex;"><span>startup
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><h4 id="自動ログインキーストアのオープン状態確認"><strong>自動ログインキーストアのオープン状態確認</strong></h4>
+<p>列 STATUS が &ldquo;OPEN&rdquo;、列 WALLET_TYPE が &ldquo;AUTOLOGIN&rdquo; となっていること</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">set</span> lines <span style="color:#ae81ff">200</span>
+</span></span><span style="display:flex;"><span>col WRL_TYPE      <span style="color:#66d9ef">for</span> a8
+</span></span><span style="display:flex;"><span>col WRL_PARAMETER <span style="color:#66d9ef">for</span> a60
+</span></span><span style="display:flex;"><span>col STATUS        <span style="color:#66d9ef">for</span> a6
+</span></span><span style="display:flex;"><span>col WALLET_TYPE   <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> INST_ID, WRL_TYPE, WRL_PARAMETER, STATUS, WALLET_TYPE <span style="color:#66d9ef">from</span> GV$ENCRYPTION_WALLET <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>exit
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span>   INST_ID WRL_TYPE WRL_PARAMETER                                                STATUS WALLET_TYPE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------- -------- ------------------------------------------------------------ ------ ---------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>         <span style="color:#ae81ff">1</span> FILE     <span style="color:#f92672">/</span>keystore<span style="color:#f92672">/</span>dbvms<span style="color:#f92672">/</span>                                           <span style="color:#66d9ef">OPEN</span>   AUTOLOGIN
+</span></span></code></pre></div><h4 id="暗号化表領域の作成"><strong>暗号化表領域の作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> TABLESPACE dbdata
+</span></span><span style="display:flex;"><span>    DATAFILE <span style="color:#e6db74">&#39;/u01/app/oracle/oradata/dbvms/dbdata.dbf&#39;</span> <span style="color:#66d9ef">SIZE</span> <span style="color:#ae81ff">3000</span>M
+</span></span><span style="display:flex;"><span>    EXTENT MANAGEMENT <span style="color:#66d9ef">LOCAL</span> UNIFORM <span style="color:#66d9ef">SIZE</span> <span style="color:#ae81ff">1</span>M
+</span></span><span style="display:flex;"><span>    SEGMENT <span style="color:#66d9ef">SPACE</span> MANAGEMENT AUTO
+</span></span><span style="display:flex;"><span>    ENCRYPTION <span style="color:#66d9ef">USING</span> <span style="color:#e6db74">&#39;AES256&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">STORAGE</span> (ENCRYPT);
+</span></span></code></pre></div><h4 id="表領域の確認"><strong>表領域の確認</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">set</span> pages <span style="color:#ae81ff">2000</span> lin <span style="color:#ae81ff">2000</span>
+</span></span><span style="display:flex;"><span>col TABLESPACE_NAME           <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span>col EXTENT_MANAGEMENT         <span style="color:#66d9ef">for</span> a17
+</span></span><span style="display:flex;"><span>col ALLOCATION_TYPE           <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span>col SEGMENT_SPACE_MANAGEMENT  <span style="color:#66d9ef">for</span> a25
+</span></span><span style="display:flex;"><span>col BIGFILE                   <span style="color:#66d9ef">for</span> a6
+</span></span><span style="display:flex;"><span>col <span style="color:#66d9ef">ENCRYPTED</span>                 <span style="color:#66d9ef">for</span> a9
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>  TABLESPACE_NAME
+</span></span><span style="display:flex;"><span>  ,INITIAL_EXTENT
+</span></span><span style="display:flex;"><span>  ,MAX_SIZE
+</span></span><span style="display:flex;"><span>  ,STATUS
+</span></span><span style="display:flex;"><span>  ,EXTENT_MANAGEMENT
+</span></span><span style="display:flex;"><span>  ,ALLOCATION_TYPE
+</span></span><span style="display:flex;"><span>  ,SEGMENT_SPACE_MANAGEMENT
+</span></span><span style="display:flex;"><span>  ,BIGFILE
+</span></span><span style="display:flex;"><span>  ,<span style="color:#66d9ef">ENCRYPTED</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> DBA_TABLESPACES
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">【コマンド結果】</span>
+</span></span><span style="display:flex;"><span>TABLESPACE_NAME INITIAL_EXTENT   MAX_SIZE STATUS EXTENT_MANAGEMENT ALLOCATION_TYPE SEGMENT_SPACE_MANAGEMENT  BIGFIL <span style="color:#66d9ef">ENCRYPTED</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------------- -------------- ---------- ------ ----------------- --------------- ------------------------- ------ ---------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dbdata                <span style="color:#ae81ff">1048576</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             UNIFORM         AUTO                      <span style="color:#66d9ef">NO</span>     YES
+</span></span><span style="display:flex;"><span>SYSAUX                   <span style="color:#ae81ff">65536</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             <span style="color:#66d9ef">SYSTEM</span>          AUTO                      <span style="color:#66d9ef">NO</span>     <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SYSTEM</span>                   <span style="color:#ae81ff">65536</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             <span style="color:#66d9ef">SYSTEM</span>          MANUAL                    <span style="color:#66d9ef">NO</span>     <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span>TEMP                   <span style="color:#ae81ff">1048576</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             UNIFORM         MANUAL                    <span style="color:#66d9ef">NO</span>     <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span>UNDOTBS1                 <span style="color:#ae81ff">65536</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             <span style="color:#66d9ef">SYSTEM</span>          MANUAL                    <span style="color:#66d9ef">NO</span>     <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span>USERS                    <span style="color:#ae81ff">65536</span> <span style="color:#ae81ff">2147483645</span> ONLINE <span style="color:#66d9ef">LOCAL</span>             <span style="color:#66d9ef">SYSTEM</span>          AUTO                      <span style="color:#66d9ef">NO</span>     <span style="color:#66d9ef">NO</span>
+</span></span></code></pre></div><h4 id="データファイルの確認"><strong>データ・ファイルの確認</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>col TABLESPACE_NAME   <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span>col FILE_NAME         <span style="color:#66d9ef">for</span> a70
+</span></span><span style="display:flex;"><span>col AUTOEXTENSIBLE    <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span>col ONLINE_STATUS     <span style="color:#66d9ef">for</span> a15
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>  TABLESPACE_NAME
+</span></span><span style="display:flex;"><span>  ,FILE_NAME
+</span></span><span style="display:flex;"><span>  ,BYTES<span style="color:#f92672">/</span><span style="color:#ae81ff">1024</span><span style="color:#f92672">/</span><span style="color:#ae81ff">1024</span> MB
+</span></span><span style="display:flex;"><span>  ,AUTOEXTENSIBLE
+</span></span><span style="display:flex;"><span>  ,STATUS
+</span></span><span style="display:flex;"><span>  ,ONLINE_STATUS
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> DBA_DATA_FILES
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> <span style="color:#ae81ff">1</span>;
+</span></span></code></pre></div><h4 id="物理的な暗号化表領域の確認"><strong>物理的な暗号化表領域の確認</strong></h4>
+<p>テーブルを作成する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> CHECK_ENCRYPT_TABLE(COL1 number, COL2 VARCHAR2(<span style="color:#ae81ff">40</span>)) tablespace dbdata;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> CHECK_ENCRYPT_TABLE <span style="color:#66d9ef">values</span> (<span style="color:#ae81ff">1</span>,<span style="color:#e6db74">&#39;CHECK_ENCRYPT_VALUE&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">commit</span>;
+</span></span></code></pre></div><h4 id="データファイルに反映されるように複数回ログスイッチを行う"><strong>データファイルに反映されるように複数回ログスイッチを行う</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> switch logfile;
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><h4 id="物理的な暗号化を確認するcheck_encrypt_valueという文言がないかどうか確認する"><strong>物理的な暗号化を確認する。CHECK_ENCRYPT_VALUEという文言がないかどうか確認する</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-m" data-lang="m"><span style="display:flex;"><span>strings <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">/</span>u01<span style="color:#f92672">/</span>app<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>oradata<span style="color:#f92672">/</span>dbvms<span style="color:#f92672">/</span>dbdata<span style="color:#960050;background-color:#1e0010">.</span>dbf<span style="color:#960050;background-color:#1e0010">&#39;</span> <span style="color:#f92672">|</span> grep CHECK_ENCRYPT_VALUE
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/goldengate-check-session-info.html">GoldenGate関連プロセスのsession情報を確認する方法</a></li>
+  
+  <li><a href="/oracle-awr-checksql/">AWR(DBA_HIST表)を使用した確認SQL</a></li>
+  
+  <li><a href="/goldengate-check-exection-sql/">GoldenGateから実行されたSQLを確認する方法(Integrated Replicat)</a></li>
+  
+  <li><a href="/goldengate-info-param.html">GoldenGateパラメータの定義情報の取得(info paramコマンド)</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

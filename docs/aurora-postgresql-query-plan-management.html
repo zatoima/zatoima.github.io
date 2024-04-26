@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる | my opinion is my own</title>
+<meta name="title" content="Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,RDS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aurora-postgresql-query-plan-management.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-11-13T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-11-13T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-11-13T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-11-13T00:00:00+00:00">
+  <meta itemprop="wordCount" content="999">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,RDS,Aurora,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</h1>
+
+<p>
+  <i>
+    <time datetime='2019-11-13' pubdate>
+      2019-11-13
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="qpmquery-plan-managementとは">QPM(Query Plan Management)とは？</h3>
+<hr>
+<p>SQLに実行計画を記録して、その実行計画を固定化、もしくは別環境に実行計画を移行して固定化出来る機能。Oracleで言うところのSPM（SQL Plan Management）になる。Aurora(PostgreSQL)でもこの機能が使えるので実際にやってみる。</p>
+<h5 id="query-plan-managementの制御方法">Query Plan Managementの制御方法</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>rds.enable_plan_management <span style="color:#f92672">=</span> <span style="color:#960050;background-color:#1e0010">{</span> <span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">1</span><span style="color:#960050;background-color:#1e0010">}</span> <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">パラメータグループで設定</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> <span style="color:#960050;background-color:#1e0010">{</span> manual, automatic, <span style="color:#66d9ef">off</span> <span style="color:#960050;background-color:#1e0010">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span> automatic : <span style="color:#960050;background-color:#1e0010">自動計画取り込み。</span><span style="color:#ae81ff">1</span><span style="color:#960050;background-color:#1e0010">回以上実行された</span>SQLを取り込む
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span> manual    : <span style="color:#960050;background-color:#1e0010">個々の</span>SQLを手動で実行計画を取り込む
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span> <span style="color:#66d9ef">off</span>       : Query Planの取得を無効化
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>apg_plan_mgmt.use_plan_baselines <span style="color:#f92672">=</span> <span style="color:#960050;background-color:#1e0010">{</span> <span style="color:#66d9ef">true</span>, <span style="color:#66d9ef">false</span> <span style="color:#960050;background-color:#1e0010">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span> <span style="color:#66d9ef">true</span>  : <span style="color:#960050;background-color:#1e0010">取得した</span>Query Planを使用して実行計画を固定化する
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span> <span style="color:#66d9ef">false</span> : <span style="color:#960050;background-color:#1e0010">取得した</span>Query Planを使用しない<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span></code></pre></div><h3 id="環境及びシナリオ説明">環境、及びシナリオ説明</h3>
+<hr>
+<p>開発環境から本番環境への実行計画の移行を想定。</p>
+<ul>
+<li>本番環境DB名：prod</li>
+<li>開発環境DB名：dev</li>
+</ul>
+<p>開発環境で実行したfull scan(seq scan)となる実行計画を本番環境に移行して非効率な実行計画を再現する。</p>
+<h3 id="パラメータグループ変更devprod環境">パラメータグループ変更（dev/prod環境）</h3>
+<hr>
+<p>クラスターパラメータグループの <code>rds.enable_plan_management</code> を<code>1</code>に設定</p>
+<h3 id="拡張機能の有効化devprod環境">拡張機能の有効化（dev/prod環境）</h3>
+<hr>
+<p>create extensionコマンドでapg_plan_mgmtをインストールする</p>
+<h5 id="コマンド">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">\</span>dx
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> extension apg_plan_mgmt;
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">\</span>dx
+</span></span></code></pre></div><h5 id="実行結果">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">実行結果</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#960050;background-color:#1e0010">\</span>dx
+</span></span><span style="display:flex;"><span>                 List <span style="color:#66d9ef">of</span> installed extensions
+</span></span><span style="display:flex;"><span>  Name   <span style="color:#f92672">|</span> <span style="color:#66d9ef">Version</span> <span style="color:#f92672">|</span>   <span style="color:#66d9ef">Schema</span>   <span style="color:#f92672">|</span>         Description          
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------+---------+------------+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> plpgsql <span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">0</span>     <span style="color:#f92672">|</span> pg_catalog <span style="color:#f92672">|</span> PL<span style="color:#f92672">/</span>pgSQL <span style="color:#66d9ef">procedural</span> <span style="color:#66d9ef">language</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">create</span> extension apg_plan_mgmt;    <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">拡張機能を有効化</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> EXTENSION
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#960050;background-color:#1e0010">\</span>dx
+</span></span><span style="display:flex;"><span>                                        List <span style="color:#66d9ef">of</span> installed extensions
+</span></span><span style="display:flex;"><span>     Name      <span style="color:#f92672">|</span> <span style="color:#66d9ef">Version</span> <span style="color:#f92672">|</span>    <span style="color:#66d9ef">Schema</span>     <span style="color:#f92672">|</span>                            Description           
+</span></span><span style="display:flex;"><span>                 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------------+---------+---------------+--------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">-----------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> apg_plan_mgmt <span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">1</span>   <span style="color:#f92672">|</span> apg_plan_mgmt <span style="color:#f92672">|</span> Amazon Aurora <span style="color:#66d9ef">with</span> PostgreSQL compatibility Query <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">★←</span>apg_plan_mgmtが増えている
+</span></span><span style="display:flex;"><span> Plan Management
+</span></span><span style="display:flex;"><span> plpgsql       <span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">0</span>     <span style="color:#f92672">|</span> pg_catalog    <span style="color:#f92672">|</span> PL<span style="color:#f92672">/</span>pgSQL <span style="color:#66d9ef">procedural</span> <span style="color:#66d9ef">language</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">2</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span></code></pre></div><h3 id="dba_plans表の事前確認devprod環境">dba_plans表の事前確認（dev/prod環境）</h3>
+<hr>
+<p>apg_plan_mgmt.dba_plans表には当然何も格納されていない。</p>
+<h5 id="コマンド-1">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span></code></pre></div><h5 id="実行結果-1">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span><span style="display:flex;"><span> sql_hash <span style="color:#f92672">|</span> plan_hash <span style="color:#f92672">|</span> status <span style="color:#f92672">|</span> enabled <span style="color:#f92672">|</span> sql_text 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------+-----------+--------+---------+----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>(<span style="color:#ae81ff">0</span> <span style="color:#66d9ef">rows</span>)
+</span></span></code></pre></div><h3 id="テスト用のテーブル作成devprod環境">テスト用のテーブル作成（dev/prod環境）</h3>
+<hr>
+<p>テスト用のテーブルを作成する</p>
+<h5 id="コマンド-2">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">AS</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> num                         a <span style="color:#75715e">-- 生成値
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>      ,<span style="color:#e6db74">&#39;1&#39;</span>                         b <span style="color:#75715e">-- 定数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>      ,to_char(num,<span style="color:#e6db74">&#39;FM00000&#39;</span>)      <span style="color:#66d9ef">c</span> <span style="color:#75715e">-- 生成値を利用（IDなどの文字列）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>      ,<span style="color:#66d9ef">current_timestamp</span>      d 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>   generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">10000</span>) num
+</span></span><span style="display:flex;"><span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">ADD</span> <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span>(a);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">\</span>d t1
+</span></span></code></pre></div><h5 id="実行結果-2">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">AS</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">SELECT</span> num                         a <span style="color:#75715e">-- 生成値
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dev<span style="color:#f92672">-&gt;</span>       ,<span style="color:#e6db74">&#39;1&#39;</span>                         b <span style="color:#75715e">-- 定数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dev<span style="color:#f92672">-&gt;</span>       ,to_char(num,<span style="color:#e6db74">&#39;FM00000&#39;</span>)      <span style="color:#66d9ef">c</span> <span style="color:#75715e">-- 生成値を利用（IDなどの文字列）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dev<span style="color:#f92672">-&gt;</span>       ,<span style="color:#66d9ef">current_timestamp</span>      d 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">FROM</span>   generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">10000</span>) num
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> ;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#ae81ff">10000</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">ADD</span> <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span>(a);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#960050;background-color:#1e0010">\</span>d t1
+</span></span><span style="display:flex;"><span>                         <span style="color:#66d9ef">Table</span> <span style="color:#e6db74">&#34;public.t1&#34;</span>
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">Column</span> <span style="color:#f92672">|</span>           <span style="color:#66d9ef">Type</span>           <span style="color:#f92672">|</span> <span style="color:#66d9ef">Collation</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">Nullable</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">Default</span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------+--------------------------+-----------+----------+---------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> a      <span style="color:#f92672">|</span> integer                  <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span> <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> b      <span style="color:#f92672">|</span> text                     <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">c</span>      <span style="color:#f92672">|</span> text                     <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span> d      <span style="color:#f92672">|</span> <span style="color:#66d9ef">timestamp</span> <span style="color:#66d9ef">with</span> time <span style="color:#66d9ef">zone</span> <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span>Indexes:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;t1_pkey&#34;</span> <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span>, btree (a)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span></code></pre></div><h3 id="sqlの実行及び実行capturedev環境">SQLの実行、及び実行capture（dev環境）</h3>
+<hr>
+<p>実行計画が**<!-- raw HTML omitted -->full scan(seq scan)<!-- raw HTML omitted --><strong>になるSQLと、</strong><!-- raw HTML omitted -->Index Scan<!-- raw HTML omitted --><strong>になるSQLを実行。この時、</strong><!-- raw HTML omitted -->full scan(seq scan)<!-- raw HTML omitted -->**になるSQLの実行計画だけを手動で取り込む。</p>
+<p>この例では「Plan Hash: -52705300」が<code>apg_plan_mgmt.dba_plans</code>表に取り込まれているのがわかる。</p>
+<h5 id="コマンド-3">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> manual; <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">実行計画の手動取り込みを有効化</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">off</span>;  <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">実行計画の手動取り込みを停止</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">off</span>;
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span></code></pre></div><h5 id="実行結果-3">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">実行ログ</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SET</span> apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> manual;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                          QUERY PLAN                          
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">Aggregate</span>  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">214</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">214</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  Seq Scan <span style="color:#66d9ef">on</span> t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">189</span>.<span style="color:#ae81ff">00</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>         Filter: (a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">SQL</span> Hash: <span style="color:#f92672">-</span><span style="color:#ae81ff">1895827505</span>, Plan Hash: <span style="color:#f92672">-</span><span style="color:#ae81ff">52705300</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">4</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SET</span> apg_plan_mgmt.capture_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">off</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span>
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>;
+</span></span><span style="display:flex;"><span>                                 QUERY PLAN                                  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-----------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">Aggregate</span>  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">30</span>..<span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">31</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  <span style="color:#66d9ef">Index</span> <span style="color:#66d9ef">Only</span> Scan <span style="color:#66d9ef">using</span> t1_pkey <span style="color:#66d9ef">on</span> t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">29</span>..<span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">30</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">Index</span> Cond: (a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>)
+</span></span><span style="display:flex;"><span> Plan Hash: <span style="color:#ae81ff">1222455040</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">4</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span><span style="display:flex;"><span>  sql_hash   <span style="color:#f92672">|</span> plan_hash <span style="color:#f92672">|</span>  status  <span style="color:#f92672">|</span> enabled <span style="color:#f92672">|</span>               sql_text               
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-------------+-----------+----------+---------+--------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1895827505</span> <span style="color:#f92672">|</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">52705300</span> <span style="color:#f92672">|</span> Approved <span style="color:#f92672">|</span> t       <span style="color:#f92672">|</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>; <span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">★←実行計画が取り込まれている</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>dev<span style="color:#f92672">=&gt;</span> 
+</span></span></code></pre></div><h3 id="エクスポート用のテーブル作成dev">エクスポート用のテーブル作成(dev)</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> plans_copy <span style="color:#66d9ef">AS</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> apg_plan_mgmt.plans;
+</span></span></code></pre></div><h3 id="pg_dumpを使用してエクスポートするdev">pg_dumpを使用してエクスポートする(dev)</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>export PGPASSWORD<span style="color:#f92672">=</span>xxxxxx
+</span></span><span style="display:flex;"><span>pg_dump <span style="color:#f92672">-</span>U postgres <span style="color:#f92672">-</span>h aurora<span style="color:#f92672">-</span>postgres<span style="color:#f92672">-</span><span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>dev.<span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>xxxxxxxx.ap<span style="color:#f92672">-</span>northeast<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>.rds.amazonaws.com <span style="color:#f92672">-</span>t plans_copy <span style="color:#f92672">-</span>Ft dev <span style="color:#f92672">&gt;</span> plans_copy.tar
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">必要に応じて不要になった中間テーブルを削除する</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--DROP TABLE plans_copy;
+</span></span></span></code></pre></div><h3 id="別dbでインポートprod">別DBでインポート(prod)</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>pg_restore <span style="color:#f92672">-</span>U postgres <span style="color:#f92672">-</span>h aurora<span style="color:#f92672">-</span>postgres<span style="color:#f92672">-</span><span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>prod.<span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>xxxxxxxxx.ap<span style="color:#f92672">-</span>northeast<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>.rds.amazonaws.com <span style="color:#f92672">-</span>t plans_copy <span style="color:#f92672">-</span>Ft plans_copy.tar <span style="color:#f92672">-</span>d prod
+</span></span></code></pre></div><h3 id="インポート確認及びマージprod">インポート確認、及びマージ(prod)</h3>
+<hr>
+<p>このあたりのマニュアルを参考に実行計画のマージを行います。</p>
+<blockquote>
+<p>実行計画の維持 - Amazon Aurora <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html#AuroraPostgreSQL.Optimize.Maintenance.ExportingImporting</a></p>
+<blockquote>
+<p>計画のエクスポートおよびインポート</p>
+</blockquote>
+</blockquote>
+<h5 id="コマンド-4">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> apg_plan_mgmt.plans <span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> plans_copy
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">ON</span> CONFLICT <span style="color:#66d9ef">ON</span> <span style="color:#66d9ef">CONSTRAINT</span> plans_pkey
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">DO</span> <span style="color:#66d9ef">UPDATE</span> <span style="color:#66d9ef">SET</span>
+</span></span><span style="display:flex;"><span> status <span style="color:#f92672">=</span> EXCLUDED.status,
+</span></span><span style="display:flex;"><span> enabled <span style="color:#f92672">=</span> EXCLUDED.enabled,
+</span></span><span style="display:flex;"><span> last_used <span style="color:#f92672">=</span> <span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> EXCLUDED.last_used <span style="color:#f92672">&gt;</span> plans.last_used 
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">THEN</span> EXCLUDED.last_used <span style="color:#66d9ef">ELSE</span> plans.last_used <span style="color:#66d9ef">END</span>, 
+</span></span><span style="display:flex;"><span> estimated_startup_cost <span style="color:#f92672">=</span> EXCLUDED.estimated_startup_cost,
+</span></span><span style="display:flex;"><span> estimated_total_cost <span style="color:#f92672">=</span> EXCLUDED.estimated_total_cost,
+</span></span><span style="display:flex;"><span> planning_time_ms <span style="color:#f92672">=</span> EXCLUDED.planning_time_ms,
+</span></span><span style="display:flex;"><span> execution_time_ms <span style="color:#f92672">=</span> EXCLUDED.execution_time_ms,
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- estimated_rows = EXCLUDED.estimated_rows,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">-- actual_rows = EXCLUDED.actual_rows,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> total_time_benefit_ms <span style="color:#f92672">=</span> EXCLUDED.total_time_benefit_ms, 
+</span></span><span style="display:flex;"><span> execution_time_benefit_ms <span style="color:#f92672">=</span> EXCLUDED.execution_time_benefit_ms;
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">管理計画を共有メモリにリロードする</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> apg_plan_mgmt.reload(); <span style="color:#75715e">-- refresh shared memory
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">TABLE</span> plans_copy;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 確認
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span></code></pre></div><p>この時、estimated_rows、actual_rowsをコメントアウトする必要あり。実際にはない行らしい。マニュアルの誤記？</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>ERROR:  <span style="color:#66d9ef">column</span> excluded.actual_rows does <span style="color:#66d9ef">not</span> exist
+</span></span><span style="display:flex;"><span>LINE <span style="color:#ae81ff">13</span>:  actual_rows <span style="color:#f92672">=</span> EXCLUDED.actual_rows,
+</span></span></code></pre></div><h5 id="実行結果-4">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> apg_plan_mgmt.plans <span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> plans_copy
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  <span style="color:#66d9ef">ON</span> CONFLICT <span style="color:#66d9ef">ON</span> <span style="color:#66d9ef">CONSTRAINT</span> plans_pkey
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  <span style="color:#66d9ef">DO</span> <span style="color:#66d9ef">UPDATE</span> <span style="color:#66d9ef">SET</span>
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  status <span style="color:#f92672">=</span> EXCLUDED.status,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  enabled <span style="color:#f92672">=</span> EXCLUDED.enabled,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  last_used <span style="color:#f92672">=</span> <span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> EXCLUDED.last_used <span style="color:#f92672">&gt;</span> plans.last_used 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  <span style="color:#66d9ef">THEN</span> EXCLUDED.last_used <span style="color:#66d9ef">ELSE</span> plans.last_used <span style="color:#66d9ef">END</span>, 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  estimated_startup_cost <span style="color:#f92672">=</span> EXCLUDED.estimated_startup_cost,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  estimated_total_cost <span style="color:#f92672">=</span> EXCLUDED.estimated_total_cost,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  planning_time_ms <span style="color:#f92672">=</span> EXCLUDED.planning_time_ms,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  execution_time_ms <span style="color:#f92672">=</span> EXCLUDED.execution_time_ms,
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span> <span style="color:#75715e">-- estimated_rows = EXCLUDED.estimated_rows,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>prod<span style="color:#f92672">-&gt;</span> <span style="color:#75715e">-- actual_rows = EXCLUDED.actual_rows,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>prod<span style="color:#f92672">-&gt;</span>  total_time_benefit_ms <span style="color:#f92672">=</span> EXCLUDED.total_time_benefit_ms, 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span>  execution_time_benefit_ms <span style="color:#f92672">=</span> EXCLUDED.execution_time_benefit_ms;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SELECT</span> apg_plan_mgmt.reload();
+</span></span><span style="display:flex;"><span> reload 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>      <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">TABLE</span> plans_copy;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">TABLE</span>
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SELECT</span> sql_hash, plan_hash, status, enabled, sql_text::varchar(<span style="color:#ae81ff">100</span>)
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">FROM</span>   apg_plan_mgmt.dba_plans
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> sql_text, plan_created;
+</span></span><span style="display:flex;"><span>  sql_hash   <span style="color:#f92672">|</span> plan_hash  <span style="color:#f92672">|</span>   status   <span style="color:#f92672">|</span> enabled <span style="color:#f92672">|</span>                sql_text                 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-------------+------------+------------+---------+-----------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1895827505</span> <span style="color:#f92672">|</span>  <span style="color:#f92672">-</span><span style="color:#ae81ff">52705300</span> <span style="color:#f92672">|</span> Approved   <span style="color:#f92672">|</span> t       <span style="color:#f92672">|</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">2</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span></code></pre></div><h3 id="sqlの実行">SQLの実行</h3>
+<p>今回はindex scanとなるところをfullscanを選択させているケース。</p>
+<h5 id="コマンド-5">コマンド</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- SQLのテスト
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SET</span> apg_plan_mgmt.use_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> apg_plan_mgmt.use_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+</span></span></code></pre></div><h5 id="実行結果-5">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SET</span> apg_plan_mgmt.use_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> 
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">explain</span> (hashes <span style="color:#66d9ef">true</span>) <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1 <span style="color:#66d9ef">where</span> a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>;
+</span></span><span style="display:flex;"><span>                                   QUERY PLAN                                    
+</span></span><span style="display:flex;"><span><span style="color:#75715e">---------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">Aggregate</span>  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">189</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">189</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  Seq Scan <span style="color:#66d9ef">on</span> t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">189</span>.<span style="color:#ae81ff">00</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>         Filter: (a <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">9999</span>)
+</span></span><span style="display:flex;"><span> Note: An Approved plan was used <span style="color:#66d9ef">instead</span> <span style="color:#66d9ef">of</span> the minimum cost plan.
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">SQL</span> Hash: <span style="color:#f92672">-</span><span style="color:#ae81ff">1895827505</span>, Plan Hash: <span style="color:#f92672">-</span><span style="color:#ae81ff">52705300</span>, Minimum Cost Plan Hash: <span style="color:#ae81ff">1222455040</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">5</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>prod<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SET</span> apg_plan_mgmt.use_plan_baselines <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span>
+</span></span></code></pre></div><p>今回の例ではwhere文でデータ取得件数を絞っているのでindex scanが実行プランとしては正しい。ただ、QPMで<code>select count(*) from t1 where a &gt; 1;</code>の実行計画が取り込まれており、この実行計画はFullscan(SeqScan)となる。敢えて非効率な実行計画を選択させたパターン。</p>
+<p>実際にログ上にも<code>Note: An Approved plan was used instead of the minimum cost plan.</code>と記載がありもっとコストのよい実行計画があるぞーと言っている。</p>
+<blockquote>
+<p>prod=&gt; explain (hashes true) select count(*) from t1 where a &gt; 9999;</p>
+<p>QUERY PLAN</p>
+<p>Aggregate  (cost=189.00..189.01 rows=1 width=8)
+-&gt;  Seq Scan on t1  (cost=0.00..189.00 rows=1 width=0)
+Filter: (a &gt; 9999)
+Note: An Approved plan was used instead of the minimum cost plan.
+SQL Hash: -1895827505, Plan Hash: -52705300, Minimum Cost Plan Hash: 1222455040</p>
+</blockquote>
+<h3 id="参考">参考</h3>
+<hr>
+<blockquote>
+<p>実行計画の維持 - Amazon Aurora <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Optimize.Maintenance.html</a></p>
+<p>Amazon Aurora PostgreSQL でのクエリ計画管理のユースケース | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/">https://aws.amazon.com/jp/blogs/news/use-cases-for-query-plan-management-in-amazon-aurora-postgresql/</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ec2-psql-install.html">EC2上からpsqlでAurora(PostgreSQL)に接続するまで</a></li>
+  
+  <li><a href="/aws-aurora-postgres-password.html">Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</a></li>
+  
+  <li><a href="/aws-aurora-postgres-querylog.html">Aurora(PostgresSQL)のスロークエリログの出力方法</a></li>
+  
+  <li><a href="/aws-rds-postgresql-sysbench.html">RDS(PostgreSQL)にsysbenchを実行する</a></li>
+  
+  <li><a href="/aws-awscli-rds-descrive-db-snapshot.html">aws rds describe-db-snapshotsの結果をcsvとして出力</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

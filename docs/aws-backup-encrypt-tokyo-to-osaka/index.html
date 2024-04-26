@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>AWSにおける暗号化されたバックアップのリージョン間コピー | my opinion is my own</title>
+<meta name="title" content="AWSにおける暗号化されたバックアップのリージョン間コピー" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-backup-encrypt-tokyo-to-osaka/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="AWSにおける暗号化されたバックアップのリージョン間コピー">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-06-11T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-06-11T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="AWSにおける暗号化されたバックアップのリージョン間コピー">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="AWSにおける暗号化されたバックアップのリージョン間コピー">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-06-11T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-06-11T00:00:00+00:00">
+  <meta itemprop="wordCount" content="101">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>AWSにおける暗号化されたバックアップのリージョン間コピー</h1>
+
+<p>
+  <i>
+    <time datetime='2021-06-11' pubdate>
+      2021-06-11
+    </time>
+  </i>
+</p>
+
+<content>
+  <ul>
+<li>
+<p>KMSはリージョン内に閉じたサービスであるため、暗号化されたスナップショットを転送する場合は、一度転送元のリージョンで復号され、転送先の別のCMKで暗号化されることとなる。</p>
+<ul>
+<li>多くのサービスでリージョン間コピーする際に宛先リージョンのKMSのCMKを指定することとなる。</li>
+<li>リージョン間の転送もセキュアとなる。（利用者は意識しないところ）</li>
+</ul>
+</li>
+<li>
+<h3 id="イメージ図">イメージ図</h3>
+<p><img src="image-20210610164118786.png" alt="image-20210610164118786"></p>
+</li>
+</ul>
+<h1 id="マニュアル">マニュアル</h1>
+<h3 id="aws-backup">AWS Backup</h3>
+<p><a href="https://docs.aws.amazon.com/ja_jp/aws-backup/latest/devguide/cross-region-backup.html">https://docs.aws.amazon.com/ja_jp/aws-backup/latest/devguide/cross-region-backup.html</a></p>
+<blockquote>
+<p>AWS Backup は、コピー先のボールトの顧客管理キーを使用してコピーを再暗号化します。</p>
+</blockquote>
+<h3 id="redshift-の場合">Redshift の場合</h3>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-db-encryption.html#working-with-aws-kms">https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-db-encryption.html#working-with-aws-kms</a></p>
+<blockquote>
+<p>スナップショットがターゲットの AWS リージョンにコピーされる前に、Amazon Redshift はソースの AWS リージョンでマスターキーを使用してスナップショットを復号し、Amazon Redshift が内部で管理しているランダムに生成された RSA キーを使用して一時的に再暗号化します。その後、Amazon Redshift は安全なチャンネル経由でターゲットの AWS リージョンにコピーし、が内部で管理している RSA キーを使用してスナップショットを復号してから、ターゲットの AWS リージョンでマスターキーを使用してスナップショットを再暗号化します。</p>
+</blockquote>
+<h3 id="auroraの場合">Auroraの場合</h3>
+<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/USER_CopySnapshot.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/USER_CopySnapshot.html</a></p>
+<blockquote>
+<p>AWS KMS カスタマーマスターキー (CMK) を使用して暗号化されたスナップショットをコピーできます。暗号化された スナップショットをコピーする場合は、スナップショットのコピーも暗号化する必要があります。同じ AWS リージョン内で暗号化されているスナップショットをコピーする場合、元のスナップショットと同じ AWS KMS CMK を使用してコピーを暗号化できます。または、別の CMK を指定することもできます。リージョン間で暗号化されているスナップショットをコピーする場合、ソーススナップショットに使用されているのと同じ AWS KMS CMK をコピーに使用することはできません。なぜなら、AWS KMS CMK はリージョン固有だからです。代わりに、ターゲット AWS リージョンで有効な AWS KMS CMK を指定する必要があります。</p>
+</blockquote>
+<h3 id="rdsの場合">RDSの場合</h3>
+<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Overview.Encryption.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Overview.Encryption.html</a></p>
+<blockquote>
+<ul>
+<li>
+<p>ある AWS リージョンから別のリージョンに暗号化されたスナップショットをコピーするには、コピー先の AWS リージョンの CMK を指定する必要があります。これは、CMK が、作成される AWS リージョンに固有であるためです。</p>
+<p>ソーススナップショットは、コピープロセス中も暗号化されたままになります。Amazon RDS は、コピープロセス処理中にエンベロープ暗号化を使用してデータを保護します。エンベロープ暗号化の仕組みの詳細については、<em>AWS Key Management Service デベロッパーガイド</em>の「<a href="https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#enveloping">エンベロープ暗号化</a>」を参照してください。</p>
+</li>
+</ul>
+</blockquote>
+<h1 id="注意点">注意点</h1>
+<p>別の AWS リージョンへの自動バックアップのレプリケーションという機能がRDSにあるが、この機能は暗号化されているDBインスタンスではサポートされていないので注意。</p>
+<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ReplicateBackups.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ReplicateBackups.html</a></p>
+<blockquote>
+<p>バックアップレプリケーションは、次のデータベースエンジンを実行する RDS DB インスタンスで使用できます。</p>
+<ul>
+<li>Oracle バージョン 12.1.0.2.v10 以降</li>
+<li>PostgreSQL バージョン 9.6 以降</li>
+</ul>
+<p>バックアップレプリケーションは、暗号化された DB インスタンスではサポートされていません。</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-rds-postgresql-pg-collector.html">awslabsのpg-collectorについて</a></li>
+  
+  <li><a href="/aws-aurora-cost-io-input-output.html">Aurora PostgreSQLのIO料金について</a></li>
+  
+  <li><a href="/aws-redshift-ra3-spectrum.html">Redshift RA3 と Spectrumの使い分け</a></li>
+  
+  <li><a href="/aws-emr-spark-concept-component.html">Apache Sparkの構成要素、概要、用語について</a></li>
+  
+  <li><a href="/aws-emr-web-ui-tool-ssh-tunnel-browser.html">Amazon EMRのWebツール（Gangliaなど）をSSHトンネルを使ってブラウザ表示</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

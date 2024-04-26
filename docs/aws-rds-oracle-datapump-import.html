@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>RDS(Oracle)にData Pumpでインポートする | my opinion is my own</title>
+<meta name="title" content="RDS(Oracle)にData Pumpでインポートする" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,RDS,Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-rds-oracle-datapump-import.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="RDS(Oracle)にData Pumpでインポートする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-01-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-01-08T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="RDS(Oracle)にData Pumpでインポートする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="RDS(Oracle)にData Pumpでインポートする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-01-08T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-01-08T00:00:00+00:00">
+  <meta itemprop="wordCount" content="487">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,RDS,Oracle">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>RDS(Oracle)にData Pumpでインポートする</h1>
+
+<p>
+  <i>
+    <time datetime='2020-01-08' pubdate>
+      2020-01-08
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="注意事項の確認">注意事項の確認</h4>
+<p>まず始めにマニュアルを眺めてみる。データベース全体のインポートはサポートされておらず、スキーマ単位、テーブル単位でインポートを行う必要があるようだ。Amazon RDS for Oracle では、管理ユーザー <code>SYS</code> または <code>SYSDBA</code> へのアクセスは許可されていないため、<code>full</code> モードでインポートしたり、Oracle 管理のコンポーネントのスキーマをインポートしたりすると、Oracle データディレクトリが損傷し、データベースの安定性に影響を及ぼす可能性があります。とのこと。早くて便利なトランスポータブル表領域もサポートされていないことに注意。</p>
+<blockquote>
+<h4 id="amazon-rds-での-oracle-へのデータのインポート---amazon-relational-database-service-httpsdocsawsamazoncomja_jpamazonrdslatestuserguideoracleproceduralimportinghtmlhttpsdocsawsamazoncomja_jpamazonrdslatestuserguideoracleproceduralimportinghtml">Amazon RDS での Oracle へのデータのインポート - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html</a></h4>
+</blockquote>
+<blockquote>
+<ul>
+<li>
+<p>特定のスキーマやオブジェクトをインポートするには、<code>schema</code> または <code>table</code> モードでインポートを実行します。</p>
+</li>
+<li>
+<p>インポートするスキーマをアプリケーションに必要なスキーマに制限します。</p>
+</li>
+<li>
+<p><code>full</code> モードではインポートしないでください。</p>
+<p>Amazon RDS for Oracle では、管理ユーザー <code>SYS</code> または <code>SYSDBA</code> へのアクセスは許可されていないため、<code>full</code> モードでインポートしたり、Oracle 管理のコンポーネントのスキーマをインポートしたりすると、Oracle データディレクトリが損傷し、データベースの安定性に影響を及ぼす可能性があります。</p>
+</li>
+<li>
+<p>大量のデータをロードする場合は、ダンプファイルをターゲットの Amazon RDS for Oracle DB インスタンスに転送し、インスタンスの DB スナップショットを作成後、インポートをテストして、問題なく完了したことを確認します。データベースコンポーネントが無効の場合は、DB インスタンスを削除後、DB スナップショットから再作成します。復元された DB インスタンスには、DB スナップショットの作成時に DB インスタンス上でステージングされたダンプファイルがすべて含まれています。</p>
+</li>
+<li>
+<p>Oracle Data Pump エクスポートパラメータ (<code>TRANSPORT_TABLESPACES</code>、<code>TRANSPORTABLE</code>、<code>TRANSPORT_FULL_CHECK</code>) を使用して作成されたダンプファイルはインポートしないでください。Amazon RDS for Oracle DB インスタンスでは、このようなダンプファイルのインポートはサポートされていません。</p>
+</li>
+</ul>
+</blockquote>
+<p>Data PumpのダンプファイルをRDS内の DATA_PUMP_DIR （ディレクトリ・オブジェクト）に転送するので、一時的にRDS内の必要とされるストレージ量が多く必要なので特に注意が必要。<code>Storage Full</code>にならないように注意が必要。インポート後も自動的に削除されるわけではないため、必要に応じてUTL_FILE.FREMOVEを使用した削除が必要。</p>
+<h4 id="data-pumpの手法">Data Pumpの手法</h4>
+<p>Data Pumpでインポートする場合は、下記2つの方法がある。</p>
+<ol>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.S3">Oracle Data Pump と Amazon S3 バケットを使用したデータのインポート</a></li>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.DBLink">Oracle Data Pump とデータベースリンクを使用したデータのインポート</a></li>
+</ol>
+<h4 id="s3バケットを経由したデータのインポートについて">S3バケットを経由したデータのインポートについて</h4>
+<h5 id="オプショングループを作成して既存のrdsoracleにアタッチする">オプショングループを作成して既存のRDS(Oracle)にアタッチする</h5>
+<p>オプショングループを選択</p>
+<!-- raw HTML omitted -->
+<p>オプショングループの作成を行う</p>
+<!-- raw HTML omitted -->
+<p>名前、説明、エンジン、メジャーエンジンのバージョンを選択する</p>
+<!-- raw HTML omitted -->
+<p>グループ作成後に、オプションを追加する</p>
+<!-- raw HTML omitted -->
+<p>「oracle-s3-integration」をオプションとして選択する。「すぐに適用」を「はい」にする。</p>
+<!-- raw HTML omitted -->
+<p>「データベースの設定」に「オプショングループ」の指定欄があるのでさきほど作成したオプショングループを指定する。</p>
+<!-- raw HTML omitted -->
+<h5 id="必要なポリシーiamロールを作成してrdsインスタンスにアタッチする">必要なポリシー、IAMロールを作成してRDSインスタンスにアタッチする。</h5>
+<blockquote>
+<p>Amazon S3 の統合 - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing</a></p>
+</blockquote>
+<h5 id="表領域の拡張">表領域の拡張</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> tablespace USERS resize <span style="color:#ae81ff">30</span><span style="color:#66d9ef">G</span>;
+</span></span></code></pre></div><h5 id="インポートするユーザに権限を付与">インポートするユーザに権限を付与</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">USER</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span> <span style="color:#66d9ef">CASCADE</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span> identified <span style="color:#66d9ef">BY</span> <span style="color:#e6db74">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">USER</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span> QUOTA UNLIMITED <span style="color:#66d9ef">ON</span> USERS;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> DBA <span style="color:#66d9ef">to</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">SESSION</span> <span style="color:#66d9ef">TO</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> <span style="color:#e6db74">&#34;RESOURCE&#34;</span> <span style="color:#66d9ef">TO</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> UNLIMITED TABLESPACE <span style="color:#66d9ef">TO</span> <span style="color:#e6db74">&#34;DPUSR&#34;</span>;
+</span></span></code></pre></div><h5 id="s3からdata-pumpのダンプファイルの転送及びインポート">S3からData Pumpのダンプファイルの転送、及びインポート</h5>
+<p>事前にディレクトリオブジェクトを確認する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">set</span> pages <span style="color:#ae81ff">2000</span> lin <span style="color:#ae81ff">2000</span>
+</span></span><span style="display:flex;"><span>col filename <span style="color:#66d9ef">for</span> a30
+</span></span><span style="display:flex;"><span>col FILESIZE <span style="color:#66d9ef">for</span> <span style="color:#ae81ff">99999999999</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> nls_date_format<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;BDUMP&#39;</span>));
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span></code></pre></div><p>s3のバケットを指定して<code>DATA_PUMP_DIR</code>にダウンロードする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> rdsadmin.rdsadmin_s3_tasks.download_from_s3(p_bucket_name <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;pluto-dev-s3-test&#39;</span>, p_directory_name <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>) <span style="color:#66d9ef">AS</span> TASK_ID <span style="color:#66d9ef">FROM</span> DUAL;
+</span></span></code></pre></div><p>必要に応じてログを確認する。<code>rdsadmin.rdsadmin_s3_tasks.download_from_s3</code>を実行したタイミングでタスクIDがコンソール上に出力されるのでそちらを確認して、rdsadmin.rds_file_util.read_text_fileの引数に指定する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> text <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span>(rdsadmin.rds_file_util.read_text_file(<span style="color:#e6db74">&#39;BDUMP&#39;</span>,<span style="color:#e6db74">&#39;dbtask-1574174424228-1248.log&#39;</span>));
+</span></span></code></pre></div><p>DATA_PUMP_DIR配下にdmpファイルが配置されていることが確認できる</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>FILENAME		       <span style="color:#66d9ef">TYPE</span>	      FILESIZE MTIME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------ ---------- ------------ -------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>datapump<span style="color:#f92672">/</span>		       directory	  <span style="color:#ae81ff">4096</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">/</span><span style="color:#ae81ff">12</span><span style="color:#f92672">/</span><span style="color:#ae81ff">06</span> <span style="color:#ae81ff">01</span>:<span style="color:#ae81ff">02</span>:<span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>datapump_meta.dmp 	       file	       <span style="color:#ae81ff">8237056</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">/</span><span style="color:#ae81ff">12</span><span style="color:#f92672">/</span><span style="color:#ae81ff">06</span> <span style="color:#ae81ff">01</span>:<span style="color:#ae81ff">02</span>:<span style="color:#ae81ff">22</span>
+</span></span></code></pre></div><p>dbms_datapumpプロシージャを使用してインポートする</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">DECLARE</span>
+</span></span><span style="display:flex;"><span>    hdnl NUMBER;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#f92672">=</span> dbms_datapump.<span style="color:#66d9ef">open</span> (<span style="color:#66d9ef">operation</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;IMPORT&#39;</span>, job_mode <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;FULL&#39;</span>, <span style="color:#66d9ef">version</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;COMPATIBLE&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;import.log&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;expdat.dmp&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.START_JOB(handle <span style="color:#f92672">=&gt;</span> hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>
+</span></span></code></pre></div><h4 id="データベースリンクを経由したデータのインポートについて">データベースリンクを経由したデータのインポートについて</h4>
+<p>データベースリンクを作成する。Data Pumpのダンプファイルを転送する転送元で実施する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">database</span> link ora121;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">database</span> link ora121 <span style="color:#66d9ef">connect</span> <span style="color:#66d9ef">to</span> master identified <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#34;Oracle2019%&#34;</span> <span style="color:#66d9ef">using</span> <span style="color:#e6db74">&#39;(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=ora121rds.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=ora121)))&#39;</span>;
+</span></span></code></pre></div><p>ダンプファイルを転送する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">BEGIN</span>
+</span></span><span style="display:flex;"><span>DBMS_FILE_TRANSFER.PUT_FILE(
+</span></span><span style="display:flex;"><span>    source_directory_object       <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DP_DIR&#39;</span>,
+</span></span><span style="display:flex;"><span>    source_file_name              <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;expdat.dmp&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_directory_object  <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_file_name         <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;expdat.dmp&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_database          <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;ora121&#39;</span>
+</span></span><span style="display:flex;"><span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">END</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>
+</span></span></code></pre></div><p>転送されているか確認する。RDS側で確認。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">set</span> pages <span style="color:#ae81ff">2000</span> lin <span style="color:#ae81ff">2000</span>
+</span></span><span style="display:flex;"><span>col filename <span style="color:#66d9ef">for</span> a30
+</span></span><span style="display:flex;"><span>col FILESIZE <span style="color:#66d9ef">for</span> <span style="color:#ae81ff">99999999999</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> nls_date_format<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;BDUMP&#39;</span>));
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span></code></pre></div><p>インポートする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">DECLARE</span>
+</span></span><span style="display:flex;"><span>hdnl NUMBER;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#f92672">=</span> DBMS_DATAPUMP.<span style="color:#66d9ef">open</span>( <span style="color:#66d9ef">operation</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;IMPORT&#39;</span>, job_mode <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;SCHEMA&#39;</span>, job_name<span style="color:#f92672">=&gt;</span><span style="color:#66d9ef">null</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;expdat.dmp&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.add_file( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;imp.log&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.METADATA_FILTER(hdnl,<span style="color:#e6db74">&#39;SCHEMA_EXPR&#39;</span>,<span style="color:#e6db74">&#39;IN (&#39;&#39;HR&#39;&#39;)&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.start_job(hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">END</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>
+</span></span></code></pre></div><p>必要に応じてログを確認する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> TEXT <span style="color:#66d9ef">FROM</span> <span style="color:#66d9ef">TABLE</span>(RDSADMIN.RDS_FILE_UTIL.READ_TEXT_FILE(<span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>,<span style="color:#e6db74">&#39;imp.log&#39;</span>));
+</span></span></code></pre></div><p>ログの削除方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">EXEC</span> UTL_FILE.FREMOVE(<span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>,<span style="color:#e6db74">&#39;imp.log&#39;</span>);
+</span></span></code></pre></div><p>dbms_datapumpプロシージャを使用してインポートする</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">DECLARE</span>
+</span></span><span style="display:flex;"><span>    hdnl NUMBER;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#f92672">=</span> dbms_datapump.<span style="color:#66d9ef">open</span> (<span style="color:#66d9ef">operation</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;IMPORT&#39;</span>, job_mode <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;FULL&#39;</span>, <span style="color:#66d9ef">version</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;COMPATIBLE&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;import.log&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#f92672">=&gt;</span> hdnl, filename <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;expdat.dmp&#39;</span>, directory <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#f92672">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.START_JOB(handle <span style="color:#f92672">=&gt;</span> hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>
+</span></span></code></pre></div><h4 id="その他">その他</h4>
+<p>下記にはPerlスクリプトを使って、DATA_PUMP_DIRに転送する方法がある。</p>
+<p><a href="https://d0.awsstatic.com/whitepapers/strategies-for-migrating-oracle-database-to-aws.pdf">Strategies for Migrating Oracle Databases to AWS</a></p>
+<p>​	Data Migration Using Oracle Data Pump -  Next Steps for a Database on Amazon RDS</p>
+<blockquote>
+<p>[AWS] Data Pump のダンプファイルをRDS for Oracle インスタンスへ転送する ｜ Developers.IO <a href="https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/">https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-rds-postgresql-replication.html">Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li>
+  
+  <li><a href="/postgresql-logical-replication-monitoring.html">PostgreSQL論理レプリケーションの遅延監視</a></li>
+  
+  <li><a href="/aws-rds-repllication-error-conflict.html">RDS(PostgreSQL)の論理レプリケーションの競合エラーを解消する</a></li>
+  
+  <li><a href="/aws-rds-pg-replication-origin-status-error.html">RDS(PostgreSQL)でpg_replication_origin_statusにアクセス出来ない(permission denied)</a></li>
+  
+  <li><a href="/aurora-postgresql-query-plan-management.html">Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Redshift Spectrumのベストプラクティス | my opinion is my own</title>
+<meta name="title" content="Redshift Spectrumのベストプラクティス" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Redshift," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-redshift-spectrum-best-practice/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Redshift Spectrumのベストプラクティス">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-09-20T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-09-20T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Redshift">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Redshift Spectrumのベストプラクティス">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Redshift Spectrumのベストプラクティス">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-09-20T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-09-20T00:00:00+00:00">
+  <meta itemprop="wordCount" content="87">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Redshift">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Redshift Spectrumのベストプラクティス</h1>
+
+<p>
+  <i>
+    <time datetime='2021-09-20' pubdate>
+      2021-09-20
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>殴り書きメモ</p>
+<h3 id="参考">参考</h3>
+<blockquote>
+<p>Amazon Redshift Advanced Guide − 最新ベストプラクティスとアップデート <a href="https://d1.awsstatic.com/webinars/jp/pdf/services/20200729_AWS_BlackBelt_RedshiftAdvancedGuide.pdf">https://d1.awsstatic.com/webinars/jp/pdf/services/20200729_AWS_BlackBelt_RedshiftAdvancedGuide.pdf</a></p>
+<p>Amazon Redshift Spectrum 12 のベストプラクティス | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/">https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/</a></p>
+</blockquote>
+<h3 id="ベストプラクティス">ベストプラクティス</h3>
+<ol>
+<li>
+<p>ファイル/テーブル属性</p>
+<ul>
+<li>列志向フォーマット（Purquet）</li>
+<li>必要な列のみを選択</li>
+<li>最適なファイルサイズ</li>
+<li>適切なデータ型</li>
+</ul>
+</li>
+<li>
+<p>パーティションプルーニング</p>
+<ul>
+<li>不要なパーティションをSkipさせるため</li>
+<li>コスト削減</li>
+</ul>
+</li>
+</ol>
+<ul>
+<li>Spectrum Usage Limitというアラームを上げる機能がある
+<!-- raw HTML omitted --></li>
+</ul>
+<ol start="3">
+<li>
+<p>Min/Maxプルーニング</p>
+<ul>
+<li>Parquet, ORCなど列指向フォーマットの最小/最大値の統計を活用する</li>
+<li>頻繁に絞り込みを行うカラムでデータをソートしておくと効果的</li>
+</ul>
+</li>
+<li>
+<p>Spectrum層へのプッシュダウン</p>
+<ul>
+<li>
+<p>頻繁に絞り込みを行うカラムでデータをソートしておくと効果的</p>
+</li>
+<li>
+<p>最後に実行されたクエリの詳細を取得</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> query, segment, elapsed, s3_scanned_rows, s3_scanned_bytes, s3query_returned_rows, s3query_returned_bytes, files 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> svl_s3query_summary 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">where</span> query <span style="color:#f92672">=</span> pg_last_query_id() 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> query,segment;
+</span></span></code></pre></div></li>
+<li>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html</a></p>
+</li>
+</ul>
+</li>
+<li>
+<p>データレイアウト</p>
+<ul>
+<li>データレイアウトを意識する</li>
+</ul>
+</li>
+<li>
+<p>実行計画の最適化</p>
+<ul>
+<li>テーブルプロパティのnumRowsを更新する
+<ul>
+<li>ANALYZE等で更新出来ない</li>
+<li>ALTER TABLE spectrum_schema.eventSET TABLE PROPERTIES (&rsquo;numRows&rsquo;=&lsquo;122857504&rsquo;);
+<ul>
+<li>もしくはGlue Data Catalog側を更新</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Redshift クラスターサイズ</p>
+<ul>
+<li>
+<p>並列度を上げるためにはノード数を増やす必要がある。</p>
+<ul>
+<li>
+<p>スライス数の確認</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> node,<span style="color:#66d9ef">count</span>(slice) <span style="color:#66d9ef">from</span> stv_slices <span style="color:#66d9ef">group</span> <span style="color:#66d9ef">by</span> node <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> node;
+</span></span></code></pre></div></li>
+<li>
+<p>スライス毎のリクエストは最大10となる</p>
+</li>
+</ul>
+</li>
+<li>
+<!-- raw HTML omitted -->
+</li>
+</ul>
+</li>
+</ol>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-redshift-spectrum-data-prepare-query-execute/">Redshift Spectrum用にテストデータの準備、及びクエリの実行</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-performance-check/">Redshift Spectrumのパフォーマンス確認</a></li>
+  
+  <li><a href="/aws-redshift-query-cancellation/">Redshiftのクエリキャンセル</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-data-query-execute/">Redshift Star Schema Benchmark 問い合わせクエリのサンプル</a></li>
+  
+  <li><a href="/aws-redshift-admin-script-memo/">Redshift Admin Scripts</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/redshift/">#Redshift</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

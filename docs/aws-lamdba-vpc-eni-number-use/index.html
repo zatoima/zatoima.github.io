@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>LambdaをVPCで使用する際のENI数 | my opinion is my own</title>
+<meta name="title" content="LambdaをVPCで使用する際のENI数" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Lambda," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-lamdba-vpc-eni-number-use/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="LambdaをVPCで使用する際のENI数">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-07-24T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-07-24T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Lambda">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="LambdaをVPCで使用する際のENI数">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="LambdaをVPCで使用する際のENI数">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-07-24T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-07-24T00:00:00+00:00">
+  <meta itemprop="wordCount" content="68">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Lambda">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>LambdaをVPCで使用する際のENI数</h1>
+
+<p>
+  <i>
+    <time datetime='2022-07-24' pubdate>
+      2022-07-24
+    </time>
+  </i>
+</p>
+
+<content>
+  <blockquote>
+<p>[発表] Lambda 関数が VPC 環境で改善されます | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/announcing-improved-vpc-networking-for-aws-lambda-functions/">https://aws.amazon.com/jp/blogs/news/announcing-improved-vpc-networking-for-aws-lambda-functions/</a></p>
+</blockquote>
+<p>以前：</p>
+<p><img src="https://d2908q01vomqb2.cloudfront.net/b3f0c7f6bb763af1be91d9e74eabfeb199dc1f1f/2019/09/04/many-enis-1024x616.png" alt="img"></p>
+<p>今：</p>
+<p><img src="https://d2908q01vomqb2.cloudfront.net/b3f0c7f6bb763af1be91d9e74eabfeb199dc1f1f/2019/09/04/v2n-architecture-1024x613.png" alt="img"></p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/foundation-networking.html?utm_source=pocket_mylist">https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/foundation-networking.html?utm_source=pocket_mylist</a></p>
+<h3 id="eni-の管理">ENI の管理</h3>
+<p>Lambda は、関数実行ロールのアクセス許可を使用して、ネットワークインターフェイスを作成および管理します。アカウントで VPC 対応関数に一意のサブネットとセキュリティグループの組み合わせを定義すると、Lambda は Hyperplane ENI を作成します。Lambda は、同じサブネットとセキュリティグループの組み合わせを使用するアカウントの他の VPC 対応関数に Hyperplane ENI を再利用します。</p>
+<p>同じ Hyperplane ENI を使用できる Lambda 関数の数にクォータはありません。ただし、各 Hyperplane ENI は最大 65,000 個の接続/ポートをサポートします。接続数が 65,000 を超えると、Lambda は新しい Hyperplane ENI を作成して、追加の接続を提供します。</p>
+<p>関数設定を更新して別の VPC にアクセスすると、Lambda は以前の VPC の Hyperplane ENI への接続を終了します。新しい VPC への接続を更新するプロセスには、数分かかる場合があります。この間、関数への呼び出しは以前の VPC を使用し続けます。更新が完了すると、新しい VPC で Hyperplane ENI を使用して新しい呼び出しが開始されます。この時点で、Lambda 関数は以前の VPC に接続されなくなります。</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-patch-apply-downtime-log/">Aurora PostgreSQLにパッチを適用した際のダウンタイムログ</a></li>
+  
+  <li><a href="/aws-direct-connect-documents/">AWS Direct Connect参考資料メモ</a></li>
+  
+  <li><a href="/aws-kinesis-hot-shard-advisor/">Kinesis Data Streamsのホットシャードを見つけるツール</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-postgis/">Aurora PostgreSQLでPostGIS(位置情報）を使用する</a></li>
+  
+  <li><a href="/aws-redshift-internal-re-invented/">Redshiftの内部アーキテクチャに関する資料</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/lambda/">#Lambda</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

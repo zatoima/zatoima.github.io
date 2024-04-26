@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>ElastiCacheのRedisにベンチマークを実施する | my opinion is my own</title>
+<meta name="title" content="ElastiCacheのRedisにベンチマークを実施する" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,ElastiCache,Redis," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-elasticache-redis-benchmark.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="ElastiCacheのRedisにベンチマークを実施する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-11-27T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-11-27T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="ElastiCache">
+    <meta property="article:tag" content="Redis">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="ElastiCacheのRedisにベンチマークを実施する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="ElastiCacheのRedisにベンチマークを実施する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-11-27T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-11-27T00:00:00+00:00">
+  <meta itemprop="wordCount" content="339">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,ElastiCache,Redis">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>ElastiCacheのRedisにベンチマークを実施する</h1>
+
+<p>
+  <i>
+    <time datetime='2020-11-27' pubdate>
+      2020-11-27
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>デフォルトで付属される<code>redis-benchmark</code>を使用してElastiCacheのRedisに対してベンチマークをしてみる。</p>
+<h4 id="マニュアル">マニュアル</h4>
+<blockquote>
+<p>How fast is Redis? – Redis <a href="https://redis.io/topics/benchmarks">https://redis.io/topics/benchmarks</a></p>
+</blockquote>
+<h4 id="オプション説明">オプション説明</h4>
+<table>
+<thead>
+<tr>
+<th>オプション</th>
+<th>オプション補足</th>
+<th>デフォルト値</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-h</td>
+<td><!-- raw HTML omitted --></td>
+<td>127.0.0.1</td>
+<td>サーバーのホスト名を指定</td>
+</tr>
+<tr>
+<td>-p</td>
+<td><!-- raw HTML omitted --></td>
+<td>6379</td>
+<td>サーバポートを指定</td>
+</tr>
+<tr>
+<td>-s</td>
+<td><!-- raw HTML omitted --></td>
+<td></td>
+<td>サーバソケットを指定</td>
+</tr>
+<tr>
+<td>-c</td>
+<td><!-- raw HTML omitted --></td>
+<td>50</td>
+<td>同時接続数を指定</td>
+</tr>
+<tr>
+<td>-n</td>
+<td><!-- raw HTML omitted --></td>
+<td>100000</td>
+<td>リクエストの数を指定</td>
+</tr>
+<tr>
+<td>-d</td>
+<td><!-- raw HTML omitted --></td>
+<td>2</td>
+<td>データサイズのバイトの形式でSET / GETの値を指定</td>
+</tr>
+<tr>
+<td>-r</td>
+<td><!-- raw HTML omitted --></td>
+<td></td>
+<td>実際のオペレーションを想定してランダムなコマンドを発行して、キャッシュミスを誘発する<!-- raw HTML omitted -->例：100kの可能なキーのうちすべての操作にランダムキーを使用して100万のSET操作を実行する<!-- raw HTML omitted -->redis-benchmark -t set -r  100000 -n 1000000</td>
+</tr>
+<tr>
+<td>-k</td>
+<td></td>
+<td>1</td>
+<td>1=keep alive 0=reconnect</td>
+</tr>
+<tr>
+<td>-P</td>
+<td></td>
+<td>1</td>
+<td>パイプラインを有効化<!-- raw HTML omitted --><a href="https://redis.io/topics/pipelining">https://redis.io/topics/pipelining</a></td>
+</tr>
+<tr>
+<td>-q</td>
+<td></td>
+<td></td>
+<td>クエリ/秒の値のみを表示</td>
+</tr>
+<tr>
+<td>-csv</td>
+<td></td>
+<td></td>
+<td>CSV形式で出力。ヘッダーは出力されないので注意</td>
+</tr>
+<tr>
+<td>-l</td>
+<td></td>
+<td></td>
+<td>ひたすらループ処理</td>
+</tr>
+<tr>
+<td>-t</td>
+<td><!-- raw HTML omitted --></td>
+<td></td>
+<td>カンマで区切られたテストのリストのみを実行     例： -t get,set → get と setコマンドのみ実行</td>
+</tr>
+<tr>
+<td>-I</td>
+<td></td>
+<td></td>
+<td>アイドルモード</td>
+</tr>
+</tbody>
+</table>
+<h4 id="パターン1">パターン1</h4>
+<p>デフォルト設定で実施。リクエスト数「100,000」、同時接続数「50」、データサイズ「2バイト」等</p>
+<pre tabindex="0"><code>redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com
+</code></pre><p>出力結果</p>
+<p>レイテンシのばらつきやレクエストが何秒で完了したか出力</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com
+====== PING_INLINE ======
+  100000 requests completed in 2.62 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+12.45% &lt;= 1 milliseconds
+98.95% &lt;= 2 milliseconds
+99.54% &lt;= 3 milliseconds
+99.75% &lt;= 4 milliseconds
+99.90% &lt;= 5 milliseconds
+99.97% &lt;= 6 milliseconds
+100.00% &lt;= 6 milliseconds
+38138.82 requests per second
+
+～省略～
+</code></pre><h4 id="パターン2">パターン2</h4>
+<p>サイレントモードで実施する。クエリ/秒の値のみを表示。</p>
+<pre tabindex="0"><code>redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -q
+</code></pre><p>出力結果</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -q
+PING_INLINE: 43840.42 requests per second
+PING_BULK: 35958.29 requests per second
+SET: 37907.50 requests per second
+GET: 34293.55 requests per second
+INCR: 41288.19 requests per second
+LPUSH: 43327.55 requests per second
+RPUSH: 43725.41 requests per second
+LPOP: 46403.71 requests per second
+RPOP: 44943.82 requests per second
+SADD: 45085.66 requests per second
+HSET: 27563.40 requests per second
+SPOP: 34258.31 requests per second
+LPUSH (needed to benchmark LRANGE): 31279.32 requests per second
+LRANGE_100 (first 100 elements): 30902.35 requests per second
+LRANGE_300 (first 300 elements): 15941.34 requests per second
+LRANGE_500 (first 450 elements): 12241.40 requests per second
+LRANGE_600 (first 600 elements): 9856.10 requests per second
+MSET (10 keys): 25766.55 requests per second
+</code></pre><h4 id="パターン3">パターン3</h4>
+<p>クライアント数を「100」に増やし、かつ「set」と「get」コマンドのみ実行する。（サイレントモード）</p>
+<pre tabindex="0"><code>redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -q -t set,get
+</code></pre><p>出力結果</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -q -t set,get
+SET: 45766.59 requests per second
+GET: 42789.90 requests per second
+</code></pre><h4 id="パターン4">パターン4</h4>
+<p>CSVモードで実行</p>
+<pre tabindex="0"><code>redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -t set,get --csv
+</code></pre><p>出力結果</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ redis-benchmark -h redistest.xxxxx.0001.apne1.cache.amazonaws.com -p 6379 -c 100 -n 100000 -t set,get --csv
+&#34;SET&#34;,&#34;41562.76&#34;
+&#34;GET&#34;,&#34;38491.14&#34;
+</code></pre><h4 id="その他">その他</h4>
+<p><code>redis-cli</code> に<code>--latency</code>を付与することでPINGを使用したレイテンシを計測することが出来る。ひたすらサンプルを取り続けるのでCtrl+Cでストップする</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ redis-cli -h redistest.xxxx.0001.apne1.cache.amazonaws.com -p 6379 --latency
+min: 0, max: 18, avg: 0.40 (4591 samples)
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-postgresql-pgaudit-user.html">Aurora PostgreSQLの拡張機能のpgauditで特定ユーザのみの監査を設定する</a></li>
+  
+  <li><a href="/aws-ec2-python-selenium-install.html">Amazon EC2上でPython &#43; Seleniumを実行するまで</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-hammerdb-benchmark.html">Aurora PostgreSQLにHammerDBのTPC-Cを実行</a></li>
+  
+  <li><a href="/aws-kms-import-key.html">BYOKでインポートしたKMSキーの注意事項、考慮事項</a></li>
+  
+  <li><a href="/aws-certified-database-specialty.html">AWS認定データベース – 専門知識(DBS-C01)の合格体験記</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/elasticache/">#ElastiCache</a>
+  
+  <a href="https://zatoima.github.io/blog/redis/">#Redis</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

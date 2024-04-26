@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>EC2上からpsqlでAurora(PostgreSQL)に接続するまで | my opinion is my own</title>
+<meta name="title" content="EC2上からpsqlでAurora(PostgreSQL)に接続するまで" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,EC2,RDS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-ec2-psql-install.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="EC2上からpsqlでAurora(PostgreSQL)に接続するまで">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-10-17T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-10-17T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="EC2">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="EC2上からpsqlでAurora(PostgreSQL)に接続するまで">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="EC2上からpsqlでAurora(PostgreSQL)に接続するまで">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-10-17T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-10-17T00:00:00+00:00">
+  <meta itemprop="wordCount" content="579">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,EC2,RDS,Aurora,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>EC2上からpsqlでAurora(PostgreSQL)に接続するまで</h1>
+
+<p>
+  <i>
+    <time datetime='2019-10-17' pubdate>
+      2019-10-17
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>EC2にpsqlをインストールし、その後構築済みのAurora(PostgreSQL)の環境に接続するまでをメモ。</p>
+<h3 id="実行コマンド">実行コマンド</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum search postgresql
+</span></span><span style="display:flex;"><span>sudo yum -y install postgresql.x86_64
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>psql -h &lt;エンドポイント&gt; -U &lt;ユーザ名&gt; -d &lt;DB名&gt;
+</span></span></code></pre></div><h3 id="os情報">OS情報</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ uname -a
+</span></span><span style="display:flex;"><span>Linux donald-dev-ec2-bastin x.xx.xxx-xxx.xxx.amzn2.x86_64 <span style="color:#75715e">#1 SMP Thu Aug 15 15:29:58 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux</span>
+</span></span></code></pre></div><h3 id="yum-searchでpostgresql-client-programsを探す">yum searchでPostgreSQL client programsを探す</h3>
+<p>実行結果から<code>postgresql.x86_64</code>が<code>PostgreSQL client programs</code>と判明。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ sudo yum search postgresql
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#f92672">=================================================================================</span> N/S matched: postgresql <span style="color:#f92672">==================================================================================</span>
+</span></span><span style="display:flex;"><span>freeradius-postgresql.x86_64 : Postgresql support <span style="color:#66d9ef">for</span> freeradius
+</span></span><span style="display:flex;"><span>pcp-pmda-postgresql.x86_64 : Performance Co-Pilot <span style="color:#f92672">(</span>PCP<span style="color:#f92672">)</span> metrics <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql.x86_64 : PostgreSQL client programs
+</span></span><span style="display:flex;"><span>postgresql-contrib.x86_64 : Extension modules distributed with PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-devel.x86_64 : PostgreSQL development header files and libraries
+</span></span><span style="display:flex;"><span>postgresql-docs.x86_64 : Extra documentation <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-jdbc.noarch : JDBC driver <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-jdbc-javadoc.noarch : API docs <span style="color:#66d9ef">for</span> postgresql-jdbc
+</span></span><span style="display:flex;"><span>postgresql-libs.x86_64 : The shared libraries required <span style="color:#66d9ef">for</span> any PostgreSQL clients
+</span></span><span style="display:flex;"><span>postgresql-libs.i686 : The shared libraries required <span style="color:#66d9ef">for</span> any PostgreSQL clients
+</span></span><span style="display:flex;"><span>postgresql-odbc.x86_64 : PostgreSQL ODBC driver
+</span></span><span style="display:flex;"><span>postgresql-plperl.x86_64 : The Perl procedural language <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-plpython.x86_64 : The Python2 procedural language <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-pltcl.x86_64 : The Tcl procedural language <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-server.x86_64 : The programs needed to create and run a PostgreSQL server
+</span></span><span style="display:flex;"><span>postgresql-static.x86_64 : Statically linked PostgreSQL libraries
+</span></span><span style="display:flex;"><span>postgresql-test.x86_64 : The test suite distributed with PostgreSQL
+</span></span><span style="display:flex;"><span>postgresql-upgrade.x86_64 : Support <span style="color:#66d9ef">for</span> upgrading from the previous major release of PostgreSQL
+</span></span><span style="display:flex;"><span>qt-postgresql.x86_64 : PostgreSQL driver <span style="color:#66d9ef">for</span> Qt<span style="color:#e6db74">&#39;s SQL classes
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">qt-postgresql.i686 : PostgreSQL driver for Qt&#39;</span>s SQL classes
+</span></span><span style="display:flex;"><span>qt3-PostgreSQL.x86_64 : PostgreSQL drivers <span style="color:#66d9ef">for</span> Qt 3<span style="color:#e6db74">&#39;s SQL classes
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">qt3-PostgreSQL.i686 : PostgreSQL drivers for Qt 3&#39;</span>s SQL classes
+</span></span><span style="display:flex;"><span>qt5-qtbase-postgresql.x86_64 : PostgreSQL driver <span style="color:#66d9ef">for</span> Qt5<span style="color:#e6db74">&#39;s SQL classes
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">qt5-qtbase-postgresql.i686 : PostgreSQL driver for Qt5&#39;</span>s SQL classes
+</span></span><span style="display:flex;"><span>PyGreSQL.x86_64 : A Python client library <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>apr-util-pgsql.x86_64 : APR utility library PostgreSQL DBD driver
+</span></span><span style="display:flex;"><span>libdbi-dbd-pgsql.x86_64 : PostgreSQL plugin <span style="color:#66d9ef">for</span> libdbi
+</span></span><span style="display:flex;"><span>perl-DBD-Pg.x86_64 : A PostgreSQL interface <span style="color:#66d9ef">for</span> perl
+</span></span><span style="display:flex;"><span>php-pgsql.x86_64 : A PostgreSQL database module <span style="color:#66d9ef">for</span> PHP
+</span></span><span style="display:flex;"><span>python-psycopg2.x86_64 : A PostgreSQL database adapter <span style="color:#66d9ef">for</span> Python
+</span></span><span style="display:flex;"><span>python-psycopg2-debug.x86_64 : A PostgreSQL database adapter <span style="color:#66d9ef">for</span> Python <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span>debug build<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>python-psycopg2-doc.x86_64 : Documentation <span style="color:#66d9ef">for</span> psycopg python PostgreSQL database adapter
+</span></span><span style="display:flex;"><span>redland-pgsql.x86_64 : PostgreSQL storage support <span style="color:#66d9ef">for</span> Redland
+</span></span><span style="display:flex;"><span>rhdb-utils.x86_64 : Miscellaneous utilities <span style="color:#66d9ef">for</span> PostgreSQL - Red Hat Edition
+</span></span><span style="display:flex;"><span>tcl-pgtcl.x86_64 : A Tcl client library <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  Name and summary matches only, use <span style="color:#e6db74">&#34;search all&#34;</span> <span style="color:#66d9ef">for</span> everything.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><h3 id="postgresql-client-programsをインストール">PostgreSQL client programsをインストール</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ sudo yum -y install postgresql.x86_64
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>amzn2-core                                                                                                                                                           | 2.4 kB  00:00:00     
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: postgresql-libs<span style="color:#f92672">(</span>x86-64<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> 9.2.24-1.amzn2.0.1 <span style="color:#66d9ef">for</span> package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libpq.so.5<span style="color:#f92672">()(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql-9.2.24-1.amzn2.0.1.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies Resolved
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                                         Arch                                   Version                                            Repository                                  Size
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> postgresql                                      x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 3.0 M
+</span></span><span style="display:flex;"><span>Installing <span style="color:#66d9ef">for</span> dependencies:
+</span></span><span style="display:flex;"><span> postgresql-libs                                 x86_64                                 9.2.24-1.amzn2.0.1                                 amzn2-core                                 <span style="color:#ae81ff">235</span> k
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction Summary
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#ae81ff">1</span> Package <span style="color:#f92672">(</span>+1 Dependent package<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total download size: 3.3 M
+</span></span><span style="display:flex;"><span>Installed size: <span style="color:#ae81ff">17</span> M
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>1/2<span style="color:#f92672">)</span>: postgresql-libs-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                 | <span style="color:#ae81ff">235</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>2/2<span style="color:#f92672">)</span>: postgresql-9.2.24-1.amzn2.0.1.x86_64.rpm                                                                                                                      | 3.0 MB  00:00:00     
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>Total                                                                                                                                                        <span style="color:#ae81ff">15</span> MB/s | 3.3 MB  00:00:00     
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction test
+</span></span><span style="display:flex;"><span>Transaction test succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>  Installing : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                1/2 
+</span></span><span style="display:flex;"><span>  Installing : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     2/2 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                     1/2 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql-libs-9.2.24-1.amzn2.0.1.x86_64                                                                                                                                2/2 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  postgresql.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                                    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  postgresql-libs.x86_64 0:9.2.24-1.amzn2.0.1                                                                                                                                               
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><h3 id="aurorapostgresqlへ接続">Aurora(PostgreSQL)へ接続</h3>
+<p>接続時にはセキュリティグループ等でEC2上の踏み台サーバからPostgreSQLへの接続を許可が必要。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#f92672">]</span>$ psql -h &lt;エンドポイント&gt; -U &lt;ユーザ名&gt; -d &lt;DB名&gt;
+</span></span><span style="display:flex;"><span>Password <span style="color:#66d9ef">for</span> user master: 
+</span></span><span style="display:flex;"><span>psql <span style="color:#f92672">(</span>9.2.24, server 10.7<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>WARNING: psql version 9.2, server version 10.0.
+</span></span><span style="display:flex;"><span>         Some psql features might not work.
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#f92672">(</span>cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Type <span style="color:#e6db74">&#34;help&#34;</span> <span style="color:#66d9ef">for</span> help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#f92672">=</span>&gt; 
+</span></span></code></pre></div><h3 id="その他">その他</h3>
+<p>EC2構築直後の状態で <code>yum -y install postgresql.x86_64</code>を行った場合、デフォルトのリポジトリを参照するのでpsqlのバージョンが古い。そういった場合は、手動でリポジトリを追加して任意のpsqlのバージョンをダウンロードすれば良い。</p>
+<p>参考：</p>
+<blockquote>
+<p>EC2(Amazon Linux2)にPostgreSQLをインストールする | my opinion is my own <a href="https://zatoima.github.io/postgresql-ec2-insatll.html">https://zatoima.github.io/postgresql-ec2-insatll.html</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ec2-awscli-setting-credentials.html">AWS CLIの初期設定(AWS認証情報設定)</a></li>
+  
+  <li><a href="/aws-oracle-ec2-pre-install_1.html">EC2上のRHEL上にOracle Database 12cR1をインストールする場合の事前準備</a></li>
+  
+  <li><a href="/aws-oracle-ec2-runinstaller-error.html">EC2上でruninstallerの実行エラー</a></li>
+  
+  <li><a href="/aws-ec2-xwindow.html">AWS EC2でX Window Systemをセットアップする</a></li>
+  
+  <li><a href="/oracle-ec2-oracleclient-install.html">EC2にOracle ClientをインストールしてRDS(Oracle)に接続する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/ec2/">#EC2</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

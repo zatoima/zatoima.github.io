@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>SnowflakeでS3の外部テーブルでクエリする | my opinion is my own</title>
+<meta name="title" content="SnowflakeでS3の外部テーブルでクエリする" />
+<meta name="description" content="" />
+<meta name="keywords" content="snowflake," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/snowflake-s3-external-table-query/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="SnowflakeでS3の外部テーブルでクエリする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-10-12T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-10-12T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="SnowflakeでS3の外部テーブルでクエリする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="SnowflakeでS3の外部テーブルでクエリする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-10-12T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-10-12T00:00:00+00:00">
+  <meta itemprop="wordCount" content="643">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Snowflake">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>SnowflakeでS3の外部テーブルでクエリする</h1>
+
+<p>
+  <i>
+    <time datetime='2022-10-12' pubdate>
+      2022-10-12
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="概要">概要</h3>
+<ul>
+<li>S3上に配置したParquetやCSV等のファイルをクエリすることができる
+<ul>
+<li>Redshift Spectrumみたいな機能と理解</li>
+</ul>
+</li>
+</ul>
+<h3 id="注意事項">注意事項</h3>
+<ul>
+<li>
+<p>「VALUE」というカラムにJSONオブジェクト形式でファイルの値が格納される</p>
+</li>
+<li>
+<p>データベースの外部に保存されているデータのクエリは、ネイティブデータベーステーブルのクエリよりも遅い可能性がある(とマニュアルには記載があった)</p>
+<blockquote>
+<p>データベースの外部に保存されているデータのクエリは、ネイティブデータベーステーブルのクエリよりも遅い可能性があります。</p>
+<p><a href="https://docs.snowflake.com/ja/user-guide/tables-external-intro.html">https://docs.snowflake.com/ja/user-guide/tables-external-intro.html</a></p>
+</blockquote>
+<ul>
+<li>パフォーマンスを上げたい場合にはマテリアライズドビューと組み合わせる
+<ul>
+<li><a href="https://docs.snowflake.com/ja/user-guide/tables-external-intro.html#label-materialized-views-over-external-tables">外部テーブルのマテリアライズドビュー — Snowflake Documentation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>パフォーマンスのためにはパーティションを積極的に使っていく必要あり</p>
+</li>
+</ul>
+<h3 id="ファイルフォーマットの作成">ファイルフォーマットの作成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> FILE FORMAT csv_format
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;CSV&#39;</span>
+</span></span><span style="display:flex;"><span>    COMPRESSION <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;AUTO&#39;</span>
+</span></span><span style="display:flex;"><span>    FIELD_DELIMITER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;,&#39;</span>
+</span></span><span style="display:flex;"><span>    RECORD_DELIMITER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;\n&#39;</span>
+</span></span><span style="display:flex;"><span>    SKIP_HEADER <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    FIELD_OPTIONALLY_ENCLOSED_BY <span style="color:#f92672">=</span> <span style="color:#66d9ef">NONE</span>
+</span></span><span style="display:flex;"><span>    DATE_FORMAT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;AUTO&#39;</span>
+</span></span><span style="display:flex;"><span>    TIMESTAMP_FORMAT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;AUTO&#39;</span>
+</span></span><span style="display:flex;"><span>    NULL_IF <span style="color:#f92672">=</span> (<span style="color:#e6db74">&#39;&#39;</span>);
+</span></span></code></pre></div><h3 id="外部ステージの作成">外部ステージの作成</h3>
+<p>下記で作成した外部ステージを使用。IAMの設定などもこちらを参照。</p>
+<p><a href="https://zatoima.github.io/snowflake-dataload-from-s3-to-snowflake/">S3(外部ステージ)からSnowflakeにデータロードする | my opinion is my own</a></p>
+<pre tabindex="0"><code>zatoima#COMPUTE_WH@TESTDB.PUBLIC&gt;show stages;
++-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+| created_on                    | name         | database_name | schema_name | url                         | has_credentials | has_encryption_key | owner        | comment | region         | type     | cloud | notification_channel | storage_integration          |
+|-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------|
+| 2022-08-23 22:45:45.523 -0700 | S3_EXT_STAGE | TESTDB        | PUBLIC      | s3://snowflake-bucket-work/ | N               | N                  | ACCOUNTADMIN |         | ap-northeast-1 | EXTERNAL | AWS   | NULL                 | SNOWFLAKE_AND_S3_INTEGRATION |
++-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+1 Row(s) produced. Time Elapsed: 0.077s
+</code></pre><h3 id="外部テーブルの構築">外部テーブルの構築</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> t1
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">WITH</span> <span style="color:#66d9ef">location</span> <span style="color:#f92672">=</span> <span style="color:#f92672">@</span>S3_EXT_STAGE
+</span></span><span style="display:flex;"><span>  auto_refresh <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>  file_format <span style="color:#f92672">=</span> csv_format;
+</span></span></code></pre></div><p>auto_refreshをTRUEにした場合においてもS3側のファイルに変更があった場合は更新を行う必要がある。AWSのS3の場合は次の設定を事前に行う必要がある。</p>
+<ul>
+<li><a href="https://docs.snowflake.com/ja/user-guide/tables-external-s3.html">Amazon S3に対する外部テーブルの自動更新 — Snowflake Documentation</a></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> t1 refresh;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------+-------------------+-----------------------------------------+        
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> file   <span style="color:#f92672">|</span> status            <span style="color:#f92672">|</span> description                             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">--------+-------------------+-----------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> t1.csv <span style="color:#f92672">|</span> REGISTERED_UPDATE <span style="color:#f92672">|</span> File registered (updated) successfully. <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------+-------------------+-----------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">480</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------------------------------------+                                     
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> VALUE                                   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">{</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c1&#34;</span>: <span style="color:#e6db74">&#34;0&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c2&#34;</span>: <span style="color:#e6db74">&#34;111111&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c3&#34;</span>: <span style="color:#e6db74">&#34;222222&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c4&#34;</span>: <span style="color:#e6db74">&#34; 1&#34;</span>,                           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c5&#34;</span>: <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">}</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">{</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c1&#34;</span>: <span style="color:#e6db74">&#34;1&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c2&#34;</span>: <span style="color:#e6db74">&#34;111111&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c3&#34;</span>: <span style="color:#e6db74">&#34;222222&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c4&#34;</span>: <span style="color:#e6db74">&#34; 2&#34;</span>,                           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c5&#34;</span>: <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">}</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">2</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">077</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><p>更新の状況は<code>SYSTEM$EXTERNAL_TABLE_PIPE_STATUS('テーブル名');</code>で確認ができる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">select</span> <span style="color:#66d9ef">SYSTEM</span><span style="color:#960050;background-color:#1e0010">$</span>EXTERNAL_TABLE_PIPE_STATUS(<span style="color:#e6db74">&#39;T1&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#66d9ef">SYSTEM</span><span style="color:#960050;background-color:#1e0010">$</span>EXTERNAL_TABLE_PIPE_STATUS(<span style="color:#e6db74">&#39;T1&#39;</span>)                                                                                                                                                                                                                                        <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">{</span><span style="color:#e6db74">&#34;executionState&#34;</span>:<span style="color:#e6db74">&#34;RUNNING&#34;</span>,<span style="color:#e6db74">&#34;pendingFileCount&#34;</span>:<span style="color:#ae81ff">0</span>,<span style="color:#e6db74">&#34;notificationChannelName&#34;</span>:<span style="color:#e6db74">&#34;arn:aws:sqs:ap-northeast-1:xxxxx:sf-snowpipe-xxxx-88QZUsuy_HLwocQAHjHNUA&#34;</span>,<span style="color:#e6db74">&#34;numOutstandingMessagesOnChannel&#34;</span>:<span style="color:#ae81ff">0</span>,<span style="color:#e6db74">&#34;lastPulledFromChannelTimestamp&#34;</span>:<span style="color:#e6db74">&#34;2022-08-25T07:24:54.217Z&#34;</span><span style="color:#960050;background-color:#1e0010">}</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+</span></span></span></code></pre></div><ul>
+<li><a href="https://docs.snowflake.com/ja/sql-reference/functions/system_external_table_pipe_status.html">SYSTEM$EXTERNAL_TABLE_PIPE_STATUS( </a></li>
+</ul>
+<p>実行ログ</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> t1
+</span></span><span style="display:flex;"><span>                                   <span style="color:#66d9ef">WITH</span> <span style="color:#66d9ef">location</span> <span style="color:#f92672">=</span> <span style="color:#f92672">@</span>S3_EXT_STAGE
+</span></span><span style="display:flex;"><span>                                   auto_refresh <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>                                   file_format <span style="color:#f92672">=</span> csv_format;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------------------------------+                                              
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> status                         <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">--------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#66d9ef">Table</span> T1 successfully created. <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">--------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">4</span>.<span style="color:#ae81ff">079</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">show</span> tables;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------+----------+---------------+-------------+-------+---------+------------+------+-------+--------------+----------------+----------------------+-----------------+-------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> created_on                    <span style="color:#f92672">|</span> name     <span style="color:#f92672">|</span> database_name <span style="color:#f92672">|</span> <span style="color:#66d9ef">schema_name</span> <span style="color:#f92672">|</span> kind  <span style="color:#f92672">|</span> <span style="color:#66d9ef">comment</span> <span style="color:#f92672">|</span> cluster_by <span style="color:#f92672">|</span> <span style="color:#66d9ef">rows</span> <span style="color:#f92672">|</span> bytes <span style="color:#f92672">|</span> <span style="color:#66d9ef">owner</span>        <span style="color:#f92672">|</span> retention_time <span style="color:#f92672">|</span> automatic_clustering <span style="color:#f92672">|</span> change_tracking <span style="color:#f92672">|</span> is_external <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-------------------------------+----------+---------------+-------------+-------+---------+------------+------+-------+--------------+----------------+----------------------+-----------------+-------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">14</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">17</span>:<span style="color:#ae81ff">22</span>.<span style="color:#ae81ff">196</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span> LINEITEM <span style="color:#f92672">|</span> TESTDB        <span style="color:#f92672">|</span> <span style="color:#66d9ef">PUBLIC</span>      <span style="color:#f92672">|</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span>            <span style="color:#f92672">|</span>    <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span> ACCOUNTADMIN <span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>              <span style="color:#f92672">|</span> <span style="color:#66d9ef">OFF</span>                  <span style="color:#f92672">|</span> <span style="color:#66d9ef">OFF</span>             <span style="color:#f92672">|</span> N           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">25</span> <span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">01</span>.<span style="color:#ae81ff">262</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span> T1       <span style="color:#f92672">|</span> TESTDB        <span style="color:#f92672">|</span> <span style="color:#66d9ef">PUBLIC</span>      <span style="color:#f92672">|</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span>            <span style="color:#f92672">|</span> <span style="color:#66d9ef">NULL</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span> ACCOUNTADMIN <span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>              <span style="color:#f92672">|</span> <span style="color:#66d9ef">OFF</span>                  <span style="color:#f92672">|</span> <span style="color:#66d9ef">OFF</span>             <span style="color:#f92672">|</span> Y           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------+----------+---------------+-------------+-------+---------+------------+------+-------+--------------+----------------+----------------------+-----------------+-------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">2</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">146</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------------------------------------+                                     
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> VALUE                                   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">{</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c1&#34;</span>: <span style="color:#e6db74">&#34;0&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c2&#34;</span>: <span style="color:#e6db74">&#34;111111&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c3&#34;</span>: <span style="color:#e6db74">&#34;222222&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c4&#34;</span>: <span style="color:#e6db74">&#34;1&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c5&#34;</span>: <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">}</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">{</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c1&#34;</span>: <span style="color:#e6db74">&#34;1&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c2&#34;</span>: <span style="color:#e6db74">&#34;111111&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c3&#34;</span>: <span style="color:#e6db74">&#34;222222&#34;</span>,                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c4&#34;</span>: <span style="color:#e6db74">&#34;2&#34;</span>,                            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>   <span style="color:#e6db74">&#34;c5&#34;</span>: <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#960050;background-color:#1e0010">}</span>                                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">～～省略～～</span>
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">SELECT</span> value :c1, value :c2, value :c3, value :c4, value :c5 <span style="color:#66d9ef">FROM</span> t1 <span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">10</span> ;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+-----------+-----------+-----------+---------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> VALUE :C1 <span style="color:#f92672">|</span> VALUE :C2 <span style="color:#f92672">|</span> VALUE :C3 <span style="color:#f92672">|</span> VALUE :C4 <span style="color:#f92672">|</span> VALUE :C5                       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------+-----------+-----------+-----------+---------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;0&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;1&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;1&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;3&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;3&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;4&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;4&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;5&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;5&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;6&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;6&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;7&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;7&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;8&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;8&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;9&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;9&#34;</span>       <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;111111&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;222222&#34;</span>  <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;10&#34;</span>      <span style="color:#f92672">|</span> <span style="color:#e6db74">&#34;2022-08-23 22:47:44.214 -0700&#34;</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+-----------+-----------+-----------+---------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">10</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">653</span>s
+</span></span></code></pre></div><h3 id="参照">参照</h3>
+<ul>
+<li><a href="https://docs.snowflake.com/ja/user-guide/tables-external-intro.html">外部テーブルの概要 — Snowflake Documentation</a></li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/snowflake-cached-memo/">Snowflakeのキャッシュ</a></li>
+  
+  <li><a href="/snowflake-data-cache-disabled/">Snowflakeのデータキャッシュの無効化</a></li>
+  
+  <li><a href="/snowflake-certificate-snowpro-advanced-memo/">SnowPro Advanced Architect対策メモ</a></li>
+  
+  <li><a href="/snowflake-login-history/">Snowflakeでログイン履歴を確認する</a></li>
+  
+  <li><a href="/snowflake-security-access-control/">Snowflakeのアクセス制御や権限管理</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/snowflake/">#Snowflake</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

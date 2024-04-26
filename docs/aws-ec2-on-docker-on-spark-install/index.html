@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Spark on Docker on EC2環境を構築する | my opinion is my own</title>
+<meta name="title" content="Spark on Docker on EC2環境を構築する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Docker,Spark,AWS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-ec2-on-docker-on-spark-install/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Spark on Docker on EC2環境を構築する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-02-04T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-02-04T00:00:00+00:00">
+    <meta property="article:tag" content="Docker">
+    <meta property="article:tag" content="Spark">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Spark on Docker on EC2環境を構築する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Spark on Docker on EC2環境を構築する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-02-04T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-02-04T00:00:00+00:00">
+  <meta itemprop="wordCount" content="418">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Docker,Spark,AWS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Spark on Docker on EC2環境を構築する</h1>
+
+<p>
+  <i>
+    <time datetime='2022-02-04' pubdate>
+      2022-02-04
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>私がSpark環境を使用する際にはAWSのEMRが基本となるが、EC2のxlargeを最低3台は必要で、かつ作成までに10分弱くらいは掛かってしまうので簡単にPySparkのスクリプトを試したい時用のSpark on Docker on EC2環境を作成。</p>
+<h3 id="dockerのバージョン">Dockerのバージョン</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ docker -v
+</span></span><span style="display:flex;"><span>Docker version 20.10.7, build f0df350
+</span></span></code></pre></div><h3 id="pyspark-notebookのコンテナをpullする">pyspark-notebookのコンテナをpullする</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ docker pull jupyter/pyspark-notebook
+</span></span><span style="display:flex;"><span>Using default tag: latest
+</span></span><span style="display:flex;"><span>latest: Pulling from jupyter/pyspark-notebook
+</span></span><span style="display:flex;"><span>ea362f368469: Pull complete 
+</span></span><span style="display:flex;"><span>1c2cc406fa63: Pull complete 
+</span></span><span style="display:flex;"><span>669dbb3f6366: Pull complete 
+</span></span><span style="display:flex;"><span>3923fd8d3607: Pull complete 
+</span></span><span style="display:flex;"><span>d5da8a60f05b: Pull complete 
+</span></span><span style="display:flex;"><span>78722f61450a: Pull complete 
+</span></span><span style="display:flex;"><span>92fcb4043b45: Pull complete 
+</span></span><span style="display:flex;"><span>e43cca32fa72: Pull complete 
+</span></span><span style="display:flex;"><span>d6e059957f76: Pull complete 
+</span></span><span style="display:flex;"><span>d4c1ac4b2556: Pull complete 
+</span></span><span style="display:flex;"><span>662cec5dfc0c: Pull complete 
+</span></span><span style="display:flex;"><span>2c1cefff5d33: Pull complete 
+</span></span><span style="display:flex;"><span>759c927f13aa: Pull complete 
+</span></span><span style="display:flex;"><span>804a283b4e2b: Pull complete 
+</span></span><span style="display:flex;"><span>a702bc58bb3e: Pull complete 
+</span></span><span style="display:flex;"><span>3da5ff2c18c0: Pull complete 
+</span></span><span style="display:flex;"><span>31672a0ad050: Pull complete 
+</span></span><span style="display:flex;"><span>105e72cf5bd3: Pull complete 
+</span></span><span style="display:flex;"><span>1124e4036913: Pull complete 
+</span></span><span style="display:flex;"><span>e9c2829123b2: Pull complete 
+</span></span><span style="display:flex;"><span>57daad9176a1: Pull complete 
+</span></span><span style="display:flex;"><span>e6caa5647846: Pull complete 
+</span></span><span style="display:flex;"><span>d6b9c536082e: Pull complete 
+</span></span><span style="display:flex;"><span>f6e352309aa2: Pull complete 
+</span></span><span style="display:flex;"><span>Digest: sha256:398bab89543dc94d75a24869665c1433e10645bd100267a6f89e8768477d14a8
+</span></span><span style="display:flex;"><span>Status: Downloaded newer image <span style="color:#66d9ef">for</span> jupyter/pyspark-notebook:latest
+</span></span><span style="display:flex;"><span>docker.io/jupyter/pyspark-notebook:latest
+</span></span></code></pre></div><h3 id="pyspark-notebookのコンテナを実行">pyspark-notebookのコンテナを実行</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ docker run -p 8888:8888 -e JUPYTER_ENABLE_LAB<span style="color:#f92672">=</span>yes --name pyspark jupyter/pyspark-notebook
+</span></span><span style="display:flex;"><span>WARNING: JUPYTER_ENABLE_LAB is ignored, use DOCKER_STACKS_JUPYTER_CMD <span style="color:#66d9ef">if</span> you want to change the command used to start the server
+</span></span><span style="display:flex;"><span>Entered start.sh with args: jupyter lab
+</span></span><span style="display:flex;"><span>/usr/local/bin/start.sh: running hooks in /usr/local/bin/before-notebook.d as uid / gid: <span style="color:#ae81ff">1000</span> / <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>/usr/local/bin/start.sh: running script /usr/local/bin/before-notebook.d/spark-config.sh
+</span></span><span style="display:flex;"><span>/usr/local/bin/start.sh: <span style="color:#66d9ef">done</span> running hooks in /usr/local/bin/before-notebook.d
+</span></span><span style="display:flex;"><span>Executing the command: jupyter lab
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.462 ServerApp<span style="color:#f92672">]</span> jupyterlab | extension was successfully linked.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>W 2022-01-28 13:50:43.467 NotebookApp<span style="color:#f92672">]</span> <span style="color:#e6db74">&#39;ip&#39;</span> has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>W 2022-01-28 13:50:43.468 NotebookApp<span style="color:#f92672">]</span> <span style="color:#e6db74">&#39;port&#39;</span> has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>W 2022-01-28 13:50:43.468 NotebookApp<span style="color:#f92672">]</span> <span style="color:#e6db74">&#39;port&#39;</span> has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.475 ServerApp<span style="color:#f92672">]</span> Writing Jupyter server cookie secret to /home/jovyan/.local/share/jupyter/runtime/jupyter_cookie_secret
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.864 ServerApp<span style="color:#f92672">]</span> nbclassic | extension was successfully linked.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.901 ServerApp<span style="color:#f92672">]</span> nbclassic | extension was successfully loaded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.903 LabApp<span style="color:#f92672">]</span> JupyterLab extension loaded from /opt/conda/lib/python3.9/site-packages/jupyterlab
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.903 LabApp<span style="color:#f92672">]</span> JupyterLab application directory is /opt/conda/share/jupyter/lab
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.906 ServerApp<span style="color:#f92672">]</span> jupyterlab | extension was successfully loaded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.907 ServerApp<span style="color:#f92672">]</span> Serving notebooks from local directory: /home/jovyan
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.907 ServerApp<span style="color:#f92672">]</span> Jupyter Server 1.13.4 is running at:
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.907 ServerApp<span style="color:#f92672">]</span> http://eff596c2a2b0:8888/lab?token<span style="color:#f92672">=</span>65c095c6ac9d7bf2d3eec7189bc1c0e8e5c254f1aad33689
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.907 ServerApp<span style="color:#f92672">]</span>  or http://127.0.0.1:8888/lab?token<span style="color:#f92672">=</span>65c095c6ac9d7bf2d3eec7189bc1c0e8e5c254f1aad33689
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:50:43.907 ServerApp<span style="color:#f92672">]</span> Use Control-C to stop this server and shut down all kernels <span style="color:#f92672">(</span>twice to skip confirmation<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>C 2022-01-28 13:50:43.910 ServerApp<span style="color:#f92672">]</span> 
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    To access the server, open this file in a browser:
+</span></span><span style="display:flex;"><span>        file:///home/jovyan/.local/share/jupyter/runtime/jpserver-7-open.html
+</span></span><span style="display:flex;"><span>    Or copy and paste one of these URLs:
+</span></span><span style="display:flex;"><span>        http://eff596c2a2b0:8888/lab?token<span style="color:#f92672">=</span>65c095c6ac9d7bf2d3eec7189bc1c0e8e5c254f1aad33689
+</span></span><span style="display:flex;"><span>     or http://127.0.0.1:8888/lab?token<span style="color:#f92672">=</span>65c095c6ac9d7bf2d3eec7189bc1c0e8e5c254f1aad33689
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>I 2022-01-28 13:51:18.309 LabApp<span style="color:#f92672">]</span> Build is up to date
+</span></span></code></pre></div><h3 id="jupyterのコンソールに移動">jupyterのコンソールに移動</h3>
+<p>Public IPやElastic IPを付与している場合。セキュリティグループ等で許可を。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>http://&lt;Public IP&gt;:8888/lab?token<span style="color:#f92672">=</span>65c095c6ac9d7bf2d3eec7189bc1c0e8e5c254f1aad33689
+</span></span></code></pre></div><p><img src="image-20220128225536632.png" alt="image-20220128225536632"></p>
+<p>OtherにあるTerminalをクリックするとPySpark環境を実行出来るようになる</p>
+<p><img src="image-20220128225652341.png" alt="image-20220128225652341"></p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ec2-docker-fiware-install/">EC2にDockerをインストールしてFIWAREを動かす</a></li>
+  
+  <li><a href="/aws-emr-spark-concept-component.html">Apache Sparkの構成要素、概要、用語について</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-performance-concurrency/">Redshift Spectrumの同時実行性能パフォーマンス</a></li>
+  
+  <li><a href="/aws-redshift-system-table-unload/">Redshiftから特定区切り文字でファイル出力する</a></li>
+  
+  <li><a href="/aws-cloudfront-apache-bench-ab-access/">Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/docker/">#Docker</a>
+  
+  <a href="https://zatoima.github.io/blog/spark/">#Spark</a>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

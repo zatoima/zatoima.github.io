@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>EC2にElasticsearch &#43; kibanaをインストールする | my opinion is my own</title>
+<meta name="title" content="EC2にElasticsearch &#43; kibanaをインストールする" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-ec2-elasticsearch-install.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="EC2にElasticsearch &#43; kibanaをインストールする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-04-17T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-04-17T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="EC2にElasticsearch &#43; kibanaをインストールする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="EC2にElasticsearch &#43; kibanaをインストールする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-04-17T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-04-17T00:00:00+00:00">
+  <meta itemprop="wordCount" content="268">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>EC2にElasticsearch &#43; kibanaをインストールする</h1>
+
+<p>
+  <i>
+    <time datetime='2020-04-17' pubdate>
+      2020-04-17
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>EC2にElasticsearchをインストールして満足するだけのメモ。</p>
+<h3 id="javaのインストール">javaのインストール</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo -s
+</span></span><span style="display:flex;"><span>sudo yum install java-1.8.0-openjdk.x86_64
+</span></span><span style="display:flex;"><span>java -version
+</span></span></code></pre></div><h3 id="elasicsearchのインストール">Elasicsearchのインストール</h3>
+<h5 id="yum-でインストールするためにリポジトリの設定">yum でインストールするためにリポジトリの設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat &gt; /etc/yum.repos.d/elasticsearch.repo <span style="color:#e6db74">&lt;&lt;EOF
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">[elasticsearch-7.x]
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">name=Elasticsearch repository for 7.x packages
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">baseurl=https://artifacts.elastic.co/packages/7.x/yum
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">gpgcheck=1
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">enabled=1
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">autorefresh=1
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">type=rpm-md
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">EOF</span>
+</span></span></code></pre></div><h5 id="elasitcserchのインストール">Elasitcserchのインストール</h5>
+<pre tabindex="0"><code>yum -y install elasticsearch
+</code></pre><h5 id="elasticsearchの起動">Elasticsearchの起動</h5>
+<pre tabindex="0"><code>systemctl start elasticsearch
+systemctl status elasticsearch
+</code></pre><h5 id="永続設定">永続設定</h5>
+<pre tabindex="0"><code>systemctl enable elasticsearch
+</code></pre><h5 id="インストール確認">インストール確認</h5>
+<p>Elasicsearchの7.6.1がインストールされています。</p>
+<pre tabindex="0"><code>[root@elastic ec2-user]# curl http://127.0.0.1:9200
+{
+  &#34;name&#34; : &#34;elastic&#34;,
+  &#34;cluster_name&#34; : &#34;elasticsearch&#34;,
+  &#34;cluster_uuid&#34; : &#34;YWsoyak7S9SOTOXJp92_QQ&#34;,
+  &#34;version&#34; : {
+    &#34;number&#34; : &#34;7.6.1&#34;,
+    &#34;build_flavor&#34; : &#34;default&#34;,
+    &#34;build_type&#34; : &#34;rpm&#34;,
+    &#34;build_hash&#34; : &#34;aa751e09be0a5072e8570670309b1f12348f023b&#34;,
+    &#34;build_date&#34; : &#34;2020-02-29T00:15:25.529771Z&#34;,
+    &#34;build_snapshot&#34; : false,
+    &#34;lucene_version&#34; : &#34;8.4.0&#34;,
+    &#34;minimum_wire_compatibility_version&#34; : &#34;6.8.0&#34;,
+    &#34;minimum_index_compatibility_version&#34; : &#34;6.0.0-beta1&#34;
+  },
+  &#34;tagline&#34; : &#34;You Know, for Search&#34;
+}
+</code></pre><h5 id="kuromojiのインストール">kuromojiのインストール</h5>
+<pre tabindex="0"><code>[root@elastic ec2-user]# /usr/share/elasticsearch/bin/elasticsearch-plugin install analysis-kuromoji
+-&gt; Installing analysis-kuromoji
+-&gt; Downloading analysis-kuromoji from elastic
+[=================================================] 100%   
+-&gt; Installed analysis-kuromoji
+[root@elastic ec2-user]# /usr/share/elasticsearch/bin/elasticsearch-plugin list
+analysis-kuromoji
+[root@elastic ec2-user]# 
+</code></pre><h3 id="kibanaのインストール">kibanaのインストール</h3>
+<pre tabindex="0"><code>yum -y install kibana
+</code></pre><h5 id="設定変更">設定変更</h5>
+<p><code>server.host</code>を<code>0.0.0.0</code>に変更</p>
+<pre tabindex="0"><code>vi /etc/kibana/kibana.yml
+</code></pre><h5 id="kibana起動">kibana起動</h5>
+<pre tabindex="0"><code>systemctl start kibana
+systemctl status kibana
+</code></pre><p>起動しました。</p>
+<pre tabindex="0"><code>[root@elastic ec2-user]# systemctl status kibana
+● kibana.service - Kibana
+   Loaded: loaded (/etc/systemd/system/kibana.service; disabled; vendor preset: disabled)
+   Active: active (running) since Sun 2020-03-22 11:33:46 UTC; 40s ago
+ Main PID: 3471 (node)
+   CGroup: /system.slice/kibana.service
+           └─3471 /usr/share/kibana/bin/../node/bin/node /usr/share/kibana/bin/../src/cli -c /etc/kibana/kibana.yml
+
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:ui_metric@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;message...nitialized&#34;}
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:markdown_vis@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;mess...nitialized&#34;}
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:metric_vis@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;messag...nitialized&#34;}
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:table_vis@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;message...nitialized&#34;}
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:tagcloud@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;message&#34;...nitialized&#34;}
+Mar 22 11:34:15 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:15Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:vega@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;message&#34;:&#34;St...nitialized&#34;}
+Mar 22 11:34:17 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:17Z&#34;,&#34;tags&#34;:[&#34;reporting&#34;,&#34;warning&#34;],&#34;pid&#34;:3471,&#34;message&#34;:&#34;Generating a random key for xpac...kibana.yml&#34;}
+Mar 22 11:34:17 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:17Z&#34;,&#34;tags&#34;:[&#34;status&#34;,&#34;plugin:reporting@7.6.1&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;state&#34;:&#34;green&#34;,&#34;message...nitialized&#34;}
+Mar 22 11:34:17 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:17Z&#34;,&#34;tags&#34;:[&#34;listening&#34;,&#34;info&#34;],&#34;pid&#34;:3471,&#34;message&#34;:&#34;Server running at http://0.0.0.0:5601&#34;}
+Mar 22 11:34:18 elastic kibana[3471]: {&#34;type&#34;:&#34;log&#34;,&#34;@timestamp&#34;:&#34;2020-03-22T11:34:18Z&#34;,&#34;tags&#34;:[&#34;info&#34;,&#34;http&#34;,&#34;server&#34;,&#34;Kibana&#34;],&#34;pid&#34;:3471,&#34;message&#34;:&#34;http server running at...0.0.0:5601&#34;}
+Hint: Some lines were ellipsized, use -l to show in full.
+</code></pre><h5 id="kibanaの起動永続設定">kibanaの起動永続設定</h5>
+<p>Elasticsearchと同様に再起動後に自動でkibanaが起動されるように設定を行います。</p>
+<pre tabindex="0"><code>systemctl enable kibana
+</code></pre><p>以上！</p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-neptune-audit-log.html">Neptuneインスタンスの監査ログを取得する方法</a></li>
+  
+  <li><a href="/aws-neptune-health-status.html">Neptuneインスタンスのヘルスステータスをcurlコマンドで取得する方法</a></li>
+  
+  <li><a href="/aws-neptune-export-rdf-data.html">Amazon NeptuneのRDFデータをExportする</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-file-get.html">RDS/Auroraのログファイルをawscliから取得・確認する</a></li>
+  
+  <li><a href="/aws-ec2-maven-install.html">EC2(Amazon Linux)にMavenをインストール</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

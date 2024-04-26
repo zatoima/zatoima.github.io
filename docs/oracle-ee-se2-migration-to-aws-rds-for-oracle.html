@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ | my opinion is my own</title>
+<meta name="title" content="Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,EE,SE2,RDS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/oracle-ee-se2-migration-to-aws-rds-for-oracle.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-04-15T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-04-15T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="EE">
+    <meta property="article:tag" content="SE2">
+    <meta property="article:tag" content="RDS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-04-15T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-04-15T00:00:00+00:00">
+  <meta itemprop="wordCount" content="224">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Oracle,EE,SE2,RDS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ</h1>
+
+<p>
+  <i>
+    <time datetime='2021-04-15' pubdate>
+      2021-04-15
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>Enterprise EditionとStandard Editionで異なるところや移行する際に検討すべきことをメモ。以下、EnterPrise EditionはEE、Standard Edition2はSE2と略。<a href="https://ja.wikipedia.org/wiki/MECE">MECE</a>の視点も足りていないのでご注意ください。</p>
+<h3 id="se2の概要">SE2の概要</h3>
+<ul>
+<li>最大2ソケット</li>
+<li>データベースごとに16スレッドの実行に制限
+<ul>
+<li>移行元のシステムのCPU数に注意</li>
+</ul>
+</li>
+<li>EE限定の機能は使用できない
+<ul>
+<li>有償オプション製品のほぼ全て
+<ul>
+<li>Oracle Advanced Security</li>
+<li>Oracle Real Application Testing</li>
+<li>Oracle Tuning Pack</li>
+<li>Oracle Diagnostics Pack</li>
+<li>Oracle Real Application Clusters (Oracle RAC)
+<ul>
+<li>RACは18c以前まで無償で使用出来ていたが、19c以降はSE2では不可となった</li>
+</ul>
+</li>
+<li>Oracle Partitioning</li>
+<li>Oracle Active Data Guard</li>
+<li>他にも多数</li>
+</ul>
+</li>
+<li>EE特有の機能
+<ul>
+<li>Oracle Data Guard</li>
+<li>オンライン再編成</li>
+<li>表領域のPoint-in-Timeリカバリ</li>
+<li>各種パラレル処理</li>
+<li>他にも多数</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="eeとse2の使用出来る使用できない機能の一覧">EEとSE2の使用出来る、使用できない機能の一覧</h3>
+<p>Exadata限定の機能とかOracle Cloudでのみ使用可能な機能があるので、左側の<!-- raw HTML omitted -->SE2<!-- raw HTML omitted -->と<!-- raw HTML omitted -->EE<!-- raw HTML omitted -->を確認。</p>
+<blockquote>
+<p>Oracle Database Release 19 Databaseライセンス情報ユーザー・マニュアル</p>
+<p><a href="https://docs.oracle.com/cd/F19136_01/dblic/Licensing-Information.html#GUID-B6113390-9586-46D7-9008-DCC9EDA45AB4">https://docs.oracle.com/cd/F19136_01/dblic/Licensing-Information.html#GUID-B6113390-9586-46D7-9008-DCC9EDA45AB4</a></p>
+</blockquote>
+<p><img src="image-20210415211612969.png" alt="image-20210415211612969"></p>
+<h3 id="eeでもse2でも変わらないこと">EEでもSE2でも変わらないこと</h3>
+<p>下記の通り、データベースとしての基本的な機能については変わらない。既存の資産（アプリケーション、ツール、スキル）は大部分は流用出来るはず。</p>
+<ul>
+<li>トランザクション</li>
+<li>ストアド・プロシージャ</li>
+<li>RMAN</li>
+<li>ディクショナリビュー、静的ディクショナリ</li>
+</ul>
+<h3 id="注意すべきee限定の機能について">注意すべきEE限定の機能について</h3>
+<p>セキュリティ要件や可用性要件をどのように実現するかに関わってくるのでSE2化には第一ステップとしてアセスメントが必要。第二に性能。</p>
+<p>個人的に<!-- raw HTML omitted -->よく使われている or 使っていた or 素晴らしい機能<!-- raw HTML omitted -->をピックアップしてみた。他にもあるので、現在使用している機能を抽出した上で検討すべき。性能や可用性、セキュリティ要件の非機能要件だけではなく、既存運用にも大幅に影響が出てくるのでこれを一つ一つ大丈夫かどうか確認し、他の手段の検討含めてやっていく必要がある。</p>
+<ul>
+<li>
+<p>有償オプション</p>
+<ul>
+<li>Oracle Advanced Security（セキュリティ）</li>
+<li>Oracle Tuning Pack（チューニング関連）</li>
+<li>Oracle Diagnostics Pack（診断系）</li>
+<li>Oracle Real Application Clusters (可用性、性能）</li>
+<li>Oracle Partitioning（性能、運用面）</li>
+<li>Oracle Active Data Guard（可用性、性能）</li>
+</ul>
+</li>
+<li>
+<p>EE特有の機能</p>
+<ul>
+<li>Basic Table Compression</li>
+<li>各種パラレル処理</li>
+<li>Data Guard</li>
+<li>オンライン系の操作（オンサイン索引再ビルド、オンライン再編成など）</li>
+<li>表領域のPoint-in-Timeリカバリ</li>
+<li>パラレル・バックアップおよびリカバリ</li>
+<li>フラッシュバック操作</li>
+<li>RMANバックアップから表や表パーティションを回復</li>
+<li>結果キャッシュ</li>
+</ul>
+</li>
+</ul>
+<h3 id="機能の代替をどうするか">機能の代替をどうするか</h3>
+<p>マネージドサービスであるRDS for Oracleを移行先として考える。ざっと気になったものを考えてみたが、一部はAWS特有の機能、もしくは機能が劣る代替機能（AWR→StatsPack）等に置き換えることで移行は可能。ただ、パーティション系やパラレル系や各種オプション製品が使えなくなることで非機能要件が満たせるかの確認が最初の検討の肝となる。</p>
+<p>※Oracleに対応した3rd Party製品は多くあるので、それと組み合わせるパターンも多く存在する。</p>
+<table>
+<thead>
+<tr>
+<th>カテゴリ</th>
+<th>EE</th>
+<th>SE2</th>
+<th>AWS RDS for Oracle</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security</td>
+<td>表領域暗号化</td>
+<td>-</td>
+<td>ストレージ暗号化で要件を満たすか確認</td>
+<td>保護出来るレイヤーが違うことに注意</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>ネットワーク暗号化</td>
+<td>ネットワーク暗号化</td>
+<td></td>
+<td>元々有償だったが、変わった模様</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>自動ワークロード・リポジトリ(AWR)</td>
+<td>Statspack</td>
+<td>Performance Insights、CloudWatch</td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>ASH（Active Session History）</td>
+<td>-</td>
+<td>Performance Insights？</td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>SQL Trace</td>
+<td>SQL Trace</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Enterprise Manager の Performance周り</td>
+<td>-</td>
+<td>Performance Insights、CloudWatch</td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>SQLアクセス・アドバイザ</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>SQLチューニング・アドバイザ</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>自動SQLチューニング</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>SQLプロファイル</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Oracle Partitioning</td>
+<td>ビューパーティション？</td>
+<td>-</td>
+<td>要検討</td>
+</tr>
+<tr>
+<td>Availability&amp;Performance</td>
+<td>Oracle Real Application Clusters</td>
+<td>-</td>
+<td>Multi-AZ構成</td>
+<td></td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Data Guard</td>
+<td>-</td>
+<td>Multi-AZ構成</td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>オンライン系の操作</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>表領域のPoint-in-Timeリカバリ</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>パラレル・バックアップおよびリカバリ</td>
+<td>-</td>
+<td>スナップショット</td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>フラッシュバック操作</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>RMANバックアップから表や表パーティションを回復</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>EE Feature</td>
+<td>結果キャッシュ</td>
+<td>-</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="補足">補足</h3>
+<p>Partitionオプション無しでPartitionっぽくやる方法をやってみた</p>
+<p><a href="https://zatoima.github.io/oracle-ee-se2-partition-trigger-view.html">Oracle Partiotionオプションの代替策(View+Trigger)を試してみる | my opinion is my own 👋</a></p>
+<h3 id="参考">参考</h3>
+<blockquote>
+<p>EE Features in SE2 <a href="https://www.doag.org/formes/pubfiles/11343091/2019-NN-Clemens_Bleile-Oracle_Standard_Edition_2_Fehlende_Features_ergaenzen-Praesentation.pdf">https://www.doag.org/formes/pubfiles/11343091/2019-NN-Clemens_Bleile-Oracle_Standard_Edition_2_Fehlende_Features_ergaenzen-Praesentation.pdf</a></p>
+<p>dbts19_cosol_oracle_se2.pdf <a href="http://cosol.jp/techdb/dbts19_cosol_oracle_se2.pdf">http://cosol.jp/techdb/dbts19_cosol_oracle_se2.pdf</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-rds-oracle-datapump-import.html">RDS(Oracle)にData Pumpでインポートする</a></li>
+  
+  <li><a href="/oracle-19c-extended-varchar2.html">Oracle 19cで拡張VARCHAR2型を導入</a></li>
+  
+  <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
+  
+  <li><a href="/oracle-exadata-typical-functions.html">Oracle Exadataの代表的な機能</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+  <a href="https://zatoima.github.io/blog/ee/">#EE</a>
+  
+  <a href="https://zatoima.github.io/blog/se2/">#SE2</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

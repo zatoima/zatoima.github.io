@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Oracle GoldenGateの仮想メモリの使い方を整理する | my opinion is my own</title>
+<meta name="title" content="Oracle GoldenGateの仮想メモリの使い方を整理する" />
+<meta name="description" content="" />
+<meta name="keywords" content="GoldenGate,Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/goldengate-vmemory-use.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Oracle GoldenGateの仮想メモリの使い方を整理する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-04-20T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-04-20T00:00:00+00:00">
+    <meta property="article:tag" content="GoldenGate">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Oracle GoldenGateの仮想メモリの使い方を整理する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Oracle GoldenGateの仮想メモリの使い方を整理する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-04-20T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-04-20T00:00:00+00:00">
+  <meta itemprop="wordCount" content="341">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="GoldenGate,Oracle">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Oracle GoldenGateの仮想メモリの使い方を整理する</h1>
+
+<p>
+  <i>
+    <time datetime='2019-04-20' pubdate>
+      2019-04-20
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="はじめに"><strong>はじめに</strong></h4>
+<p>GoldenGateもOS上で動作するミドルウェアなので物理メモリ/仮想メモリを使用します。</p>
+<p>GoldenGateはコミットされたトランザクションのみをレプリケートするため、トランザクションのコミットまたはロールバックを受信するまで、<em>キャッシュ</em>と呼ばれる<code>管理仮想メモリー・プール</code>に各トランザクションの操作を保持する必要があります。ここで述べているのは物理メモリではなく仮想メモリです。ご注意ください。</p>
+<p>本記事で明示的に指定していない場合は、メモリという言葉は仮想メモリを指します。</p>
+<p>GoldenGateプロセスによって使用される物理メモリーの実際の量は、オペレーティング・システムによって制御されます。</p>
+<p>具体的なメモリの使い方と使用されるスワップ容量については本記事では扱いません。</p>
+<h4 id="必要な仮想メモリ量について"><strong>必要な仮想メモリ量について</strong></h4>
+<p>仮想メモリの見積もり式は下記の通りマニュアルに記載があります。</p>
+<blockquote>
+<p><a href="https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-B910F3D9-E41C-4335-AC0A-442435481A19.htm">https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-B910F3D9-E41C-4335-AC0A-442435481A19.htm</a></p>
+<p>CACHEMGR</p>
+</blockquote>
+<pre tabindex="0"><code>1. 1つのExtractプロセスおよび1つのReplicatプロセスを起動します。
+2. GGSCIを実行します。
+3. 実行中の各プロセスのレポート・ファイルを表示し、PROCESS VM AVAIL FROM OS (min)行を探します。
+4. 必要な場合、各値を次の整数(GB)に切り上げます。たとえば、1.76GBの場合は2GBに切り上げます。
+5. 繰り上げられたExtractの値に、Extractプロセスの数を掛けます。
+6. 繰り上げられたReplicatの値に、Replicatプロセスの数を掛けます。
+7. 2つの結果に、システム上のOracle GoldenGateプロセスおよびその他のプロセスで必要とする追加スワップ領域を足します。
+
+(PROCESS_VM x number_Extracts) + (PROCESS_VM x number_Replicats) + (swap_for_other_processes) = max_swap_space_on_system
+
+この合計が、これらのプロセスに必要な最大スワップ領域になります。すべてのOracle GoldenGateプロセスが使用する実際の物理メモリー量は、Oracle GoldenGateプロセスではなく、オペレーティング・システムによって制御されます。グローバル・キャッシュ・サイズは、CACHEMGRのCACHESIZEオプションで制御します。
+</code></pre><h4 id="仮想メモリ動作"><strong>仮想メモリ動作</strong></h4>
+<p>下記はプロセス起動時にレポートファイルに出力されるメモリの統計値です。</p>
+<pre tabindex="0"><code>CACHEMGR virtual memory values (may have been adjusted)
+CACHEPAGEOUTSIZE (default):               4M
+PROCESS VM AVAIL FROM OS (min):           2G
+CACHESIZEMAX (strict force to disk):   1.74G
+</code></pre><p>仮想メモリ上限値を設定したい場合、CACHESIZEパラメータを設定します。これはプロセスがトランザクション・データのキャッシュに使用できる仮想メモリーの弱い制限を示します。これは、PROCESS VM AVAIL FROM OS (min)の値に基づいて動的に決定されます。CACHEMGRのCACHESIZEオプションを使用して制御できます。トランザクション・データのキャッシングにできる仮想メモリー量(キャッシュ・サイズ)の弱い制限を指定するため、トランザクションによってはこのサイズを超えてメモリを使用するケースも存在します。この場合、上限値は上記の統計値で言うところの <code>CACHESIZEMAX</code>が上限となります。</p>
+<p>次に、PROCESS VM AVAIL FROM OS (min)は、このプロセスが使用可能と判断したおおよその仮想メモリー量を示します。内部的な理由で、この量はオペレーティング・システムによって使用可能と表示される量より少ない場合があります。</p>
+<p>CACHESIZEMAX (strict force to disk)は、PROCESS VM AVAIL FROM OSおよびCACHESIZEから導出されます。通常は、現在仮想メモリー・バッファが特定の内部値を超えているトランザクションのみがページングの候補です。メモリー・リクエストの合計がCACHESIZEの値を超えると、キャッシュ・マネージャはディスクに書き込むトランザクションを探し、ページング候補のリストからトランザクションを選択します。ページング候補のトランザクションがすでにディスクにページングされていて、使用中の仮想メモリーがCACHESIZEMAX (strict force to disk)を超えている場合は、追加のバッファを必要とするすべてのトランザクションをページング候補にできます。このような方法で、常に仮想メモリーの可用性が確保されています。</p>
+<p>メモリ使用の上限を超える場合 GoldenGateインストール・ディレクトリの<code>dirtmp</code>サブディレクトリにトランザクション・データがスワップされます。</p>
+<p>ロングトランザクションが実行される場合は設定しているCACHESIZE次第ですが、ディスクにスワップされる可能性が高いでディスク容量にも注意が必要と思われます。</p>
+<h4 id="send-extract-capture名-cachemgr-cachestatsについて"><strong>SEND EXTRACT &lt;Capture名&gt;, CACHEMGR CACHESTATSについて</strong></h4>
+<p>仮想メモリの使用状況について確認したい場合は下記コマンドを実行します。</p>
+<p>多くの情報が出力されますが、「CACHE OBJECT MANAGER statistics」セクションを見てどのようなメモリ動作になっているか確認すれば良いと思います。ファイルキャッシュに関する情報は「CACHE File Caching」で確認可能です。</p>
+<pre tabindex="0"><code>GGSCI (dbvgg.jp.oracle.com as ggs@db112s) 40&gt; SEND EXTRACT c11, CACHEMGR CACHESTATS
+
+Sending CACHEMGR request to EXTRACT C11 ...
+
+CACHE OBJECT MANAGER statistics
+
+CACHE MANAGER VM USAGE
+vm current     =      0    vm anon queues =      0
+vm anon in use =      0    vm file        =      0
+vm used max    =   1.27G   ==&gt; CACHE BALANCED
+
+CACHE CONFIGURATION
+cache size            =   1G   cache force paging = 1.74G
+buffer min            =  64K   buffer max (soft)  =   4M
+pageout eligible size =   4M
+
+================================================================================
+RUNTIME STATS FOR SUPERPOOL
+
+CACHE Transaction Stats
+trans active    =      0    max concurrent =    238
+non-zero total  =      1    trans total    =  42.58K
+
+CACHE File Caching
+filecache rqsts        =    129    bytes to disk      =   8.20G
+file retrieves         =   2.08K   objs filecached    =      1
+queue entries          =    129    queue processed    =    130
+queue entry not needed =      0    queue not signaled =      0
+fc requesting obj      =      0
+
+CACHE MANAGEMENT
+buffer links   =   2.06K  anon gets   =      0
+forced unmaps  =     39   cnnbl try   =    200
+cached out     =    114
+</code></pre><p>想定より多く仮想メモリを使用していることを疑われる場合は<code>CACHE MANAGER VM USAGE</code> を優先的に確認するのが良いと思います。</p>
+<pre tabindex="0"><code>CACHE MANAGER VM USAGE
+vm current = 1015M vm anon queues = 320M
+vm anon in use = 692M vm file = 3M
+vm used max = 1G ==&gt; CACHE BALANCED
+</code></pre><h5 id="各項目の補足説明"><strong>各項目の補足説明</strong></h5>
+<ul>
+<li>vm current : 現在割当てられている仮想メモリサイズ総量(メモリ＋ページング)</li>
+<li>vm anon queues : vm current のうち、フリーなメモリサイズ(使用されなくなったメモリをフリーなメモリとして一旦キューに保持しているサイズ)</li>
+<li>vm anon in use : 現在処理で利用中の仮想メモリサイズ総量</li>
+<li>vm file : 現在ページングしているサイズ</li>
+<li>vm used max : これまでに利用された仮想メモリサイズ総量の最大サイズ</li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/goldengate-classic-replicat-trace.html">GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法</a></li>
+  
+  <li><a href="/goldengate-classic-replicat-create.html">GoldenGateのClassic Replicat(非統合Replicat)の作成手順</a></li>
+  
+  <li><a href="/goldengate-opentransaction-getinfo.html">GoldenGateのコマンドを使用してオープントランザクションを特定する</a></li>
+  
+  <li><a href="/goldengate-flashbackscn-instantiationSCN.html">expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて</a></li>
+  
+  <li><a href="/goldengate-12c-18c-install-implement.html">GoldenGateをインストールしてDB間のレプリケーション環境を構築する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/goldengate/">#GoldenGate</a>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

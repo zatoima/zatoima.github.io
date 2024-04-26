@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQL論理レプリケーションの遅延監視 | my opinion is my own</title>
+<meta name="title" content="PostgreSQL論理レプリケーションの遅延監視" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-logical-replication-monitoring.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQL論理レプリケーションの遅延監視">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-12-22T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-12-22T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQL論理レプリケーションの遅延監視">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQL論理レプリケーションの遅延監視">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-12-22T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-12-22T00:00:00+00:00">
+  <meta itemprop="wordCount" content="231">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,RDS,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQL論理レプリケーションの遅延監視</h1>
+
+<p>
+  <i>
+    <time datetime='2019-12-22' pubdate>
+      2019-12-22
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="はじめに">はじめに</h4>
+<hr>
+<p>論理レプリケーションを行う時の遅延監視について整理してみる。環境はAWSのAurora、及びRDSのPostgreSQL互換を使用。バージョンは10.7。</p>
+<!-- raw HTML omitted -->
+<h4 id="walの読み込み位置の確認">WALの読み込み位置の確認</h4>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">select</span> pg_current_wal_lsn();
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">------+----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>pg_current_wal_lsn <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F94888
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<h4 id="レプリケーション遅延の確認">レプリケーション遅延の確認</h4>
+<hr>
+<p>Publisher側でpg_stat_replicationビューを確認して確認が可能。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">\</span>x
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_stat_replication;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_stat_replication;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">----+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>pid              <span style="color:#f92672">|</span> <span style="color:#ae81ff">19407</span>
+</span></span><span style="display:flex;"><span>usesysid         <span style="color:#f92672">|</span> <span style="color:#ae81ff">16393</span>
+</span></span><span style="display:flex;"><span>usename          <span style="color:#f92672">|</span> postgres
+</span></span><span style="display:flex;"><span>application_name <span style="color:#f92672">|</span> auroratopostgresql
+</span></span><span style="display:flex;"><span>client_addr      <span style="color:#f92672">|</span> xxx.xxx.xxx.xx
+</span></span><span style="display:flex;"><span>client_hostname  <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span>client_port      <span style="color:#f92672">|</span> <span style="color:#ae81ff">46478</span>
+</span></span><span style="display:flex;"><span>backend_start    <span style="color:#f92672">|</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">-</span><span style="color:#ae81ff">12</span><span style="color:#f92672">-</span><span style="color:#ae81ff">14</span> <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">24</span>:<span style="color:#ae81ff">19</span>.<span style="color:#ae81ff">187306</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
+</span></span><span style="display:flex;"><span>backend_xmin     <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">state</span>            <span style="color:#f92672">|</span> streaming
+</span></span><span style="display:flex;"><span>sent_lsn         <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F67640
+</span></span><span style="display:flex;"><span>write_lsn        <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F67640
+</span></span><span style="display:flex;"><span>flush_lsn        <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F67640
+</span></span><span style="display:flex;"><span>replay_lsn       <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F67640
+</span></span><span style="display:flex;"><span>write_lag        <span style="color:#f92672">|</span> <span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">01</span>.<span style="color:#ae81ff">582706</span>
+</span></span><span style="display:flex;"><span>flush_lag        <span style="color:#f92672">|</span> <span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">01</span>.<span style="color:#ae81ff">985095</span>
+</span></span><span style="display:flex;"><span>replay_lag       <span style="color:#f92672">|</span> <span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">01</span>.<span style="color:#ae81ff">582706</span>
+</span></span><span style="display:flex;"><span>sync_priority    <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>sync_state       <span style="color:#f92672">|</span> async
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> 
+</span></span></code></pre></div><p>WALログの位置が重要。sent_lsn、write_lsn、flush_lsn、replay_lsn等から位置が特定できる。</p>
+<table>
+<thead>
+<tr>
+<th>列</th>
+<th>型</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sent_lsn</td>
+<td>pg_lsn</td>
+<td>この接続で送信された最後の先行書き込みログの位置です。</td>
+</tr>
+<tr>
+<td>write_lsn</td>
+<td>pg_lsn</td>
+<td>このスタンバイサーバによってディスクに書き出された最後の先行書き込みログ位置です。</td>
+</tr>
+<tr>
+<td>flush_lsn</td>
+<td>pg_lsn</td>
+<td>このスタンバイサーバによってディスクに吐き出された最後の先行書き込みログ位置です。</td>
+</tr>
+<tr>
+<td>replay_lsn</td>
+<td>pg_lsn</td>
+<td>このスタンバイサーバ上のデータベースに再生された最後の先行書き込みログ位置です。</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>28.2. 統計情報コレクタ <a href="https://www.postgresql.jp/document/10/html/monitoring-stats.html#PG-STAT-REPLICATION-VIEW">https://www.postgresql.jp/document/10/html/monitoring-stats.html#PG-STAT-REPLICATION-VIEW</a></p>
+</blockquote>
+<p>sent_lsn、write_lsn、flush_lsn、replay_lsnは下記のような関係性だと予想。（<strong><!-- raw HTML omitted -->要検証<!-- raw HTML omitted --></strong>）ここのlsnの位置を使うことで、Publisher側の問題なのか、ネットワークの問題なのか、Subscriberの適用の問題なのかがわかる。</p>
+<!-- raw HTML omitted -->
+<p>また、stateからもWAL Senderの状態がわかる。</p>
+<blockquote>
+<p>WAL送信サーバの現在の状態です。 取り得る値は以下の通りです。</p>
+<ul>
+<li>startup: このWAL送信サーバは起動するところです。</li>
+<li>catchup: このWAL送信サーバが接続しているスタンバイはプライマリに追いつこうとしています。</li>
+<li>streaming: このWAL送信サーバは、接続先のスタンバイサーバがプライマリに追いついた後、変更をストリーミングしています。</li>
+<li>backup: このWAL送信サーバはバックアップを送信しています。</li>
+<li>stopping: このWAL送信サーバは停止するところです。</li>
+</ul>
+</blockquote>
+<p>とは言え、<!-- raw HTML omitted -->遅延確認という観点だとpg_stat_replicationの更新頻度が 『write or flush lsnの位置が変更があったとき』、もしくは 『&ldquo;wal_receiver_status_interval&quot;で指定された秒数』となるため、後述の方法を使って判断した方が良い<!-- raw HTML omitted -->と考える。wal_receiver_status_intervalはデフォルト10秒のため、WALの適用が終わっているにも関わらず、更新されないという自体が起きうる。wal_receiver_status_intervalの10秒が経過後、pg_stat_replicationを確認したタイミングでようやくわかる。wal_receiver_status_intervalを調整した環境や常にレプリケーションが走っている状況の場合は有用のはず。</p>
+<p>PostgreSQLのLSNは16進数となるので一見したところ位置の比較が不明な場合があるので、その場合は「pg_wal_lsn_diff」関数を使う。出力される情報はバイトであることに注意。</p>
+<blockquote>
+<p><a href="https://www.postgresql.jp/document/10/html/functions-admin.html">https://www.postgresql.jp/document/10/html/functions-admin.html</a></p>
+<p>pg_wal_lsn_diffは、2つの先行書き込みログの位置の差分をバイト数で算出します。 この関数はpg_stat_replicationや<a href="https://www.postgresql.jp/document/10/html/functions-admin.html#FUNCTIONS-ADMIN-BACKUP-TABLE">表 9.79</a>に示される関数と併用することで、レプリケーションの遅延の確認に使用できます。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    pg_wal_lsn_diff(sent_lsn,write_lsn) write_diff,
+</span></span><span style="display:flex;"><span>    pg_wal_lsn_diff(sent_lsn,flush_lsn) flush_diff,
+</span></span><span style="display:flex;"><span>    pg_wal_lsn_diff(sent_lsn,replay_lsn) replay_diff
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    pg_stat_replication;
+</span></span></code></pre></div><p>1.) 差分がある場合：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">select</span> pg_wal_lsn_diff(sent_lsn,write_lsn) write_diff, pg_wal_lsn_diff(sent_lsn, flush_lsn) flush_diff, pg_wal_lsn_diff(sent_lsn,replay_lsn) replay_diff <span style="color:#66d9ef">from</span> pg_stat_replication;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">---------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>write_diff  <span style="color:#f92672">|</span> <span style="color:#ae81ff">26749408</span>
+</span></span><span style="display:flex;"><span>flush_diff  <span style="color:#f92672">|</span> <span style="color:#ae81ff">26749408</span>
+</span></span><span style="display:flex;"><span>replay_diff <span style="color:#f92672">|</span> <span style="color:#ae81ff">26749408</span>
+</span></span></code></pre></div><p>2.) 差分がない場合：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">select</span> pg_wal_lsn_diff(sent_lsn,write_lsn) write_diff, pg_wal_lsn_diff(sent_lsn, flush_lsn) flush_diff, pg_wal_lsn_diff(sent_lsn,replay_lsn) replay_diff <span style="color:#66d9ef">from</span> pg_stat_replication;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">--
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>write_diff  <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>flush_diff  <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>replay_diff <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<p>Subscriber側で確認する方法としては下記がある。時間がわかるので直感的にわかりやすい。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_stat_subscription;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">---------+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>subid                 <span style="color:#f92672">|</span> <span style="color:#ae81ff">16425</span>
+</span></span><span style="display:flex;"><span>subname               <span style="color:#f92672">|</span> auroratopostgresql
+</span></span><span style="display:flex;"><span>pid                   <span style="color:#f92672">|</span> <span style="color:#ae81ff">15008</span>
+</span></span><span style="display:flex;"><span>relid                 <span style="color:#f92672">|</span> 
+</span></span><span style="display:flex;"><span>received_lsn          <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F87048
+</span></span><span style="display:flex;"><span>last_msg_send_time    <span style="color:#f92672">|</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">-</span><span style="color:#ae81ff">12</span><span style="color:#f92672">-</span><span style="color:#ae81ff">14</span> <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">29</span>.<span style="color:#ae81ff">125815</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
+</span></span><span style="display:flex;"><span>last_msg_receipt_time <span style="color:#f92672">|</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">-</span><span style="color:#ae81ff">12</span><span style="color:#f92672">-</span><span style="color:#ae81ff">14</span> <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">29</span>.<span style="color:#ae81ff">135405</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
+</span></span><span style="display:flex;"><span>latest_end_lsn        <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>F87048
+</span></span><span style="display:flex;"><span>latest_end_time       <span style="color:#f92672">|</span> <span style="color:#ae81ff">2019</span><span style="color:#f92672">-</span><span style="color:#ae81ff">12</span><span style="color:#f92672">-</span><span style="color:#ae81ff">14</span> <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">29</span>.<span style="color:#ae81ff">125815</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aurora-postgresql-query-plan-management.html">Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li>
+  
+  <li><a href="/aws-ec2-psql-install.html">EC2上からpsqlでAurora(PostgreSQL)に接続するまで</a></li>
+  
+  <li><a href="/aws-rds-repllication-error-conflict.html">RDS(PostgreSQL)の論理レプリケーションの競合エラーを解消する</a></li>
+  
+  <li><a href="/aws-rds-pg-replication-origin-status-error.html">RDS(PostgreSQL)でpg_replication_origin_statusにアクセス出来ない(permission denied)</a></li>
+  
+  <li><a href="/aws-aurora-postgres-password.html">Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

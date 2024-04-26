@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード | my opinion is my own</title>
+<meta name="title" content="S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-aurora-postgres-lambda-s3-event/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-05-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-05-25T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-05-25T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-05-25T00:00:00+00:00">
+  <meta itemprop="wordCount" content="248">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード</h1>
+
+<p>
+  <i>
+    <time datetime='2022-05-25' pubdate>
+      2022-05-25
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>※RDS Proxyやパスワードの外出し等やるべきことやっていません。</p>
+<h3 id="s3のイベント構造">S3のイベント構造</h3>
+<hr>
+<p>Amazon S3 がイベントを発行する場合のJSONはこちら。</p>
+<blockquote>
+<p>イベントメッセージの構造 - Amazon Simple Storage Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/notification-content-structure.html">https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/notification-content-structure.html</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{  
+</span></span><span style="display:flex;"><span>   <span style="color:#f92672">&#34;Records&#34;</span>:[  
+</span></span><span style="display:flex;"><span>      {  
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;eventVersion&#34;</span>:<span style="color:#e6db74">&#34;2.2&#34;</span>,
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;eventSource&#34;</span>:<span style="color:#e6db74">&#34;aws:s3&#34;</span>,
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;awsRegion&#34;</span>:<span style="color:#e6db74">&#34;us-west-2&#34;</span>,
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;eventTime&#34;</span>:<span style="color:#e6db74">&#34;The time, in ISO-8601 format, for example, 1970-01-01T00:00:00.000Z, when Amazon S3 finished processing the request&#34;</span>,
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;eventName&#34;</span>:<span style="color:#e6db74">&#34;event-type&#34;</span>,
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;userIdentity&#34;</span>:{  
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;principalId&#34;</span>:<span style="color:#e6db74">&#34;Amazon-customer-ID-of-the-user-who-caused-the-event&#34;</span>
+</span></span><span style="display:flex;"><span>         },
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;requestParameters&#34;</span>:{  
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;sourceIPAddress&#34;</span>:<span style="color:#e6db74">&#34;ip-address-where-request-came-from&#34;</span>
+</span></span><span style="display:flex;"><span>         },
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;responseElements&#34;</span>:{  
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;x-amz-request-id&#34;</span>:<span style="color:#e6db74">&#34;Amazon S3 generated request ID&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;x-amz-id-2&#34;</span>:<span style="color:#e6db74">&#34;Amazon S3 host that processed the request&#34;</span>
+</span></span><span style="display:flex;"><span>         },
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;s3&#34;</span>:{  
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;s3SchemaVersion&#34;</span>:<span style="color:#e6db74">&#34;1.0&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;configurationId&#34;</span>:<span style="color:#e6db74">&#34;ID found in the bucket notification configuration&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;bucket&#34;</span>:{  
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;name&#34;</span>:<span style="color:#e6db74">&#34;bucket-name&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;ownerIdentity&#34;</span>:{  
+</span></span><span style="display:flex;"><span>                  <span style="color:#f92672">&#34;principalId&#34;</span>:<span style="color:#e6db74">&#34;Amazon-customer-ID-of-the-bucket-owner&#34;</span>
+</span></span><span style="display:flex;"><span>               },
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;arn&#34;</span>:<span style="color:#e6db74">&#34;bucket-ARN&#34;</span>
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;object&#34;</span>:{  
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;key&#34;</span>:<span style="color:#e6db74">&#34;object-key&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;size&#34;</span>:<span style="color:#e6db74">&#34;object-size in bytes&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;eTag&#34;</span>:<span style="color:#e6db74">&#34;object eTag&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;versionId&#34;</span>:<span style="color:#e6db74">&#34;object version if bucket is versioning-enabled, otherwise null&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;sequencer&#34;</span>: <span style="color:#e6db74">&#34;a string representation of a hexadecimal value used to determine event sequence, only used with PUTs and DELETEs&#34;</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>         },
+</span></span><span style="display:flex;"><span>         <span style="color:#f92672">&#34;glacierEventData&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;restoreEventData&#34;</span>: {
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;lifecycleRestorationExpiryTime&#34;</span>: <span style="color:#e6db74">&#34;The time, in ISO-8601 format, for example, 1970-01-01T00:00:00.000Z, of Restore Expiry&#34;</span>,
+</span></span><span style="display:flex;"><span>               <span style="color:#f92672">&#34;lifecycleRestoreStorageClass&#34;</span>: <span style="color:#e6db74">&#34;Source storage class for restore&#34;</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>         }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>   ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="lambda側でトリガーを追加">Lambda側でトリガーを追加</h3>
+<hr>
+<p><img src="image-20220507204915194.png" alt="image-20220507204915194"></p>
+<p><img src="image-20220507204835813.png" alt="image-20220507204835813"></p>
+<h3 id="lamdba-pythonスクリプト">Lamdba Pythonスクリプト</h3>
+<hr>
+<p>S3へのCSVファイルのPUTを検知してAurora PostgreSQLのテーブルにロードをする簡易スクリプト。特にエラーハンドリング等は実施していないので注意。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> psycopg2
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> psycopg2.extras
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> time
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> logging
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> boto3
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> sys
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> os
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">lambda_handler</span>(event, context):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#39;event: </span><span style="color:#e6db74">{}</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">.</span>format(event))
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#39;context: </span><span style="color:#e6db74">{}</span><span style="color:#e6db74">&#39;</span><span style="color:#f92672">.</span>format(context))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    logger <span style="color:#f92672">=</span> logging<span style="color:#f92672">.</span>getLogger()
+</span></span><span style="display:flex;"><span>    logger<span style="color:#f92672">.</span>setLevel(logging<span style="color:#f92672">.</span>INFO)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    s3_client <span style="color:#f92672">=</span> boto3<span style="color:#f92672">.</span>client(<span style="color:#e6db74">&#39;s3&#39;</span>)
+</span></span><span style="display:flex;"><span>    conn <span style="color:#f92672">=</span> psycopg2<span style="color:#f92672">.</span>connect(<span style="color:#e6db74">&#34;host=auroraserverlessv2.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> record <span style="color:#f92672">in</span> event[<span style="color:#e6db74">&#39;Records&#39;</span>]:
+</span></span><span style="display:flex;"><span>        bucket <span style="color:#f92672">=</span> record[<span style="color:#e6db74">&#39;s3&#39;</span>][<span style="color:#e6db74">&#39;bucket&#39;</span>][<span style="color:#e6db74">&#39;name&#39;</span>]
+</span></span><span style="display:flex;"><span>        key <span style="color:#f92672">=</span> record[<span style="color:#e6db74">&#39;s3&#39;</span>][<span style="color:#e6db74">&#39;object&#39;</span>][<span style="color:#e6db74">&#39;key&#39;</span>]
+</span></span><span style="display:flex;"><span>        s3location <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;s3://&#39;</span> <span style="color:#f92672">+</span> bucket <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;/&#39;</span> <span style="color:#f92672">+</span> key
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(s3location)
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(bucket)
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(key)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        cur <span style="color:#f92672">=</span> conn<span style="color:#f92672">.</span>cursor()
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;SUCCESS: Connection to RDS Aurora instance succeeded&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sql <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;SELECT aws_s3.table_import_from_s3(&#39;ddb&#39;, &#39;&#39;, &#39;(format csv)&#39;,  </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">  , </span><span style="color:#e6db74">%s</span><span style="color:#e6db74"> , &#39;ap-northeast-1&#39;);&#34;</span>
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(sql)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">with</span> conn<span style="color:#f92672">.</span>cursor() <span style="color:#66d9ef">as</span> cur:
+</span></span><span style="display:flex;"><span>                cur<span style="color:#f92672">.</span>execute(sql, (bucket, key))
+</span></span><span style="display:flex;"><span>                conn<span style="color:#f92672">.</span>commit()
+</span></span><span style="display:flex;"><span>                logger<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#39;Data loaded from S3 into Aurora&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        conn<span style="color:#f92672">.</span>commit()
+</span></span><span style="display:flex;"><span>        cur<span style="color:#f92672">.</span>close()
+</span></span><span style="display:flex;"><span>        conn<span style="color:#f92672">.</span>close()
+</span></span><span style="display:flex;"><span>        
+</span></span></code></pre></div><h4 id="補足">補足</h4>
+<hr>
+<p><code>aws_s3.table_import_from_s3</code>を使っているのでAurora側にIAMロールの設定や拡張機能の設定が必要となることに注意。</p>
+<blockquote>
+<ul>
+<li><a href="https://zatoima.github.io/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする | my opinion is my own 👋</a></li>
+</ul>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-lambda-sam-deploy/">AWS SAM CLI を使用したLambdaのデプロイ</a></li>
+  
+  <li><a href="/aws-aurora-postgres-psycopg2-lambda/">Lambdaからawslambda-psycopg2を使用してAurora PostgreSQLに接続</a></li>
+  
+  <li><a href="/aws-aurora-postgres-pgadmin4-bastin-connect/">pgAdmin4からAurora PostgreSQLへ踏み台サーバのポートフォワード経由で接続する</a></li>
+  
+  <li><a href="/aws-dynamodb-to-s3-csv-transform-python-lamdba/">DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト</a></li>
+  
+  <li><a href="/aws-dynamodb-to-s3-by-kinesis/">DynamoDBからkinesis firehose経由でS3に出力</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

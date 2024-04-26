@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響 | my opinion is my own</title>
+<meta name="title" content="シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-signal-process-term-int-hup.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-03-11T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-03-11T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-03-11T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-03-11T00:00:00+00:00">
+  <meta itemprop="wordCount" content="536">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響</h1>
+
+<p>
+  <i>
+    <time datetime='2020-03-11' pubdate>
+      2020-03-11
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>表題の通り、シグナル(TERM／INT／HUP)によるpostgresプロセスへの影響を確認してみます。</p>
+<h3 id="postgresqlのシャットダウンモードについて">PostgreSQLのシャットダウンモードについて</h3>
+<p>まず前提となるシャットダウン時のモード。</p>
+<table>
+<thead>
+<tr>
+<th>shutdown mode</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>スマートシャットダウンモード</td>
+<td>新しい接続を禁止しますが、既に存在するセッションは通常通り動作。既存セッションが通常に終了するまではシャットダウンしない。</td>
+</tr>
+<tr>
+<td>高速シャットダウンモード</td>
+<td>サーバは新しい接続を禁止し全ての存在するサーバプロセスにSIGTERMを送り、この結果サーバプロセスは現在のトランザクションをアボートし、即座に終了する</td>
+</tr>
+<tr>
+<td>即時シャットダウン</td>
+<td>全ての子プロセスに SIGQUITを送り、即座に終了。次回起動時にWALを使用してリカバリをする必要がある。</td>
+</tr>
+</tbody>
+</table>
+<p>次にシグナルを送った場合(killした場合)の挙動を確認してみる。</p>
+<h4 id="sigintの場合">SIGINTの場合</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ ps -ef | grep <span style="color:#e6db74">&#34;/usr/pgsql-10/bin/postgres&#34;</span> | grep -v grep
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">5632</span>     <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">0</span> 03:00 pts/3    00:00:00 /usr/pgsql-10/bin/postgres
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ kill -SIGINT <span style="color:#ae81ff">5632</span>
+</span></span></code></pre></div><h4 id="log出力">log出力</h4>
+<p>高速シャットダウンモードとなる</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5632<span style="color:#f92672">[</span>7<span style="color:#f92672">]</span> LOG:  received fast shutdown request
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5632<span style="color:#f92672">[</span>8<span style="color:#f92672">]</span> LOG:  aborting any active transactions
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5632<span style="color:#f92672">[</span>9<span style="color:#f92672">]</span> LOG:  worker process: logical replication launcher <span style="color:#f92672">(</span>PID 5641<span style="color:#f92672">)</span> exited with exit code <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5635<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  shutting down
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5635<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  checkpoint starting: shutdown immediate
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5635<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> LOG:  checkpoint complete: wrote <span style="color:#ae81ff">1</span> buffers <span style="color:#f92672">(</span>0.0%<span style="color:#f92672">)</span>; <span style="color:#ae81ff">0</span> WAL file<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> added, <span style="color:#ae81ff">10</span> removed, <span style="color:#ae81ff">0</span> recycled; write<span style="color:#f92672">=</span>0.015 s, sync<span style="color:#f92672">=</span>0.000 s, total<span style="color:#f92672">=</span>0.046 s; sync files<span style="color:#f92672">=</span>1, longest<span style="color:#f92672">=</span>0.000 s, average<span style="color:#f92672">=</span>0.000 s; distance<span style="color:#f92672">=</span><span style="color:#ae81ff">16384</span> kB, estimate<span style="color:#f92672">=</span><span style="color:#ae81ff">16384</span> kB
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:02:28 JST<span style="color:#f92672">]</span>  5632<span style="color:#f92672">[</span>10<span style="color:#f92672">]</span> LOG:  database system is shut down
+</span></span></code></pre></div><h4 id="sigtermの場合">SIGTERMの場合</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ ps -ef | grep <span style="color:#e6db74">&#34;/usr/pgsql-10/bin/postgres&#34;</span> | grep -v grep
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">5678</span>     <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">9</span> 03:06 pts/3    00:00:00 /usr/pgsql-10/bin/postgres
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ kill -SIGTERM <span style="color:#ae81ff">5678</span>
+</span></span></code></pre></div><h4 id="log出力-1">log出力</h4>
+<p>スマートシャットダウンモード</p>
+<pre tabindex="0"><code>[2020-03-10 12:06:56 JST]  5678[7] LOG:  received smart shutdown request
+[2020-03-10 12:06:56 JST]  5678[8] LOG:  worker process: logical replication launcher (PID 5687) exited with exit code 1
+[2020-03-10 12:06:56 JST]  5681[1] LOG:  shutting down
+[2020-03-10 12:06:56 JST]  5681[2] LOG:  checkpoint starting: shutdown immediate
+[2020-03-10 12:06:56 JST]  5681[3] LOG:  checkpoint complete: wrote 0 buffers (0.0%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.015 s, sync=0.000 s, total=0.024 s; sync files=0, longest=0.000 s, average=0.000 s; distance=16384 kB, estimate=16384 kB
+[2020-03-10 12:06:56 JST]  5678[9] LOG:  database system is shut down
+</code></pre><h4 id="sighupの場合">SIGHUPの場合</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ ps -ef | grep <span style="color:#e6db74">&#34;/usr/pgsql-10/bin/postgres&#34;</span> | grep -v grep
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">5695</span>     <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">3</span> 03:08 pts/3    00:00:00 /usr/pgsql-10/bin/postgres
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>postgres@postdb ~<span style="color:#f92672">]</span>$ kill -SIGHUP <span style="color:#ae81ff">5695</span>
+</span></span></code></pre></div><h4 id="log出力-2">log出力</h4>
+<p>SIGHUPの場合はパラメータファイルの再読み込み</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-10 12:08:33 JST<span style="color:#f92672">]</span>  5695<span style="color:#f92672">[</span>7<span style="color:#f92672">]</span> LOG:  received SIGHUP, reloading configuration files
+</span></span></code></pre></div><h4 id="sigquitの場合">SIGQUITの場合</h4>
+<pre tabindex="0"><code>[postgres@postdb ~]$ ps -ef | grep &#34;/usr/pgsql-10/bin/postgres&#34; | grep -v grep
+postgres  5695     1  0 03:08 pts/3    00:00:00 /usr/pgsql-10/bin/postgres
+[postgres@postdb ~]$ kill -SIGQUIT 5695
+</code></pre><h4 id="log出力-3">log出力</h4>
+<p>即時シャットダウンとなる</p>
+<pre tabindex="0"><code>[2020-03-10 12:09:40 JST]  5695[8] LOG:  received immediate shutdown request
+[2020-03-10 12:09:40 JST]  5701[1] WARNING:  terminating connection because of crash of another server process
+[2020-03-10 12:09:40 JST]  5701[2] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+[2020-03-10 12:09:40 JST]  5701[3] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+[2020-03-10 12:09:40 JST]  5695[9] LOG:  archiver process (PID 5702) exited with exit code 1
+[2020-03-10 12:09:40 JST]  5695[10] LOG:  database system is shut down
+</code></pre><p>即時シャットダウンとなるので、次回起動時には<code>redo starts</code>の適用が始まる。</p>
+<pre tabindex="0"><code>[2020-03-10 12:10:06 JST]  5725[1] LOG:  database system was interrupted; last known up at 2020-03-10 12:08:20 JST
+[2020-03-10 12:10:06 JST]  5725[2] LOG:  database system was not properly shut down; automatic recovery in progress
+[2020-03-10 12:10:06 JST]  5725[3] LOG:  redo starts at 3/71000098
+[2020-03-10 12:10:06 JST]  5725[4] LOG:  invalid record length at 3/710000D0: wanted 24, got 0
+[2020-03-10 12:10:06 JST]  5725[5] LOG:  redo done at 3/71000098
+[2020-03-10 12:10:06 JST]  5725[6] LOG:  checkpoint starting: end-of-recovery immediate
+[2020-03-10 12:10:06 JST]  5725[7] LOG:  checkpoint complete: wrote 0 buffers (0.0%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.013 s, sync=0.000 s, total=0.019 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=0 kB
+[2020-03-10 12:10:06 JST]  5723[6] LOG:  database system is ready to accept connections
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-about-monitoring-log.html">PostgreSQLの監視のためのログ設定について</a></li>
+  
+  <li><a href="/aws-aurora-postgres-extention-list/">Aurora(PostgreSQL互換)で使用可能な拡張機能一覧</a></li>
+  
+  <li><a href="/postgresql-how-to-use-oid2name/">PostgreSQLのoid2nameの使用方法</a></li>
+  
+  <li><a href="/postgresql-about-pg_buffercache.html">PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する</a></li>
+  
+  <li><a href="/postgresql-how-to-install-and-use-pgstattuple/">PostgreSQLのpgstattupleのインストールと使用方法</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする | my opinion is my own</title>
+<meta name="title" content="S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-aurora-rds-s3-import.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-05-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-05-25T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-05-25T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-05-25T00:00:00+00:00">
+  <meta itemprop="wordCount" content="179">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,RDS,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</h1>
+
+<p>
+  <i>
+    <time datetime='2020-05-25' pubdate>
+      2020-05-25
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>事前設定のIAMロールの設定から実際のRDS(PostgreSQL)に対してCSVファイルのロードを行う。RDSとAuroraで手順に関しては大きく差異はないが、Amazon S3 から Aurora PostgreSQL にインポートするには、データベースで PostgreSQL バージョン 10.7 以降を実行している必要がある。</p>
+<p>詳細の手順や制限事項等は下記マニュアルを参照。</p>
+<blockquote>
+<p>PostgreSQL 互換で Amazon Aurora にデータを移行する - Amazon Aurora <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import</a></p>
+</blockquote>
+<h3 id="iamロールの設定">IAMロールの設定</h3>
+<p>データロードのための下準備としてIAMロールの設定を行う。</p>
+<p>IAMの画面から「ロールの作成」を選択</p>
+<p><img src="image-20200513164944959.png" alt="image-20200513164944959"></p>
+<p>S3を選択</p>
+<p><img src="image-20200128163255012.png" alt="image-20200128163255012"></p>
+<p>「<code>AmazonS3ReadOnlyAccess</code>」を選択してポリシーをアタッチする。</p>
+<p><img src="image-20200513165046884.png" alt="image-20200513165046884"></p>
+<p>必要に応じてタグを設定。</p>
+<p><img src="image-20200128163425236.png" alt="image-20200128163425236"></p>
+<p>ロール名は「importfroms3」とした。</p>
+<p><img src="image-20200513165137293.png" alt="image-20200513165137293"></p>
+<p>作成したロールの画面に移動する。</p>
+<p><img src="image-20200513165231849.png" alt="image-20200513165231849"></p>
+<p>「信頼関係」-「信頼関係の編集」へと移動して下記を上書きして貼り付ける。</p>
+<p><img src="image-20200128163702608.png" alt="image-20200128163702608"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;Version&#34;</span>: <span style="color:#e6db74">&#34;2012-10-17&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;Statement&#34;</span>: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;Sid&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;Effect&#34;</span>: <span style="color:#e6db74">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;Principal&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;Service&#34;</span>: [
+</span></span><span style="display:flex;"><span>          <span style="color:#e6db74">&#34;rds.amazonaws.com&#34;</span>
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;Action&#34;</span>: <span style="color:#e6db74">&#34;sts:AssumeRole&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><img src="image-20200128163744771.png" alt="image-20200128163744771"></p>
+<h3 id="amazon-aurora-クラスターに-iam-ロールを追加する">「Amazon Aurora クラスターに IAM ロール」を追加する</h3>
+<p>Aurora クラスタに移動して「IAMロールの管理」を選択。</p>
+<p><img src="image-20200513165739916.png" alt="image-20200513165739916"></p>
+<p>IAMロールの管理のところにて先程作成した「importfroms3」ロールを追加する。機能は「s3import」を指定。</p>
+<p><img src="image-20200513165428474.png" alt="image-20200513165428474"></p>
+<p><img src="image-20200513170011219.png" alt="image-20200513170011219"></p>
+<p>ここまでで事前設定が終わりとなる。</p>
+<p>実際のインポート自体はCLI上でコマンドで実施するが、まずは<code>aws_s3</code>を有効化する。</p>
+<pre tabindex="0"><code>CREATE EXTENSION aws_s3 CASCADE;
+</code></pre><h5 id="インポートコマンド">インポートコマンド</h5>
+<pre tabindex="0"><code>SELECT aws_s3.table_import_from_s3(
+ &#39;aozora_kaiseki&#39;,
+ &#39;&#39;,
+ &#39;(format csv)&#39;,
+ &#39;nep-s3-bk&#39;,
+ &#39;utf8_all.csv&#39;,
+ &#39;ap-northeast-1&#39;
+);
+</code></pre><p>関数の引数は下記の通り。</p>
+<blockquote>
+<p>PostgreSQL 互換で Amazon Aurora にデータを移行する - Amazon Aurora <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import.FileFormats">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html#USER_PostgreSQL.S3Import.FileFormats</a></p>
+<p>aws_s3.table_import_from_s3 関数を使用して Amazon S3 データをインポートする</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>dbname<span style="color:#f92672">=</span>&gt; SELECT aws_s3.table_import_from_s3<span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;テーブル名&#39;</span>,
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;カラムリスト&#39;</span>, -- 空文字<span style="color:#f92672">(</span><span style="color:#e6db74">&#39;&#39;</span><span style="color:#f92672">)</span>の場合は、テーブルのカラムと一致
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;PostgreSQL COPYの引数・フォーマット&#39;</span>,
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;S3バケット名&#39;</span>,
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;S3キー&#39;</span>,
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#39;S3リージョン&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">)</span>;
+</span></span></code></pre></div><p>約10GB相当のデータを約4分でインポートすることが出来た。</p>
+<pre tabindex="0"><code>postgres@rdspgsqlv1:postgres&gt; SELECT aws_s3.table_import_from_s3( 
+  &#39;aozora_kaiseki&#39;, 
+  &#39;&#39;, 
+  &#39;(format csv)&#39;, 
+  &#39;nep-s3-bk&#39;, 
+  &#39;utf8_all.csv&#39;, 
+  &#39;ap-northeast-1&#39; 
+  );                                                                                                                                                                                   
++--------------------------------------------------------------------------------------------------+
+| table_import_from_s3                                                                             |
+|--------------------------------------------------------------------------------------------------|
+| 87701673 rows imported into relation &#34;aozora_kaiseki&#34; from file utf8_all.csv of 6539180310 bytes |
++--------------------------------------------------------------------------------------------------+
+SELECT 1
+Time: 272.534s (4 minutes), executed in: 272.522s (4 minutes)
+postgres@rdspgsqlv1:postgres&gt;  
+</code></pre><p>psqlのコピーコマンドを使ったCSVインポートと比較してみたが、特に時間としては変わらなかった。</p>
+<pre tabindex="0"><code>■CSVインポート(COPYコマンド)	
+[ec2-user@bastin ~]$ time psql -h rdspgsqlv1.xxxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora_kaiseki(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv	
+COPY 87701673	
+	
+real	4m20.753s
+user	0m19.471s
+sys	0m6.427s
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-rds-log-download.html">指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li>
+  
+  <li><a href="/postgresql-aozora-bunko-data-import.html">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li>
+  
+  <li><a href="/aws-ec2-postgresql-pgcli-install-howto.html">EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-file-get.html">RDS/Auroraのログファイルをawscliから取得・確認する</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-replication.html">Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/rds/">#RDS</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

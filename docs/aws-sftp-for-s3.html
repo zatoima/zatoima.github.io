@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>AWS Transfer for SFTPを使ってS3にアップロード | my opinion is my own</title>
+<meta name="title" content="AWS Transfer for SFTPを使ってS3にアップロード" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,SFTP," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-sftp-for-s3.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="AWS Transfer for SFTPを使ってS3にアップロード">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-11-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-11-29T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="SFTP">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="AWS Transfer for SFTPを使ってS3にアップロード">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="AWS Transfer for SFTPを使ってS3にアップロード">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-11-29T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-11-29T00:00:00+00:00">
+  <meta itemprop="wordCount" content="110">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,SFTP">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>AWS Transfer for SFTPを使ってS3にアップロード</h1>
+
+<p>
+  <i>
+    <time datetime='2019-11-29' pubdate>
+      2019-11-29
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>awscliではなくsftpコマンドでS3にアップロードしたい！そういうときのマネージドサービス。</p>
+<h4 id="sftpサーバの起動作成">SFTPサーバの起動/作成</h4>
+<hr>
+<p>サービス一覧からAWS Transfer fot SFTPを選択して&quot;Creaete Server&quot;をクリック</p>
+<p><img src="image-20191127113550997.png" alt="image-20191127113550997"></p>
+<p>Endpoint configurationでEndpoint typeを選択する。ここではPublicを選択。Logging RoleやTagは必要に応じて。</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<h4 id="ユーザの作成">ユーザの作成</h4>
+<hr>
+<p>ロールを指定するがこの時S3のアクセス権が必要。 AssumeRole が必要だったはず。</p>
+<blockquote>
+<p>SFTP のための IAM ポリシーおよびロールの作成 - AWS Transfer for SFTP <a href="https://docs.aws.amazon.com/ja_jp/transfer/latest/userguide/requirements-roles.html">https://docs.aws.amazon.com/ja_jp/transfer/latest/userguide/requirements-roles.html</a></p>
+</blockquote>
+<!-- raw HTML omitted -->
+<h4 id="ユーザを作成する時に必要な登録用の鍵を作る">ユーザを作成する時に必要な登録用の鍵を作る</h4>
+<hr>
+<p>登録した公開鍵をユーザ作成画面で登録する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@walt-dev-ec2 ~<span style="color:#f92672">]</span>$ ssh-keygen -t rsa
+</span></span><span style="display:flex;"><span>Generating public/private rsa key pair.
+</span></span><span style="display:flex;"><span>Enter file in which to save the key <span style="color:#f92672">(</span>/home/ec2-user/.ssh/id_rsa<span style="color:#f92672">)</span>: 
+</span></span><span style="display:flex;"><span>Enter passphrase <span style="color:#f92672">(</span>empty <span style="color:#66d9ef">for</span> no passphrase<span style="color:#f92672">)</span>: 
+</span></span><span style="display:flex;"><span>Enter same passphrase again: 
+</span></span><span style="display:flex;"><span>Your identification has been saved in /home/ec2-user/.ssh/id_rsa.
+</span></span><span style="display:flex;"><span>Your public key has been saved in /home/ec2-user/.ssh/id_rsa.pub.
+</span></span><span style="display:flex;"><span>The key fingerprint is:
+</span></span><span style="display:flex;"><span>SHA256:FGSySPzbCkxTDDiX/NYhnKP2ko/CTIrR2r/lZef83k4 ec2-user@walt-dev-ec2
+</span></span></code></pre></div><h4 id="接続">接続</h4>
+<hr>
+<p>作成した鍵を使ってsftpを実行。接続できた。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@walt-dev-ec2 ~<span style="color:#f92672">]</span>$ sftp -i .ssh/id_rsa sftp-user@s-9ec720a3add94f11a.server.transfer.ap-northeast-1.amazonaws.com
+</span></span><span style="display:flex;"><span>Connected to s-9ec720a3add94f11a.server.transfer.ap-northeast-1.amazonaws.com.
+</span></span><span style="display:flex;"><span>sftp&gt; 
+</span></span><span style="display:flex;"><span>sftp&gt; ls -l
+</span></span><span style="display:flex;"><span>drwxr--r--   <span style="color:#ae81ff">1</span>        -        -        <span style="color:#ae81ff">0</span> Jan  <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">1970</span> pluto-dev-s3-test
+</span></span><span style="display:flex;"><span>drwxr--r--   <span style="color:#ae81ff">1</span>        -        -        <span style="color:#ae81ff">0</span> Jan  <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">1970</span> z3-cloudtrail-s3-test
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/oracle-to-aws-sct-partition-limit.html">OracleのパーティションテーブルをAurora(PostgreSQL)へSCT変換する場合の注意事項メモ</a></li>
+  
+  <li><a href="/aurora-postgresql-query-plan-management.html">Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li>
+  
+  <li><a href="/aws-aurora-postgres-password.html">Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</a></li>
+  
+  <li><a href="/aws-cloudwatchlogs-dms-log-error.html">CloudWatchでDMSログを確認しようとすると「ロググループは存在しません」と出力される</a></li>
+  
+  <li><a href="/aws-awscli-rds-descrive-db-snapshot.html">aws rds describe-db-snapshotsの結果をcsvとして出力</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/sftp/">#SFTP</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

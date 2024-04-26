@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>RMANのduplicateコマンドでDBを複製する | my opinion is my own</title>
+<meta name="title" content="RMANのduplicateコマンドでDBを複製する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/oracle-rman-ruplicate.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="RMANのduplicateコマンドでDBを複製する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-03-06T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-03-06T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="RMANのduplicateコマンドでDBを複製する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="RMANのduplicateコマンドでDBを複製する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-03-06T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-03-06T00:00:00+00:00">
+  <meta itemprop="wordCount" content="135">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="Oracle">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>RMANのduplicateコマンドでDBを複製する</h1>
+
+<p>
+  <i>
+    <time datetime='2019-03-06' pubdate>
+      2019-03-06
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="はじめに"><strong>はじめに</strong></h4>
+<p>データベースの複製パターンには下記4つのパターンがあります。</p>
+<p>システム的な要件によって選べる選択肢が変わってくると思います。</p>
+<p>今回の例では4.の「ターゲットまたはリカバリ・カタログへの接続なしで実行するバックアップベースの複製」で実施しています。</p>
+<hr>
+<ol>
+<li>
+<p>アクティブな複製</p>
+<p>オープン状態またはマウント状態のデータベースから直接複製します。</p>
+</li>
+<li>
+<p>ターゲット接続なしで実行するバックアップベースの複製</p>
+<p>RMANは、既存のRMANバックアップおよびコピーから複製ファイルを作成します。</p>
+<p>この形式では、補助インスタンスおよびリカバリ・カタログへの接続が必要</p>
+</li>
+<li>
+<p>ターゲット接続を指定したバックアップベースの複製</p>
+<p>既存のRMANバックアップおよびコピーから複製ファイルを作成します。</p>
+</li>
+<li>
+<p>ターゲットまたはリカバリ・カタログへの接続なしで実行するバックアップベースの複製</p>
+<p>BACKUP LOCATIONで指定した場所に配置されたRMANバックアップおよびコピーから複製ファイルを作成</p>
+</li>
+</ol>
+<hr>
+<p>RMANバックアップからリストア・リカバリする場合もデータベースの複製となりますが、今回の例では含んでいません。</p>
+<p><strong>環境構成</strong></p>
+<p>同一筐体内に複製する手順となります。</p>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>データベース名</th>
+<th>DBバージョン</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>db121s</td>
+<td>12.1.0.2</td>
+<td>複製元</td>
+</tr>
+<tr>
+<td>2</td>
+<td>db121t</td>
+<td>12.1.0.2</td>
+<td>複製先</td>
+</tr>
+</tbody>
+</table>
+<p><strong>複製元で</strong>RMANバックアップの取得</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>rman target <span style="color:#f92672">/</span>
+</span></span><span style="display:flex;"><span>run <span style="color:#960050;background-color:#1e0010">{</span>
+</span></span><span style="display:flex;"><span>  BACKUP INCREMENTAL <span style="color:#66d9ef">LEVEL</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">DATABASE</span> FORMAT <span style="color:#e6db74">&#39;/home/oracle/rman/db121s/full_%d_%T_%U&#39;</span> SPFILE PLUS ARCHIVELOG FORMAT <span style="color:#e6db74">&#39;/home/oracle/rman/db121s/ARCH_%d_%T_%U&#39;</span>;
+</span></span><span style="display:flex;"><span>  BACKUP <span style="color:#66d9ef">AS</span> <span style="color:#66d9ef">COPY</span> <span style="color:#66d9ef">CURRENT</span> CONTROLFILE FORMAT <span style="color:#e6db74">&#39;/home/oracle/rman/db121s/CNT_%d_%T_%U.ctl&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">}</span>
+</span></span></code></pre></div><h4 id="複製先のクリーンアップ"><strong>複製先のクリーンアップ</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>rm <span style="color:#f92672">-</span>rf <span style="color:#f92672">/</span>u01<span style="color:#f92672">/</span>app<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>oradata<span style="color:#f92672">/</span>DB121T<span style="color:#75715e">/*
+</span></span></span></code></pre></div><h4 id="複製先パラメータファイル作成"><strong>複製先パラメータファイル作成</strong></h4>
+<p>複製元のデータベースに接続し、spfileから編集用のpfileを作成する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>. <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>.oraenv_db121s
+</span></span><span style="display:flex;"><span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> pfile<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;/tmp/initdb121t.ora&#39;</span> <span style="color:#66d9ef">from</span> spfile;
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><h4 id="複製先パラメータファイル編集"><strong>複製先パラメータファイル編集</strong></h4>
+<p>複製元に依存する値を複製先に記載を変更する。（例：db_nameは「db121s」から「db121t」へ）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>vi <span style="color:#f92672">/</span>tmp<span style="color:#f92672">/</span>initdb121t.ora
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">以下のパラメータの値を変更する</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">・</span><span style="color:#f92672">*</span>.cluster_database     : <span style="color:#66d9ef">false</span>																<span style="color:#960050;background-color:#1e0010">・</span><span style="color:#f92672">*</span>.control_files        : <span style="color:#f92672">/</span>u01<span style="color:#f92672">/</span>app<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>oradata<span style="color:#f92672">/</span>db121t
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">・</span><span style="color:#f92672">*</span>.db_name              : db121t
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">・</span><span style="color:#f92672">*</span>.db_unique_name       : db121t
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">・</span><span style="color:#f92672">*</span>.dispatchers          : (PROTOCOL<span style="color:#f92672">=</span>TCP) (SERVICE<span style="color:#f92672">=</span>db121tXDB)								
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">以下のパラメータの値を追加する</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">*</span>.DB_FILE_NAME_CONVERT<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB121S/datafile/&#39;</span>,<span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB121T/datafile/&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">*</span>.LOG_FILE_NAME_CONVERT<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB121S/onlinelog/&#39;</span>,<span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB121T/onlinelog&#39;</span>
+</span></span></code></pre></div><h4 id="補助インスタンス起動"><strong>補助インスタンス起動</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>. <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>.oraenv_db121t
+</span></span><span style="display:flex;"><span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span>startup nomount pfile<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;/tmp/initdb121t.ora&#39;</span>
+</span></span></code></pre></div><h4 id="spfileの作成"><strong>spfile</strong>の作成</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> spfile <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;/u01/app/oracle/product/12.1.0.2/dbhome_2/dbs/spfiledb121t.ora&#39;</span> <span style="color:#66d9ef">from</span> pfile<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;/tmp/initdb121t.ora&#39;</span>;
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><h4 id="複製コマンドの実施"><strong>複製コマンドの実施</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>rman auxiliary <span style="color:#f92672">/</span>
+</span></span><span style="display:flex;"><span>run <span style="color:#960050;background-color:#1e0010">{</span>			
+</span></span><span style="display:flex;"><span>duplicate <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">to</span> db121t backup <span style="color:#66d9ef">location</span> <span style="color:#e6db74">&#39;/home/oracle/rman/db121s&#39;</span>;			
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">}</span>
+</span></span></code></pre></div><p>RMANのduplicateコマンドの詳細についてはマニュアルをご確認ください。</p>
+<blockquote>
+<p>Oracle® Databaseバックアップおよびリカバリ・リファレンス 12cリリース1 (12.1)</p>
+<p><a href="https://docs.oracle.com/cd/E57425_01/121/RCMRF/rcmsynta020.htm">https://docs.oracle.com/cd/E57425_01/121/RCMRF/rcmsynta020.htm</a></p>
+<p>DUPLICATE</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/oracle-datapump-command.html">Data Pump(expdp/impdp)使用時のコマンドとオプション</a></li>
+  
+  <li><a href="/oracle-tablespace-capacitycheck.html">Oracle Databaseの表領域使用率を確認するSQL</a></li>
+  
+  <li><a href="/oracle-tde-implement.html">Oracle Databaseで透過的データベース暗号化(Transparent Data Encryption(TDE))の設定・構築を行う</a></li>
+  
+  <li><a href="/goldengate-check-session-info.html">GoldenGate関連プロセスのsession情報を確認する方法</a></li>
+  
+  <li><a href="/oracle-awr-checksql/">AWR(DBA_HIST表)を使用した確認SQL</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/oracle/">#Oracle</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

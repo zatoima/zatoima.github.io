@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Aurora PostgreSQLにHammerDBのTPC-Hを実行 | my opinion is my own</title>
+<meta name="title" content="Aurora PostgreSQLにHammerDBのTPC-Hを実行" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-aurora-postgresql-hammerdb-benchmark-tpc-h.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Aurora PostgreSQLにHammerDBのTPC-Hを実行">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-01-15T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-01-15T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Aurora PostgreSQLにHammerDBのTPC-Hを実行">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Aurora PostgreSQLにHammerDBのTPC-Hを実行">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-01-15T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-01-15T00:00:00+00:00">
+  <meta itemprop="wordCount" content="2315">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Aurora PostgreSQLにHammerDBのTPC-Hを実行</h1>
+
+<p>
+  <i>
+    <time datetime='2021-01-15' pubdate>
+      2021-01-15
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>TPC-HをAurora PostgreSQLに対して実行する。</p>
+<p>TPC-Cについては下記を参照。</p>
+<blockquote>
+<p>Aurora PostgreSQLにHammerDBのTPC-Cを実行 | my opinion is my own <a href="https://zatoima.github.io/aws-aurora-postgresql-hammerdb-benchmark.html">https://zatoima.github.io/aws-aurora-postgresql-hammerdb-benchmark.html</a></p>
+</blockquote>
+<h3 id="はじめに">はじめに</h3>
+<p>CLI実行とのことで、下記のHammerDBのドキュメントを参考</p>
+<blockquote>
+<p>Chapter 8. Command Line Interface (CLI) <a href="https://hammerdb.com/docs/ch08.html">https://hammerdb.com/docs/ch08.html</a></p>
+</blockquote>
+<h3 id="事前準備">事前準備</h3>
+<p>PostgreSQL関連のライブラリが既にインストールされていることを前提。無ければ下記でインストールしておく。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum -y install postgresql
+</span></span><span style="display:flex;"><span>sudo yum -y install postgresql-contrib
+</span></span></code></pre></div><h3 id="hammerdbのインストーラーダウンロード">HammerDBのインストーラーダウンロード</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>wget https://github.com/TPC-Council/HammerDB/releases/download/v3.3/HammerDB-3.3-Linux.tar.gz
+</span></span><span style="display:flex;"><span>tar xvzf HammerDB-3.3-Linux.tar.gz
+</span></span><span style="display:flex;"><span>cd HammerDB-3.3
+</span></span></code></pre></div><blockquote>
+<p>HammerDB <a href="https://hammerdb.com/download.html">https://hammerdb.com/download.html</a></p>
+</blockquote>
+<h3 id="ライブラリ確認">ライブラリ確認</h3>
+<p>PostgreSQLのライブラリのチェックのSuccessを確認する。</p>
+<pre tabindex="0"><code>Checking database library for PostgreSQL
+Success ... loaded library Pgtcl for PostgreSQL
+</code></pre><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin HammerDB-3.3<span style="color:#f92672">]</span>$ ls -l
+</span></span><span style="display:flex;"><span>total <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">19</span> Oct <span style="color:#ae81ff">18</span>  <span style="color:#ae81ff">2019</span> agent
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">37</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> bin
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user <span style="color:#ae81ff">29218</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> ChangeLog
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user   <span style="color:#ae81ff">178</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> config
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">7274</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdb
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">3167</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdbcli
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user  <span style="color:#ae81ff">2508</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> hammerdbws
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user    <span style="color:#ae81ff">39</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> images
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> include
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">21</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">21</span>  <span style="color:#ae81ff">2019</span> lib
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user <span style="color:#ae81ff">34666</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> license
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">2</span> ec2-user ec2-user  <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> modules
+</span></span><span style="display:flex;"><span>-rwxr-xr-x  <span style="color:#ae81ff">1</span> ec2-user ec2-user   <span style="color:#ae81ff">116</span> Oct <span style="color:#ae81ff">16</span>  <span style="color:#ae81ff">2019</span> readme
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">10</span> ec2-user ec2-user   <span style="color:#ae81ff">126</span> Jul <span style="color:#ae81ff">19</span>  <span style="color:#ae81ff">2019</span> src
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin HammerDB-3.3<span style="color:#f92672">]</span>$ ./hammerdbcli
+</span></span><span style="display:flex;"><span>HammerDB CLI v3.3
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 2003-2019 Steve Shaw
+</span></span><span style="display:flex;"><span>Type <span style="color:#e6db74">&#34;help&#34;</span> <span style="color:#66d9ef">for</span> a list of commands
+</span></span><span style="display:flex;"><span>The xml is well-formed, applying configuration
+</span></span><span style="display:flex;"><span>hammerdb&gt;librarycheck
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Error: failed to load Oratcl - can<span style="color:#e6db74">&#39;t read &#34;env(ORACLE_HOME)&#34;: no such variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Ensure that Oracle client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Checking database library for MSSQLServer
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Error: failed to load tdbc::odbc - couldn&#39;</span>t load file <span style="color:#e6db74">&#34;libiodbc.so&#34;</span>: libiodbc.so: cannot open shared object file: No such file or directory
+</span></span><span style="display:flex;"><span>Ensure that MSSQLServer client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Db2
+</span></span><span style="display:flex;"><span>Error: failed to load db2tcl - couldn<span style="color:#e6db74">&#39;t load file &#34;/home/ec2-user/HammerDB-3.3/lib/db2tcl2.0.0/libdb2tcl.so.0.0.1&#34;: libdb2.so.1: cannot open shared object file: No such file or directory
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Ensure that Db2 client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Checking database library for MySQL
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">Error: failed to load mysqltcl - couldn&#39;</span>t load file <span style="color:#e6db74">&#34;/home/ec2-user/HammerDB-3.3/lib/mysqltcl-3.052/libmysqltcl3.052.so&#34;</span>: libmysqlclient.so.21: cannot open shared object file: No such file or directory
+</span></span><span style="display:flex;"><span>Ensure that MySQL client libraries are installed and the location in the LD_LIBRARY_PATH environment variable
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>Success ... loaded library Pgtcl <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>Checking database library <span style="color:#66d9ef">for</span> Redis
+</span></span><span style="display:flex;"><span>Success ... loaded library redis <span style="color:#66d9ef">for</span> Redis
+</span></span></code></pre></div><h3 id="hammerdbのパラメータ設定">HammerDBのパラメータ設定</h3>
+<h5 id="接続dbをpostgresql-指定">接続DBをPostgreSQL 指定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; dbset db pg
+</span></span></code></pre></div><h5 id="対象ベンチマークをtpc-cに設定する">対象ベンチマークをTPC-Cに設定する</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; dbset bm TPC-H
+</span></span></code></pre></div><h5 id="接続先ホスト名の設定">接続先ホスト名の設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset connection pg_host aurorav1.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com
+</span></span></code></pre></div><h5 id="superuserのユーザ名パスワードの設定">superuserのユーザ名、パスワードの設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpch pg_tpch_superuser postgres
+</span></span><span style="display:flex;"><span>hammerdb&gt; diset tpch pg_tpch_superuserpass postgres
+</span></span></code></pre></div><h5 id="pg_count_wareスケールファクターの設定">pg_count_ware（スケールファクター）の設定</h5>
+<p>データ容量を調整する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpch pg_scale_fact <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><h5 id="テストスキーマ構築を実行するユーザー数の設定">テストスキーマ構築を実行するユーザー数の設定</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; diset tpch pg_num_tpch_threads <span style="color:#ae81ff">4</span>
+</span></span></code></pre></div><h5 id="設定値を確認">設定値を確認</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;print dict
+</span></span><span style="display:flex;"><span>Dictionary Settings <span style="color:#66d9ef">for</span> PostgreSQL
+</span></span><span style="display:flex;"><span>connection <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> pg_host <span style="color:#f92672">=</span> aurorav1.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com
+</span></span><span style="display:flex;"><span> pg_port <span style="color:#f92672">=</span> <span style="color:#ae81ff">5432</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>tpch       <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span> pg_scale_fact         <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_tpch_superuser     <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_tpch_superuserpass <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_tpch_defaultdbase  <span style="color:#f92672">=</span> postgres
+</span></span><span style="display:flex;"><span> pg_tpch_user          <span style="color:#f92672">=</span> tpch
+</span></span><span style="display:flex;"><span> pg_tpch_pass          <span style="color:#f92672">=</span> tpch
+</span></span><span style="display:flex;"><span> pg_tpch_dbase         <span style="color:#f92672">=</span> tpch
+</span></span><span style="display:flex;"><span> pg_tpch_gpcompat      <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_tpch_gpcompress    <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_num_tpch_threads   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span> pg_total_querysets    <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_raise_query_error  <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_verbose            <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_refresh_on         <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_degree_of_parallel <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span> pg_update_sets        <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span> pg_trickle_refresh    <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>
+</span></span><span style="display:flex;"><span> pg_refresh_verbose    <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_cloud_query        <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span> pg_rs_compat          <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><h3 id="スキーマ作成">スキーマ作成</h3>
+<h5 id="スキーマ作成及びテストデータの投入">スキーマ作成、及び、テストデータの投入</h5>
+<p>データロードが走るので時間が掛かる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;buildschema
+</span></span><span style="display:flex;"><span>Script cleared
+</span></span><span style="display:flex;"><span>Building <span style="color:#ae81ff">1</span> Warehouses<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> with <span style="color:#ae81ff">1</span> Virtual User
+</span></span><span style="display:flex;"><span>Ready to create a <span style="color:#ae81ff">1</span> Warehouse PostgreSQL TPC-C schema
+</span></span><span style="display:flex;"><span>in host xxxxxx.CLUSTER-xxxxxxxx.AP-NORTHEAST-1.RDS.AMAZONAWS.COM:5432 under user TPCC in database TPCC?
+</span></span><span style="display:flex;"><span>Enter yes or no: replied yes
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">1</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>RUNNING - TPC-C creation
+</span></span><span style="display:flex;"><span>Vuser 1:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 1:CREATING TPCC SCHEMA
+</span></span><span style="display:flex;"><span>Vuser 1:CREATING DATABASE tpcc under OWNER tpcc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>～省略～
+</span></span><span style="display:flex;"><span>Vuser 1:GATHERING SCHEMA STATISTICS
+</span></span><span style="display:flex;"><span>Vuser 1:TPCC SCHEMA COMPLETE
+</span></span><span style="display:flex;"><span>Vuser 1:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>ALL VIRTUAL USERS COMPLETE
+</span></span><span style="display:flex;"><span>                          TPC-C Driver Script
+</span></span><span style="display:flex;"><span>hammerdb&gt;
+</span></span></code></pre></div><p>スケールファクタを10倍に設定して、完了後にPostgreSQL側のtpccデータベースにログインして確認すれば9つのテーブルが作成されていることがわかる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres@aurorapgsqlv1:tpcc&gt; <span style="color:#ae81ff">\d</span>t+                                                                                                   
+</span></span><span style="display:flex;"><span>+----------+------------+--------+---------+---------+---------------+
+</span></span><span style="display:flex;"><span>| Schema   | Name       | Type   | Owner   | Size    | Description   |
+</span></span><span style="display:flex;"><span>|----------+------------+--------+---------+---------+---------------|
+</span></span><span style="display:flex;"><span>| public   | customer   | table  | tpcc    | <span style="color:#ae81ff">371</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | district   | table  | tpcc    | <span style="color:#ae81ff">168</span> kB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | history    | table  | tpcc    | <span style="color:#ae81ff">56</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | item       | table  | tpcc    | <span style="color:#ae81ff">21</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | new_order  | table  | tpcc    | <span style="color:#ae81ff">7864</span> kB | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | order_line | table  | tpcc    | <span style="color:#ae81ff">656</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | orders     | table  | tpcc    | <span style="color:#ae81ff">43</span> MB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | stock      | table  | tpcc    | <span style="color:#ae81ff">710</span> MB  | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>| public   | warehouse  | table  | tpcc    | <span style="color:#ae81ff">40</span> kB   | &lt;null&gt;        |
+</span></span><span style="display:flex;"><span>+----------+------------+--------+---------+---------+---------------+
+</span></span><span style="display:flex;"><span>SELECT <span style="color:#ae81ff">9</span>
+</span></span><span style="display:flex;"><span>Time: 0.021s
+</span></span></code></pre></div><h5 id="ロード用のクライアントプロセスをkillする">ロード用のクライアントプロセスをkillする</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vudestroy
+</span></span><span style="display:flex;"><span>Destroying Virtual Users
+</span></span><span style="display:flex;"><span>Virtual Users Destroyed
+</span></span><span style="display:flex;"><span>vudestroy success
+</span></span></code></pre></div><h5 id="スクリプトのロード">スクリプトのロード</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;loadscript
+</span></span><span style="display:flex;"><span>TPC-C Driver Script
+</span></span><span style="display:flex;"><span>Script loaded, Type <span style="color:#e6db74">&#34;print script&#34;</span> to view
+</span></span></code></pre></div><h4 id="テスト実行用クライアントvirtual-userの設定作成">テスト実行用クライアント（Virtual User）の設定、作成</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vuset vu <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset logtotemp <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset showoutput <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset unique <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vuset timestamps <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;print vuconf
+</span></span><span style="display:flex;"><span>Virtual Users <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>User Delay<span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>Repeat Delay<span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>Iterations <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Show Output <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Log Output <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Unique Log Name <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>No Log Buffer <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>Log Timestamps <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;
+</span></span><span style="display:flex;"><span>hammerdb&gt; vucreate
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">1</span> created MONITOR - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">2</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">3</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">4</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Vuser <span style="color:#ae81ff">5</span> created - WAIT IDLE
+</span></span><span style="display:flex;"><span>Logging activated
+</span></span><span style="display:flex;"><span>to /tmp/hammerdb_5FADF0FE5B3F03E293835333.log
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5</span> Virtual Users Created with Monitor VU
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;vustatus
+</span></span><span style="display:flex;"><span>1 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>2 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>3 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>4 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span><span style="display:flex;"><span>5 <span style="color:#f92672">=</span> WAIT IDLE
+</span></span></code></pre></div><h3 id="hammerdbの実行前の準備">HammerDBの実行前の準備</h3>
+<p>下記のような理由からこの状態でHammerDBを実行していくと中々終わらないみたいなので、ひと手間加えていく。</p>
+<blockquote>
+<p>HammerDBをCLIで使うなど（８）：PostgreSQLにTPC-Hを実行してみる - なからなLife <a href="https://atsuizo.hatenadiary.jp/entry/2019/09/04/090000">https://atsuizo.hatenadiary.jp/entry/2019/09/04/090000</a></p>
+<p>作成されるインデックスが、<a href="http://d.hatena.ne.jp/keyword/MySQL">MySQL</a>用と異なっているからー！</p>
+<p>例えば、<a href="http://d.hatena.ne.jp/keyword/TPC">TPC</a>-Hで一番大きいテーブル「LINEITEM」には、以下のようにPARTSUPPテーブルを参照する外部キー制約が付与されています。</p>
+<pre tabindex="0"><code>CONSTRAINT lineitem_partsupp_fk FOREIGN KEY (l_partkey, l_suppkey)
+        REFERENCES public.partsupp (ps_partkey, ps_suppkey)
+</code></pre><p><a href="http://d.hatena.ne.jp/keyword/PostgreSQL">PostgreSQL</a>では</p>
+<blockquote>
+<p>外部キーは主キーであるかまたは一意性制約を構成する列を参照しなければなりません。 これは、被参照列は常に(主キーまたは一意性制約の基礎となる)インデックスを持つことを意味します。 このため、参照行に一致する行があるかどうかのチェックは効率的です。 被参照テーブルからの行のDELETEや被参照行のUPDATEは、古い値と一致する行に対して参照テーブルのスキャンが必要となるので、参照行にもインデックスを付けるのは大抵は良い考えです。 これは常に必要という訳ではなく、また、インデックスの方法には多くの選択肢がありますので、<strong>外部キー制約の宣言では参照列のインデックスが自動的に作られるということはありません。</strong>
+<a href="https://www.postgresql.jp/document/10/html/ddl-constraints.html#DDL-CONSTRAINTS-FK">5.3. 制約</a></p>
+</blockquote>
+<p>ということで、PARTSUPPテーブルの(ps_partkey, ps_suppkey列には主キー制約が適用されている＝インデックスも存在するものの、LINEITEMのl_partkey, l_suppkey列には、インデックスがない状態です。</p>
+<p><a href="http://d.hatena.ne.jp/keyword/SQL">SQL</a>-20では、LINEITEMテーブルのl_partkey, l_suppkeyついて、PARTSUPPテーブルのps_partkey, ps_suppkeyに対するFKが張ってあり、これを使って結合されているのですが、l_partkey, l_suppkeyに自体にはインデックスが張ってないんで、フルスキャン（SeqScan）になっています。</p>
+<p>そして、この外部参照の関係にある列で結合して絞り込んだ結果を集約関数で処理するサブクエリの実行コストが異常に大きな値となります。</p>
+</blockquote>
+<p>というわけで、実行前にtpchユーザでtpchデータベースにログインして、下記のインデックスを作成する。</p>
+<pre tabindex="0"><code>CREATE INDEX ON customer (C_NATIONKEY);
+CREATE INDEX ON lineitem (L_ORDERKEY);
+CREATE INDEX ON lineitem (L_SUPPKEY);
+CREATE INDEX ON lineitem (L_PARTKEY,L_SUPPKEY);
+CREATE INDEX ON nation (N_REGIONKEY);
+CREATE INDEX ON orders (O_CUSTKEY);
+CREATE INDEX ON partsupp (PS_PARTKEY);
+CREATE INDEX ON partsupp (PS_SUPPKEY);
+CREATE INDEX ON supplier (S_NATIONKEY);
+CREATE INDEX ON lineitem (L_SHIPDATE);
+CREATE INDEX ON lineitem (L_COMMITDATE);
+CREATE INDEX ON lineitem (L_RECEIPTDATE);
+CREATE INDEX ON orders (O_ORDERDATE);
+</code></pre><h3 id="hammerdbの実行">HammerDBの実行</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt; vurun
+</span></span></code></pre></div><h5 id="実行結果">実行結果</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vurun
+</span></span><span style="display:flex;"><span>RUNNING - PostgreSQL TPC-H
+</span></span><span style="display:flex;"><span>Vuser 1:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">21</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">6</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">8</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:RUNNING
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">5</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">6</span> completed in 3.016 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">17</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">5</span> completed in 2.78 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">21</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">21</span> completed in 5.485 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">3</span> completed in 2.953 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">18</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">21</span> completed in 5.661 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">14</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">8</span> completed in 9.447 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">5</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">2</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">14</span> completed in 1.777 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">19</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">4</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">19</span> completed in 0.348 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">15</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">5</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">5</span> completed in 2.148 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">4</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">17</span> completed in 9.567 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">14</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">3</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">4</span> completed in 0.81 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">6</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">4</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">14</span> completed in 1.566 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">16</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">4</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">6</span> completed in 2.785 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">17</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">5</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">16</span> completed in 7.821 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">19</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">5</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">19</span> completed in 0.243 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">10</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">6</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">17</span> completed in 8.858 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">7</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">6</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">7</span> completed in 3.284 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">7</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">15</span> completed in 17.023 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">17</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">6</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">10</span> completed in 6.98 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">9</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">7</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">18</span> completed in 26.544 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">5</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">4</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">5</span> completed in 2.252 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">11</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">5</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">11</span> completed in 0.781 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">7</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">6</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">9</span> completed in 9.707 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">8</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">7</span> completed in 2.585 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">6</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">7</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">17</span> completed in 13.075 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">12</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">7</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">6</span> completed in 2.757 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">20</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">8</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">20</span> completed in 0.943 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">17</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">9</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">2</span> completed in 5.946 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">15</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">9</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">12</span> completed in 3.236 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">6</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">8</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">6</span> completed in 2.542 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">4</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">9</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">1</span> completed in 20.678 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">18</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">8</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">4</span> completed in 0.767 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">9</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">17</span> completed in 13.149 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">12</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">12</span> completed in 3.912 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">16</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">11</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">9</span> completed in 13.335 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">8</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">11</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">8</span> completed in 1.575 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">16</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">12</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">15</span> completed in 18.843 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">8</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">8</span> completed in 0.921 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">5</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">11</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">5</span> completed in 1.495 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">22</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">12</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">22</span> completed in 0.785 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">12</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">13</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">16</span> completed in 9.12 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">15</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">12</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">12</span> completed in 3.083 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">7</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">14</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">16</span> completed in 8.094 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">11</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">13</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">11</span> completed in 0.576 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">14</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">7</span> completed in 2.229 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">13</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">15</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">18</span> completed in 26.223 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">22</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">9</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">22</span> completed in 0.718 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">14</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">10</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">2</span> completed in 4.166 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">10</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">15</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">14</span> completed in 1.276 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">9</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">11</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">13</span> completed in 6.832 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">18</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">16</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">10</span> completed in 7.385 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">18</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">16</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">9</span> completed in 11.277 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">10</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">12</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">15</span> completed in 18.736 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">13</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">13</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">10</span> completed in 7.917 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">15</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">13</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">13</span> completed in 13.717 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">10</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">14</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">10</span> completed in 7.634 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">15</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">18</span> completed in 33.341 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">17</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">2</span> completed in 4.614 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">8</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">16</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">8</span> completed in 1.044 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">14</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">17</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">18</span> completed in 33.215 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">17</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">14</span> completed in 1.698 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">19</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">18</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">19</span> completed in 0.303 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">9</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">19</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">15</span> completed in 26.017 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">11</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">14</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">11</span> completed in 1.312 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">20</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">15</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">20</span> completed in 1.176 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">2</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">16</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">9</span> completed in 11.02 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">22</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">20</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">22</span> completed in 1.261 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">1</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">21</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">2</span> completed in 6.488 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">21</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">17</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">21</span> completed in 9.238 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">19</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">18</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">19</span> completed in 0.417 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">13</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">19</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">1</span> completed in 28.195 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">4</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">18</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">4</span> completed in 1.517 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">20</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">19</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">20</span> completed in 1.775 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">20</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">1</span> completed in 27.942 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">13</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">18</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">3</span> completed in 5.823 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">11</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">21</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">11</span> completed in 0.55 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Executing Query <span style="color:#ae81ff">21</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">22</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">13</span> completed in 10.16 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">16</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">20</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">13</span> completed in 9.648 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">7</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">19</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">7</span> completed in 2.796 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">22</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">20</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 2:query <span style="color:#ae81ff">21</span> completed in 7.339 seconds
+</span></span><span style="display:flex;"><span>Vuser 2:Completed <span style="color:#ae81ff">1</span> query set<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> in <span style="color:#ae81ff">157</span> seconds
+</span></span><span style="display:flex;"><span>Vuser 2:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">1</span> completed in 27.607 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Executing Query <span style="color:#ae81ff">4</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">22</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">22</span> completed in 0.616 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">21</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 1:query <span style="color:#ae81ff">4</span> completed in 0.512 seconds
+</span></span><span style="display:flex;"><span>Vuser 1:Completed <span style="color:#ae81ff">1</span> query set<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> in <span style="color:#ae81ff">159</span> seconds
+</span></span><span style="display:flex;"><span>Vuser 1:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">16</span> completed in 8.796 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">12</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">21</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">3</span> completed in 1.766 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Executing Query <span style="color:#ae81ff">20</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">22</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 4:query <span style="color:#ae81ff">20</span> completed in 0.292 seconds
+</span></span><span style="display:flex;"><span>Vuser 4:Completed <span style="color:#ae81ff">1</span> query set<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> in <span style="color:#ae81ff">158</span> seconds
+</span></span><span style="display:flex;"><span>Vuser 4:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">12</span> completed in 1.208 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Executing Query <span style="color:#ae81ff">3</span> <span style="color:#f92672">(</span><span style="color:#ae81ff">22</span> of 22<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Vuser 3:query <span style="color:#ae81ff">3</span> completed in 0.941 seconds
+</span></span><span style="display:flex;"><span>Vuser 3:Completed <span style="color:#ae81ff">1</span> query set<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> in <span style="color:#ae81ff">161</span> seconds
+</span></span><span style="display:flex;"><span>Vuser 3:FINISHED SUCCESS
+</span></span><span style="display:flex;"><span>ALL VIRTUAL USERS COMPLETE
+</span></span><span style="display:flex;"><span>                          TPC-H Driver Script
+</span></span><span style="display:flex;"><span>hammerdb&gt;
+</span></span></code></pre></div><h3 id="クリーンアップ">クリーンアップ</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>hammerdb&gt;vucomplete
+</span></span><span style="display:flex;"><span>true
+</span></span><span style="display:flex;"><span>hammerdb&gt;vudestroy
+</span></span><span style="display:flex;"><span>Destroying Virtual Users
+</span></span><span style="display:flex;"><span>Virtual Users Destroyed
+</span></span><span style="display:flex;"><span>vudestroy success
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>hammerdb&gt;clearscript
+</span></span><span style="display:flex;"><span>Script cleared
+</span></span></code></pre></div><h3 id="参考">参考</h3>
+<blockquote>
+<p>HammerDBをCLIで使うなど（８）：PostgreSQLにTPC-Hを実行してみる - なからなLife <a href="https://atsuizo.hatenadiary.jp/entry/2019/09/04/090000">https://atsuizo.hatenadiary.jp/entry/2019/09/04/090000</a></p>
+<p>Chapter 8. Command Line Interface (CLI) <a href="https://hammerdb.com/docs/ch08.html">https://hammerdb.com/docs/ch08.html</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-postgresql-log_fdw-analyze-postgreslog.html">log_fdw拡張機能を使用してAurora PostgreSQLのログを分析する</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-pgaudit-user.html">Aurora PostgreSQLの拡張機能のpgauditで特定ユーザのみの監査を設定する</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-hammerdb-benchmark.html">Aurora PostgreSQLにHammerDBのTPC-Cを実行</a></li>
+  
+  <li><a href="/aws-postgresql-rdsproxy-failover.html">RDS Proxyを使用してAurora PostgreSQLのフェイルオーバーを実行する</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-ssl-connect.html">Aurora（PostgreSQL）へのSSL接続について</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/aurora/">#Aurora</a>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

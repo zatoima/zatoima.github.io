@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出 | my opinion is my own</title>
+<meta name="title" content="PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-index-duplicate-unused-search.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-04-18T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-04-18T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-04-18T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-04-18T00:00:00+00:00">
+  <meta itemprop="wordCount" content="299">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQL内の重複インデックスまたは未使用のインデックスを抽出</h1>
+
+<p>
+  <i>
+    <time datetime='2021-04-18' pubdate>
+      2021-04-18
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="重複したインデックスの検索">重複したインデックスの検索</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    indrelid::regclass <span style="color:#66d9ef">AS</span> TableName
+</span></span><span style="display:flex;"><span>    ,array_agg(indexrelid::regclass) <span style="color:#66d9ef">AS</span> Indexes
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_index
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    indrelid
+</span></span><span style="display:flex;"><span>    ,indkey
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">HAVING</span> <span style="color:#66d9ef">COUNT</span>(<span style="color:#f92672">*</span>) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>;
+</span></span></code></pre></div><h3 id="未使用のインデックスの検索">未使用のインデックスの検索</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WITH</span> table_scans <span style="color:#66d9ef">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">SELECT</span> relid,
+</span></span><span style="display:flex;"><span>        tables.idx_scan <span style="color:#f92672">+</span> tables.seq_scan <span style="color:#66d9ef">as</span> all_scans,
+</span></span><span style="display:flex;"><span>        ( tables.n_tup_ins <span style="color:#f92672">+</span> tables.n_tup_upd <span style="color:#f92672">+</span> tables.n_tup_del ) <span style="color:#66d9ef">as</span> writes,
+</span></span><span style="display:flex;"><span>                pg_relation_size(relid) <span style="color:#66d9ef">as</span> table_size
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">FROM</span> pg_stat_user_tables <span style="color:#66d9ef">as</span> tables
+</span></span><span style="display:flex;"><span>),
+</span></span><span style="display:flex;"><span>all_writes <span style="color:#66d9ef">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">sum</span>(writes) <span style="color:#66d9ef">as</span> total_writes
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">FROM</span> table_scans
+</span></span><span style="display:flex;"><span>),
+</span></span><span style="display:flex;"><span>indexes <span style="color:#66d9ef">as</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">SELECT</span> idx_stat.relid, idx_stat.indexrelid,
+</span></span><span style="display:flex;"><span>        idx_stat.schemaname, idx_stat.relname <span style="color:#66d9ef">as</span> tablename,
+</span></span><span style="display:flex;"><span>        idx_stat.indexrelname <span style="color:#66d9ef">as</span> indexname,
+</span></span><span style="display:flex;"><span>        idx_stat.idx_scan,
+</span></span><span style="display:flex;"><span>        pg_relation_size(idx_stat.indexrelid) <span style="color:#66d9ef">as</span> index_bytes,
+</span></span><span style="display:flex;"><span>        indexdef <span style="color:#f92672">~*</span> <span style="color:#e6db74">&#39;USING btree&#39;</span> <span style="color:#66d9ef">AS</span> idx_is_btree
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">FROM</span> pg_stat_user_indexes <span style="color:#66d9ef">as</span> idx_stat
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">JOIN</span> pg_index
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">USING</span> (indexrelid)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">JOIN</span> pg_indexes <span style="color:#66d9ef">as</span> indexes
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">ON</span> idx_stat.schemaname <span style="color:#f92672">=</span> indexes.schemaname
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">AND</span> idx_stat.relname <span style="color:#f92672">=</span> indexes.tablename
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">AND</span> idx_stat.indexrelname <span style="color:#f92672">=</span> indexes.indexname
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">WHERE</span> pg_index.indisunique <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>
+</span></span><span style="display:flex;"><span>),
+</span></span><span style="display:flex;"><span>index_ratios <span style="color:#66d9ef">AS</span> (
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> schemaname, tablename, indexname,
+</span></span><span style="display:flex;"><span>    idx_scan, all_scans,
+</span></span><span style="display:flex;"><span>    round(( <span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> all_scans <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">THEN</span> <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">0</span>::NUMERIC
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">ELSE</span> idx_scan::NUMERIC<span style="color:#f92672">/</span>all_scans <span style="color:#f92672">*</span> <span style="color:#ae81ff">100</span> <span style="color:#66d9ef">END</span>),<span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">as</span> index_scan_pct,
+</span></span><span style="display:flex;"><span>    writes,
+</span></span><span style="display:flex;"><span>    round((<span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> writes <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">THEN</span> idx_scan::NUMERIC <span style="color:#66d9ef">ELSE</span> idx_scan::NUMERIC<span style="color:#f92672">/</span>writes <span style="color:#66d9ef">END</span>),<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">as</span> scans_per_write,
+</span></span><span style="display:flex;"><span>    pg_size_pretty(index_bytes) <span style="color:#66d9ef">as</span> index_size,
+</span></span><span style="display:flex;"><span>    pg_size_pretty(table_size) <span style="color:#66d9ef">as</span> table_size,
+</span></span><span style="display:flex;"><span>    idx_is_btree, index_bytes
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">FROM</span> indexes
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">JOIN</span> table_scans
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">USING</span> (relid)
+</span></span><span style="display:flex;"><span>),
+</span></span><span style="display:flex;"><span>index_groups <span style="color:#66d9ef">AS</span> (
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#e6db74">&#39;Never Used Indexes&#39;</span> <span style="color:#66d9ef">as</span> reason, <span style="color:#f92672">*</span>, <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">as</span> grp
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> index_ratios
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    idx_scan <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> idx_is_btree
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">UNION</span> <span style="color:#66d9ef">ALL</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#e6db74">&#39;Low Scans, High Writes&#39;</span> <span style="color:#66d9ef">as</span> reason, <span style="color:#f92672">*</span>, <span style="color:#ae81ff">2</span> <span style="color:#66d9ef">as</span> grp
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> index_ratios
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    scans_per_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> index_scan_pct <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> idx_scan <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> writes <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> idx_is_btree
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">UNION</span> <span style="color:#66d9ef">ALL</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#e6db74">&#39;Seldom Used Large Indexes&#39;</span> <span style="color:#66d9ef">as</span> reason, <span style="color:#f92672">*</span>, <span style="color:#ae81ff">3</span> <span style="color:#66d9ef">as</span> grp
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> index_ratios
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    index_scan_pct <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">5</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> scans_per_write <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> idx_scan <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> idx_is_btree
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">and</span> index_bytes <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">100000000</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">UNION</span> <span style="color:#66d9ef">ALL</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#e6db74">&#39;High-Write Large Non-Btree&#39;</span> <span style="color:#66d9ef">as</span> reason, index_ratios.<span style="color:#f92672">*</span>, <span style="color:#ae81ff">4</span> <span style="color:#66d9ef">as</span> grp
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> index_ratios, all_writes
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    ( writes::NUMERIC <span style="color:#f92672">/</span> ( total_writes <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> ) ) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">02</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">AND</span> <span style="color:#66d9ef">NOT</span> idx_is_btree
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">AND</span> index_bytes <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">100000000</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> grp, index_bytes <span style="color:#66d9ef">DESC</span> )
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> reason, schemaname, tablename, indexname,
+</span></span><span style="display:flex;"><span>    index_scan_pct, scans_per_write, index_size, table_size
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> index_groups;
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-nologging-load.html">PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-parameter-change.html">RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-parameter-modifiable.html">RDSとAurora PostgreSQLで変更不可なパラメータ一覧</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>PostgreSQLの実行中のSQLをキャンセルする | my opinion is my own</title>
+<meta name="title" content="PostgreSQLの実行中のSQLをキャンセルする" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/postgresql-sql-statement-cancell.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLの実行中のSQLをキャンセルする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-03-12T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-03-12T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLの実行中のSQLをキャンセルする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLの実行中のSQLをキャンセルする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-03-12T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-03-12T00:00:00+00:00">
+  <meta itemprop="wordCount" content="234">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLの実行中のSQLをキャンセルする</h1>
+
+<p>
+  <i>
+    <time datetime='2020-03-12' pubdate>
+      2020-03-12
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="長時間掛かるクエリ実行">長時間掛かるクエリ実行</h3>
+<p>直積結合して件数カウント。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1,t2,t3,t4,t5;
+</span></span></code></pre></div><h3 id="実行中のsqlの確認">実行中のSQLの確認</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">select</span> pid,query_start,<span style="color:#66d9ef">state</span>,query <span style="color:#66d9ef">from</span> pg_stat_activity <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> query_start <span style="color:#66d9ef">asc</span> <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span> pid  <span style="color:#f92672">|</span>          query_start          <span style="color:#f92672">|</span> <span style="color:#66d9ef">state</span>  <span style="color:#f92672">|</span>                                           query                                            
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------+-------------------------------+--------+---------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#ae81ff">2567</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">03</span><span style="color:#f92672">-</span><span style="color:#ae81ff">03</span> <span style="color:#ae81ff">03</span>:<span style="color:#ae81ff">39</span>:<span style="color:#ae81ff">22</span>.<span style="color:#ae81ff">744191</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span> active <span style="color:#f92672">|</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> t1,t2,t3,t4,t5;
+</span></span><span style="display:flex;"><span> <span style="color:#ae81ff">2863</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">03</span><span style="color:#f92672">-</span><span style="color:#ae81ff">03</span> <span style="color:#ae81ff">03</span>:<span style="color:#ae81ff">44</span>:<span style="color:#ae81ff">25</span>.<span style="color:#ae81ff">423124</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span> active <span style="color:#f92672">|</span> <span style="color:#66d9ef">select</span> pid,query_start,<span style="color:#66d9ef">state</span>,query <span style="color:#66d9ef">from</span> pg_stat_activity <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> query_start <span style="color:#66d9ef">asc</span> <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">5</span>;
+</span></span></code></pre></div><h3 id="実行中のsqlのキャンセル">実行中のSQLのキャンセル</h3>
+<p>下記の関数でキャンセル可能。pg_cancel_backendはSIGINT。pg_terminate_backendはSIGTERMのシグナルをサーバ側に送る模様。</p>
+<blockquote>
+<p>9.26. システム管理関数 <a href="https://www.postgresql.jp/document/10/html/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL-TABLE">https://www.postgresql.jp/document/10/html/functions-admin.html#FUNCTIONS-ADMIN-SIGNAL-TABLE</a></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>名前</th>
+<th>戻り型</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pg_cancel_backend(<em>pid</em> int)</td>
+<td>boolean</td>
+<td>バックエンドの現在の問い合わせを取り消す。  関数を呼ぶユーザが取り消す対象のバックエンドのロールのメンバーであるとき、あるいはpg_signal_backendの権限を与えられているときも実行できます。 ただし、スーパーユーザのバックエンドはスーパーユーザのみが取り消せます。</td>
+</tr>
+<tr>
+<td>pg_terminate_backend(<em>pid</em> int)</td>
+<td>boolean</td>
+<td>バックエンドを終了する。  関数を呼ぶユーザが終了対象のバックエンドのロールのメンバーであるとき、あるいはpg_signal_backendの権限を与えられているときも実行できます。 ただし、スーパーユーザのバックエンドはスーパーユーザのみが終了できます。</td>
+</tr>
+</tbody>
+</table>
+<h5 id="pg_cancel_backend関数">pg_cancel_backend関数</h5>
+<p>バックエンドの現在の問い合わせを取り消す。実行した場合、SQL実行はキャンセルするが、接続したまま。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> pg_cancel_backend<span style="color:#f92672">(</span>2567<span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select pg_cancel_backend(2567);</span>
+</span></span><span style="display:flex;"><span> pg_cancel_backend 
+</span></span><span style="display:flex;"><span>-------------------
+</span></span><span style="display:flex;"><span> t
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> row<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- terminal
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select count(*) from t1,t2,t3,t4,t5;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ERROR:  canceling statement due to user request
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- log
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:52:20 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>27<span style="color:#f92672">]</span> ERROR:  canceling statement due to user request
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:52:20 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>28<span style="color:#f92672">]</span> STATEMENT:  <span style="color:#66d9ef">select</span> count<span style="color:#f92672">(</span>*<span style="color:#f92672">)</span> from t1,t2,t3,t4,t5;
+</span></span></code></pre></div><h5 id="pg_terminate_backend関数">pg_terminate_backend関数</h5>
+<p>pg_terminate_backendは接続自体を切断され、その後に再接続がされる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> pg_terminate_backend<span style="color:#f92672">(</span>2567<span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select pg_terminate_backend(2567);</span>
+</span></span><span style="display:flex;"><span> pg_terminate_backend 
+</span></span><span style="display:flex;"><span>----------------------
+</span></span><span style="display:flex;"><span> t
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span> row<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- terminal
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select count(*) from t1,t2,t3,t4,t5;</span>
+</span></span><span style="display:flex;"><span>FATAL:  terminating connection due to administrator command
+</span></span><span style="display:flex;"><span>server closed the connection unexpectedly
+</span></span><span style="display:flex;"><span>	This probably means the server terminated abnormally
+</span></span><span style="display:flex;"><span>	before or <span style="color:#66d9ef">while</span> processing the request.
+</span></span><span style="display:flex;"><span>The connection to the server was lost. Attempting reset: Succeeded.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- log
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:54:14 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>29<span style="color:#f92672">]</span> FATAL:  terminating connection due to administrator command
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:54:14 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>30<span style="color:#f92672">]</span> STATEMENT:  <span style="color:#66d9ef">select</span> count<span style="color:#f92672">(</span>*<span style="color:#f92672">)</span> from t1,t2,t3,t4,t5;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:54:14 UTC<span style="color:#f92672">]</span>postgres postgres 2567<span style="color:#f92672">[</span>31<span style="color:#f92672">]</span> LOG:  disconnection: session time: 0:33:20.877 user<span style="color:#f92672">=</span>postgres database<span style="color:#f92672">=</span>postgres host<span style="color:#f92672">=[</span>local<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:54:14 UTC<span style="color:#f92672">][</span>unknown<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>unknown<span style="color:#f92672">]</span> 2918<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  connection received: host<span style="color:#f92672">=[</span>local<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-03 03:54:14 UTC<span style="color:#f92672">]</span>postgres postgres 2918<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  connection authorized: user<span style="color:#f92672">=</span>postgres database<span style="color:#f92672">=</span>postgres
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-signal-process-term-int-hup.html">シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響</a></li>
+  
+  <li><a href="/postgresql-about-monitoring-log.html">PostgreSQLの監視のためのログ設定について</a></li>
+  
+  <li><a href="/aws-aurora-postgres-extention-list/">Aurora(PostgreSQL互換)で使用可能な拡張機能一覧</a></li>
+  
+  <li><a href="/postgresql-how-to-use-oid2name/">PostgreSQLのoid2nameの使用方法</a></li>
+  
+  <li><a href="/postgresql-about-pg_buffercache.html">PostgreSQLのpg_buffercacheを使用して共有buffer上のオブジェクトを確認する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

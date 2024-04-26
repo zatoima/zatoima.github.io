@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/images/favicon.png" />
+<title>Redshift Spectrum用にテストデータの準備、及びクエリの実行 | my opinion is my own</title>
+<meta name="title" content="Redshift Spectrum用にテストデータの準備、及びクエリの実行" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Redshift," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/aws-redshift-spectrum-data-prepare-query-execute/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Redshift Spectrum用にテストデータの準備、及びクエリの実行">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-09-10T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-09-10T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Redshift">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="Redshift Spectrum用にテストデータの準備、及びクエリの実行">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Redshift Spectrum用にテストデータの準備、及びクエリの実行">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-09-10T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-09-10T00:00:00+00:00">
+  <meta itemprop="wordCount" content="425">
+  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
+  <meta itemprop="keywords" content="AWS,Redshift">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Redshift Spectrum用にテストデータの準備、及びクエリの実行</h1>
+
+<p>
+  <i>
+    <time datetime='2021-09-10' pubdate>
+      2021-09-10
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="はじめに">はじめに</h3>
+<p>一定のテストデータ、及び多少の負荷が掛かるSQLをRedshift Spectrumに向けて実行したい場合の作業用メモ。</p>
+<h3 id="データ確認">データ確認</h3>
+<p>データは<code>s3://awssampledbuswest2/ssbgz/</code>から自バケットに予めコピーしている</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>aws s3 ls <span style="color:#75715e">--human-readable --recursive s3://ssbgz-spectrum/
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>[ec2<span style="color:#f92672">-</span><span style="color:#66d9ef">user</span><span style="color:#f92672">@</span>bastin <span style="color:#f92672">~</span>]<span style="color:#960050;background-color:#1e0010">$</span> aws s3 ls <span style="color:#75715e">--human-readable --recursive s3://ssbgz-spectrum/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">10</span>  <span style="color:#ae81ff">100</span>.<span style="color:#ae81ff">5</span> MiB customer<span style="color:#f92672">/</span>customer0002_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">10</span>   <span style="color:#ae81ff">24</span>.<span style="color:#ae81ff">6</span> KiB dwdate<span style="color:#f92672">/</span>dwdate.tbl.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">10</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0000_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">10</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0001_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">11</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0002_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">10</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0003_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">10</span>:<span style="color:#ae81ff">14</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0004_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">11</span>:<span style="color:#ae81ff">47</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0005_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">16</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0006_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">26</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">1</span> GiB lineorder<span style="color:#f92672">/</span>lineorder0007_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">35</span>    <span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">3</span> MiB part<span style="color:#f92672">/</span>part0000_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">36</span>    <span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">3</span> MiB part<span style="color:#f92672">/</span>part0001_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">38</span>    <span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">3</span> MiB part<span style="color:#f92672">/</span>part0002_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">39</span>    <span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">3</span> MiB part<span style="color:#f92672">/</span>part0003_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">40</span>   <span style="color:#ae81ff">32</span>.<span style="color:#ae81ff">5</span> MiB supplier<span style="color:#f92672">/</span>supplier.tbl_0000_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">42</span>   <span style="color:#ae81ff">20</span> Bytes supplier<span style="color:#f92672">/</span>supplier0001_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">42</span>   <span style="color:#ae81ff">20</span> Bytes supplier<span style="color:#f92672">/</span>supplier0002_part_00.gz
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2021</span><span style="color:#f92672">-</span><span style="color:#ae81ff">06</span><span style="color:#f92672">-</span><span style="color:#ae81ff">15</span> <span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">12</span>:<span style="color:#ae81ff">42</span>   <span style="color:#ae81ff">20</span> Bytes supplier<span style="color:#f92672">/</span>supplier0003_part_00.gz
+</span></span></code></pre></div><h3 id="外部スキーマ定義">外部スキーマ定義</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">external</span> <span style="color:#66d9ef">schema</span> s3 <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">data</span> <span style="color:#66d9ef">catalog</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">database</span> <span style="color:#e6db74">&#39;s3_spectrum&#39;</span>
+</span></span><span style="display:flex;"><span>iam_role <span style="color:#e6db74">&#39;arn:aws:iam::xxxxxxxxxxx:role/myRedshiftRole&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">external</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">exists</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">create</span> <span style="color:#66d9ef">external</span> <span style="color:#66d9ef">schema</span> s3 <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">data</span> <span style="color:#66d9ef">catalog</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">-#</span> <span style="color:#66d9ef">database</span> <span style="color:#e6db74">&#39;s3_spectrum&#39;</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">-#</span> iam_role <span style="color:#e6db74">&#39;arn:aws:iam::xxxxxxxxxxx:role/myRedshiftRole&#39;</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">-#</span> <span style="color:#66d9ef">create</span> <span style="color:#66d9ef">external</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">exists</span>;
+</span></span><span style="display:flex;"><span>INFO:  <span style="color:#66d9ef">External</span> <span style="color:#66d9ef">database</span> <span style="color:#e6db74">&#34;s3_spectrum&#34;</span> already <span style="color:#66d9ef">exists</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">SCHEMA</span>
+</span></span></code></pre></div><h3 id="外部表の定義">外部表の定義</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> s3.part;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> s3.part 
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>  p_partkey     INTEGER,
+</span></span><span style="display:flex;"><span>  p_name        VARCHAR(<span style="color:#ae81ff">22</span>),
+</span></span><span style="display:flex;"><span>  p_mfgr        VARCHAR(<span style="color:#ae81ff">6</span>),
+</span></span><span style="display:flex;"><span>  p_category    VARCHAR(<span style="color:#ae81ff">7</span>),
+</span></span><span style="display:flex;"><span>  p_brand1      VARCHAR(<span style="color:#ae81ff">9</span>),
+</span></span><span style="display:flex;"><span>  p_color       VARCHAR(<span style="color:#ae81ff">11</span>),
+</span></span><span style="display:flex;"><span>  p_type        VARCHAR(<span style="color:#ae81ff">25</span>),
+</span></span><span style="display:flex;"><span>  p_size        INTEGER,
+</span></span><span style="display:flex;"><span>  p_container   VARCHAR(<span style="color:#ae81ff">10</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">row</span> format delimited
+</span></span><span style="display:flex;"><span>fields terminated <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#39;|&#39;</span>
+</span></span><span style="display:flex;"><span>stored <span style="color:#66d9ef">as</span> textfile
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://ssbgz-spectrum/part/&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> s3.supplier;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> s3.supplier 
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>  s_suppkey   INTEGER,
+</span></span><span style="display:flex;"><span>  s_name      VARCHAR(<span style="color:#ae81ff">25</span>),
+</span></span><span style="display:flex;"><span>  s_address   VARCHAR(<span style="color:#ae81ff">25</span>),
+</span></span><span style="display:flex;"><span>  s_city      VARCHAR(<span style="color:#ae81ff">10</span>),
+</span></span><span style="display:flex;"><span>  s_nation    VARCHAR(<span style="color:#ae81ff">15</span>),
+</span></span><span style="display:flex;"><span>  s_region    VARCHAR(<span style="color:#ae81ff">12</span>),
+</span></span><span style="display:flex;"><span>  s_phone     VARCHAR(<span style="color:#ae81ff">15</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">row</span> format delimited
+</span></span><span style="display:flex;"><span>fields terminated <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#39;|&#39;</span>
+</span></span><span style="display:flex;"><span>stored <span style="color:#66d9ef">as</span> textfile
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://ssbgz-spectrum/supplier/&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> s3.customer;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> s3.customer 
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>  c_custkey      INTEGER,
+</span></span><span style="display:flex;"><span>  c_name         VARCHAR(<span style="color:#ae81ff">25</span>),
+</span></span><span style="display:flex;"><span>  c_address      VARCHAR(<span style="color:#ae81ff">25</span>),
+</span></span><span style="display:flex;"><span>  c_city         VARCHAR(<span style="color:#ae81ff">10</span>),
+</span></span><span style="display:flex;"><span>  c_nation       VARCHAR(<span style="color:#ae81ff">15</span>),
+</span></span><span style="display:flex;"><span>  c_region       VARCHAR(<span style="color:#ae81ff">12</span>),
+</span></span><span style="display:flex;"><span>  c_phone        VARCHAR(<span style="color:#ae81ff">15</span>),
+</span></span><span style="display:flex;"><span>  c_mktsegment   VARCHAR(<span style="color:#ae81ff">10</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">row</span> format delimited
+</span></span><span style="display:flex;"><span>fields terminated <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#39;|&#39;</span>
+</span></span><span style="display:flex;"><span>stored <span style="color:#66d9ef">as</span> textfile
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://ssbgz-spectrum/customer/&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> s3.dwdate;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> s3.dwdate 
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>  d_datekey            INTEGER,
+</span></span><span style="display:flex;"><span>  d_date               VARCHAR(<span style="color:#ae81ff">19</span>),
+</span></span><span style="display:flex;"><span>  d_dayofweek          VARCHAR(<span style="color:#ae81ff">10</span>),
+</span></span><span style="display:flex;"><span>  d_month              VARCHAR(<span style="color:#ae81ff">10</span>),
+</span></span><span style="display:flex;"><span>  d_year               INTEGER,
+</span></span><span style="display:flex;"><span>  d_yearmonthnum       INTEGER,
+</span></span><span style="display:flex;"><span>  d_yearmonth          VARCHAR(<span style="color:#ae81ff">8</span>),
+</span></span><span style="display:flex;"><span>  d_daynuminweek       INTEGER,
+</span></span><span style="display:flex;"><span>  d_daynuminmonth      INTEGER,
+</span></span><span style="display:flex;"><span>  d_daynuminyear       INTEGER,
+</span></span><span style="display:flex;"><span>  d_monthnuminyear     INTEGER,
+</span></span><span style="display:flex;"><span>  d_weeknuminyear      INTEGER,
+</span></span><span style="display:flex;"><span>  d_sellingseason      VARCHAR(<span style="color:#ae81ff">13</span>),
+</span></span><span style="display:flex;"><span>  d_lastdayinweekfl    VARCHAR(<span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>  d_lastdayinmonthfl   VARCHAR(<span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>  d_holidayfl          VARCHAR(<span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>  d_weekdayfl          VARCHAR(<span style="color:#ae81ff">1</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">row</span> format delimited
+</span></span><span style="display:flex;"><span>fields terminated <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#39;|&#39;</span>
+</span></span><span style="display:flex;"><span>stored <span style="color:#66d9ef">as</span> textfile
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://ssbgz-spectrum/dwdate/&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> s3.lineorder;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> s3.lineorder 
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>  lo_orderkey          INTEGER,
+</span></span><span style="display:flex;"><span>  lo_linenumber        INTEGER,
+</span></span><span style="display:flex;"><span>  lo_custkey           INTEGER,
+</span></span><span style="display:flex;"><span>  lo_partkey           INTEGER,
+</span></span><span style="display:flex;"><span>  lo_suppkey           INTEGER,
+</span></span><span style="display:flex;"><span>  lo_orderdate         INTEGER,
+</span></span><span style="display:flex;"><span>  lo_orderpriority     VARCHAR(<span style="color:#ae81ff">15</span>),
+</span></span><span style="display:flex;"><span>  lo_shippriority      VARCHAR(<span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>  lo_quantity          INTEGER,
+</span></span><span style="display:flex;"><span>  lo_extendedprice     INTEGER,
+</span></span><span style="display:flex;"><span>  lo_ordertotalprice   INTEGER,
+</span></span><span style="display:flex;"><span>  lo_discount          INTEGER,
+</span></span><span style="display:flex;"><span>  lo_revenue           INTEGER,
+</span></span><span style="display:flex;"><span>  lo_supplycost        INTEGER,
+</span></span><span style="display:flex;"><span>  lo_tax               INTEGER,
+</span></span><span style="display:flex;"><span>  lo_commitdate        INTEGER,
+</span></span><span style="display:flex;"><span>  lo_shipmode          VARCHAR(<span style="color:#ae81ff">10</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">row</span> format delimited
+</span></span><span style="display:flex;"><span>fields terminated <span style="color:#66d9ef">by</span> <span style="color:#e6db74">&#39;|&#39;</span>
+</span></span><span style="display:flex;"><span>stored <span style="color:#66d9ef">as</span> textfile
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://ssbgz-spectrum/lineorder/&#39;</span>;
+</span></span></code></pre></div><h3 id="テストクエリ">テストクエリ</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    c_city,
+</span></span><span style="display:flex;"><span>    s_city,
+</span></span><span style="display:flex;"><span>    d_year,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">SUM</span>(lo_revenue) <span style="color:#66d9ef">AS</span> revenue
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    s3.customer,
+</span></span><span style="display:flex;"><span>    s3.lineorder,
+</span></span><span style="display:flex;"><span>    s3.supplier,
+</span></span><span style="display:flex;"><span>    s3.dwdate
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    lo_custkey <span style="color:#f92672">=</span> c_custkey <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    lo_suppkey <span style="color:#f92672">=</span> s_suppkey <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    lo_orderdate <span style="color:#f92672">=</span> d_datekey <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    (c_city<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;UNITED KI1&#39;</span> <span style="color:#66d9ef">OR</span> c_city<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;UNITED KI5&#39;</span>) <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    (s_city<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;UNITED KI1&#39;</span> <span style="color:#66d9ef">OR</span> s_city<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;UNITED KI5&#39;</span>) <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    d_yearmonth <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;Dec1997&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    c_city,
+</span></span><span style="display:flex;"><span>    s_city,
+</span></span><span style="display:flex;"><span>    d_year
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    d_year <span style="color:#66d9ef">ASC</span>,
+</span></span><span style="display:flex;"><span>    revenue <span style="color:#66d9ef">DESC</span>;
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-redshift-spectrum-performance-check/">Redshift Spectrumのパフォーマンス確認</a></li>
+  
+  <li><a href="/aws-redshift-query-cancellation/">Redshiftのクエリキャンセル</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-data-query-execute/">Redshift Star Schema Benchmark 問い合わせクエリのサンプル</a></li>
+  
+  <li><a href="/aws-redshift-admin-script-memo/">Redshift Admin Scripts</a></li>
+  
+  <li><a href="/aws-redshift-short-query-acceleration-sqa/">Redshift ショートクエリアクセラレーション（SQA）</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="https://zatoima.github.io/blog/aws/">#AWS</a>
+  
+  <a href="https://zatoima.github.io/blog/redshift/">#Redshift</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>
