@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード | my opinion is my own</title>
+<meta name="title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-aurora-rds-postgresql-nologging-load.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-01-27T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-01-27T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-01-27T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-01-27T00:00:00+00:00">
+  <meta itemprop="wordCount" content="220">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,RDS,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</h1>
+
+<p>
+  <i>
+    <time datetime='2021-01-27' pubdate>
+      2021-01-27
+    </time>
+  </i>
+</p>
+
+<content>
+  <h1 id="unloggedテーブルとは">UNLOGGEDテーブルとは</h1>
+<p>UNLOGGEDテーブルはOracle Databaseで言うところのUNLOGGINGテーブルでWALに書き出さないテーブルとなり、高速化が見込める。一方、クラッシュ時には当然WALにデータがないので、リカバリが出来ない。</p>
+<p>とは言え、データロード等のリトライ可能な処理には有効なので、効果含めて確認してみる</p>
+<h1 id="設定方法">設定方法</h1>
+<p>テーブル作成時にオプションを付けるかALTER TABLE文を使用するか。今回はALTER TABLEで実施してみる</p>
+<pre tabindex="0"><code>ALTER TABLE aozora SET UNLOGGED;
+ALTER TABLE aozora SET LOGGED;
+</code></pre><blockquote>
+<p>CREATE TABLE <a href="https://www.postgresql.jp/document/12/html/sql-createtable.html">https://www.postgresql.jp/document/12/html/sql-createtable.html</a></p>
+<p>ALTER TABLE <a href="https://www.postgresql.jp/document/12/html/sql-altertable.html">https://www.postgresql.jp/document/12/html/sql-altertable.html</a></p>
+</blockquote>
+<h1 id="テーブル作成">テーブル作成</h1>
+<p>青空文庫のテキストデータをロード出来るようにテーブルを準備</p>
+<pre tabindex="0"><code>CREATE TABLE aozora(file VARCHAR(30),num INT,row INT,word TEXT,subtype1 VARCHAR(30),subtype2 VARCHAR(30),subtype3 VARCHAR(30),subtype4 VARCHAR(10),conjtype VARCHAR(15),conjugation VARCHAR(15),basic TEXT,ruby TEXT,pronunce TEXT );
+ALTER TABLE aozora SET UNLOGGED;
+</code></pre><p>作成後にテーブル定義を確認すると<code>Unlogged table &quot;public.aozora&quot;</code>と表示されるようになっている。</p>
+<pre tabindex="0"><code>postgres=&gt; \d aozora
+                    Unlogged table &#34;public.aozora&#34;
+   Column    |         Type          | Collation | Nullable | Default 
+-------------+-----------------------+-----------+----------+---------
+ file        | character varying(30) |           |          | 
+ num         | integer               |           |          | 
+ row         | integer               |           |          | 
+ word        | text                  |           |          | 
+ subtype1    | character varying(30) |           |          | 
+ subtype2    | character varying(30) |           |          | 
+ subtype3    | character varying(30) |           |          | 
+ subtype4    | character varying(10) |           |          | 
+ conjtype    | character varying(15) |           |          | 
+ conjugation | character varying(15) |           |          | 
+ basic       | text                  |           |          | 
+ ruby        | text                  |           |          | 
+ pronunce    | text                  |           |          | 
+</code></pre><h1 id="結果">結果</h1>
+<p>約3割ほどUNLOGGEDテーブルの方が早い結果に。</p>
+<table>
+<thead>
+<tr>
+<th>テーブル種別</th>
+<th>時間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UNLOGGEDテーブル</td>
+<td>0:04:41</td>
+</tr>
+<tr>
+<td>LOGGEDテーブル</td>
+<td>0:06:11</td>
+</tr>
+</tbody>
+</table>
+<h4 id="unloggedテーブルの場合">UNLOGGEDテーブルの場合</h4>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
+COPY 87701673
+
+real	4m41.921s
+user	0m19.347s
+sys	0m6.618s
+</code></pre><h4 id="loggedテーブルの場合">LOGGEDテーブルの場合</h4>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
+COPY 87701673
+
+real	6m11.123s
+user	0m18.744s
+sys	0m6.738s
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-rds-postgresql-parameter-change.html">RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-parameter-modifiable.html">RDSとAurora PostgreSQLで変更不可なパラメータ一覧</a></li>
+  
+  <li><a href="/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-download.html">指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li>
+  
+  <li><a href="/postgresql-aozora-bunko-data-import.html">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/aurora/">#Aurora</a>
+  
+  <a href="http://localhost:1313/blog/rds/">#RDS</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

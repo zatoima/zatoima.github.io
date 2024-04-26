@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>Snowflakeのキャッシュ | my opinion is my own</title>
+<meta name="title" content="Snowflakeのキャッシュ" />
+<meta name="description" content="" />
+<meta name="keywords" content="snowflake," />
+
+
+<meta property="og:url" content="http://localhost:1313/snowflake-cached-memo/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Snowflakeのキャッシュ">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-09-30T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-09-30T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="Snowflakeのキャッシュ">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Snowflakeのキャッシュ">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-09-30T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-09-30T00:00:00+00:00">
+  <meta itemprop="wordCount" content="80">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Snowflake">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Snowflakeのキャッシュ</h1>
+
+<p>
+  <i>
+    <time datetime='2022-09-30' pubdate>
+      2022-09-30
+    </time>
+  </i>
+</p>
+
+<content>
+  <table>
+<thead>
+<tr>
+<th>#</th>
+<th>キャッシュ名</th>
+<th>キャッシュ対象</th>
+<th>使用可能なユーザー</th>
+<th>保存レイヤー</th>
+<th>有効期間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>結果キャッシュ</td>
+<td>クエリの結果</td>
+<td>クエリが実行された同じロールのすべてのユーザー</td>
+<td>Snowflake</td>
+<td>24時間</td>
+</tr>
+<tr>
+<td>2</td>
+<td>メタデータキャッシュ</td>
+<td>テーブルに関する情報</td>
+<td>すべてのユーザー</td>
+<td>Snowflake</td>
+<td>常に</td>
+</tr>
+<tr>
+<td>3</td>
+<td>データキャッシュ</td>
+<td>クエリ結果のファイルヘッダとカラムデータ</td>
+<td>同じ仮想ウェアハウスを実行したユーザー</td>
+<td>ウェアハウス（SSD）</td>
+<td>ウェアハウスの稼働中</td>
+</tr>
+</tbody>
+</table>
+<p>コンパイルキャッシュは存在せず常にコンパイルが必要</p>
+<h3 id="キャッシュを使用しないようにするためには">キャッシュを使用しないようにするためには？？</h3>
+<ul>
+<li>結果キャッシュ
+<ul>
+<li><code>USE_CACHED_RESULT</code>を<code>FALSE</code>に</li>
+</ul>
+</li>
+<li>メタデータキャッシュ
+<ul>
+<li>方法無し</li>
+</ul>
+</li>
+<li>データキャッシュ
+<ul>
+<li>ウェアハウスのSUSPENDなど
+<ul>
+<li><a href="https://zatoima.github.io/snowflake-data-cache-disabled/">Snowflakeのデータキャッシュの無効化 | my opinion is my own</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="注意事項">注意事項</h3>
+<h4 id="結果キャッシュ">結果キャッシュ</h4>
+<blockquote>
+<p><a href="https://docs.snowflake.com/ja/user-guide/querying-persisted-results.html#retrieval-optimization">https://docs.snowflake.com/ja/user-guide/querying-persisted-results.html#retrieval-optimization</a></p>
+<p>通常、次の条件の <strong>すべて</strong> が満たされる場合、クエリ結果が再利用されます。</p>
+<ul>
+<li>新しいクエリは、以前に実行したクエリと構文的に一致する。</li>
+<li>クエリには、実行時に評価する必要のある関数が含まれていない（例: <a href="https://docs.snowflake.com/ja/sql-reference/functions/current_timestamp.html">CURRENT_TIMESTAMP()</a> および <a href="https://docs.snowflake.com/ja/sql-reference/functions/uuid_string.html">UUID_STRING()</a>）。 <a href="https://docs.snowflake.com/ja/sql-reference/functions/current_date.html">CURRENT_DATE()</a> 関数はこのルールの例外です。CURRENT_DATE() は実行時に評価されますが、 CURRENT_DATE() を使用するクエリは、クエリ再利用機能を引き続き使用できます。</li>
+<li>クエリには、 <a href="https://docs.snowflake.com/ja/sql-reference/udf-overview.html">ユーザー定義関数（UDFs）</a> または <a href="https://docs.snowflake.com/ja/sql-reference/external-functions.html">外部関数</a> が含まれていない。</li>
+<li>クエリ結果に寄与するテーブルデータが変更されていない。</li>
+<li>以前のクエリの永続化された結果が引き続き利用可能である。</li>
+<li>キャッシュされた結果にアクセスするロールには、必要な権限がある。
+<ul>
+<li>クエリが SELECT クエリの場合、クエリを実行するロールには、キャッシュされたクエリで使用されるすべてのテーブルに必要なアクセス権限が必要です。</li>
+<li>クエリが SHOW クエリの場合、クエリを実行するロールは、キャッシュされた結果を生成したロールと一致する必要があります。</li>
+</ul>
+</li>
+<li>結果の生成方法に影響する構成オプションが変更されていない。</li>
+<li>テーブル内にある他のデータ変更によって、テーブルのマイクロパーティションが変更されていない（例: 再クラスタ化または統合化）。</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>これらの条件をすべて満たしても、Snowflakeがクエリ結果を再利用することは <strong>保証されません</strong>。</p>
+</blockquote>
+<h3 id="参照">参照</h3>
+<ul>
+<li>
+<p><a href="https://zenn.dev/aaizawa/articles/2b06dd50d56438">Snowflakeの３つのキャッシュ</a></p>
+</li>
+<li>
+<p><a href="https://docs.snowflake.com/ja/user-guide/querying-persisted-results.html">保存済みのクエリ結果の使用 — Snowflake Documentation</a></p>
+</li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/snowflake-data-cache-disabled/">Snowflakeのデータキャッシュの無効化</a></li>
+  
+  <li><a href="/snowflake-certificate-snowpro-advanced-memo/">SnowPro Advanced Architect対策メモ</a></li>
+  
+  <li><a href="/snowflake-login-history/">Snowflakeでログイン履歴を確認する</a></li>
+  
+  <li><a href="/snowflake-security-access-control/">Snowflakeのアクセス制御や権限管理</a></li>
+  
+  <li><a href="/snowflake-dataload-from-s3-to-snowflake/">S3(外部ステージ)からSnowflakeにデータロードする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/snowflake/">#Snowflake</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い | my opinion is my own</title>
+<meta name="title" content="OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,PostgreSQL,DB Migration," />
+
+
+<meta property="og:url" content="http://localhost:1313/oracle-postgresql-char-varchar-byte.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-06-24T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-06-30T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="DB Migration">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-06-24T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-06-30T00:00:00+00:00">
+  <meta itemprop="wordCount" content="166">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,PostgreSQL,DB Migration">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い</h1>
+
+<p>
+  <i>
+    <time datetime='2020-06-24' pubdate>
+      2020-06-24
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>charとvarcharの引数指定はOracleはバイト数である一方PostgreSQLは文字数となる。UTF8環境のOracleでchar(10)とした場合は3文字しか格納出来ない。一方、PostgreSQLでchar(10)と設定した場合は、10文字格納出来る。ora2pgやSCT(schema conversion tool)ではこの非互換は変換されないので注意が必要。</p>
+<h3 id="oraclepostgresql共通">Oracle/PostgreSQL共通</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> chartest(a char(<span style="color:#ae81ff">10</span>));
+</span></span></code></pre></div><h3 id="postgresql">PostgreSQL</h3>
+<p>char(10)の列に全角10文字を格納し、長さとバイト数を確認。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> chartest <span style="color:#66d9ef">values</span>(<span style="color:#e6db74">&#39;１２３４５６７８９あ&#39;</span>);                                                                                                                              
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">004</span>s
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">LENGTH</span>(a) <span style="color:#66d9ef">from</span> chartest;                                                                                                                                                   
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#66d9ef">length</span>   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">----------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">10</span>       <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">017</span>s
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">OCTET_LENGTH</span>(a) <span style="color:#66d9ef">from</span> chartest;                                                                                                                                             
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#66d9ef">octet_length</span>   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">----------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">30</span>             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">017</span>s
+</span></span><span style="display:flex;"><span><span style="color:#f92672">#</span><span style="color:#960050;background-color:#1e0010">文字数オーバーなパターン</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> chartest <span style="color:#66d9ef">values</span>(<span style="color:#e6db74">&#39;１２３４５６７８９あい&#39;</span>);                                                                                                                            
+</span></span><span style="display:flex;"><span>value too long <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">type</span> character(<span style="color:#ae81ff">10</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">004</span>s
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span>  
+</span></span></code></pre></div><blockquote>
+<p><a href="https://www.postgresql.jp/document/11/html/datatype-character.html">https://www.postgresql.jp/document/11/html/datatype-character.html</a></p>
+<p>SQLは2つの主要な文字データ型を定義しています。 <code>character varying(*</code>n<code>*)</code>と<code>character(*</code>n<code>*)</code>です。 ここで*<code>n</code><em>は正の整数です。 これらのデータ型は2つとも</em><code>n</code>*文字長（バイト数ではなく）までの文字列を保存できます。</p>
+</blockquote>
+<h3 id="oracle">Oracle</h3>
+<p>同様に10バイト分のデータを入れて確認。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> chartest <span style="color:#66d9ef">values</span>(<span style="color:#e6db74">&#39;１２３&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span> inserted.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">SELECT</span> LENGTHB(a) <span style="color:#66d9ef">from</span> chartest;
+</span></span><span style="display:flex;"><span>   LENGTHB(A) 
+</span></span><span style="display:flex;"><span>_____________ 
+</span></span><span style="display:flex;"><span>           <span style="color:#ae81ff">10</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">LENGTH</span>(a) <span style="color:#66d9ef">from</span> chartest;
+</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">LENGTH</span>(A) 
+</span></span><span style="display:flex;"><span>____________ 
+</span></span><span style="display:flex;"><span>           <span style="color:#ae81ff">4</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> chartest <span style="color:#66d9ef">values</span>(<span style="color:#e6db74">&#39;１２３４&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Error starting <span style="color:#66d9ef">at</span> line : <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">in</span> command <span style="color:#f92672">-</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> chartest <span style="color:#66d9ef">values</span>(<span style="color:#e6db74">&#39;１２３４&#39;</span>)
+</span></span><span style="display:flex;"><span>Error report <span style="color:#f92672">-</span>
+</span></span><span style="display:flex;"><span>ORA<span style="color:#f92672">-</span><span style="color:#ae81ff">12899</span>: value too <span style="color:#66d9ef">large</span> <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">column</span> <span style="color:#e6db74">&#34;ADMIN&#34;</span>.<span style="color:#e6db74">&#34;CHARTEST&#34;</span>.<span style="color:#e6db74">&#34;A&#34;</span> (actual: <span style="color:#ae81ff">12</span>, maximum: <span style="color:#ae81ff">10</span>)
+</span></span></code></pre></div><blockquote>
+<p><a href="https://docs.oracle.com/cd/F19136_01/sqlrf/Data-Types.html#GUID-7B72E154-677A-4342-A1EA-C74C1EA928E6">https://docs.oracle.com/cd/F19136_01/sqlrf/Data-Types.html#GUID-7B72E154-677A-4342-A1EA-C74C1EA928E6</a></p>
+<p>Oracleの組込みデータ型</p>
+</blockquote>
+<h3 id="追記redshiftの場合">追記：Redshiftの場合</h3>
+<p>PostgreSQLベースのRedshiftはPostgreSQLと同じで文字数かー、と思っていてマニュアルを念の為に確認してみるとバイト単位だったので注意。</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_Character_types.html">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_Character_types.html</a></p>
+<p>CHAR および VARCHAR のデータ型は、文字単位でなくバイト単位で定義されます。CHAR 列にはシングルバイト文字のみを含めることができます。したがって、CHAR(10) 列には、最大 10 バイト長の文字列を含めることができます。VARCHAR にはマルチバイト文字 (1 文字あたり最大で 4 バイトまで) を含めることができます。例えば、VARCHAR(12) 列には、シングルバイト文字なら 12 個、2 バイト文字なら 6 個、3 バイト文字なら 4 個、4 バイト文字なら 3 個含めることができます。</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ora2pg-oracle-to-aurora-postgresql-conversion.html">ora2pgを使用したOracleからPostgreSQLへの変換結果</a></li>
+  
+  <li><a href="/oracle-postgresql-transaction-different.html">OracleとPostgreSQLのトランザクション差異について整理する</a></li>
+  
+  <li><a href="/aws-sct-oracle-to-aurora-postgresql-conversion.html">AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</a></li>
+  
+  <li><a href="/oracle-mysql-postgresql-isolation-level.html">トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</a></li>
+  
+  <li><a href="/postgresql-create-database-locale-error.html">PostgreSQLでja_JP.UTF-8のデータベース作成時のlocaleエラー</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="http://localhost:1313/blog/db-migration/">#DB Migration</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

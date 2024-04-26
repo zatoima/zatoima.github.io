@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて | my opinion is my own</title>
+<meta name="title" content="expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,GoldenGate," />
+
+
+<meta property="og:url" content="http://localhost:1313/goldengate-flashbackscn-instantiationSCN.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-03-30T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-03-30T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="GoldenGate">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-03-30T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-03-30T00:00:00+00:00">
+  <meta itemprop="wordCount" content="324">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,GoldenGate">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて</h1>
+
+<p>
+  <i>
+    <time datetime='2019-03-30' pubdate>
+      2019-03-30
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="はじめに"><strong>はじめに</strong></h4>
+<p>GoldenGateにはインスタンス化SCNという機能があります。この機能を使用するとDatapumpを使用したシステム無停止の初期移行が簡単に出来ます。</p>
+<p>詳細は下記のqiita記事がわかりやすいのでご確認ください。</p>
+<p>インスタンス化SCNを使ってお手軽初期移行 - Qiita <a href="https://qiita.com/kurouuuron/items/118afdc6b6d15d46e7dd">https://qiita.com/kurouuuron/items/118afdc6b6d15d46e7dd</a></p>
+<blockquote>
+<p>Oracle Datapump との連携を強化した、GoldenGateの初期移行用の機能。</p>
+<p>一言でいえば、Datapumpを使用したシステム無停止の初期移行が簡単にできる、という機能。</p>
+<p>もう少し言えば、Flashback_scnやHandlecollisionsなどの初期移行で考慮すべきポイントを考慮せずによくしてくれた機能。</p>
+<p>実際の挙動としては、Datapumpでexpdpした際に、その表はどのSCNまで反映し終わっているか、というデータを内部的に付与してくれて、impdpしたらReplicatがそのSCN以降のデータから自動で当ててくれる、というもの。</p>
+</blockquote>
+<p>この記事にもあるようにGoldenGate12.2以上でadd trandataを実行した場合にpreparescnがデフォルトで付与されるためDatapumpでexpdpした際に、その表はどのSCNまで反映し終わっているか、というデータを内部的に付与してくれます。</p>
+<h4 id="環境の前提"><strong>環境の前提</strong></h4>
+<p>add trandata preparecsn noneを指定した場合の動作になります。</p>
+<p>none以外を設定した場合は下記の内容は異なる場合がありますのでご注意ください。</p>
+<h4 id="add-trandata-preparescn-noneをした場合の動作"><strong>add trandata preparescn noneをした場合の動作</strong></h4>
+<p><a href="https://docs.oracle.com/cd/E74358_01/gg-winux/GWURF/GUID-D3FD004B-81E4-4185-92D3-812834A5DEFC.htm">マニュアル</a>に記載があるとおり、この場合はインスタンス化の準備は行われません。</p>
+<p><strong>ソース側でのエクスポート</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@xxxxxxxx1p ~<span style="color:#f92672">]</span>$ expdp ggtest/xxxxxx DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp TABLES<span style="color:#f92672">=</span>t10 CONTENT<span style="color:#f92672">=</span>DATA_ONLY REUSE_DUMPFILES<span style="color:#f92672">=</span>YES
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Export: Release 11.2.0.4.0 - Production on 日 3月 <span style="color:#ae81ff">3</span> 16:47:00 <span style="color:#ae81ff">2019</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 1982, 2011, Oracle and/or its affiliates.  All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>接続先: Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+</span></span><span style="display:flex;"><span>With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+</span></span><span style="display:flex;"><span>Data Mining and Real Application Testing options
+</span></span><span style="display:flex;"><span>FLASHBACKでは、データベース整合性が自動的に維持されます。
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>を起動しています: ggtest DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp TABLES<span style="color:#f92672">=</span>t10 CONTENT<span style="color:#f92672">=</span>DATA_ONLY REUSE_DUMPFILES<span style="color:#f92672">=</span>YES
+</span></span><span style="display:flex;"><span>BLOCKSメソッドを使用して見積り中です...
+</span></span><span style="display:flex;"><span>オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+</span></span><span style="display:flex;"><span>BLOCKSメソッドを使用した見積り合計: <span style="color:#ae81ff">384</span> KB
+</span></span><span style="display:flex;"><span>. . <span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;T10&#34;</span>                              288.6 KB   10000行がエクスポートされました
+</span></span><span style="display:flex;"><span>マスター表<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>は正常にロード/アンロードされました
+</span></span><span style="display:flex;"><span>******************************************************************************
+</span></span><span style="display:flex;"><span>GGTEST.SYS_EXPORT_TABLE_01に設定されたダンプ・ファイルは次のとおりです:
+</span></span><span style="display:flex;"><span>  /home/oracle/t10.dmp
+</span></span><span style="display:flex;"><span>ジョブ<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>が日 3月 <span style="color:#ae81ff">3</span> 16:47:04 <span style="color:#ae81ff">2019</span> elapsed <span style="color:#ae81ff">0</span> 00:00:02で正常に完了しました
+</span></span></code></pre></div><h4 id="ターゲット側のインポート"><strong>ターゲット側のインポート</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@xxxxxx ~<span style="color:#f92672">]</span>$ impdp ggtest/xxxxxx@xxxxxxxx1 DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp tables<span style="color:#f92672">=</span>t10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Import: Release 18.0.0.0.0 - Production on 日 3月 <span style="color:#ae81ff">3</span> 16:48:33 <span style="color:#ae81ff">2019</span>
+</span></span><span style="display:flex;"><span>Version 18.4.0.0.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 1982, 2018, Oracle and/or its affiliates.  All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>接続先: Oracle Database 18c Enterprise Edition Release 18.0.0.0.0 - Production
+</span></span><span style="display:flex;"><span>マスター表<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_IMPORT_TABLE_01&#34;</span>は正常にロード/アンロードされました
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_IMPORT_TABLE_01&#34;</span>を起動しています: ggtest@xxxxxxxx1 DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp tables<span style="color:#f92672">=</span>t10
+</span></span><span style="display:flex;"><span>オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+</span></span><span style="display:flex;"><span>. . <span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;T10&#34;</span>                              288.6 KB   10000行がインポートされました
+</span></span><span style="display:flex;"><span>ジョブ<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_IMPORT_TABLE_01&#34;</span>が日 3月 <span style="color:#ae81ff">3</span> 16:48:45 <span style="color:#ae81ff">2019</span> elapsed <span style="color:#ae81ff">0</span> 00:00:09で正常に完了しました
+</span></span></code></pre></div><h4 id="インスタンス化scnの確認"><strong>インスタンス化SCNの確認</strong></h4>
+<p>preparescn noneのため、この場合はインスタンスSCN化されていません。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; <span style="color:#66d9ef">select</span> source_database,source_object_owner,source_object_name,instantiation_scn from  DBA_APPLY_INSTANTIATED_OBJECTS where SOURCE_OBJECT_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;T10&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>行が選択されていません
+</span></span></code></pre></div><h4 id="expdp時にflashback_scnを使用した場合"><strong>expdp時にFLASHBACK_SCNを使用した場合</strong></h4>
+<p>ここでようやく表題の件ですが、このケースはtrandata時にpreparecsn noneに設定した場合においてもインスタンス化SCNがexpdp時に設定される動作のようです。</p>
+<h4 id="エクスポート時のコマンド"><strong>エクスポート時のコマンド</strong></h4>
+<p>ここで特定時点のFLASHBACK_SCNを指定します。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@xxxxxxxx1p ~<span style="color:#f92672">]</span>$ expdp ggtest/xxxxxx DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp TABLES<span style="color:#f92672">=</span>t10 CONTENT<span style="color:#f92672">=</span>DATA_ONLY REUSE_DUMPFILES<span style="color:#f92672">=</span>YES FLASHBACK_SCN<span style="color:#f92672">=</span><span style="color:#ae81ff">25587768</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Export: Release 11.2.0.4.0 - Production on 日 3月 <span style="color:#ae81ff">3</span> 16:59:04 <span style="color:#ae81ff">2019</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 1982, 2011, Oracle and/or its affiliates.  All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>接続先: Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+</span></span><span style="display:flex;"><span>With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+</span></span><span style="display:flex;"><span>Data Mining and Real Application Testing options
+</span></span><span style="display:flex;"><span>FLASHBACKでは、データベース整合性が自動的に維持されます。
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>を起動しています: ggtest DIRECTORY<span style="color:#f92672">=</span>homedir DUMPFILE<span style="color:#f92672">=</span>t10.dmp TABLES<span style="color:#f92672">=</span>t10 CONTENT<span style="color:#f92672">=</span>DATA_ONLY REUSE_DUMPFILES<span style="color:#f92672">=</span>YES FLASHBACK_SCN<span style="color:#f92672">=</span><span style="color:#ae81ff">25587768</span>
+</span></span><span style="display:flex;"><span>BLOCKSメソッドを使用して見積り中です...
+</span></span><span style="display:flex;"><span>オブジェクト型TABLE_EXPORT/TABLE/TABLE_DATAの処理中です
+</span></span><span style="display:flex;"><span>BLOCKSメソッドを使用した見積り合計: <span style="color:#ae81ff">384</span> KB
+</span></span><span style="display:flex;"><span>. . <span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;T10&#34;</span>                              288.6 KB   10000行がエクスポートされました
+</span></span><span style="display:flex;"><span>マスター表<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>は正常にロード/アンロードされました
+</span></span><span style="display:flex;"><span>******************************************************************************
+</span></span><span style="display:flex;"><span>GGTEST.SYS_EXPORT_TABLE_01に設定されたダンプ・ファイルは次のとおりです:
+</span></span><span style="display:flex;"><span>  /home/oracle/t10.dmp
+</span></span><span style="display:flex;"><span>ジョブ<span style="color:#e6db74">&#34;GGTEST&#34;</span>.<span style="color:#e6db74">&#34;SYS_EXPORT_TABLE_01&#34;</span>が日 3月 <span style="color:#ae81ff">3</span> 16:59:08 <span style="color:#ae81ff">2019</span> elapsed <span style="color:#ae81ff">0</span> 00:00:02で正常に完了しました
+</span></span></code></pre></div><p>FLASHBACK_SCN を指定してexpdpしたdmpファイルをimpdpした場合、 DBA_APPLY_INSTANTIATED_OBJECTS は INSTANTIATION_SCNが設定されています。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; <span style="color:#66d9ef">select</span> source_database,source_object_owner,source_object_name,instantiation_scn from  DBA_APPLY_INSTANTIATED_OBJECTS where SOURCE_OBJECT_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;T10&#39;</span>;
+</span></span><span style="display:flex;"><span>SOURCE_DATABASE   SOURCE_OBJECT_OWNER   SOURCE_OBJECT_NAME     INSTANTIATION_SCN
+</span></span><span style="display:flex;"><span>xxxxxxx           GGTEST                T10                             <span style="color:#ae81ff">25587768</span> ←★INSTANTIATION_SCNが設定されている
+</span></span></code></pre></div><h4 id="まとめ"><strong>まとめ</strong></h4>
+<p>add trandata時にpreparecsn noneを設定した場合においてもexpdp時にFLASHBACK_SCNを使用した場合はインスタンス化SCNが設定されるという動作になります。</p>
+<p>この動作についてですが、streamsのマニュアルに記載があります。合わせてご確認ください。</p>
+<blockquote>
+<p><a href="https://docs.oracle.com/cd/E16338_01/server.112/b61352/instant.htm#CIHBDFJE">https://docs.oracle.com/cd/E16338_01/server.112/b61352/instant.htm#CIHBDFJE</a></p>
+<p>エクスポート中、Oracle Data Pumpでは、データベース・オブジェクトごとにエクスポートされたデータおよび手続き型操作が特定の時点で一貫性を持つように、自動的にOracle Flashbackが使用されます。Oracle Streams環境でインスタンス化を実行する場合は、ある程度の一貫性が必要です。データ・ポンプ・エクスポート・ユーティリティを使用すると、Oracle Streamsのインスタンス化についてこの一貫性を確保できます。</p>
+<p>Oracle Streamsのインスタンス化のみでなく、他の用途にもエクスポート・ダンプ・ファイルを使用しており、その用途がデータ・ポンプのデフォルトのエクスポートで得られる一貫性より厳密な一貫性要件を伴う場合は、Oracle Streamsのインスタンス化にデータ・ポンプ・エクスポート・ユーティリティ・パラメータ<code>FLASHBACK_SCN</code>または<code>FLASHBACK_TIME</code>を使用できます。たとえば、エクスポートに外部キー制約を持つオブジェクトが含まれている場合、より厳密な一貫性が要求される場合があります。</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/goldengate-12c-18c-install-implement.html">GoldenGateをインストールしてDB間のレプリケーション環境を構築する</a></li>
+  
+  <li><a href="/goldengate-merge-replication.html">MERGE文のGoldenGateによる伝搬</a></li>
+  
+  <li><a href="/goldengate-check-session-info.html">GoldenGate関連プロセスのsession情報を確認する方法</a></li>
+  
+  <li><a href="/goldengate-check-exection-sql/">GoldenGateから実行されたSQLを確認する方法(Integrated Replicat)</a></li>
+  
+  <li><a href="/goldengate-info-param.html">GoldenGateパラメータの定義情報の取得(info paramコマンド)</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/goldengate/">#GoldenGate</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

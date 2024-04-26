@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>OracleとPostgreSQLのトランザクション差異について整理する | my opinion is my own</title>
+<meta name="title" content="OracleとPostgreSQLのトランザクション差異について整理する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,PostgreSQL,DB Migration," />
+
+
+<meta property="og:url" content="http://localhost:1313/oracle-postgresql-transaction-different.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="OracleとPostgreSQLのトランザクション差異について整理する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-06-02T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-06-02T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="DB Migration">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="OracleとPostgreSQLのトランザクション差異について整理する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="OracleとPostgreSQLのトランザクション差異について整理する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-06-02T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-06-02T00:00:00+00:00">
+  <meta itemprop="wordCount" content="298">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,PostgreSQL,DB Migration">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>OracleとPostgreSQLのトランザクション差異について整理する</h1>
+
+<p>
+  <i>
+    <time datetime='2020-06-02' pubdate>
+      2020-06-02
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>OracleとPostgreSQLのトランザクション分離レベルは同じREAD COMMITTEDだが、トランザクションによってはそれぞれのデータベースで動作が異なる場合がある。関数の違いや機能差異というのは試験でエラーになるが、この仕様差異はエラーにならず、データの結果差異に繋がることから非常に厄介な問題である。</p>
+<p>トランザクション分離レベルの概要等は以前にこちらの記事で書いた。</p>
+<blockquote>
+<p>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて | my opinion is my own <a href="https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html">https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html</a></p>
+</blockquote>
+<p>今回は上記で触れられなかった各DBエンジンの挙動の違いについてメモしておく。このトランザクション差異の話は有名だと思っているが、あまりネット上で「何故そうなるか？」の観点で記載された記事が無かったので、調査した内容と実機検証の結果を書き留める。（もし誤りがあればご指摘ください。）</p>
+<h3 id="トランザクションの結果が異なるケースについて">トランザクションの結果が異なるケースについて</h3>
+<h4 id="writeの競合">Writeの競合</h4>
+<table>
+<thead>
+<tr>
+<th>-</th>
+<th>oracle</th>
+<th></th>
+<th>PostgreSQL</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>時系列</td>
+<td>tx1</td>
+<td>tx2</td>
+<td>tx1</td>
+<td>tx2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td></td>
+<td>begin;</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>update t1 set b = b + 1;</td>
+<td></td>
+<td>update t1 set b = b + 1;</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td></td>
+<td></td>
+<td>begin;</td>
+</tr>
+<tr>
+<td>5</td>
+<td></td>
+<td>delete from t1 where b = 3;</td>
+<td></td>
+<td>delete from t1 where b = 3;</td>
+</tr>
+<tr>
+<td>6</td>
+<td>commit;</td>
+<td></td>
+<td>commit;</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td></td>
+<td>commit;</td>
+<td></td>
+<td>commit;</td>
+</tr>
+<tr>
+<td>8</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+<td>select * from t1;</td>
+</tr>
+</tbody>
+</table>
+<p>実際に上記の手順を実行した場合は下記の結果となる。赤枠で囲っている箇所のトランザクションの動作が異なる。(※markdownで上手く表に出来なかったため画像にしました。)</p>
+<p><img src="image-20200601221655472.png" alt="image-20200601221655472"></p>
+<ul>
+<li>
+<h3 id="oracleの動作仕様">Oracleの動作仕様</h3>
+</li>
+</ul>
+<p>Oracleの場合は、下記マニュアルにこの動作仕様の説明が記載されている。</p>
+<blockquote>
+<p>データの同時実行性と整合性 <a href="https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm">https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm</a></p>
+<p>コミット読取りトランザクション内での書込みの競合</p>
+<p>コミット読取りトランザクションでは、未コミットの同時実行トランザクション(<em>ブロックしているトランザクション</em>とも呼ばれる)によって更新された行の変更を試行すると、書込みの競合が発生します。コミット読取りトランザクションは、ブロックしているトランザクションが終了して行ロックが解除されるまで待機します。</p>
+<ul>
+<li>ブロックしているトランザクションがコミットされてロックが解除された場合、待機しているトランザクションでは、新たに変更された行に対して更新が実行されます。</li>
+</ul>
+</blockquote>
+<p>上記に記載されている通り、<code>ブロックしているトランザクションがコミットされてロックが解除された場合、待機しているトランザクションでは、新たに変更された行に対して更新が実行されます。</code>とあるので、<code>No.6</code>の<code>tx1</code>の<code>Commit</code>実行時に<code>No.5</code>の<code>delete from t1 where b = 3;</code>は<code>No.3</code>の計算結果を踏まえて削除処理が実行される。</p>
+<ul>
+<li>
+<h3 id="postgresqlの動作仕様">PostgreSQLの動作仕様</h3>
+</li>
+</ul>
+<p>PostgreSQLの場合は、下記がマニュアルの該当箇所となる。</p>
+<blockquote>
+<p>13.2. トランザクションの分離 <a href="https://www.postgresql.jp/document/11/html/transaction-iso.html">https://www.postgresql.jp/document/11/html/transaction-iso.html</a></p>
+<p>UPDATE、DELETE、SELECT FOR UPDATE、およびSELECT FOR SHAREコマンドは対象行を検索する際に<code>SELECT</code>コマンドと同じように振舞います。 これらのコマンドは、問い合わせが開始された時点で既にコミットされた対象行のみを検出します。 しかし、その対象行は、検出されるまでに、同時実行中の他のトランザクションによって、既に更新（もしくは削除あるいはロック）されてしまっているかもしれません。 このような場合更新されるべき処理は、最初の更新トランザクションが（それがまだ進行中の場合）コミットもしくはロールバックするのを待ちます。 最初の更新処理がロールバックされるとその結果は無視されて、2番目の更新処理で元々検出した行の更新を続行することができます。 最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 行が削除されなかった時の更新処理は、最初のコミットで更新された行に適用されます。 コマンドの検索条件（<code>WHERE</code>句）は、更新された行がまだその検索条件に一致するかどうかの確認のため再評価されます。 検索条件と一致している場合、2番目の更新処理は、更新された行を使用して処理を開始します。</p>
+</blockquote>
+<p><code>最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 行が削除されなかった時の更新処理は、最初のコミットで更新された行に適用されます。</code>とあるので、<code>No.6</code>の<code>tx1</code>の<code>Commit</code>実行時に<code>最初の更新処理により行が削除された</code>ので、その行の処理についてはskipする。</p>
+<p>上記の通り、<strong>OracleではSQL文が再評価（=再起動）されて実行されるのに対して、PostgreSQLでは行が削除された場合は、該当行を無視する</strong>ので結果の差異が生じる。（個人的にPostgreSQLのこの挙動は分かりづらく感じる。）</p>
+<p>次に青枠で囲っているcommitをrollbackしてみる。（<code>最初の更新処理がロールバックされるとその結果は無視されて、2番目の更新処理で元々検出した行の更新を続行することができます。</code>という文章の確認）</p>
+<p><img src="image-20200531231932820.png" alt="image-20200531231932820"></p>
+<p>この場合は、元々の<code>b=3</code>のデータが削除される。Oracleにおいても下記記載がある通り、同様の挙動となる。当然結果も同じとなる。</p>
+<blockquote>
+<p>データの同時実行性と整合性 <a href="https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm">https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm</a></p>
+<ul>
+<li>ブロックしているトランザクションがロールバックされた場合、待機しているトランザクションでは、ブロックしているトランザクションが存在していなかったかのように、ロックされていた行が変更されます。</li>
+</ul>
+</blockquote>
+<h4 id="select-for-updateとdeleteの競合">select for updateとdeleteの競合</h4>
+<p>次にこのパターンを確認する。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>oracle</th>
+<th></th>
+<th>PostgreSQL</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>時系列</td>
+<td>tx1</td>
+<td>tx2</td>
+<td>tx1</td>
+<td>tx2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>SELECT * FROM t1 ORDER BY a;</td>
+<td></td>
+<td>SELECT * FROM t1 ORDER BY a;</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+<td></td>
+<td>BEGIN;</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;</td>
+<td></td>
+<td>SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td></td>
+<td></td>
+<td>BEGIN;</td>
+</tr>
+<tr>
+<td>5</td>
+<td></td>
+<td>SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;</td>
+<td></td>
+<td>SELECT a, b FROM t1 WHERE a =  (SELECT MIN(a) FROM t1) FOR UPDATE;</td>
+</tr>
+<tr>
+<td>6</td>
+<td>DELETE FROM t1 WHERE a = 1;</td>
+<td></td>
+<td>DELETE FROM t1 WHERE a = 1;</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>COMMIT;</td>
+<td></td>
+<td>COMMIT;</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>上記のトランザクション実行時の結果は次の通り。</p>
+<p><img src="image-20200601220033176.png" alt="image-20200601220033176"></p>
+<ul>
+<li>
+<h4 id="oracleの動作仕様-1">Oracleの動作仕様</h4>
+</li>
+</ul>
+<p>基本的な考え方はwriteの競合パターンの考え方と同一で良いと考えるが、下記マニュアルにある通り、選択した行が更新または削除された場合は再度問い合わせ文を再起動して評価をし直す。したがって、この場合はNo.7の<code>commit</code>のタイミングで再評価され、その時点の最小データである<code>2</code>がクエリされることになる。</p>
+<blockquote>
+<p>アプリケーション開発者用のSQL処理 <a href="https://docs.oracle.com/cd/E57425_01/121/ADFNS/adfns_sqlproc.htm#i1025003">https://docs.oracle.com/cd/E57425_01/121/ADFNS/adfns_sqlproc.htm#i1025003</a></p>
+<p>問合せの実行中に、<code>SELECT</code> <code>FOR</code> <code>UPDATE</code>に対する結果セットが変化する場合があります。たとえば、問合せ開始後に問合せで選択された列が更新されたり、行が削除された場合です。このような場合、<code>SELECT</code> <code>FOR</code> <code>UPDATE</code>は変更されなかった行でロックを取得し、このロックを使用して表の読取り一貫性スナップショットを取得してから、残りのロックを取得するために問合せを再起動します。</p>
+</blockquote>
+<ul>
+<li>
+<h4 id="postgresqlの動作仕様-1">PostgreSQLの動作仕様</h4>
+</li>
+</ul>
+<p>writeの競合パターンと同様に「最初の更新処理がコミットされると、2番目の更新処理では、最初の更新処理により行が削除された場合はその行を無視します。 」となるので0件となる。</p>
+<h3 id="参考">参考</h3>
+<p>SQL移行調査編 <a href="https://pgecons-sec-tech.github.io/tech-report/pdf/09_SqlMigrationResearch.pdf">https://pgecons-sec-tech.github.io/tech-report/pdf/09_SqlMigrationResearch.pdf</a></p>
+<p>Oracle DBとPostgreSQLで異なる処理結果、「仕様差」問題に要注意 | 日経クロステック（xTECH） <a href="https://xtech.nikkei.com/atcl/nxt/column/18/00817/061300007/">https://xtech.nikkei.com/atcl/nxt/column/18/00817/061300007/</a></p>
+<p>13.2. トランザクションの分離 <a href="https://www.postgresql.jp/document/11/html/transaction-iso.html">https://www.postgresql.jp/document/11/html/transaction-iso.html</a></p>
+<p>Oracle/MySQL/PostgreSQLにおけるサブクエリを含むDMLの非互換性 - SH2の日記 <a href="https://sh2.hatenablog.jp/entry/20131223">https://sh2.hatenablog.jp/entry/20131223</a></p>
+<p>ept/hermitage: What are the differences between the transaction isolation levels in databases? This is a suite of test cases which differentiate isolation levels. <a href="https://github.com/ept/hermitage">https://github.com/ept/hermitage</a></p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-sct-oracle-to-aurora-postgresql-conversion.html">AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</a></li>
+  
+  <li><a href="/oracle-mysql-postgresql-isolation-level.html">トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</a></li>
+  
+  <li><a href="/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-download.html">指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li>
+  
+  <li><a href="/postgresql-versionup-pg_upgrade-extention.html">PostgreSQLのメジャーバージョンアップ拡張機能のpg_upgradeを使用する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="http://localhost:1313/blog/db-migration/">#DB Migration</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

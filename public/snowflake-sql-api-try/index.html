@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>SQL APIを使用してSnowflakeにSQLを発行する | my opinion is my own</title>
+<meta name="title" content="SQL APIを使用してSnowflakeにSQLを発行する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Snowflake," />
+
+
+<meta property="og:url" content="http://localhost:1313/snowflake-sql-api-try/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="SQL APIを使用してSnowflakeにSQLを発行する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2023-01-11T00:00:00+00:00">
+    <meta property="article:modified_time" content="2023-01-11T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="SQL APIを使用してSnowflakeにSQLを発行する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="SQL APIを使用してSnowflakeにSQLを発行する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2023-01-11T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2023-01-11T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1256">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Snowflake">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>SQL APIを使用してSnowflakeにSQLを発行する</h1>
+
+<p>
+  <i>
+    <time datetime='2023-01-11' pubdate>
+      2023-01-11
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="キーペア認証を使用して接続可能なユーザを作成">キーペア認証を使用して接続可能なユーザを作成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd ~/.ssh
+</span></span><span style="display:flex;"><span>openssl genrsa <span style="color:#ae81ff">2048</span> | openssl pkcs8 -topk8 -inform PEM -out snowflake_tf_snow_key.p8 -nocrypt
+</span></span><span style="display:flex;"><span>openssl rsa -in snowflake_tf_snow_key.p8 -pubout -out snowflake_tf_snow_key.pub
+</span></span></code></pre></div><p><code>snowflake_tf_snow_key.pub</code>の文字列を取得して次のSQLの<code>RSA_PUBLIC_KEY_HERE</code>に貼り付ける。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> sqlapiuser RSA_PUBLIC_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;RSA_PUBLIC_KEY_HERE&#39;</span> DEFAULT_ROLE<span style="color:#f92672">=</span><span style="color:#66d9ef">PUBLIC</span> MUST_CHANGE_PASSWORD<span style="color:#f92672">=</span><span style="color:#66d9ef">FALSE</span>;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- CREATE USER sqlapiuser RSA_PUBLIC_KEY=&#39;MIIBXnmXXXXXXXXXXXXXXXXXXf7Z4EqXXXXXXXXXXXB&#39; DEFAULT_ROLE=PUBLIC MUST_CHANGE_PASSWORD=FALSE;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">GRANT</span> <span style="color:#66d9ef">ROLE</span> SYSADMIN <span style="color:#66d9ef">TO</span> <span style="color:#66d9ef">USER</span> sqlapiuser;
+</span></span></code></pre></div><h4 id="接続確認を行う">接続確認を行う</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>snowsql <span style="color:#f92672">-</span>a <span style="color:#f92672">&lt;</span>ACCOUNT名<span style="color:#f92672">&gt;</span> <span style="color:#f92672">-</span>u sqlapiuser <span style="color:#75715e">--private-key-path /Users/jimazato/.ssh/snowflake_tf_snow_key.p8
+</span></span></span></code></pre></div><h3 id="jwt生成を行う">JWT生成を行う</h3>
+<p>下記マニュアルにも記載がある通り、リクエスト用の認証情報である JSON Web トークン（JWT）を生成する</p>
+<blockquote>
+<p><a href="https://docs.snowflake.com/ja/developer-guide/sql-api/authenticating.html">Authenticating to the Server for the SQL API — Snowflake Documentation</a></p>
+</blockquote>
+<p><code>sql-api-generate-jwt.py</code>として保存する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># To run this on the command line, enter:</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   python3 sql-api-generate-jwt.py --account=&lt;account_identifier&gt; --user=&lt;username&gt; --private_key_file_path=&lt;path_to_private_key_file&gt;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> cryptography.hazmat.primitives.serialization <span style="color:#f92672">import</span> load_pem_private_key
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> cryptography.hazmat.primitives.serialization <span style="color:#f92672">import</span> Encoding
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> cryptography.hazmat.primitives.serialization <span style="color:#f92672">import</span> PublicFormat
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> cryptography.hazmat.backends <span style="color:#f92672">import</span> default_backend
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> datetime <span style="color:#f92672">import</span> timedelta, timezone, datetime
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> argparse
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> base64
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> getpass <span style="color:#f92672">import</span> getpass
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> hashlib
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> logging
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> sys
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This class relies on the PyJWT module (https://pypi.org/project/PyJWT/).</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> jwt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#f92672">=</span> logging<span style="color:#f92672">.</span>getLogger(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">from</span> typing <span style="color:#f92672">import</span> Text
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">except</span> <span style="color:#a6e22e">ImportError</span>:
+</span></span><span style="display:flex;"><span>    logger<span style="color:#f92672">.</span>debug(<span style="color:#e6db74">&#39;# Python 3.5.0 and 3.5.1 have incompatible typing modules.&#39;</span>, exc_info<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">from</span> typing_extensions <span style="color:#f92672">import</span> Text
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ISSUER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;iss&#34;</span>
+</span></span><span style="display:flex;"><span>EXPIRE_TIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;exp&#34;</span>
+</span></span><span style="display:flex;"><span>ISSUE_TIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;iat&#34;</span>
+</span></span><span style="display:flex;"><span>SUBJECT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;sub&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># If you generated an encrypted private key, implement this method to return</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># the passphrase for decrypting your private key. As an example, this function</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># prompts the user for the passphrase.</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_private_key_passphrase</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> getpass(<span style="color:#e6db74">&#39;Passphrase for private key: &#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">JWTGenerator</span>(object):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Creates and signs a JWT with the specified private key file, username, and account identifier. The JWTGenerator keeps the
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    generated token and only regenerates the token if a specified period of time has passed.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    LIFETIME <span style="color:#f92672">=</span> timedelta(minutes<span style="color:#f92672">=</span><span style="color:#ae81ff">59</span>)  <span style="color:#75715e"># The tokens will have a 59 minute lifetime</span>
+</span></span><span style="display:flex;"><span>    RENEWAL_DELTA <span style="color:#f92672">=</span> timedelta(minutes<span style="color:#f92672">=</span><span style="color:#ae81ff">54</span>)  <span style="color:#75715e"># Tokens will be renewed after 54 minutes</span>
+</span></span><span style="display:flex;"><span>    ALGORITHM <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;RS256&#34;</span>  <span style="color:#75715e"># Tokens will be generated using RSA with SHA256</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> __init__(self, account: Text, user: Text, private_key_file_path: Text,
+</span></span><span style="display:flex;"><span>                 lifetime: timedelta <span style="color:#f92672">=</span> LIFETIME, renewal_delay: timedelta <span style="color:#f92672">=</span> RENEWAL_DELTA):
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        __init__ creates an object that generates JWTs for the specified user, account identifier, and private key.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param account: Your Snowflake account identifier. See https://docs.snowflake.com/en/user-guide/admin-account-identifier.html. Note that if you are using the account locator, exclude any region information from the account locator.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param user: The Snowflake username.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param private_key_file_path: Path to the private key file used for signing the JWTs.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param lifetime: The number of minutes (as a timedelta) during which the key will be valid.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param renewal_delay: The number of minutes (as a timedelta) from now after which the JWT generator should renew the JWT.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;&#34;&#34;Creating JWTGenerator with arguments
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            account : </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">, user : </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">, lifetime : </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">, renewal_delay : </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>            account, user, lifetime, renewal_delay)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Construct the fully qualified name of the user in uppercase.</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>account <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>prepare_account_name_for_jwt(account)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>user <span style="color:#f92672">=</span> user<span style="color:#f92672">.</span>upper()
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>qualified_username <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>account <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;.&#34;</span> <span style="color:#f92672">+</span> self<span style="color:#f92672">.</span>user
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>lifetime <span style="color:#f92672">=</span> lifetime
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>renewal_delay <span style="color:#f92672">=</span> renewal_delay
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>private_key_file_path <span style="color:#f92672">=</span> private_key_file_path
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>renew_time <span style="color:#f92672">=</span> datetime<span style="color:#f92672">.</span>now(timezone<span style="color:#f92672">.</span>utc)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>token <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Load the private key from the specified file.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">with</span> open(self<span style="color:#f92672">.</span>private_key_file_path, <span style="color:#e6db74">&#39;rb&#39;</span>) <span style="color:#66d9ef">as</span> pem_in:
+</span></span><span style="display:flex;"><span>            pemlines <span style="color:#f92672">=</span> pem_in<span style="color:#f92672">.</span>read()
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Try to access the private key without a passphrase.</span>
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>private_key <span style="color:#f92672">=</span> load_pem_private_key(pemlines, <span style="color:#66d9ef">None</span>, default_backend())
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">TypeError</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># If that fails, provide the passphrase returned from get_private_key_passphrase().</span>
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>private_key <span style="color:#f92672">=</span> load_pem_private_key(pemlines, get_private_key_passphrase()<span style="color:#f92672">.</span>encode(), default_backend())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">prepare_account_name_for_jwt</span>(self, raw_account: Text) <span style="color:#f92672">-&gt;</span> Text:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Prepare the account identifier for use in the JWT.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        For the JWT, the account identifier must not include the subdomain or any region or cloud provider information.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param raw_account: The specified account identifier.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :return: The account identifier in a form that can be used to generate JWT.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        account <span style="color:#f92672">=</span> raw_account
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> <span style="color:#e6db74">&#39;.global&#39;</span> <span style="color:#f92672">in</span> account:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Handle the general case.</span>
+</span></span><span style="display:flex;"><span>            idx <span style="color:#f92672">=</span> account<span style="color:#f92672">.</span>find(<span style="color:#e6db74">&#39;.&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> idx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>:
+</span></span><span style="display:flex;"><span>                account <span style="color:#f92672">=</span> account[<span style="color:#ae81ff">0</span>:idx]
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Handle the replication case.</span>
+</span></span><span style="display:flex;"><span>            idx <span style="color:#f92672">=</span> account<span style="color:#f92672">.</span>find(<span style="color:#e6db74">&#39;-&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> idx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>:
+</span></span><span style="display:flex;"><span>                account <span style="color:#f92672">=</span> account[<span style="color:#ae81ff">0</span>:idx]
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Use uppercase for the account identifier.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> account<span style="color:#f92672">.</span>upper()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_token</span>(self) <span style="color:#f92672">-&gt;</span> Text:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Generates a new JWT. If a JWT has been already been generated earlier, return the previously generated token unless the
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        specified renewal time has passed.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :return: the new token
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        now <span style="color:#f92672">=</span> datetime<span style="color:#f92672">.</span>now(timezone<span style="color:#f92672">.</span>utc)  <span style="color:#75715e"># Fetch the current time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># If the token has expired or doesn&#39;t exist, regenerate the token.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>token <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">or</span> self<span style="color:#f92672">.</span>renew_time <span style="color:#f92672">&lt;=</span> now:
+</span></span><span style="display:flex;"><span>            logger<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Generating a new token because the present time (</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">) is later than the renewal time (</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">)&#34;</span>,
+</span></span><span style="display:flex;"><span>                        now, self<span style="color:#f92672">.</span>renew_time)
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Calculate the next time we need to renew the token.</span>
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>renew_time <span style="color:#f92672">=</span> now <span style="color:#f92672">+</span> self<span style="color:#f92672">.</span>renewal_delay
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Prepare the fields for the payload.</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Generate the public key fingerprint for the issuer in the payload.</span>
+</span></span><span style="display:flex;"><span>            public_key_fp <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>calculate_public_key_fingerprint(self<span style="color:#f92672">.</span>private_key)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Create our payload</span>
+</span></span><span style="display:flex;"><span>            payload <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Set the issuer to the fully qualified username concatenated with the public key fingerprint.</span>
+</span></span><span style="display:flex;"><span>                ISSUER: self<span style="color:#f92672">.</span>qualified_username <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;.&#39;</span> <span style="color:#f92672">+</span> public_key_fp,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Set the subject to the fully qualified username.</span>
+</span></span><span style="display:flex;"><span>                SUBJECT: self<span style="color:#f92672">.</span>qualified_username,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Set the issue time to now.</span>
+</span></span><span style="display:flex;"><span>                ISSUE_TIME: now,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># Set the expiration time, based on the lifetime specified for this object.</span>
+</span></span><span style="display:flex;"><span>                EXPIRE_TIME: now <span style="color:#f92672">+</span> self<span style="color:#f92672">.</span>lifetime
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># Regenerate the actual token</span>
+</span></span><span style="display:flex;"><span>            token <span style="color:#f92672">=</span> jwt<span style="color:#f92672">.</span>encode(payload, key<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>private_key, algorithm<span style="color:#f92672">=</span>JWTGenerator<span style="color:#f92672">.</span>ALGORITHM)
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># If you are using a version of PyJWT prior to 2.0, jwt.encode returns a byte string, rather than a string.</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># If the token is a byte string, convert it to a string.</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> isinstance(token, bytes):
+</span></span><span style="display:flex;"><span>              token <span style="color:#f92672">=</span> token<span style="color:#f92672">.</span>decode(<span style="color:#e6db74">&#39;utf-8&#39;</span>)
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>token <span style="color:#f92672">=</span> token
+</span></span><span style="display:flex;"><span>            logger<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Generated a JWT with the following payload: </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span>, jwt<span style="color:#f92672">.</span>decode(self<span style="color:#f92672">.</span>token, key<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>private_key<span style="color:#f92672">.</span>public_key(), algorithms<span style="color:#f92672">=</span>[JWTGenerator<span style="color:#f92672">.</span>ALGORITHM]))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>token
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">calculate_public_key_fingerprint</span>(self, private_key: Text) <span style="color:#f92672">-&gt;</span> Text:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Given a private key in PEM format, return the public key fingerprint.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :param private_key: private key string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        :return: public key fingerprint
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Get the raw bytes of public key.</span>
+</span></span><span style="display:flex;"><span>        public_key_raw <span style="color:#f92672">=</span> private_key<span style="color:#f92672">.</span>public_key()<span style="color:#f92672">.</span>public_bytes(Encoding<span style="color:#f92672">.</span>DER, PublicFormat<span style="color:#f92672">.</span>SubjectPublicKeyInfo)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Get the sha256 hash of the raw bytes.</span>
+</span></span><span style="display:flex;"><span>        sha256hash <span style="color:#f92672">=</span> hashlib<span style="color:#f92672">.</span>sha256()
+</span></span><span style="display:flex;"><span>        sha256hash<span style="color:#f92672">.</span>update(public_key_raw)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Base64-encode the value and prepend the prefix &#39;SHA256:&#39;.</span>
+</span></span><span style="display:flex;"><span>        public_key_fp <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;SHA256:&#39;</span> <span style="color:#f92672">+</span> base64<span style="color:#f92672">.</span>b64encode(sha256hash<span style="color:#f92672">.</span>digest())<span style="color:#f92672">.</span>decode(<span style="color:#e6db74">&#39;utf-8&#39;</span>)
+</span></span><span style="display:flex;"><span>        logger<span style="color:#f92672">.</span>info(<span style="color:#e6db74">&#34;Public key fingerprint is </span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span>, public_key_fp)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> public_key_fp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    logging<span style="color:#f92672">.</span>basicConfig(stream<span style="color:#f92672">=</span>sys<span style="color:#f92672">.</span>stdout, level<span style="color:#f92672">=</span>logging<span style="color:#f92672">.</span>INFO)
+</span></span><span style="display:flex;"><span>    cli_parser <span style="color:#f92672">=</span> argparse<span style="color:#f92672">.</span>ArgumentParser()
+</span></span><span style="display:flex;"><span>    cli_parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#39;--account&#39;</span>, required<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, help<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;The account identifier (e.g. &#34;myorganization-myaccount&#34; for &#34;myorganization-myaccount.snowflakecomputing.com&#34;).&#39;</span>)
+</span></span><span style="display:flex;"><span>    cli_parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#39;--user&#39;</span>, required<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, help<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;The user name.&#39;</span>)
+</span></span><span style="display:flex;"><span>    cli_parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#39;--private_key_file_path&#39;</span>, required<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, help<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Path to the private key file used for signing the JWT.&#39;</span>)
+</span></span><span style="display:flex;"><span>    cli_parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#39;--lifetime&#39;</span>, type<span style="color:#f92672">=</span>int, default<span style="color:#f92672">=</span><span style="color:#ae81ff">59</span>, help<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;The number of minutes that the JWT should be valid for.&#39;</span>)
+</span></span><span style="display:flex;"><span>    cli_parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#39;--renewal_delay&#39;</span>, type<span style="color:#f92672">=</span>int, default<span style="color:#f92672">=</span><span style="color:#ae81ff">54</span>, help<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;The number of minutes before the JWT generator should produce a new JWT.&#39;</span>)
+</span></span><span style="display:flex;"><span>    args <span style="color:#f92672">=</span> cli_parser<span style="color:#f92672">.</span>parse_args()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    token <span style="color:#f92672">=</span> JWTGenerator(args<span style="color:#f92672">.</span>account, args<span style="color:#f92672">.</span>user, args<span style="color:#f92672">.</span>private_key_file_path, timedelta(minutes<span style="color:#f92672">=</span>args<span style="color:#f92672">.</span>lifetime), timedelta(minutes<span style="color:#f92672">=</span>args<span style="color:#f92672">.</span>renewal_delay))<span style="color:#f92672">.</span>get_token()
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#39;JWT:&#39;</span>)
+</span></span><span style="display:flex;"><span>    print(token)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div><p>引数にアカウント識別子やSnowflakeのユーザ、最初に作成した秘密鍵のパスを指定する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>python3 sql-api-generate-jwt.py --account<span style="color:#f92672">=</span>&lt;ACCOUNT名&gt; --user<span style="color:#f92672">=</span>sqlapiuser --private_key_file_path<span style="color:#f92672">=</span>/Users/jimazato/.ssh/snowflake_tf_snow_key.p8
+</span></span></code></pre></div><pre tabindex="0"><code>(base) jimazato@CJ2VQ9Y2M1 sqlapi % python3 sql-api-generate-jwt.py --account=&lt;ACCOUNT名&gt; --user=sqlapiuser --private_key_file_path=/Users/jimazato/.ssh/snowflake_tf_snow_key.p8
+
+INFO:__main__:Creating JWTGenerator with arguments
+            account : &lt;ACCOUNT名&gt;, user : sqlapiuser, lifetime : 0:59:00, renewal_delay : 0:54:00
+INFO:__main__:Generating a new token because the present time (2022-12-28 07:00:24.553334+00:00) is later than the renewal time (2022-12-28 07:00:24.508806+00:00)
+INFO:__main__:Public key fingerprint is SHA256:maG2a3wOxVnX0cGmhc5SRmWpRzzK5JuNjUm98JRGa1k=
+INFO:__main__:Generated a JWT with the following payload: {&#39;iss&#39;: &#39;&lt;ACCOUNT名&gt;.sqlapiuser.SHA256:maG2a3wOxVnX0cGmhc5SRmWpRzzK5JuNjUm98JRGa1k=&#39;, &#39;sub&#39;: &#39;&lt;ACCOUNT名&gt;.sqlapiuser&#39;, &#39;iat&#39;: 1672210824, &#39;exp&#39;: 1672214364}
+JWT:
+eyJ0 (省略) ixwFE-Ww
+</code></pre><p>Curlでリクエスト発行。JWTのところで出力された文字列を<code>Authorization: Bearer</code>に指定する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>curl -i -X POST <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -H <span style="color:#e6db74">&#34;Authorization: Bearer &lt;ここにJWTの値を貼り付けて実行&gt;&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -H <span style="color:#e6db74">&#34;Accept: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -H <span style="color:#e6db74">&#34;User-Agent: myApplicationName/1.0&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -H <span style="color:#e6db74">&#34;X-Snowflake-Authorization-Token-Type: KEYPAIR_JWT&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -d <span style="color:#e6db74">&#34;{\&#34;statement\&#34;: \&#34;SELECT CURRENT_REGION()\&#34;}&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    <span style="color:#e6db74">&#34;https://&lt;ACCOUNT名&gt;.snowflakecomputing.com/api/v2/statements&#34;</span>
+</span></span></code></pre></div><h4 id="レスポンス結果">レスポンス結果</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>HTTP/1.1 <span style="color:#ae81ff">200</span> OK
+</span></span><span style="display:flex;"><span>Content-Type: application/json
+</span></span><span style="display:flex;"><span>Date: Wed, <span style="color:#ae81ff">28</span> Dec <span style="color:#ae81ff">2022</span> 07:15:28 GMT
+</span></span><span style="display:flex;"><span>Expect-CT: enforce, max-age<span style="color:#f92672">=</span><span style="color:#ae81ff">3600</span>
+</span></span><span style="display:flex;"><span>Link: &lt;/api/v2/statements/01a943f3-0000-a91b-0000-a6f10012c07a?requestId<span style="color:#f92672">=</span>9c8671e3-9d0a-47a3-998e-9f01472d6435&amp;partition<span style="color:#f92672">=</span>0&gt;; rel<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;first&#34;</span>,&lt;/api/v2/statements/01a943f3-0000-a91b-0000-a6f10012c07a?requestId<span style="color:#f92672">=</span>a7facb2c-4fc3-4503-9d08-bab3ed427c27&amp;partition<span style="color:#f92672">=</span>0&gt;; rel<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;last&#34;</span>
+</span></span><span style="display:flex;"><span>Strict-Transport-Security: max-age<span style="color:#f92672">=</span><span style="color:#ae81ff">31536000</span>
+</span></span><span style="display:flex;"><span>Vary: Accept-Encoding, User-Agent
+</span></span><span style="display:flex;"><span>X-Content-Type-Options: nosniff
+</span></span><span style="display:flex;"><span>X-Country: Japan
+</span></span><span style="display:flex;"><span>X-Frame-Options: deny
+</span></span><span style="display:flex;"><span>X-XSS-Protection: : 1; mode<span style="color:#f92672">=</span>block
+</span></span><span style="display:flex;"><span>Content-Length: <span style="color:#ae81ff">891</span>
+</span></span><span style="display:flex;"><span>Connection: keep-alive
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;resultSetMetaData&#34;</span> : <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;numRows&#34;</span> : 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;format&#34;</span> : <span style="color:#e6db74">&#34;jsonv2&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;partitionInfo&#34;</span> : <span style="color:#f92672">[</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;rowCount&#34;</span> : 1,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;uncompressedSize&#34;</span> : <span style="color:#ae81ff">29</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span> <span style="color:#f92672">]</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;rowType&#34;</span> : <span style="color:#f92672">[</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;name&#34;</span> : <span style="color:#e6db74">&#34;CURRENT_REGION()&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;database&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;schema&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;table&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;byteLength&#34;</span> : 16777216,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;type&#34;</span> : <span style="color:#e6db74">&#34;text&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;scale&#34;</span> : null,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;precision&#34;</span> : null,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;nullable&#34;</span> : true,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;collation&#34;</span> : null,
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;length&#34;</span> : <span style="color:#ae81ff">16777216</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span> <span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;data&#34;</span> : <span style="color:#f92672">[</span> <span style="color:#f92672">[</span><span style="color:#e6db74">&#34;PUBLIC.AWS_AP_NORTHEAST_1&#34;</span><span style="color:#f92672">]</span> <span style="color:#f92672">]</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;code&#34;</span> : <span style="color:#e6db74">&#34;090001&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;statementStatusUrl&#34;</span> : <span style="color:#e6db74">&#34;/api/v2/statements/01a943f3-0000-a91b-0000-a6f10012c07a?requestId=10c8547f-3a93-438a-88f1-94788ec3755e&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;requestId&#34;</span> : <span style="color:#e6db74">&#34;10c8547f-3a93-438a-88f1-94788ec3755e&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;sqlState&#34;</span> : <span style="color:#e6db74">&#34;00000&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;statementHandle&#34;</span> : <span style="color:#e6db74">&#34;01a943f3-0000-a91b-0000-a6f10012c07a&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;message&#34;</span> : <span style="color:#e6db74">&#34;Statement executed successfully.&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;createdOn&#34;</span> : <span style="color:#ae81ff">1672211728759</span>
+</span></span></code></pre></div><h3 id="参考">参考</h3>
+<ul>
+<li><a href="https://docs.snowflake.com/ja/developer-guide/sql-api/index.html">Snowflake SQL API — Snowflake Documentation</a></li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/snowflake-excel-sql-execute-macro-button/">ExcelからSnowflakeへSQLを実行するマクロボタンを作成する</a></li>
+  
+  <li><a href="/snowflake-m1-mac-excel-connect/">M1 MacからSnowflakeへExcelでODBC接続する</a></li>
+  
+  <li><a href="/snowflake-anaconda-snowflake-conector-python-install/">Anaconda環境にsnowflake-connector-pythonをインストール</a></li>
+  
+  <li><a href="/snowflake-extract-name-position-function/">Snowflakeで名字と名前を抽出する(POSITION関数)</a></li>
+  
+  <li><a href="/snowflake-snowsql-install-howto/">snowsqlのインストール</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/snowflake/">#Snowflake</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

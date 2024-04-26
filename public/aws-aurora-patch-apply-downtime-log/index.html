@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>Aurora PostgreSQLにパッチを適用した際のダウンタイムログ | my opinion is my own</title>
+<meta name="title" content="Aurora PostgreSQLにパッチを適用した際のダウンタイムログ" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-aurora-patch-apply-downtime-log/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Aurora PostgreSQLにパッチを適用した際のダウンタイムログ">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-07-20T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-07-20T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="Aurora PostgreSQLにパッチを適用した際のダウンタイムログ">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Aurora PostgreSQLにパッチを適用した際のダウンタイムログ">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-07-20T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-07-20T00:00:00+00:00">
+  <meta itemprop="wordCount" content="770">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Aurora PostgreSQLにパッチを適用した際のダウンタイムログ</h1>
+
+<p>
+  <i>
+    <time datetime='2022-07-20' pubdate>
+      2022-07-20
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>パッチの中身に依存するので参考までに。この時のパッチ適用の実質的なダウンタイムは約7秒だった。</p>
+<h4 id="スクリプト">スクリプト</h4>
+<pre tabindex="0"><code>import psycopg2
+import psycopg2.extras
+import time
+import datetime
+
+for i in range(20000):
+  try:
+    dt_now = datetime.datetime.now()
+    conn = psycopg2.connect(&#34;host=auroraserverlessv2.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=postgres&#34;)
+    cur = conn.cursor()
+    cur.execute(&#34;insert into zdptest (time) values (current_timestamp)&#34;)
+    print(dt_now)
+    time.sleep(1)
+    conn.commit()
+    cur.close()
+    conn.close()
+  except:
+    pass
+</code></pre><h4 id="ログ">ログ</h4>
+<pre tabindex="0"><code>2022-06-28 13:52:53 UTC::@:[31196]:LOG:  starting PostgreSQL 13.6 on aarch64-unknown-linux-gnu, compiled by aarch64-unknown-linux-gnu-gcc (GCC) 7.4.0, 64-bit
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv4 address &#34;0.0.0.0&#34;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on IPv6 address &#34;::&#34;, port 5432
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  listening on Unix socket &#34;/tmp/.s.PGSQL.5432&#34;
+2022-06-28 13:52:53 UTC::@:[31196]:LOG:  Waiting for runtime initialization complete...
+2022-06-28 13:52:54 UTC:[local]:rdsadmin@rdsadmin:[31354]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC::@:[31352]:LOG:  database system was interrupted; last known up at 2022-06-28 13:52:19 UTC
+2022-06-28 13:52:54 UTC:10.0.1.31(34296):postgres@postgres:[31353]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34298):postgres@postgres:[31368]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34300):postgres@postgres:[31382]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34302):postgres@postgres:[31386]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34304):postgres@postgres:[31402]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34306):postgres@postgres:[31440]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34308):postgres@postgres:[31448]:FATAL:  the database system is starting up
+2022-06-28 13:52:54 UTC:10.0.1.31(34310):postgres@postgres:[31457]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34312):postgres@postgres:[31467]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC:10.0.1.31(34314):postgres@postgres:[31478]:FATAL:  the database system is starting up
+2022-06-28 13:52:55 UTC::@:[31196]:LOG:  database system is ready to accept connections
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &#34;unix_socket_permissions&#34; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &#34;shared_buffers&#34; cannot be changed without restarting the server
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  parameter &#34;apg_critical_insights_enabled&#34; changed to &#34;on&#34;
+2022-06-28 13:55:10 UTC::@:[31196]:LOG:  configuration file &#34;/rdsdbdata/config/postgresql.conf&#34; contains errors; unaffected changes were applied
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31486]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31490]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31262]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31489]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31226]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31485]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31487]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31492]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC::@:[31488]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:10 UTC:10.0.1.31(34600):postgres@postgres:[11434]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  received SIGHUP, reloading configuration files
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &#34;unix_socket_permissions&#34; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &#34;shared_buffers&#34; cannot be changed without restarting the server
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &#34;rds.enable_buffer_pin_conflict_forking&#34; changed to &#34;on&#34;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  parameter &#34;rds.apg_space_reclaim_thread_enabled&#34; changed to &#34;on&#34;
+2022-06-28 13:55:30 UTC::@:[31196]:LOG:  configuration file &#34;/rdsdbdata/config/postgresql.conf&#34; contains errors; unaffected changes were applied
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31262]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31226]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31487]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31488]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31492]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31489]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31485]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31486]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC::@:[31490]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &#34;/rdsdbdata/config/recovery.conf&#34;
+2022-06-28 13:55:30 UTC:10.0.1.31(34640):postgres@postgres:[12957]:LOG:  skipping missing configuration file &#34;/rdsdbdata/db/postgresql.auto.conf&#34;
+</code></pre><h4 id="テーブル">テーブル</h4>
+<pre tabindex="0"><code> 321 | 2022-06-28 13:52:39.452956
+ 322 | 2022-06-28 13:52:40.483377
+ 323 | 2022-06-28 13:52:41.516449
+ 324 | 2022-06-28 13:52:42.54735
+ 325 | 2022-06-28 13:52:43.579139
+ 326 | 2022-06-28 13:52:44.610785
+ 327 | 2022-06-28 13:52:45.642509
+ 328 | 2022-06-28 13:52:46.673966
+ 329 | 2022-06-28 13:52:47.705797
+ 330 | 2022-06-28 13:52:48.738429 ★←約10秒弱書き込めていない
+ 331 | 2022-06-28 13:52:55.153238
+ 332 | 2022-06-28 13:52:56.194006
+ 333 | 2022-06-28 13:52:57.228373
+ 334 | 2022-06-28 13:52:58.263974
+ 335 | 2022-06-28 13:52:59.317474
+ 336 | 2022-06-28 13:53:00.347215
+ 337 | 2022-06-28 13:53:01.379734
+ 338 | 2022-06-28 13:53:02.417656
+ 339 | 2022-06-28 13:53:03.451107
+ 340 | 2022-06-28 13:53:04.487402
+ 341 | 2022-06-28 13:53:05.522603
+ 342 | 2022-06-28 13:53:06.554656
+</code></pre><h4 id="auroraクラスタ側のイベント情報">Auroraクラスタ側のイベント情報</h4>
+<p><img src="image-20220628230154200.png" alt="image-20220628230154200"></p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-postgresql-postgis/">Aurora PostgreSQLでPostGIS(位置情報）を使用する</a></li>
+  
+  <li><a href="/aws-aurora-postgres-pgadmin4-bastin-connect/">pgAdmin4からAurora PostgreSQLへ踏み台サーバのポートフォワード経由で接続する</a></li>
+  
+  <li><a href="/aws-aurora-support-eol/">Auroraの各バージョンのサポート期間</a></li>
+  
+  <li><a href="/aws-aurora-postgresql-audit/">Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）</a></li>
+  
+  <li><a href="/aws-tokyo-to-osaka-network-outbound-cost/">AWSで東京リージョンから大阪リージョンへのリージョン間のアウトバウンド通信コストを確認</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/aurora/">#Aurora</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

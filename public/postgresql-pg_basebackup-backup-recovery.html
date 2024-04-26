@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う | my opinion is my own</title>
+<meta name="title" content="PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="http://localhost:1313/postgresql-pg_basebackup-backup-recovery.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-04-12T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-04-12T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-04-12T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-04-12T00:00:00+00:00">
+  <meta itemprop="wordCount" content="404">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLのpg_basebackupを使用してバックアップ／リカバリを行う</h1>
+
+<p>
+  <i>
+    <time datetime='2020-04-12' pubdate>
+      2020-04-12
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>pg_basebackupを使ったPostgreSQLの基本的なバックアップ/リカバリを実施する。</p>
+<h3 id="バックアップ">バックアップ</h3>
+<h4 id="バックアップディレクトリの作成">バックアップディレクトリの作成</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>mkdir $HOME/pg_basebackup_dir
+</span></span></code></pre></div><h4 id="環境変数の設定">環境変数の設定</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>export BACKUP_DIR<span style="color:#f92672">=</span>/var/lib/pgsql/pg_basebackup_dir
+</span></span></code></pre></div><h4 id="pg_basebackupでのバックアップ">pg_basebackupでのバックアップ</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pg_basebackup -D $BACKUP_DIR -F t -z
+</span></span><span style="display:flex;"><span>ls -l $BACKUP_DIR
+</span></span></code></pre></div><p>今回は フォーマットでtarファイルを指定してしており、かつtarファイル出力のデフォルトの圧縮レベルによるgzip圧縮を有効にしている。</p>
+<blockquote>
+<p>pg_basebackup <a href="https://www.postgresql.jp/document/10/html/app-pgbasebackup.html">https://www.postgresql.jp/document/10/html/app-pgbasebackup.html</a></p>
+</blockquote>
+<h3 id="データ損失">データ損失</h3>
+<h4 id="db停止">DB停止</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pg_ctl stop
+</span></span></code></pre></div><h4 id="データ削除">データ削除</h4>
+<p>物理的にデータを損失させる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>rm -r /var/lib/pgsql/10/data/*
+</span></span></code></pre></div><h3 id="リカバリ">リカバリ</h3>
+<p>ここからがリカバリ。</p>
+<h4 id="バックアップデータの展開">バックアップデータの展開</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /var/lib/pgsql/10/data
+</span></span><span style="display:flex;"><span>tar xvfz $BACKUP_DIR/base.tar.gz
+</span></span></code></pre></div><h4 id="pg_walの削除">pg_walの削除</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>rm -rf /var/lib/pgsql/10/data/pg_wal/*
+</span></span></code></pre></div><h4 id="バックアップしたwalファイルの解凍">バックアップしたwalファイルの解凍</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /var/lib/pgsql/10/data/pg_wal
+</span></span><span style="display:flex;"><span>tar xvfz $BACKUP_DIR/pg_wal.tar.gz
+</span></span></code></pre></div><h4 id="バックアップしたwalファイルの解凍-1">バックアップしたwalファイルの解凍</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /var/lib/pgsql/10/data/pg_wal
+</span></span><span style="display:flex;"><span>tar xvfz $BACKUP_DIR/pg_wal.tar.gz
+</span></span></code></pre></div><h4 id="recoveryconfファイルの作成">recovery.confファイルの作成</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /var/lib/pgsql/10/data/
+</span></span><span style="display:flex;"><span>vi /var/lib/pgsql/10/data/recovery.conf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>restore_command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;cp /var/lib/pgsql/10/data/pg_wal/%f %p&#39;</span>
+</span></span></code></pre></div><p>デフォルトではリカバリ可能な最新時点までリカバリされるが、PITRなど時間を明示的に指定したい場合は下記マニュアルを参考にしつつ<code>recovery_target_name</code>や<code>recovery_target_lsn</code>を設定する。</p>
+<blockquote>
+<p>27.2. リカバリ対象の設定 <a href="https://www.postgresql.jp/document/10/html/recovery-target-settings.html">https://www.postgresql.jp/document/10/html/recovery-target-settings.html</a></p>
+</blockquote>
+<h4 id="db起動">DB起動</h4>
+<p>通常のコマンドと同様にスタートする。この時recovery.confを参照してリカバリを行う。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pg_ctl start
+</span></span></code></pre></div><h4 id="リカバリ時のログ出力">リカバリ時のログ出力</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  database system was interrupted; last known up at 2020-03-04 13:31:23 UTC
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  starting archive recovery
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> LOG:  restored log file <span style="color:#e6db74">&#34;00000002.history&#34;</span> from archive
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>4<span style="color:#f92672">]</span> LOG:  restored log file <span style="color:#e6db74">&#34;000000020000000000000050&#34;</span> from archive
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>5<span style="color:#f92672">]</span> LOG:  redo starts at 0/50000028
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>6<span style="color:#f92672">]</span> LOG:  consistent recovery state reached at 0/500000F8
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18050<span style="color:#f92672">[</span>6<span style="color:#f92672">]</span> LOG:  database system is ready to accept read only connections
+</span></span><span style="display:flex;"><span>cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/000000020000000000000051’: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>7<span style="color:#f92672">]</span> LOG:  redo <span style="color:#66d9ef">done</span> at 0/500000F8
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>8<span style="color:#f92672">]</span> LOG:  restored log file <span style="color:#e6db74">&#34;000000020000000000000050&#34;</span> from archive
+</span></span><span style="display:flex;"><span>cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/00000003.history’: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:00 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>9<span style="color:#f92672">]</span> LOG:  selected new timeline ID: <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>10<span style="color:#f92672">]</span> LOG:  archive recovery complete
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18052<span style="color:#f92672">[</span>11<span style="color:#f92672">]</span> LOG:  restored log file <span style="color:#e6db74">&#34;00000002.history&#34;</span> from archive
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18055<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  checkpoint starting: end-of-recovery immediate wait
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18055<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> LOG:  checkpoint complete: wrote <span style="color:#ae81ff">0</span> buffers <span style="color:#f92672">(</span>0.0%<span style="color:#f92672">)</span>; <span style="color:#ae81ff">0</span> WAL file<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> added, <span style="color:#ae81ff">0</span> removed, <span style="color:#ae81ff">0</span> recycled; write<span style="color:#f92672">=</span>0.000 s, sync<span style="color:#f92672">=</span>0.000 s, total<span style="color:#f92672">=</span>0.004 s; sync files<span style="color:#f92672">=</span>0, longest<span style="color:#f92672">=</span>0.000 s, average<span style="color:#f92672">=</span>0.000 s; distance<span style="color:#f92672">=</span><span style="color:#ae81ff">16384</span> kB, estimate<span style="color:#f92672">=</span><span style="color:#ae81ff">16384</span> kB
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18050<span style="color:#f92672">[</span>7<span style="color:#f92672">]</span> LOG:  database system is ready to accept connections
+</span></span><span style="display:flex;"><span>cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> LOG:  archive command failed with exit code <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:01 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+</span></span><span style="display:flex;"><span>cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:02 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> LOG:  archive command failed with exit code <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:02 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>4<span style="color:#f92672">]</span> DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+</span></span><span style="display:flex;"><span>cp: cannot create regular file ‘/var/lib/pgsql/10/data/pg_wal/archive/00000003.history’: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:03 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>5<span style="color:#f92672">]</span> LOG:  archive command failed with exit code <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:03 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>6<span style="color:#f92672">]</span> DETAIL:  The failed archive command was: cp pg_wal/00000003.history /var/lib/pgsql/10/data/pg_wal/archive/00000003.history
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>2020-03-04 13:34:03 UTC<span style="color:#f92672">]</span>  18064<span style="color:#f92672">[</span>7<span style="color:#f92672">]</span> WARNING:  archiving write-ahead log file <span style="color:#e6db74">&#34;00000003.history&#34;</span> failed too many times, will try again later
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-aozora-date-insert.html">青空文庫のテキストデータをPostgreSQLに投入する</a></li>
+  
+  <li><a href="/postgresql-gdb-postgresql-install.html">Debug対応のPostgreSQL10をソースコードからビルドしてgdbを使用する</a></li>
+  
+  <li><a href="/postgresql-function-describe-get.html">PostgreSQLでfunctionの定義を確認する方法</a></li>
+  
+  <li><a href="/postgresql-pg-stat-statements-insuffient-priviledge/">PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-file-get.html">RDS/Auroraのログファイルをawscliから取得・確認する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

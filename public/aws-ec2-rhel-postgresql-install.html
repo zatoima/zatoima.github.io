@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール | my opinion is my own</title>
+<meta name="title" content="EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,EC2,PostgreSQL,RHEL," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-ec2-rhel-postgresql-install.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-05-18T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-05-18T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="EC2">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="RHEL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-05-18T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-05-18T00:00:00+00:00">
+  <meta itemprop="wordCount" content="632">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,EC2,PostgreSQL,RHEL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11と12をyumでインストール</h1>
+
+<p>
+  <i>
+    <time datetime='2020-05-18' pubdate>
+      2020-05-18
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="はじめに">はじめに</h3>
+<p>EC2上のRHEL 8 (Red Hat Enterprise Linux)にPostgreSQL 11と12をyumでインストールしてみる。２つのバージョンを入れるのは後続の記事で整理予定のpg_upgradeの拡張機能を使用した検証をやってみたいから。Amazon Linux2にPostgreSQLをyumでインストールする方法はこちらをどうぞ。</p>
+<blockquote>
+<p>EC2(Amazon Linux2)にPostgreSQLをインストールする | my opinion is my own <a href="https://zatoima.github.io/postgresql-ec2-insatll.html">https://zatoima.github.io/postgresql-ec2-insatll.html</a></p>
+</blockquote>
+<p>Red hatのバージョンはこちら</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ cat /etc/redhat-release 
+Red Hat Enterprise Linux release 8.2 (Ootpa)
+</code></pre><h3 id="リポジトリの追加">リポジトリの追加</h3>
+<pre tabindex="0"><code>sudo yum -y localinstall https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+</code></pre><blockquote>
+<p>参考：PostgreSQL RPM Repository (with Yum) <a href="https://yum.postgresql.org/repopackages.php">https://yum.postgresql.org/repopackages.php</a></p>
+</blockquote>
+<h3 id="epelリポジトリの追加">EPELリポジトリの追加</h3>
+<blockquote>
+<p>PostgreSQL RPM Repository (with Yum) <a href="https://yum.postgresql.org/repopackages.php">https://yum.postgresql.org/repopackages.php</a></p>
+<p>Please note that PostgreSQL YUM repository depends on EPEL repository for some packages. RHEL/CentOS/, etc. users should install EPEL repo RPM along with PGDG repo RPMs to satisfy dependencies.</p>
+</blockquote>
+<p>上記の記載の通り、EPELリポジトリのいくつかのパッケージに依存しているため、EPELリポジトリを追加する必要がある模様。（特にインストールせずともインストール自体は出来た。）</p>
+<p><a href="https://fedoraproject.org/wiki/EPEL/ja">EPEL</a>（Extra Packages for Enterprise Linux）とは、Red Hat Enterprise Linux（RHEL）向けの「追加パッケージ」を提供するリポジトリ。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+</span></span><span style="display:flex;"><span>sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+</span></span></code></pre></div><p>インストール実施後、epelリポジトリが使用可能になる。</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ yum repolist
+repo id                                                                     repo name                                                                                                 status
+epel/x86_64                                                                 Extra Packages for Enterprise Linux 7 - x86_64                                                            13,273
+</code></pre><h3 id="インストール可能なバージョンの確認">インストール可能なバージョンの確認</h3>
+<p>postgresql11と12の最新版の11.8と12.3が使用可能。RHEL7用のリポジトリに入っているPostgreSQLのパッケージ名と微妙に違うような、、、</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ sudo yum info postgresql11-server
+Last metadata expiration check: 1:06:25 ago on Sat 16 May 2020 07:30:17 PM JST.
+Installed Packages
+Name         : postgresql11-server
+Version      : 11.8
+Release      : 1PGDG.rhel8
+Architecture : x86_64
+Size         : 19 M
+Source       : postgresql11-11.8-1PGDG.rhel8.src.rpm
+Repository   : @System
+From repo    : pgdg11
+Summary      : The programs needed to create and run a PostgreSQL server
+URL          : https://www.postgresql.org/
+License      : PostgreSQL
+Description  : PostgreSQL is an advanced Object-Relational database management system (DBMS).
+             : The postgresql11-server package contains the programs needed to create
+             : and run a PostgreSQL server, which will in turn allow you to create
+             : and maintain PostgreSQL databases.
+[ec2-user@pgsql ~]$ sudo yum info postgresql12-server
+Last metadata expiration check: 1:06:37 ago on Sat 16 May 2020 07:30:17 PM JST.
+Installed Packages
+Name         : postgresql12-server
+Version      : 12.3
+Release      : 1PGDG.rhel8
+Architecture : x86_64
+Size         : 20 M
+Source       : postgresql12-12.3-1PGDG.rhel8.src.rpm
+Repository   : @System
+From repo    : pgdg12
+Summary      : The programs needed to create and run a PostgreSQL server
+URL          : https://www.postgresql.org/
+License      : PostgreSQL
+Description  : PostgreSQL is an advanced Object-Relational database management system (DBMS).
+             : The postgresql12-server package contains the programs needed to create
+             : and run a PostgreSQL server, which will in turn allow you to create
+             : and maintain PostgreSQL databases.
+</code></pre><h3 id="postgresql11のインストール">PostgreSQL11のインストール</h3>
+<p>PostgreSQL11をインストールしてみる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum -y install postgresql11-server
+</span></span></code></pre></div><p>バージョンを確認。</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ /usr/pgsql-11/bin/postgres --version
+postgres (PostgreSQL) 11.8
+</code></pre><p>OS側にpostgresユーザが作成される。</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ cat /etc/passwd
+～中略～
+ec2-user:x:1000:1000:Cloud User:/home/ec2-user:/bin/bash
+postgres:x:26:26:PostgreSQL Server:/var/lib/pgsql:/bin/bash
+</code></pre><p>postgresql11-contribとpostgresql11-develも合わせてインストールする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@pgsql ~<span style="color:#f92672">]</span>$ sudo yum -y install postgresql11-contrib.x86_64 postgresql11-devel.x86_64
+</span></span></code></pre></div><h3 id="postgresql12のインストール">PostgreSQL12のインストール</h3>
+<p>PostgreSQL12をインストールする。（※手順はPostgreSQL11とほぼ一緒）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo yum -y install postgresql12-server
+</span></span></code></pre></div><p>バージョンを確認してみる。</p>
+<pre tabindex="0"><code>[ec2-user@pgsql ~]$ /usr/pgsql-12/bin/postgres --version
+postgres (PostgreSQL) 12.3
+</code></pre><p>postgresql11-contribとpostgresql11-develも合わせてインストールする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@pgsql ~<span style="color:#f92672">]</span>$ sudo yum -y install postgresql12-contrib.x86_64 postgresql12-devel.x86_64
+</span></span></code></pre></div><h3 id="db初期化postgresqlの起動停止接続確認等">DB初期化、PostgreSQLの起動停止、接続確認等</h3>
+<p>DBの初期化を行う。rootで実施。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>root@pgsql ~<span style="color:#f92672">]</span><span style="color:#75715e"># /usr/pgsql-11/bin/postgresql-11-setup initdb</span>
+</span></span><span style="display:flex;"><span>Initializing database ... OK
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>root@pgsql ~<span style="color:#f92672">]</span><span style="color:#75715e"># /usr/pgsql-12/bin/postgresql-12-setup initdb</span>
+</span></span><span style="display:flex;"><span>Initializing database ... OK
+</span></span></code></pre></div><p>自動起動設定を行う</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>root@pgsql ~<span style="color:#f92672">]</span><span style="color:#75715e"># systemctl enable postgresql-11</span>
+</span></span><span style="display:flex;"><span>Created symlink from /etc/systemd/system/multi-user.target.wants/postgresql-11.service to /usr/lib/systemd/system/postgresql-12.service.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>root@pgsql ~<span style="color:#f92672">]</span><span style="color:#75715e"># systemctl enable postgresql-12</span>
+</span></span><span style="display:flex;"><span>Created symlink from /etc/systemd/system/multi-user.target.wants/postgresql-12.service to /usr/lib/systemd/system/postgresql-12.service.
+</span></span></code></pre></div><p>PostgreSQL11と12で起動ポートが重複するため、PostgreSQL12用のpostgresql.confを修正して一方の起動ポートを変更する</p>
+<pre tabindex="0"><code>sed -i &#34;s/#port = 5432/port = 5433/g&#34; &#34;/var/lib/pgsql/12/data/postgresql.conf&#34;
+</code></pre><p>問題なくPostgreSQLの起動、停止、再起動が出来るか確認する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo systemctl start postgresql-11.service
+</span></span><span style="display:flex;"><span>sudo systemctl stop postgresql-11.service
+</span></span><span style="display:flex;"><span>sudo systemctl restart postgresql-11.service
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sudo systemctl start postgresql-12.service
+</span></span><span style="display:flex;"><span>sudo systemctl stop postgresql-12.service
+</span></span><span style="display:flex;"><span>sudo systemctl restart postgresql-12.service
+</span></span></code></pre></div><p>環境変数を用意</p>
+<pre tabindex="0"><code>vi .pgsql11_env
+
+--------------
+export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/pgsql-11/bin
+[ -f /etc/profile ] &amp;&amp; source /etc/profile
+PGDATA=/var/lib/pgsql/11/data
+export PGDATA
+
+export PGPORT=5432
+
+# If you want to customize your settings,
+# Use the file below. This is not overridden
+# by the RPMS.
+[ -f /var/lib/pgsql/.pgsql_profile ] &amp;&amp; source /var/lib/pgsql/.pgsql_profile
+--------------
+</code></pre><pre tabindex="0"><code>vi .pgsql12_env
+
+--------------
+export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/pgsql-12/bin
+[ -f /etc/profile ] &amp;&amp; source /etc/profile
+PGDATA=/var/lib/pgsql/12/data
+export PGDATA
+
+export PGPORT=5433
+
+# If you want to customize your settings,
+# Use the file below. This is not overridden
+# by the RPMS.
+[ -f /var/lib/pgsql/.pgsql_profile ] &amp;&amp; source /var/lib/pgsql/.pgsql_profile
+--------------
+</code></pre><p>接続確認</p>
+<pre tabindex="0"><code>[postgres@pgsql ~]$ . .pgsql11_env 
+[postgres@pgsql ~]$ 
+[postgres@pgsql ~]$ psql
+psql (12.3, server 11.8)
+Type &#34;help&#34; for help.
+
+postgres=# select version();
+                                                version                                     
+            
+--------------------------------------------------------------------------------------------
+------------
+ PostgreSQL 11.8 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 8.3.1 20191121 (Red Hat 8.3.1
+-5), 64-bit
+(1 row)
+[postgres@pgsql ~]$ . .pgsql12_env 
+[postgres@pgsql ~]$ psql
+psql (12.3)
+Type &#34;help&#34; for help.
+
+postgres=# select version();
+                                                version                                     
+            
+--------------------------------------------------------------------------------------------
+------------
+ PostgreSQL 12.3 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 8.3.1 20191121 (Red Hat 8.3.1
+-5), 64-bit
+(1 row)
+</code></pre><p>次はこの環境を使ってpg_upgradeの動作確認検証を行う予定。</p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ec2-postgresql-pgcli-install-howto.html">EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</a></li>
+  
+  <li><a href="/postgresql-ec2-insatll.html">EC2(Amazon Linux2)にPostgreSQLをインストールする</a></li>
+  
+  <li><a href="/aws-ec2-psql-install.html">EC2上からpsqlでAurora(PostgreSQL)に接続するまで</a></li>
+  
+  <li><a href="/postgresql-aozora-bunko-data-import.html">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li>
+  
+  <li><a href="/aws-aurora-replica-master-check.html">Aurora PostgreSQL でリードレプリカかプライマリか見分ける方法</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/ec2/">#EC2</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="http://localhost:1313/blog/rhel/">#RHEL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>S3(外部ステージ)からSnowflakeにデータロードする | my opinion is my own</title>
+<meta name="title" content="S3(外部ステージ)からSnowflakeにデータロードする" />
+<meta name="description" content="" />
+<meta name="keywords" content="snowflake," />
+
+
+<meta property="og:url" content="http://localhost:1313/snowflake-dataload-from-s3-to-snowflake/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="S3(外部ステージ)からSnowflakeにデータロードする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-08-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-08-29T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="S3(外部ステージ)からSnowflakeにデータロードする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="S3(外部ステージ)からSnowflakeにデータロードする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-08-29T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-08-29T00:00:00+00:00">
+  <meta itemprop="wordCount" content="588">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Snowflake">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>S3(外部ステージ)からSnowflakeにデータロードする</h1>
+
+<p>
+  <i>
+    <time datetime='2022-08-29' pubdate>
+      2022-08-29
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>S3(外部ステージ)からSnowflakeにデータロードしてみる。</p>
+<h3 id="iamポリシーの作成">IAMポリシーの作成</h3>
+<p><code>sf_policy</code>として作成</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;Version&#34;</span>: <span style="color:#e6db74">&#34;2012-10-17&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;Statement&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Effect&#34;</span>: <span style="color:#e6db74">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Action&#34;</span>: [
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:PutObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:GetObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:GetObjectVersion&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:DeleteObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:DeleteObjectVersion&#34;</span>
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Resource&#34;</span>: <span style="color:#e6db74">&#34;arn:aws:s3:::snowflake-bucket-work/*&#34;</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Effect&#34;</span>: <span style="color:#e6db74">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Action&#34;</span>: [
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:ListBucket&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;s3:GetBucketLocation&#34;</span>
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;Resource&#34;</span>: <span style="color:#e6db74">&#34;arn:aws:s3:::snowflake-bucket-work&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="iamロールの作成">IAMロールの作成</h3>
+<p><code>sf_role</code>として作成</p>
+<ul>
+<li>AWSアカウントを選択</li>
+<li>別のAWSアカウントを選択して自分の AWS アカウントID を一時的に入力
+<ul>
+<li>なお、後で信頼関係を変更し、Snowflakeへのアクセスを許可する</li>
+</ul>
+</li>
+<li>&ldquo;外部IDを要求する&quot;をクリックしてダミーのIDを入力しておく
+<ul>
+<li>後で信頼関係を変更し、Snowflakeステージの外部 ID を指定します。AWS リソース（つまり、S3）へのアクセスをサードパーティ（つまり、Snowflake）に対して許可するには、外部 ID が必要</li>
+</ul>
+</li>
+<li>上記で作成した<code>sf_policy</code>をアタッチする</li>
+</ul>
+<p><img src="image-20220824142339311.png" alt="image-20220824142339311"></p>
+<p><img src="image-20220824142551527.png" alt="image-20220824142551527"></p>
+<h3 id="snowflake側でクラウドストレージ統合を作成">Snowflake側でクラウドストレージ統合を作成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">STORAGE</span> INTEGRATION snowflake_and_s3_integration
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=</span> EXTERNAL_STAGE
+</span></span><span style="display:flex;"><span>  STORAGE_PROVIDER <span style="color:#f92672">=</span> S3
+</span></span><span style="display:flex;"><span>  ENABLED <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>
+</span></span><span style="display:flex;"><span>  STORAGE_AWS_ROLE_ARN <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;arn:aws:iam::&lt;AWSアカウント&gt;:role/sf_role&#39;</span>
+</span></span><span style="display:flex;"><span>  STORAGE_ALLOWED_LOCATIONS <span style="color:#f92672">=</span> (<span style="color:#e6db74">&#39;s3://snowflake-bucket-work/&#39;</span>)
+</span></span><span style="display:flex;"><span>;
+</span></span></code></pre></div><p>※本コマンドを実行できるのはアカウント管理者（ ACCOUNTADMIN ロールを持つユーザー）またはグローバル CREATE INTEGRATION 権限を持つロールのみ</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">STORAGE</span> INTEGRATION snowflake_and_s3_integration
+</span></span><span style="display:flex;"><span>                                   <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=</span> EXTERNAL_STAGE
+</span></span><span style="display:flex;"><span>                                   STORAGE_PROVIDER <span style="color:#f92672">=</span> S3
+</span></span><span style="display:flex;"><span>                                   ENABLED <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>
+</span></span><span style="display:flex;"><span>                                   STORAGE_AWS_ROLE_ARN <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;arn:aws:iam::&lt;AWSアカウント&gt;:role/sf_role&#39;</span>
+</span></span><span style="display:flex;"><span>                                   STORAGE_ALLOWED_LOCATIONS <span style="color:#f92672">=</span> (<span style="color:#e6db74">&#39;s3://snowflake-bucket-work/&#39;</span>)
+</span></span><span style="display:flex;"><span>                                 ;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------------------------------------------------------------+              
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> status                                                         <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">----------------------------------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> Integration SNOWFLAKE_AND_S3_INTEGRATION successfully created. <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">----------------------------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">015</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">desc</span> integration snowflake_and_s3_integration;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">---------------------------+---------------+------------------------------------------------+------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> property                  <span style="color:#f92672">|</span> property_type <span style="color:#f92672">|</span> property_value                                 <span style="color:#f92672">|</span> property_default <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">---------------------------+---------------+------------------------------------------------+------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> ENABLED                   <span style="color:#f92672">|</span> Boolean       <span style="color:#f92672">|</span> <span style="color:#66d9ef">true</span>                                           <span style="color:#f92672">|</span> <span style="color:#66d9ef">false</span>            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_PROVIDER          <span style="color:#f92672">|</span> String        <span style="color:#f92672">|</span> S3                                             <span style="color:#f92672">|</span>                  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_ALLOWED_LOCATIONS <span style="color:#f92672">|</span> List          <span style="color:#f92672">|</span> s3:<span style="color:#f92672">//</span>snowflake<span style="color:#f92672">-</span>bucket<span style="color:#f92672">-</span><span style="color:#66d9ef">work</span><span style="color:#f92672">/</span>                    <span style="color:#f92672">|</span> []               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_BLOCKED_LOCATIONS <span style="color:#f92672">|</span> List          <span style="color:#f92672">|</span>                                                <span style="color:#f92672">|</span> []               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_AWS_IAM_USER_ARN  <span style="color:#f92672">|</span> String        <span style="color:#f92672">|</span> arn:aws:iam::xxxxxxxxx:<span style="color:#66d9ef">user</span><span style="color:#f92672">/</span>qvl6<span style="color:#f92672">-</span>s<span style="color:#f92672">-</span>jpss8756 <span style="color:#f92672">|</span>                  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_AWS_ROLE_ARN      <span style="color:#f92672">|</span> String        <span style="color:#f92672">|</span> arn:aws:iam::<span style="color:#f92672">&lt;</span>AWSアカウント<span style="color:#f92672">&gt;</span>:<span style="color:#66d9ef">role</span><span style="color:#f92672">/</span>sf_role         <span style="color:#f92672">|</span>                  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> STORAGE_AWS_EXTERNAL_ID   <span style="color:#f92672">|</span> String        <span style="color:#f92672">|</span> <span style="color:#f92672">&lt;</span>Snowflakeアカウント<span style="color:#f92672">&gt;</span>_SFCRole<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>_ZGmPmtzjlkklddeysL<span style="color:#f92672">+</span>zqym2qW8<span style="color:#f92672">=</span> <span style="color:#f92672">|</span>                  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#66d9ef">COMMENT</span>                   <span style="color:#f92672">|</span> String        <span style="color:#f92672">|</span>                                                <span style="color:#f92672">|</span>                  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">---------------------------+---------------+------------------------------------------------+------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">8</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">713</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><p><code>STORAGE_AWS_IAM_USER_ARN</code>と<code>STORAGE_AWS_EXTERNAL_ID</code>の値を控えておく</p>
+<h3 id="iamロールの信頼関係の修正">IAMロールの信頼関係の修正</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">&#34;Version&#34;</span>: <span style="color:#e6db74">&#34;2012-10-17&#34;</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">&#34;Statement&#34;</span>: [
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#f92672">&#34;Effect&#34;</span>: <span style="color:#e6db74">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#f92672">&#34;Principal&#34;</span>: {
+</span></span><span style="display:flex;"><span>				<span style="color:#f92672">&#34;AWS&#34;</span>: <span style="color:#e6db74">&#34;&lt;STORAGE_AWS_IAM_USER_ARN&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>			<span style="color:#f92672">&#34;Action&#34;</span>: <span style="color:#e6db74">&#34;sts:AssumeRole&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#f92672">&#34;Condition&#34;</span>: {
+</span></span><span style="display:flex;"><span>				<span style="color:#f92672">&#34;StringEquals&#34;</span>: {
+</span></span><span style="display:flex;"><span>					<span style="color:#f92672">&#34;sts:ExternalId&#34;</span>: <span style="color:#e6db74">&#34;&lt;STORAGE_AWS_EXTERNAL_ID&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="外部ステージの作成">外部ステージの作成</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> STAGE s3_ext_stage STORAGE_INTEGRATION <span style="color:#f92672">=</span> snowflake_and_s3_integration URL <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;s3://snowflake-bucket-work/&#39;</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">CREATE</span> STAGE s3_ext_stage STORAGE_INTEGRATION <span style="color:#f92672">=</span> snowflake_and_s3_integration URL <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;s3://snowflake-bucket-work/&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------------------------------------------+                               
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> status                                        <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> Stage area S3_EXT_STAGE successfully created. <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">show</span> stages;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> created_on                    <span style="color:#f92672">|</span> name         <span style="color:#f92672">|</span> database_name <span style="color:#f92672">|</span> <span style="color:#66d9ef">schema_name</span> <span style="color:#f92672">|</span> url                         <span style="color:#f92672">|</span> has_credentials <span style="color:#f92672">|</span> has_encryption_key <span style="color:#f92672">|</span> <span style="color:#66d9ef">owner</span>        <span style="color:#f92672">|</span> <span style="color:#66d9ef">comment</span> <span style="color:#f92672">|</span> region         <span style="color:#f92672">|</span> <span style="color:#66d9ef">type</span>     <span style="color:#f92672">|</span> cloud <span style="color:#f92672">|</span> notification_channel <span style="color:#f92672">|</span> storage_integration          <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">45</span>:<span style="color:#ae81ff">45</span>.<span style="color:#ae81ff">523</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span> S3_EXT_STAGE <span style="color:#f92672">|</span> TESTDB        <span style="color:#f92672">|</span> <span style="color:#66d9ef">PUBLIC</span>      <span style="color:#f92672">|</span> s3:<span style="color:#f92672">//</span>snowflake<span style="color:#f92672">-</span>bucket<span style="color:#f92672">-</span><span style="color:#66d9ef">work</span><span style="color:#f92672">/</span> <span style="color:#f92672">|</span> N               <span style="color:#f92672">|</span> N                  <span style="color:#f92672">|</span> ACCOUNTADMIN <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span> ap<span style="color:#f92672">-</span>northeast<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#f92672">|</span> AWS   <span style="color:#f92672">|</span> <span style="color:#66d9ef">NULL</span>                 <span style="color:#f92672">|</span> SNOWFLAKE_AND_S3_INTEGRATION <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">098</span>s
+</span></span></code></pre></div><h3 id="データロード">データロード</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">copy</span> <span style="color:#66d9ef">into</span> t1 <span style="color:#66d9ef">from</span> <span style="color:#f92672">@</span>s3_ext_stage pattern<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;test.csv&#39;</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">copy</span> <span style="color:#66d9ef">into</span> t1 <span style="color:#66d9ef">from</span> <span style="color:#f92672">@</span>s3_ext_stage pattern<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;test.csv&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> file                                <span style="color:#f92672">|</span> status <span style="color:#f92672">|</span> rows_parsed <span style="color:#f92672">|</span> rows_loaded <span style="color:#f92672">|</span> error_limit <span style="color:#f92672">|</span> errors_seen <span style="color:#f92672">|</span> first_error <span style="color:#f92672">|</span> first_error_line <span style="color:#f92672">|</span> first_error_character <span style="color:#f92672">|</span> first_error_column_name <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> s3:<span style="color:#f92672">//</span>snowflake<span style="color:#f92672">-</span>bucket<span style="color:#f92672">-</span><span style="color:#66d9ef">work</span><span style="color:#f92672">/</span>test.csv <span style="color:#f92672">|</span> LOADED <span style="color:#f92672">|</span>          <span style="color:#ae81ff">10</span> <span style="color:#f92672">|</span>          <span style="color:#ae81ff">10</span> <span style="color:#f92672">|</span>           <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>           <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">NULL</span>        <span style="color:#f92672">|</span>             <span style="color:#66d9ef">NULL</span> <span style="color:#f92672">|</span>                  <span style="color:#66d9ef">NULL</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">NULL</span>                    <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">2</span>.<span style="color:#ae81ff">675</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">---+--------+--------+----+-------------------------------+                    
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> A <span style="color:#f92672">|</span> B      <span style="color:#f92672">|</span> <span style="color:#66d9ef">C</span>      <span style="color:#f92672">|</span>  D <span style="color:#f92672">|</span> E                             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">---+--------+--------+----+-------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">6</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">6</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">7</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">7</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">8</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">8</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">9</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#ae81ff">9</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">111111</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">222222</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">10</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">2022</span><span style="color:#f92672">-</span><span style="color:#ae81ff">08</span><span style="color:#f92672">-</span><span style="color:#ae81ff">23</span> <span style="color:#ae81ff">22</span>:<span style="color:#ae81ff">47</span>:<span style="color:#ae81ff">44</span>.<span style="color:#ae81ff">214</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0700</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">---+--------+--------+----+-------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">10</span> <span style="color:#66d9ef">Row</span>(s) produced. Time Elapsed: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">198</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#f92672">#</span>COMPUTE_WH<span style="color:#f92672">@</span>TESTDB.<span style="color:#66d9ef">PUBLIC</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="ロード時のオプション">ロード時のオプション</h4>
+<p>ON_ERRORオプション</p>
+<table>
+<thead>
+<tr>
+<th>CONTINUE</th>
+<th>エラーが見つかった場合は、ファイルのロードを続行します。エラーが見つかった行はロードされません。</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SKIP_FILE</td>
+<td>エラーが見つかった場合はファイルをスキップします。</td>
+</tr>
+<tr>
+<td>SKIP_FILE_数値</td>
+<td>ファイル内で見つかったエラー行の数が指定された数以上の場合は、ファイルをスキップします。</td>
+</tr>
+<tr>
+<td>SKIP_FILE_数値%</td>
+<td>ファイル内で見つかったエラー行の割合が指定された割合を超えた場合は、ファイルをスキップします。</td>
+</tr>
+<tr>
+<td>ABORT_STATEMENT</td>
+<td>データファイルでエラーが見つかった場合は、ロード操作を中止します。</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><a href="https://docs.snowflake.com/ja/sql-reference/sql/copy-into-table.html#copy-options-copyoptions">COPY INTO &lt;テーブル&gt; — Snowflake Documentation</a></li>
+</ul>
+<h3 id="データアンロード">データアンロード</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">copy</span> <span style="color:#66d9ef">into</span> <span style="color:#f92672">@</span>s3_ext_stage<span style="color:#f92672">/</span>unload<span style="color:#f92672">/</span> <span style="color:#66d9ef">from</span> t1;
+</span></span></code></pre></div><p>デフォルトでは圧縮された状態でアンロードされる。</p>
+<h3 id="参照">参照</h3>
+<ul>
+<li>
+<p><a href="https://docs.snowflake.com/ja/user-guide/data-load-s3-config-storage-integration.html">オプション1：Amazon S3にアクセスするためのSnowflakeストレージ統合の構成 — Snowflake Documentation</a></p>
+</li>
+<li>
+<p><a href="https://docs.snowflake.com/ja/user-guide/data-unload-s3.html#unloading-into-amazon-s3">Amazon S3へのアンロード — Snowflake Documentation</a></p>
+</li>
+</ul>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/snowflake-snowpro-core-certification-study/">SnowPro Core認定の試験ガイド対策</a></li>
+  
+  <li><a href="/snowflake-timetravel-summary/">SnowflakeのTime Travel</a></li>
+  
+  <li><a href="/snowflake-failsafe-summary/">SnowflakeのFail-safe</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/snowflake/">#Snowflake</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

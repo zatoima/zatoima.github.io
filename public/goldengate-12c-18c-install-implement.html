@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>GoldenGateをインストールしてDB間のレプリケーション環境を構築する | my opinion is my own</title>
+<meta name="title" content="GoldenGateをインストールしてDB間のレプリケーション環境を構築する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,GoldenGate," />
+
+
+<meta property="og:url" content="http://localhost:1313/goldengate-12c-18c-install-implement.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="GoldenGateをインストールしてDB間のレプリケーション環境を構築する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-03-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-03-29T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="GoldenGate">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="GoldenGateをインストールしてDB間のレプリケーション環境を構築する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="GoldenGateをインストールしてDB間のレプリケーション環境を構築する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-03-29T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-03-29T00:00:00+00:00">
+  <meta itemprop="wordCount" content="3101">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,GoldenGate">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>GoldenGateをインストールしてDB間のレプリケーション環境を構築する</h1>
+
+<p>
+  <i>
+    <time datetime='2019-03-29' pubdate>
+      2019-03-29
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>GoldenGateを使用してOracle Database間のレプリケーションを構築します。</p>
+<p>レプリケーションまでのステップは下記の通りですが、本記事だと「1.」と「2.」を対象にしています。</p>
+<ol>
+<li>
+<p>GoldenGateインストール</p>
+</li>
+<li>
+<p>GoldenGate環境設定</p>
+</li>
+<li>
+<p>データ伝搬</p>
+</li>
+</ol>
+<h4 id="環境構成"><strong>環境構成</strong></h4>
+<p>マシンスペックの関係で同一マシン内に2DBを作成しています。この2DBをGoldenGateを使用してレプリケーション環境を作成します。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>ソース</th>
+<th>ターゲット</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DBバージョン</td>
+<td>11.2.0.4</td>
+<td>18c</td>
+</tr>
+<tr>
+<td>GoldenGateバージョン</td>
+<td>12.2.0.1</td>
+<td>18.1.0.0.0</td>
+</tr>
+<tr>
+<td>DB名</td>
+<td>db112s</td>
+<td>db18s</td>
+</tr>
+<tr>
+<td>PDB名</td>
+<td>-</td>
+<td>db18p1</td>
+</tr>
+<tr>
+<td>GoldenGate用DBユーザ</td>
+<td>ggs</td>
+<td>c##ggs</td>
+</tr>
+<tr>
+<td>伝搬用ユーザ</td>
+<td>ggtest</td>
+<td>ggtest</td>
+</tr>
+<tr>
+<td>GoldenGateインストール先</td>
+<td>/gg/gg1</td>
+<td>/gg/gg2</td>
+</tr>
+<tr>
+<td>Captureプロセス</td>
+<td>c11</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Data Pumpプロセス</td>
+<td>d11</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Replicatプロセス</td>
+<td>-</td>
+<td>r11</td>
+</tr>
+<tr>
+<td>Captureプロセスのモード</td>
+<td>統合モード<!-- raw HTML omitted -->(Integrated Capture)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Replicatプロセスのモード</td>
+<td>-</td>
+<td>統合モード<!-- raw HTML omitted -->(Integrated Replicat)</td>
+</tr>
+<tr>
+<td>その他</td>
+<td>シングル構成</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="前提事項"><strong>前提事項</strong></h4>
+<ol>
+<li>既にソースDBとターゲットDBがインストールされていること</li>
+<li>GoldenGateのメディアファイルを事前にダウンロードしていること</li>
+</ol>
+<h4 id="goldengateインストール"><strong>GoldenGateインストール</strong></h4>
+<h4 id="gg_homeの作成"><strong>GG_HOMEの作成</strong></h4>
+<p>今回はCUIベースでのインストールを行います。GUIでインストールしたい場合は下記qiitaの記事をご参照ください。</p>
+<blockquote>
+<p>GoldenGate布教活動②　～GoldenGateのインストール～ - Qiita <a href="https://qiita.com/ch0c0bana0/items/a57debf29a8d907e9feb">https://qiita.com/ch0c0bana0/items/a57debf29a8d907e9feb</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>su -
+</span></span><span style="display:flex;"><span>mkdir -p /gg/gg1
+</span></span><span style="display:flex;"><span>mkdir -p /gg/gg2
+</span></span><span style="display:flex;"><span>chmod -R <span style="color:#ae81ff">755</span> /gg
+</span></span><span style="display:flex;"><span>chown -R oracle:oinstall /gg
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><h4 id="goldengate12cr212201のインストール"><strong>GoldenGate12cR2(12.2.0.1)のインストール</strong></h4>
+<h4 id="メディアファイルの解凍"><strong>メディア・ファイルの解凍</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#コマンド</span>
+</span></span><span style="display:flex;"><span>cd /home/oracle/software/goldengate/12.2.0.1/V100692-01
+</span></span><span style="display:flex;"><span>ls -l
+</span></span><span style="display:flex;"><span>unzip V100692-01.zip
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V100692-01<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V100692-01<span style="color:#f92672">]</span>$ cd /home/oracle/software/goldengate/12.2.0.1/V100692-01
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V100692-01<span style="color:#f92672">]</span>$ ls -l
+</span></span><span style="display:flex;"><span>合計 <span style="color:#ae81ff">464468</span>
+</span></span><span style="display:flex;"><span>-rwxr-xr-x <span style="color:#ae81ff">1</span> oracle oinstall <span style="color:#ae81ff">475611228</span>  7月  <span style="color:#ae81ff">7</span> 19:15 <span style="color:#ae81ff">2017</span> V100692-01.zip
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V100692-01<span style="color:#f92672">]</span>$ unzip V100692-01.zip
+</span></span><span style="display:flex;"><span>Archive:  V100692-01.zip
+</span></span><span style="display:flex;"><span>   creating: fbo_ggs_Linux_x64_shiphome/
+</span></span><span style="display:flex;"><span>   creating: fbo_ggs_Linux_x64_shiphome/Disk1/
+</span></span><span style="display:flex;"><span>～中略～
+</span></span><span style="display:flex;"><span>   creating: fbo_ggs_Linux_x64_shiphome/Disk1/response/
+</span></span><span style="display:flex;"><span>  inflating: fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+</span></span><span style="display:flex;"><span>  inflating: OGG-12.2.0.1-README.txt
+</span></span><span style="display:flex;"><span>  inflating: OGG-12.2.0.1.1-ReleaseNotes.pdf
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V100692-01<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="サイレントインストール用のレスポンスファイルの修正"><strong>サイレントインストール用のレスポンスファイルの修正</strong></h4>
+<p>★部分が修正箇所になります。環境に合わせて修正する必要があります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd ./fbo_ggs_Linux_x64_shiphome/Disk1/response
+</span></span><span style="display:flex;"><span>ls -l
+</span></span><span style="display:flex;"><span>vi oggcore.rsp
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#oggcore.rspの修正内容</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">####################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Copyright(c) Oracle Corporation 2014. All rights reserved.     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Specify values for the variables listed below to customize     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## your installation.                                             ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Each variable is associated with a comment. The comment        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## can help to populate the variables with the appropriate        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## values.                                                        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## IMPORTANT NOTE: This file should be secured to have read       ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## permission only by the oracle user or an administrator who     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## own this installation to protect any sensitive input values.   ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">####################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Do not change the following system generated value.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>oracle.install.responseFileVersion<span style="color:#f92672">=</span>/oracle/install/rspfmt_ogginstall_response_schema_v12_1_2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Oracle GoldenGate installation option and details                          ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the installation option.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify ORA12c for installing Oracle GoldenGate for Oracle Database 12c and</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#         ORA11g for installing Oracle GoldenGate for Oracle Database 11g</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>INSTALL_OPTION<span style="color:#f92672">=</span>ORA11g ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify a location to install Oracle GoldenGate</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>SOFTWARE_LOCATION<span style="color:#f92672">=</span>/gg/gg1 ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify true to start the manager after installation.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>START_MANAGER<span style="color:#f92672">=</span>false ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify a free port within the valid range for the manager process.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Required only if START_MANAGER is true.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>MANAGER_PORT<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the location of the Oracle Database.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Required only if START_MANAGER is true.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>DATABASE_LOCATION<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Specify details to Create inventory for Oracle installs                    ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Required only for the first Oracle product install on a system.            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the location which holds the install inventory files.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This is an optional parameter if installing on</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Windows based Operating System.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>INVENTORY_LOCATION<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Unix group to be set for the inventory directory.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This parameter is not applicable if installing on</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Windows based Operating System.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>UNIX_GROUP_NAME<span style="color:#f92672">=</span>
+</span></span></code></pre></div><h4 id="goldengateインストール-1"><strong>GoldenGateインストール</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1
+</span></span><span style="display:flex;"><span>./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg Disk1<span style="color:#f92672">]</span>$ ./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/12.2.0.1/V100692-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+</span></span><span style="display:flex;"><span>Oracle Universal Installerを起動中です...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>一時領域の確認中: 120MBを超えている必要があります.   実際 28028MB    問題なし
+</span></span><span style="display:flex;"><span>スワップ領域の確認中: 150MBを超えている必要があります.   実際 7855MB    問題なし
+</span></span><span style="display:flex;"><span>Oracle Universal Installerの起動を準備中 /tmp/OraInstall2019-03-29_05-24-01PM. お待ちください...
+</span></span><span style="display:flex;"><span>このインストール・セッションのログは次の場所にあります:
+</span></span><span style="display:flex;"><span> /u01/app/oraInventory/logs/installActions2019-03-29_05-24-01PM.log
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Coreのインストールが成功しました。
+</span></span><span style="display:flex;"><span>詳細は<span style="color:#e6db74">&#39;/u01/app/oraInventory/logs/silentInstall2019-03-29_05-24-01PM.log&#39;</span>を確認してください。
+</span></span><span style="display:flex;"><span>Successfully Setup Software.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg Disk1<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="opatch更新"><strong>OPatch更新</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#OPatch更新</span>
+</span></span><span style="display:flex;"><span>cd /home/oracle/software/goldengate/12.2.0.1/p6880880
+</span></span><span style="display:flex;"><span>unzip p6880880_112000_Linux-x86-64.zip
+</span></span><span style="display:flex;"><span>cp -Rp ./OPatch/* /gg/gg1/OPatch/
+</span></span><span style="display:flex;"><span>/gg/gg1/OPatch/opatch version
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg p6880880<span style="color:#f92672">]</span>$ /gg/gg1/OPatch/opatch version
+</span></span><span style="display:flex;"><span>OPatch Version: 11.2.0.3.19
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OPatch succeeded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg p6880880<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="goldengate用のpatch更新"><strong>GoldenGate用のPatch更新</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#OPatch更新</span>
+</span></span><span style="display:flex;"><span>export ORACLE_HOME<span style="color:#f92672">=</span>/gg/gg1
+</span></span><span style="display:flex;"><span>export PATH<span style="color:#f92672">=</span>$ORACLE_HOME/OPatch:$PATH
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cd /home/oracle/software/goldengate/12.2.0.1/p26849940
+</span></span><span style="display:flex;"><span>unzip p26849940_12201170919_Linux-x86-64.zip
+</span></span><span style="display:flex;"><span>cd 26849940/
+</span></span><span style="display:flex;"><span>/gg/gg1/OPatch/opatch prereq CheckConflictAgainstOHWithDetail -ph ./
+</span></span><span style="display:flex;"><span>$ORACLE_HOME/OPatch/opatch apply -oh $ORACLE_HOME
+</span></span><span style="display:flex;"><span>$ORACLE_HOME/OPatch/opatch lspatches
+</span></span><span style="display:flex;"><span>$ORACLE_HOME/OPatch/opatch lsinventory
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$ $ORACLE_HOME/OPatch/opatch apply -oh $ORACLE_HOME
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle Interim Patch Installerバージョン11.2.0.3.19
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 2019, Oracle Corporation.  All rights reserved。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle Home       : /gg/gg1
+</span></span><span style="display:flex;"><span>Central Inventory : /u01/app/oraInventory
+</span></span><span style="display:flex;"><span>   from           : /gg/gg1/oraInst.loc
+</span></span><span style="display:flex;"><span>OPatch version    : 11.2.0.3.19
+</span></span><span style="display:flex;"><span>OUI version       : 11.2.0.3.0
+</span></span><span style="display:flex;"><span>Log file location : /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-36-23午後_1.log
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Verifying environment and performing prerequisite checks...
+</span></span><span style="display:flex;"><span>OPatch continues with these patches:   <span style="color:#ae81ff">26849940</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>続行しますか。<span style="color:#f92672">[</span>y|n<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>y
+</span></span><span style="display:flex;"><span>User Responded with: Y
+</span></span><span style="display:flex;"><span>All checks passed.
+</span></span><span style="display:flex;"><span>セキュリティの問題について通知を受ける電子メール・アドレスを指定し、Oracle Configuration
+</span></span><span style="display:flex;"><span>Managerをインストールして開始してください。My Oracle Supportの電子メール・アドレス/ユーザー名を使用すればより簡単です。
+</span></span><span style="display:flex;"><span>詳細はhttp://www.oracle.com/support/policies.htmlにアクセスしてください。
+</span></span><span style="display:flex;"><span>電子メール・アドレス/ユーザー名:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>セキュリティの問題について通知を受け取るための電子メール・アドレスが指定されていません。
+</span></span><span style="display:flex;"><span>セキュリティの問題に関する通知を今後も受け取りませんか<span style="color:#f92672">([</span>Y<span style="color:#f92672">]</span>はい, <span style="color:#f92672">[</span>N<span style="color:#f92672">]</span>いいえ<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>N<span style="color:#f92672">]</span>:  y
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ローカル・システムのこのORACLE_HOME以外で実行しているOracleインスタンスを停止してください。
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>Oracleホーム <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;/gg/gg1&#39;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ローカル・システムにパッチを適用する準備ができましたか。 <span style="color:#f92672">[</span>y|n<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>y
+</span></span><span style="display:flex;"><span>User Responded with: Y
+</span></span><span style="display:flex;"><span>Backing up files...
+</span></span><span style="display:flex;"><span>Applying interim patch <span style="color:#e6db74">&#39;26849940&#39;</span> to OH <span style="color:#e6db74">&#39;/gg/gg1&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>コンポーネントoracle.oggcore.ora11g, 12.2.0.0.0にパッチを適用中...
+</span></span><span style="display:flex;"><span>Patch <span style="color:#ae81ff">26849940</span> successfully applied.
+</span></span><span style="display:flex;"><span>Log file location: /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-36-23午後_1.log
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OPatch succeeded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$ $ORACLE_HOME/OPatch/opatch lspatches
+</span></span><span style="display:flex;"><span>26849940;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OPatch succeeded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$ $ORACLE_HOME/OPatch/opatch lsinventory
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle Interim Patch Installerバージョン11.2.0.3.19
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 2019, Oracle Corporation.  All rights reserved。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle Home       : /gg/gg1
+</span></span><span style="display:flex;"><span>Central Inventory : /u01/app/oraInventory
+</span></span><span style="display:flex;"><span>   from           : /gg/gg1/oraInst.loc
+</span></span><span style="display:flex;"><span>OPatch version    : 11.2.0.3.19
+</span></span><span style="display:flex;"><span>OUI version       : 11.2.0.3.0
+</span></span><span style="display:flex;"><span>Log file location : /gg/gg1/cfgtoollogs/opatch/opatch2019-03-29_17-38-37午後_1.log
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Lsinventory Output file location : /gg/gg1/cfgtoollogs/opatch/lsinv/lsinventory2019-03-29_17-38-37午後.txt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>Local Machine Information::
+</span></span><span style="display:flex;"><span>Hostname: dbvgg.jp.oracle.com
+</span></span><span style="display:flex;"><span>ARU platform id: <span style="color:#ae81ff">226</span>
+</span></span><span style="display:flex;"><span>ARU platform description:: Linux x86-64
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>インストールされた最上位製品<span style="color:#f92672">(</span>1<span style="color:#f92672">)</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Core                                               12.2.0.0.0
+</span></span><span style="display:flex;"><span>このOracleホームには1の製品がインストールされています。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>仮パッチ<span style="color:#f92672">(</span>1<span style="color:#f92672">)</span> :
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Patch  <span style="color:#ae81ff">26849940</span>     : applied on Fri Mar <span style="color:#ae81ff">29</span> 17:37:09 JST <span style="color:#ae81ff">2019</span>
+</span></span><span style="display:flex;"><span>Unique Patch ID:  <span style="color:#ae81ff">21947835</span>
+</span></span><span style="display:flex;"><span>   Created on <span style="color:#ae81ff">13</span> Feb 2018, 15:29:18 hrs PST8PDT
+</span></span><span style="display:flex;"><span>   Bugs fixed:
+</span></span><span style="display:flex;"><span>     26112114, 21254311, 22628312, 25256300, 24339776, 22466155, <span style="color:#ae81ff">21562399</span>
+</span></span><span style="display:flex;"><span>     22910007, 22642576, 25096792, 25252388, 26122243, 25031466, <span style="color:#ae81ff">24826961</span>
+</span></span><span style="display:flex;"><span>     24804392, 22912874, 24312736, 24302758, 24414523, 23733399, <span style="color:#ae81ff">22959377</span>
+</span></span><span style="display:flex;"><span>     23514258, 25369310, 21548970, 23642240, 22266611, 23058710, <span style="color:#ae81ff">24744349</span>
+</span></span><span style="display:flex;"><span>     25918872, 24598011, 25797611, 23755469, 25667779, 21131090, <span style="color:#ae81ff">22202129</span>
+</span></span><span style="display:flex;"><span>     22478792, 25814949, 22830589, 22295723, 22993705, 25213169, <span style="color:#ae81ff">23102612</span>
+</span></span><span style="display:flex;"><span>     22458470, 23750747, 21888279, 23267559, 22295940, 22730188, <span style="color:#ae81ff">25674499</span>
+</span></span><span style="display:flex;"><span>     23712604, 25137084, 25350730, 22811754, 26127417, 20822775, <span style="color:#ae81ff">24439762</span>
+</span></span><span style="display:flex;"><span>     23661056, 23607346, 23641740, 23499047, 22352402, 23751229, <span style="color:#ae81ff">25439681</span>
+</span></span><span style="display:flex;"><span>     24345528, 22514172, 25927416, 25463128, 23478103, 23587474, <span style="color:#ae81ff">23763062</span>
+</span></span><span style="display:flex;"><span>     21425179, 23067041, 24359320, 22046726, 21763449, 23479013, <span style="color:#ae81ff">23275654</span>
+</span></span><span style="display:flex;"><span>     25231249, 23133585, 22004485, 23608765, 25087704, 26000622, <span style="color:#ae81ff">24752349</span>
+</span></span><span style="display:flex;"><span>     23108041, 22455149, 25462009, 26253307, 22103949, 24310901, <span style="color:#ae81ff">21452073</span>
+</span></span><span style="display:flex;"><span>     23580290, 25414758, 23040154, 22257964, 26159982, 22888353, <span style="color:#ae81ff">24751551</span>
+</span></span><span style="display:flex;"><span>     21805148, 21481506, 22553129, 23328064, <span style="color:#ae81ff">20656312</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OPatch succeeded.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg 26849940<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="goldengate18c181000のインストール"><strong>GoldenGate18c(18.1.0.0.0)のインストール</strong></h4>
+<h4 id="メディアファイルの解凍-1"><strong>メディア・ファイルの解凍</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#コマンド</span>
+</span></span><span style="display:flex;"><span>cd /home/oracle/software/goldengate/18.1.0.0/V980002-01
+</span></span><span style="display:flex;"><span>ls -l
+</span></span><span style="display:flex;"><span>unzip V980002-01.zip
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$ cd /home/oracle/software/goldengate/18.1.0.0/V980002-01
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$ ll
+</span></span><span style="display:flex;"><span>合計 <span style="color:#ae81ff">383516</span>
+</span></span><span style="display:flex;"><span>-rwxr-xr-x <span style="color:#ae81ff">1</span> oracle oinstall <span style="color:#ae81ff">392717701</span> 10月 <span style="color:#ae81ff">19</span> 11:16 <span style="color:#ae81ff">2018</span> V980002-01.zip
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$ unzip V980002-01.zip
+</span></span><span style="display:flex;"><span>Archive:  V980002-01.zip
+</span></span><span style="display:flex;"><span>   creating: fbo_ggs_Linux_x64_shiphome/
+</span></span><span style="display:flex;"><span>  ～中略～
+</span></span><span style="display:flex;"><span>  inflating: fbo_ggs_Linux_x64_shiphome/Disk1/stage/sizes/oracle.oggcore.top18.1.0.0.0ora18c.sizes.properties
+</span></span><span style="display:flex;"><span>  inflating: OGG-18.1.0.0-README.txt
+</span></span><span style="display:flex;"><span>  inflating: OGG_WinUnix_Rel_Notes_18.1.0.0.0.pdf
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg V980002-01<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="サイレントインストール用のレスポンスファイルの修正-1"><strong>サイレントインストール用のレスポンスファイルの修正</strong></h4>
+<p>★部分が修正箇所になります。環境に合わせて修正する必要があります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd ./fbo_ggs_Linux_x64_shiphome/Disk1/response
+</span></span><span style="display:flex;"><span>ls -l
+</span></span><span style="display:flex;"><span>vi oggcore.rsp
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#oggcore.rspの修正内容</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">####################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Copyright(c) Oracle Corporation 2018. All rights reserved.     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Specify values for the variables listed below to customize     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## your installation.                                             ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Each variable is associated with a comment. The comment        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## can help to populate the variables with the appropriate        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## values.                                                        ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## IMPORTANT NOTE: This file should be secured to have read       ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## permission only by the oracle user or an administrator who     ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## own this installation to protect any sensitive input values.   ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">####################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Do not change the following system generated value.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>oracle.install.responseFileVersion<span style="color:#f92672">=</span>/oracle/install/rspfmt_ogginstall_response_schema_v12_1_2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Oracle GoldenGate installation option and details                          ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the installation option.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify ORA18c for installing Oracle GoldenGate for Oracle Database 18c or</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#         ORA12c for installing Oracle GoldenGate for Oracle Database 12c or</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#         ORA11g for installing Oracle GoldenGate for Oracle Database 11g</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>INSTALL_OPTION<span style="color:#f92672">=</span>ORA18c ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify a location to install Oracle GoldenGate</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>SOFTWARE_LOCATION<span style="color:#f92672">=</span>/gg/gg2 ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify true to start the manager after installation.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>START_MANAGER<span style="color:#f92672">=</span>false ★←
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify a free port within the valid range for the manager process.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Required only if START_MANAGER is true.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>MANAGER_PORT<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the location of the Oracle Database.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Required only if START_MANAGER is true.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>DATABASE_LOCATION<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Specify details to Create inventory for Oracle installs                    ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## Required only for the first Oracle product install on a system.            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##                                                                            ##</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">################################################################################</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Specify the location which holds the install inventory files.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This is an optional parameter if installing on</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Windows based Operating System.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>INVENTORY_LOCATION<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Unix group to be set for the inventory directory.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># This parameter is not applicable if installing on</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Windows based Operating System.</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#-------------------------------------------------------------------------------</span>
+</span></span><span style="display:flex;"><span>UNIX_GROUP_NAME<span style="color:#f92672">=</span>
+</span></span></code></pre></div><h4 id="goldengateインストール-2"><strong>GoldenGateインストール</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1
+</span></span><span style="display:flex;"><span>./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg Disk1<span style="color:#f92672">]</span>$ ./runInstaller -silent -nowait -responseFile /home/oracle/software/goldengate/18.1.0.0/V980002-01/fbo_ggs_Linux_x64_shiphome/Disk1/response/oggcore.rsp
+</span></span><span style="display:flex;"><span>Oracle Universal Installerを起動中です...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>一時領域の確認中: 120MBを超えている必要があります.   実際 25219MB    問題なし
+</span></span><span style="display:flex;"><span>スワップ領域の確認中: 150MBを超えている必要があります.   実際 7855MB    問題なし
+</span></span><span style="display:flex;"><span>Oracle Universal Installerの起動を準備中 /tmp/OraInstall2019-03-29_05-44-14PM. お待ちください...
+</span></span><span style="display:flex;"><span>このインストール・セッションのログは次の場所にあります:
+</span></span><span style="display:flex;"><span> /u01/app/oraInventory/logs/installActions2019-03-29_05-44-14PM.log
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Coreのインストールが成功しました。
+</span></span><span style="display:flex;"><span>詳細は<span style="color:#e6db74">&#39;/u01/app/oraInventory/logs/silentInstall2019-03-29_05-44-14PM.log&#39;</span>を確認してください。
+</span></span><span style="display:flex;"><span>Successfully Setup Software.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg Disk1<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="trailファイル格納ディレクトリの作成"><strong>Trailファイル格納ディレクトリの作成</strong></h4>
+<p>「/gg/gg1/c11」はソース側のCaptureプロセスが生成するLocal Trailの格納ディレクトリ、「/gg/gg2/d11」はData Pumpがターゲット側に生成するRemote Trailの格納ディレクトリとなります。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>mkdir -p /gg/gg1/dirdat/c11 <span style="color:#75715e">#Local Trail用の格納ディレクトリ</span>
+</span></span><span style="display:flex;"><span>mkdir -p /gg/gg2/dirdat/d11 <span style="color:#75715e">#Remote Trail用の格納ディレクトリ</span>
+</span></span></code></pre></div><h4 id="db環境変更ソース側"><strong>DB環境変更（ソース側）</strong></h4>
+<h4 id="表領域の作成"><strong>表領域の作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>. <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>.oraenv_db112s <span style="color:#75715e">--環境変数の読み込み
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> tablespace ggdata datafile <span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB112S/datafile/ggdata.dbf&#39;</span> <span style="color:#66d9ef">size</span> <span style="color:#ae81ff">5</span><span style="color:#66d9ef">G</span>;
+</span></span></code></pre></div><h4 id="伝搬対象ユーザ及びgoldengate管理ユーザの作成"><strong>伝搬対象ユーザ、及びGoldenGate管理ユーザの作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> ggs IDENTIFIED <span style="color:#66d9ef">BY</span> oracle <span style="color:#66d9ef">DEFAULT</span> TABLESPACE ggdata;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> ggtest IDENTIFIED <span style="color:#66d9ef">BY</span> oracle <span style="color:#66d9ef">DEFAULT</span> TABLESPACE ggdata;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> dba <span style="color:#66d9ef">TO</span> ggs;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> dba <span style="color:#66d9ef">TO</span> ggtest;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">exec</span> dbms_goldengate_auth.grant_admin_privilege(<span style="color:#e6db74">&#39;GGS&#39;</span>);
+</span></span></code></pre></div><h4 id="初期化パラメータの変更最小サプリメンタルロギングの設定"><strong>初期化パラメータの変更/最小サプリメンタルロギングの設定</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 事前確認
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 初期化パラメータの変更
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> enable_goldengate_replication<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span> <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> streams_pool_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1250</span>M <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span> SID<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;*&#39;</span>; <span style="color:#75715e">-- Integrated Capture要件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 最小サプリメンタルロギングの設定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">add</span> supplemental log <span style="color:#66d9ef">data</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> switch logfile;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 設定変更確認
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 実行結果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME                                 <span style="color:#66d9ef">TYPE</span>        VALUE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------------ ----------- ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable_goldengate_replication        boolean     <span style="color:#66d9ef">FALSE</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME      SUPPLEME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------- --------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>DB112S    <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>LOG_MODE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>ARCHIVELOG
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> enable_goldengate_replication<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span> <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> streams_pool_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1250</span>M <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span> SID<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;*&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">add</span> supplemental log <span style="color:#66d9ef">data</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">データベースが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> switch logfile;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME                                 <span style="color:#66d9ef">TYPE</span>        VALUE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------------ ----------- ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable_goldengate_replication        boolean     <span style="color:#66d9ef">TRUE</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME      SUPPLEME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------- --------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>DB112S    YES
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>LOG_MODE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>ARCHIVELOG
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="db環境変更ターゲット側"><strong>DB環境変更（ターゲット側）</strong></h4>
+<h4 id="表領域の作成-1"><strong>表領域の作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>. <span style="color:#f92672">/</span>home<span style="color:#f92672">/</span>oracle<span style="color:#f92672">/</span>.oraenv_db18s <span style="color:#75715e">--環境変数の読み込み
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>sqlplus <span style="color:#f92672">/</span> <span style="color:#66d9ef">as</span> sysdba
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> tablespace ggdata datafile <span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB18S/ggdata.dbf&#39;</span> <span style="color:#66d9ef">size</span> <span style="color:#ae81ff">1</span><span style="color:#66d9ef">G</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>db18p1;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> tablespace ggdata datafile <span style="color:#e6db74">&#39;/u01/app/oracle/oradata/DB18S/db18p1/ggdata.dbf&#39;</span> <span style="color:#66d9ef">size</span> <span style="color:#ae81ff">5</span><span style="color:#66d9ef">G</span>;
+</span></span></code></pre></div><h4 id="伝搬対象ユーザ及びgoldengate管理ユーザの作成-1"><strong>伝搬対象ユーザ、及びGoldenGate管理ユーザの作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>cdb$root;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">show</span> con_name
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> <span style="color:#66d9ef">c</span><span style="color:#f92672">##</span>ggs IDENTIFIED <span style="color:#66d9ef">BY</span> oracle <span style="color:#66d9ef">DEFAULT</span> TABLESPACE ggdata;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>db18p1;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">show</span> con_name
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">USER</span> ggtest IDENTIFIED <span style="color:#66d9ef">BY</span> oracle <span style="color:#66d9ef">DEFAULT</span> TABLESPACE ggdata;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>cdb$root;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> DBA <span style="color:#66d9ef">TO</span> <span style="color:#66d9ef">c</span><span style="color:#f92672">##</span>ggs container<span style="color:#f92672">=</span><span style="color:#66d9ef">all</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">exec</span> dbms_goldengate_auth.grant_admin_privilege(<span style="color:#e6db74">&#39;C##GGS&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>db18p1;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GRANT</span> DBA <span style="color:#66d9ef">TO</span> ggtest;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">exec</span> dbms_goldengate_auth.grant_admin_privilege(<span style="color:#e6db74">&#39;C##GGS&#39;</span>);
+</span></span></code></pre></div><h4 id="初期化パラメータの変更最小サプリメンタルロギングの設定-1"><strong>初期化パラメータの変更/最小サプリメンタルロギングの設定</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>cdb$root;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">show</span> con_name
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 事前確認
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 初期化パラメータの変更
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> enable_goldengate_replication<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span> <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> streams_pool_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1250</span>M <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span> SID<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;*&#39;</span>; <span style="color:#75715e">-- Integrated Replicat要件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 最小サプリメンタルロギングの設定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">add</span> supplemental log <span style="color:#66d9ef">data</span>;  <span style="color:#75715e">-- ターゲット側なので本来であれば不要。logminer要件のため設定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> switch logfile;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 設定変更確認
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 実行結果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">session</span> <span style="color:#66d9ef">set</span> container<span style="color:#f92672">=</span>cdb$root;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">セッションが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> con_name
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>CON_NAME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>CDB$ROOT
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME                                 <span style="color:#66d9ef">TYPE</span>        VALUE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------------ ----------- ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable_goldengate_replication        boolean     <span style="color:#66d9ef">FALSE</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME      SUPPLEME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------- --------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>DB18S     <span style="color:#66d9ef">NO</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>LOG_MODE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>ARCHIVELOG
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> enable_goldengate_replication<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span> <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> <span style="color:#66d9ef">set</span> streams_pool_size<span style="color:#f92672">=</span><span style="color:#ae81ff">1250</span>M <span style="color:#66d9ef">scope</span><span style="color:#f92672">=</span><span style="color:#66d9ef">both</span> SID<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;*&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">database</span> <span style="color:#66d9ef">add</span> supplemental log <span style="color:#66d9ef">data</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">データベースが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">alter</span> <span style="color:#66d9ef">system</span> switch logfile;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">システムが変更されました。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">show</span> <span style="color:#66d9ef">parameter</span> enable_goldengate_replication
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME                                 <span style="color:#66d9ef">TYPE</span>        VALUE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------------ ----------- ------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable_goldengate_replication        boolean     <span style="color:#66d9ef">TRUE</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> name,supplemental_log_data_min <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NAME      SUPPLEME
+</span></span><span style="display:flex;"><span><span style="color:#75715e">--------- --------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>DB18S     YES
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> log_mode <span style="color:#66d9ef">from</span> v$database;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>LOG_MODE
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>ARCHIVELOG
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span>
+</span></span></code></pre></div><h4 id="goldengate環境設定"><strong>GoldenGate環境設定</strong></h4>
+<h4 id="gg_home配下のサブディレクトリ作成"><strong>GG_HOME配下のサブディレクトリ作成</strong></h4>
+<p>サプリメンタル・ロギングはソース側で実施します。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>create subdirs
+</span></span><span style="display:flex;"><span>exit
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cd /gg/gg2
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>create subdirs
+</span></span><span style="display:flex;"><span>exit
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$ ./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Command Interpreter <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+</span></span><span style="display:flex;"><span>Linux, x64, 64bit <span style="color:#f92672">(</span>optimized<span style="color:#f92672">)</span>, Oracle 11g on Oct <span style="color:#ae81ff">30</span> <span style="color:#ae81ff">2017</span> 19:19:45
+</span></span><span style="display:flex;"><span>Operating system character set identified as UTF-8.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; create subdirs
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Creating subdirectories under current directory /gg/gg1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Parameter files                /gg/gg1/dirprm: created
+</span></span><span style="display:flex;"><span>Report files                   /gg/gg1/dirrpt: created
+</span></span><span style="display:flex;"><span>Checkpoint files               /gg/gg1/dirchk: created
+</span></span><span style="display:flex;"><span>Process status files           /gg/gg1/dirpcs: created
+</span></span><span style="display:flex;"><span>SQL script files               /gg/gg1/dirsql: created
+</span></span><span style="display:flex;"><span>Database definitions files     /gg/gg1/dirdef: created
+</span></span><span style="display:flex;"><span>Extract data files             /gg/gg1/dirdat: created
+</span></span><span style="display:flex;"><span>Temporary files                /gg/gg1/dirtmp: created
+</span></span><span style="display:flex;"><span>Credential store files         /gg/gg1/dircrd: created
+</span></span><span style="display:flex;"><span>Masterkey wallet files         /gg/gg1/dirwlt: created
+</span></span><span style="display:flex;"><span>Dump files                     /gg/gg1/dirdmp: created
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 2&gt;
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 3&gt; exit
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$ cd /gg/gg2
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg2<span style="color:#f92672">]</span>$ ./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Command Interpreter <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Version 18.1.0.0.0 OGGCORE_18.1.0.0.0_PLATFORMS_180928.0432_FBO
+</span></span><span style="display:flex;"><span>Linux, x64, 64bit <span style="color:#f92672">(</span>optimized<span style="color:#f92672">)</span>, Oracle 18c on Sep <span style="color:#ae81ff">29</span> <span style="color:#ae81ff">2018</span> 07:21:38
+</span></span><span style="display:flex;"><span>Operating system character set identified as UTF-8.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 1995, 2018, Oracle and/or its affiliates. All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; create subdirs
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Creating subdirectories under current directory /gg/gg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Parameter file                 /gg/gg2/dirprm: created.
+</span></span><span style="display:flex;"><span>Report file                    /gg/gg2/dirrpt: created.
+</span></span><span style="display:flex;"><span>Checkpoint file                /gg/gg2/dirchk: created.
+</span></span><span style="display:flex;"><span>Process status files           /gg/gg2/dirpcs: created.
+</span></span><span style="display:flex;"><span>SQL script files               /gg/gg2/dirsql: created.
+</span></span><span style="display:flex;"><span>Database definitions files     /gg/gg2/dirdef: created.
+</span></span><span style="display:flex;"><span>Extract data files             /gg/gg2/dirdat: created.
+</span></span><span style="display:flex;"><span>Temporary files                /gg/gg2/dirtmp: created.
+</span></span><span style="display:flex;"><span>Credential store files         /gg/gg2/dircrd: created.
+</span></span><span style="display:flex;"><span>Masterkey wallet files         /gg/gg2/dirwlt: created.
+</span></span><span style="display:flex;"><span>Dump files                     /gg/gg2/dirdmp: created.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 2&gt; exit
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg2<span style="color:#f92672">]</span>$
+</span></span></code></pre></div><h4 id="スキーマレベルのサプリメンタルロギングの実施"><strong>スキーマ・レベルのサプリメンタルロギングの実施</strong></h4>
+<p>サプリメンタル・ロギングはソース側で実施します。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>dblogin userid ggs@db112s, password oracle
+</span></span><span style="display:flex;"><span>add schematrandata ggtest
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$ ./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Command Interpreter <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+</span></span><span style="display:flex;"><span>Linux, x64, 64bit <span style="color:#f92672">(</span>optimized<span style="color:#f92672">)</span>, Oracle 11g on Oct <span style="color:#ae81ff">30</span> <span style="color:#ae81ff">2017</span> 19:19:45
+</span></span><span style="display:flex;"><span>Operating system character set identified as UTF-8.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; dblogin userid ggs@db112s, password oracle
+</span></span><span style="display:flex;"><span>Successfully logged into database.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 2&gt; add schematrandata ggtest
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2019-03-29 17:59:55  INFO    OGG-01788  SCHEMATRANDATA has been added on schema ggtest.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2019-03-29 17:59:55  INFO    OGG-01976  SCHEMATRANDATA <span style="color:#66d9ef">for</span> scheduling columns has been added on schema ggtest.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 3&gt;
+</span></span></code></pre></div><h4 id="ggパラメータファイルの作成"><strong>GGパラメータファイルの作成</strong></h4>
+<p>GoldenGateのパラメータは各プロセスごとに作成する必要があります。GLOBALS、MGRパラメータはソース、及びターゲット側に存在するので両サイトで作成する必要があります。</p>
+<h4 id="globalsパラメータソース側"><strong>GLOBALSパラメータ（ソース側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS GLOBALS
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#下記をviエディタで指定する</span>
+</span></span><span style="display:flex;"><span>SYSLOG NONE
+</span></span><span style="display:flex;"><span>GGSCHEMA ggs
+</span></span><span style="display:flex;"><span>NODUPMSGSUPPRESSION
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>view params GLOBALS
+</span></span></code></pre></div><h4 id="mgrパラメータソース側"><strong>MGRパラメータ（ソース側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS MGR
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MGRファイルの設定</span>
+</span></span><span style="display:flex;"><span>PORT <span style="color:#ae81ff">7809</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>AUTOSTART EXTRACT c11
+</span></span><span style="display:flex;"><span>AUTOSTART EXTRACT d11
+</span></span><span style="display:flex;"><span>AUTORESTART EXTRACT c11, RETRIES 2, WAITMINUTES 1, RESETMINUTES <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>AUTORESTART EXTRACT d11, RETRIES 5, WAITMINUTES 1, RESETMINUTES <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- Trailファイルのメンテンス設定
+</span></span><span style="display:flex;"><span>PURGEOLDEXTRACTS ./dirdat/c11/*,  USECHECKPOINTS, MINKEEPDAYS <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>view params GLOBALS
+</span></span></code></pre></div><h4 id="captureパラメータソース側"><strong>Captureパラメータ（ソース側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS C11
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># CAPTUREファイルの設定</span>
+</span></span><span style="display:flex;"><span>EXTRACT c11
+</span></span><span style="display:flex;"><span>USERID ggs@db112s,PASSWORD oracle
+</span></span><span style="display:flex;"><span>EXTTRAIL ./dirdat/c11/lt
+</span></span><span style="display:flex;"><span>CACHEMGR CACHESIZE 4GB
+</span></span><span style="display:flex;"><span>DISCARDFILE ./dirrpt/c11.dsc, APPEND, MEGABYTES <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>DISCARDROLLOVER AT 2:00 ON SUNDAY
+</span></span><span style="display:flex;"><span>REPORTROLLOVER AT 2:00 ON SUNDAY
+</span></span><span style="display:flex;"><span>DDL INCLUDE ALL
+</span></span><span style="display:flex;"><span>DDLOPTIONS CAPTUREGLOBALTEMPTABLE,REPORT
+</span></span><span style="display:flex;"><span>TRANLOGOPTIONS INTEGRATEDPARAMS <span style="color:#f92672">(</span>MAX_SGA_SIZE 1250, PARALLELISM 2<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>TABLE ggtest.* ;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>view params MGR
+</span></span></code></pre></div><h4 id="data-pumpパラメータソース側"><strong>Data Pumpパラメータ（ソース側）</strong></h4>
+<p>今回は筐体内の2DB間のレプリケーション設定なので、RMTHOSTに「localhost」を設定しています。本来ならばターゲットサーバのhostname、もしくはIPアドレスの指定が必要です。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS d11
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Data Pumpファイルの設定</span>
+</span></span><span style="display:flex;"><span>EXTRACT d11
+</span></span><span style="display:flex;"><span>PASSTHRU
+</span></span><span style="display:flex;"><span>RMTHOST localhost,  MGRPORT <span style="color:#ae81ff">7810</span>
+</span></span><span style="display:flex;"><span>RMTTRAIL ./dirdat/d11/rt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>TABLE ggtest.*;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>view params c11
+</span></span></code></pre></div><h4 id="globalsパラメータターゲット側"><strong>GLOBALSパラメータ（ターゲット側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db18s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAM GLOBALS
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCHEMA c##ggs
+</span></span><span style="display:flex;"><span>NODUPMSGSUPPRESSION
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>view params GLOBALS
+</span></span></code></pre></div><h4 id="mgrパラメータソース側-1"><strong>MGRパラメータ（ソース側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS MGR
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MGRファイルの設定</span>
+</span></span><span style="display:flex;"><span>PORT <span style="color:#ae81ff">7810</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>AUTOSTART REPLICAT r11
+</span></span><span style="display:flex;"><span>AUTORESTART REPLICAT r11, RETRIES 2, WAITMINUTES 1, RESETMINUTES <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- Trailファイルのメンテンス設定
+</span></span><span style="display:flex;"><span>PURGEOLDEXTRACTS ./dirdat/d11/*,  USECHECKPOINTS, MINKEEPDAYS <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><h4 id="replicatパラメータターゲット側"><strong>Replicatパラメータ（ターゲット側）</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>EDIT PARAMS R11
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>REPLICAT r11
+</span></span><span style="display:flex;"><span>USERID c##ggs@db18p1, PASSWORD oracle
+</span></span><span style="display:flex;"><span>DBOPTIONS INTEGRATEDPARAMS<span style="color:#f92672">(</span>PARALLELISM 4,MAX_PARALLELISM 4<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DISCARDFILE ./dirrpt/r11.dsc, APPEND, MEGABYTES <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>DISCARDROLLOVER AT 2:00 ON SUNDAY
+</span></span><span style="display:flex;"><span>REPORTROLLOVER AT 2:00 ON SUNDAY
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DDL INCLUDE ALL
+</span></span><span style="display:flex;"><span>DDLOPTIONS CAPTUREGLOBALTEMPTABLE,REPORT
+</span></span><span style="display:flex;"><span>REPORTCOUNT EVERY <span style="color:#ae81ff">10</span> MINUTES, RATE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>BATCHSQL
+</span></span><span style="display:flex;"><span>MAP ggtest.* ,TARGET db18p1.ggtest.*;
+</span></span></code></pre></div><h4 id="goldengateプロセス作成"><strong>GoldenGateプロセス作成</strong></h4>
+<h4 id="ソース側のプロセス作成"><strong>ソース側のプロセス作成</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#DBログイン</span>
+</span></span><span style="display:flex;"><span>dblogin userid ggs@db112s,password oracle
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#Captuteプロセスの作成・追加</span>
+</span></span><span style="display:flex;"><span>REGISTER EXTRACT c11 DATABASE
+</span></span><span style="display:flex;"><span>add extract c11, integrated,tranlog, begin now
+</span></span><span style="display:flex;"><span>add exttrail  ./dirdat/c11/lt, extract c11, megabytes <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#Data Pumpプロセスの作成・追加</span>
+</span></span><span style="display:flex;"><span>add extract d11, exttrailsource ./dirdat/c11/lt
+</span></span><span style="display:flex;"><span>add rmttrail ./dirdat/d11/rt, extract d11
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#確認</span>
+</span></span><span style="display:flex;"><span>info all
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; dblogin userid ggs@db112s,password oracle
+</span></span><span style="display:flex;"><span>Successfully logged into database.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 2&gt; REGISTER EXTRACT c11 DATABASE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2019-03-29 18:18:00  INFO    OGG-02003  Extract C11 successfully registered with database at SCN 1089847.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 3&gt; add extract c11, integrated,tranlog, begin now
+</span></span><span style="display:flex;"><span>EXTRACT <span style="color:#f92672">(</span>Integrated<span style="color:#f92672">)</span> added.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 4&gt; add exttrail  ./dirdat/c11/lt, extract c11, megabytes <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>EXTTRAIL added.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 5&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 5&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 5&gt; add extract d11, exttrailsource ./dirdat/c11/lt
+</span></span><span style="display:flex;"><span>EXTRACT added.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 6&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 6&gt; add rmttrail ./dirdat/d11/rt, extract d11
+</span></span><span style="display:flex;"><span>RMTTRAIL added.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 7&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 7&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     STOPPED
+</span></span><span style="display:flex;"><span>EXTRACT     STOPPED     C11         00:00:00      00:00:17
+</span></span><span style="display:flex;"><span>EXTRACT     STOPPED     D11         00:00:00      00:00:07
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as ggs@db112s<span style="color:#f92672">)</span> 8&gt;
+</span></span></code></pre></div><h4 id="ターゲット側のプロセス作成"><strong>ターゲット側のプロセス作成</strong></h4>
+<p>ReplicatはPDBに対して適用するため、dblogin時に指定する接続記述子はCDB$ROOTではなく適用するPDBへの指定が必要です。</p>
+<p>またIntegrated Catptureの場合はregisterコマンドが必要でしたが、Integrated Replicatの場合は不要です。（内部的に発行されています。）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db18s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg2
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#DBログイン</span>
+</span></span><span style="display:flex;"><span>dblogin userid c##ggs@db18p1,password oracle
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#Replicatプロセスの作成</span>
+</span></span><span style="display:flex;"><span>ADD REPLICAT r11,integrated EXTTRAIL ./dirdat/d11/rt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#状態確認</span>
+</span></span><span style="display:flex;"><span>info all
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; dblogin userid c##ggs@db18p1,password oracle
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Successfully logged into database DB18P1.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1<span style="color:#f92672">)</span> 2&gt;
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1<span style="color:#f92672">)</span> 2&gt; ADD REPLICAT r11,integrated EXTTRAIL ./dirdat/d11/rt
+</span></span><span style="display:flex;"><span>REPLICAT <span style="color:#f92672">(</span>Integrated<span style="color:#f92672">)</span> added.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1<span style="color:#f92672">)</span> 3&gt;
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1<span style="color:#f92672">)</span> 3&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     STOPPED
+</span></span><span style="display:flex;"><span>REPLICAT    STOPPED     R11         00:00:00      00:00:20
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com as c##ggs@db18s/DB18P1<span style="color:#f92672">)</span> 4&gt;
+</span></span></code></pre></div><h4 id="goldengateプロセス起動"><strong>GoldenGateプロセス起動</strong></h4>
+<p>ソース側のData Pumpプロセスはターゲット側のMGRプロセスと通信をします。したがって、先にターゲット側のMGRプロセスを起動する必要があるため、ターゲット側から起動を行います。</p>
+<h4 id="ターゲット側のプロセス起動"><strong>ターゲット側のプロセス起動</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db18s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#起動コマンド</span>
+</span></span><span style="display:flex;"><span>start mgr
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># mgrのパラメータでautostartを設定しているためreplicatプロセスの起動は不要。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#start r11</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#状態確認コマンド</span>
+</span></span><span style="display:flex;"><span>info all
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg2<span style="color:#f92672">]</span>$ ./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Command Interpreter <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Version 18.1.0.0.0 OGGCORE_18.1.0.0.0_PLATFORMS_180928.0432_FBO
+</span></span><span style="display:flex;"><span>Linux, x64, 64bit <span style="color:#f92672">(</span>optimized<span style="color:#f92672">)</span>, Oracle 18c on Sep <span style="color:#ae81ff">29</span> <span style="color:#ae81ff">2018</span> 07:21:38
+</span></span><span style="display:flex;"><span>Operating system character set identified as UTF-8.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 1995, 2018, Oracle and/or its affiliates. All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     STOPPED
+</span></span><span style="display:flex;"><span>REPLICAT    STOPPED     R11         00:00:00      00:00:49
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 2&gt; start mgr
+</span></span><span style="display:flex;"><span>Manager started.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 3&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     RUNNING
+</span></span><span style="display:flex;"><span>REPLICAT    RUNNING     R11         00:00:00      00:00:03
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 4&gt;
+</span></span></code></pre></div><h4 id="ソース側のプロセス起動"><strong>ソース側のプロセス起動</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#起動コマンド</span>
+</span></span><span style="display:flex;"><span>start mgr
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># mgrのパラメータでautostartを設定しているためcapture、data pumpプロセスの起動は不要。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># start c11</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># start d11</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#状態確認コマンド</span>
+</span></span><span style="display:flex;"><span>info all
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 実行結果</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$ ./ggsci
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Command Interpreter <span style="color:#66d9ef">for</span> Oracle
+</span></span><span style="display:flex;"><span>Version 12.2.0.1.170919 OGGCORE_12.2.0.1.0OGGBP_PLATFORMS_171030.0908_FBO
+</span></span><span style="display:flex;"><span>Linux, x64, 64bit <span style="color:#f92672">(</span>optimized<span style="color:#f92672">)</span>, Oracle 11g on Oct <span style="color:#ae81ff">30</span> <span style="color:#ae81ff">2017</span> 19:19:45
+</span></span><span style="display:flex;"><span>Operating system character set identified as UTF-8.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>C<span style="color:#f92672">)</span> 1995, 2017, Oracle and/or its affiliates. All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 1&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     STOPPED
+</span></span><span style="display:flex;"><span>EXTRACT     STOPPED     C11         00:00:02      00:00:30
+</span></span><span style="display:flex;"><span>EXTRACT     STOPPED     D11         00:00:00      00:00:29
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 2&gt; start mgr
+</span></span><span style="display:flex;"><span>Manager started.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 3&gt; info all
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Program     Status      Group       Lag at Chkpt  Time Since Chkpt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>MANAGER     RUNNING
+</span></span><span style="display:flex;"><span>EXTRACT     RUNNING     C11         00:00:10      00:00:07
+</span></span><span style="display:flex;"><span>EXTRACT     RUNNING     D11         00:00:00      00:00:04
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GGSCI <span style="color:#f92672">(</span>dbvgg.jp.oracle.com<span style="color:#f92672">)</span> 4&gt;
+</span></span></code></pre></div><h4 id="appendix"><strong>Appendix</strong></h4>
+<h4 id="ogg-02912エラー対応"><strong>OGG-02912エラー対応</strong></h4>
+<p>**DB11.2とGG12.2(Integrated Capture)**の組み合わせで初回起動時、OGG-02912が発生し Capture プロセスが ABENDする場合があります。(適用されているPSU/BPに依存します。)</p>
+<p>Oracle GoldenGate12.2 からTrailファイルのフォーマットが変更されていることによるエラーです。（データベース側のログマイナーに関するファンクションが対応していない場合に発生します。）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>ERROR OGG-02912 Patch 17030189 is required on your Oracle mining database for trail format RELEASE 12.2 or later.
+</span></span></code></pre></div><p>エラーが発生した場合はエラーメッセージにある通り「Patch 17030189」を適用するか、GG_HOME配下にある「prvtlmpg.plb」を実行することでエラーを回避することが出来ます。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>. /home/oracle/.oraenv_db112s --環境変数の読み込み
+</span></span><span style="display:flex;"><span>cd /gg/gg1
+</span></span><span style="display:flex;"><span>sqlplus / as sysdba
+</span></span><span style="display:flex;"><span>@prvtlmpg.plb
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-- 実行結果
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$ sqlplus / as sysdba
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SQL*Plus: Release 11.2.0.4.0 Production on 金 3月 <span style="color:#ae81ff">29</span> 18:22:29 <span style="color:#ae81ff">2019</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#f92672">(</span>c<span style="color:#f92672">)</span> 1982, 2013, Oracle.  All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+</span></span><span style="display:flex;"><span>With the Partitioning, OLAP, Data Mining and Real Application Testing options
+</span></span><span style="display:flex;"><span>に接続されました。
+</span></span><span style="display:flex;"><span>SQL&gt; @prvtlmpg.plb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Oracle GoldenGate Workaround prvtlmpg
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>This script provides a temporary workaround <span style="color:#66d9ef">for</span> bug 17030189.
+</span></span><span style="display:flex;"><span>It is strongly recommended that you apply the official Oracle
+</span></span><span style="display:flex;"><span>Patch <span style="color:#66d9ef">for</span> bug <span style="color:#ae81ff">17030189</span> from My Oracle Support instead of using
+</span></span><span style="display:flex;"><span>this workaround.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>This script must be executed in the mining database of Integrated
+</span></span><span style="display:flex;"><span>Capture. You will be prompted <span style="color:#66d9ef">for</span> the username of the mining user.
+</span></span><span style="display:flex;"><span>Use a double quoted identifier <span style="color:#66d9ef">if</span> the username is <span style="color:#66d9ef">case</span> sensitive
+</span></span><span style="display:flex;"><span>or contains special characters. In a CDB environment, this script
+</span></span><span style="display:flex;"><span>must be executed from the CDB$ROOT container and the mining user
+</span></span><span style="display:flex;"><span>must be a common user.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">===========================</span>  WARNING  <span style="color:#f92672">==========================</span>
+</span></span><span style="display:flex;"><span>You MUST stop all Integrated Captures that belong to this mining
+</span></span><span style="display:flex;"><span>user before proceeding!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">================================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Enter Integrated Capture mining user: ggs
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installing workaround...
+</span></span><span style="display:flex;"><span>エラーはありません。
+</span></span><span style="display:flex;"><span>エラーはありません。
+</span></span><span style="display:flex;"><span>エラーはありません。
+</span></span><span style="display:flex;"><span>Installation completed.
+</span></span><span style="display:flex;"><span>SQL&gt;
+</span></span><span style="display:flex;"><span>SQL&gt; Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+</span></span><span style="display:flex;"><span>With the Partitioning, OLAP, Data Mining and Real Application Testing optionsとの接続が切断されました。
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg gg1<span style="color:#f92672">]</span>$
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/goldengate-merge-replication.html">MERGE文のGoldenGateによる伝搬</a></li>
+  
+  <li><a href="/goldengate-check-session-info.html">GoldenGate関連プロセスのsession情報を確認する方法</a></li>
+  
+  <li><a href="/goldengate-check-exection-sql/">GoldenGateから実行されたSQLを確認する方法(Integrated Replicat)</a></li>
+  
+  <li><a href="/goldengate-info-param.html">GoldenGateパラメータの定義情報の取得(info paramコマンド)</a></li>
+  
+  <li><a href="/oracle-migration-tde-tts.html">TDEで暗号化された表領域をトランスポータブル表領域(TTS)で移行する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/goldengate/">#GoldenGate</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

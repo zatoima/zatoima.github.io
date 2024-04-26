@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>青空文庫のテキストデータをPostgreSQLに投入する | my opinion is my own</title>
+<meta name="title" content="青空文庫のテキストデータをPostgreSQLに投入する" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="http://localhost:1313/postgresql-aozora-date-insert.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="青空文庫のテキストデータをPostgreSQLに投入する">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-04-04T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-04-04T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="青空文庫のテキストデータをPostgreSQLに投入する">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="青空文庫のテキストデータをPostgreSQLに投入する">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-04-04T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-04-04T00:00:00+00:00">
+  <meta itemprop="wordCount" content="273">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>青空文庫のテキストデータをPostgreSQLに投入する</h1>
+
+<p>
+  <i>
+    <time datetime='2020-04-04' pubdate>
+      2020-04-04
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>このサイトを参考にさせて頂きました。SQL文作成のところが私の環境では動かなかったので別の方法に変えました。</p>
+<blockquote>
+<p>青空文庫のデータでテキストマイニング（の準備） | ACALL BLOG <a href="https://blog.acall.jp/2019/11/aozorabunko-textmining/">https://blog.acall.jp/2019/11/aozorabunko-textmining/</a></p>
+</blockquote>
+<p>日本語の大容量のテキストデータが欲しかっただけで、綺麗に整形しておりませんのでご注意ください。</p>
+<h5 id="青空文庫のリポジトリからclone">青空文庫のリポジトリからclone</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#sudo yum -y install git</span>
+</span></span><span style="display:flex;"><span>git clone --depth <span style="color:#ae81ff">1</span> https://github.com/aozorabunko/aozorabunko.git
+</span></span></code></pre></div><h5 id="nkfのインストール">nkfのインストール</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>wget https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/n/nkf-2.1.3-5.el7.x86_64.rpm
+</span></span><span style="display:flex;"><span>sudo rpm -ivh nkf-2.1.3-5.el7.x86_64.rpm
+</span></span></code></pre></div><h5 id="テキストファイルのマージ">テキストファイルのマージ</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cd aozorabunko-master
+</span></span><span style="display:flex;"><span>mdkir text
+</span></span><span style="display:flex;"><span>find cards -name <span style="color:#e6db74">&#39;*.zip&#39;</span> -exec cp <span style="color:#f92672">{}</span> text <span style="color:#ae81ff">\;</span>
+</span></span><span style="display:flex;"><span>cd text
+</span></span><span style="display:flex;"><span>unzip <span style="color:#e6db74">&#39;*.zip&#39;</span>
+</span></span><span style="display:flex;"><span>mkdir matome
+</span></span><span style="display:flex;"><span>cp *.txt matome
+</span></span><span style="display:flex;"><span>cd matome
+</span></span><span style="display:flex;"><span>find . -name <span style="color:#e6db74">&#34;*.txt&#34;</span> -exec cat <span style="color:#f92672">{}</span> &gt;&gt;matome.txt +
+</span></span><span style="display:flex;"><span>nkf -w --overwrite matome.txt
+</span></span></code></pre></div><h5 id="テキストファイルから実行用のsqlを作成">テキストファイルから実行用のSQLを作成</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#テキストファイル内のシングルクォートを削除。シングルクォートがあると区切り文字を誤って判断してしまうため。</span>
+</span></span><span style="display:flex;"><span>sed -e <span style="color:#e6db74">&#34;s/&#39;/ /g&#34;</span> matome.txt &gt; matome1.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sed <span style="color:#e6db74">&#34;s/^/insert into aozoradata (data) values (&#39;/g&#34;</span> matome1.sql &gt; matome2.sql
+</span></span><span style="display:flex;"><span>sed <span style="color:#e6db74">&#34;s/</span>$<span style="color:#e6db74">/&#39;);/g&#34;</span> matome2.sql &gt; matome3.sql
+</span></span></code></pre></div><h5 id="postgresql側の準備">PostgreSQL側の準備</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> aozoradata(
+</span></span><span style="display:flex;"><span>id serial <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>,
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">data</span> text <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><h5 id="sqlファイルの実行-時間が凄く掛かります">SQLファイルの実行 #時間が凄く掛かります。</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>psql -d postgres -U postgres -f matome3.sql
+</span></span></code></pre></div><p>行数は<code>3533485件</code>となります。</p>
+<pre tabindex="0"><code>postgres=# \d+ aozoradata;
+                                                Table &#34;public.aozoradata&#34;
+ Column |  Type   | Collation | Nullable |                Default                 | Storage  | Stats target | Description 
+--------+---------+-----------+----------+----------------------------------------+----------+--------------+-------------
+ id     | integer |           | not null | nextval(&#39;aozoradata_id_seq&#39;::regclass) | plain    |              | 
+ data   | text    |           | not null |                                        | extended |              | 
+Indexes:
+    &#34;aozoradata_idx&#34; gin (data gin_trgm_ops)
+
+postgres=# select count(*) from aozoradata;
+  count  
+---------
+ 3533485
+(1 row)
+</code></pre><p>pgstattupleで確認してみるとこんな感じに。</p>
+<pre tabindex="0"><code>postgres=# SELECT * FROM pgstattuple(&#39;aozoradata&#39;);
+-[ RECORD 1 ]------+----------
+table_len          | 807690240
+tuple_count        | 3533485
+tuple_len          | 774167704
+tuple_percent      | 95.85
+dead_tuple_count   | 0
+dead_tuple_len     | 0
+dead_tuple_percent | 0
+free_space         | 3066496
+free_percent       | 0.38
+</code></pre><p>統計情報(pg_stats)から確認。avg_widthが<code>190</code>で意外と小さく感じた。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span><span style="color:#75715e"># select schemaname,tablename,attname,null_frac,avg_width,n_distinct,correlation from pg_stats where tablename=&#39;aozoradata&#39;;</span>
+</span></span><span style="display:flex;"><span>-<span style="color:#f92672">[</span> RECORD <span style="color:#ae81ff">1</span> <span style="color:#f92672">]</span>------------
+</span></span><span style="display:flex;"><span>schemaname  | public
+</span></span><span style="display:flex;"><span>tablename   | aozoradata
+</span></span><span style="display:flex;"><span>attname     | id
+</span></span><span style="display:flex;"><span>null_frac   | <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>avg_width   | <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>n_distinct  | -1
+</span></span><span style="display:flex;"><span>correlation | 0.999998
+</span></span><span style="display:flex;"><span>-<span style="color:#f92672">[</span> RECORD <span style="color:#ae81ff">2</span> <span style="color:#f92672">]</span>------------
+</span></span><span style="display:flex;"><span>schemaname  | public
+</span></span><span style="display:flex;"><span>tablename   | aozoradata
+</span></span><span style="display:flex;"><span>attname     | data
+</span></span><span style="display:flex;"><span>null_frac   | <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>avg_width   | <span style="color:#ae81ff">190</span>
+</span></span><span style="display:flex;"><span>n_distinct  | <span style="color:#ae81ff">114652</span>
+</span></span><span style="display:flex;"><span>correlation | -0.00665814
+</span></span></code></pre></div><p>青空文庫側の注釈や空行、ハイフン区切りが多く残っているので必要に応じて削除する必要があると思いますのでその場合は参考URLの中段以降をどうぞ。</p>
+<blockquote>
+<p>青空文庫のデータでテキストマイニング（の準備） | ACALL BLOG <a href="https://blog.acall.jp/2019/11/aozorabunko-textmining/">https://blog.acall.jp/2019/11/aozorabunko-textmining/</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-gdb-postgresql-install.html">Debug対応のPostgreSQL10をソースコードからビルドしてgdbを使用する</a></li>
+  
+  <li><a href="/postgresql-function-describe-get.html">PostgreSQLでfunctionの定義を確認する方法</a></li>
+  
+  <li><a href="/postgresql-pg-stat-statements-insuffient-priviledge/">PostgreSQLのpg_stat_statements参照時の&lt;insufficient privilege&gt;について</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-file-get.html">RDS/Auroraのログファイルをawscliから取得・確認する</a></li>
+  
+  <li><a href="/postgresql-pg_setting-unit.html">PostgreSQLのpg_settingsビューにはunit列があり単位が見れる</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

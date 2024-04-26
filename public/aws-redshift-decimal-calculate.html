@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>Redshiftのdecimalの数値計算時の注意点 | my opinion is my own</title>
+<meta name="title" content="Redshiftのdecimalの数値計算時の注意点" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Redshift," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-redshift-decimal-calculate.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Redshiftのdecimalの数値計算時の注意点">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-05-13T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-05-13T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Redshift">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="Redshiftのdecimalの数値計算時の注意点">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Redshiftのdecimalの数値計算時の注意点">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-05-13T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-05-13T00:00:00+00:00">
+  <meta itemprop="wordCount" content="202">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,Redshift">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Redshiftのdecimalの数値計算時の注意点</h1>
+
+<p>
+  <i>
+    <time datetime='2021-05-13' pubdate>
+      2021-05-13
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="はじめに">はじめに</h3>
+<p>浮動小数点演算で細かいところまで保持したい場合は<code>DECIMAL</code>を使うことになると思うが、DECIMALを<!-- raw HTML omitted -->数値計算に使用した場合<!-- raw HTML omitted -->、計算結果の有効桁数は格納先のDECIMALと異なるという。</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html</a></p>
+<p>DECIMAL の計算結果の精度とスケール</p>
+</blockquote>
+<h3 id="精度とスケール">精度とスケール</h3>
+<p>まずは精度とスケールの基本的理解から。</p>
+<ul>
+<li>精度(Precision)：全体の桁数</li>
+<li>スケール(Scale)：小数点以下の桁数</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>入力データ</th>
+<th>NUMBER型の定義</th>
+<th>格納されるデータ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER</td>
+<td>7456123.89</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(*,1)</td>
+<td>7456123.9</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(9)</td>
+<td>7456124</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(9,2)</td>
+<td>7456123.89</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(9,1)</td>
+<td>7456123.9</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(6)</td>
+<td>（精度を超えているため、受け入れられない）</td>
+</tr>
+<tr>
+<td>7,456,123.89</td>
+<td>NUMBER(7,-2)</td>
+<td>7456100</td>
+</tr>
+</tbody>
+</table>
+<h3 id="redshiftでの浮動小数点演算の仕様">Redshiftでの浮動小数点演算の仕様</h3>
+<p>例えば次のように一連のコマンドを実行する。これは<code>a</code>というカラムが<code>decimal(8,2)</code>、<code>b</code>というカラムが<code>decimal(8,7)</code>であり、このaとbに格納されている値を除算して、<code>c</code>の<code>decimal(38,23)</code>に格納するパターンとなる。cに格納される値は小数点23位までしっかりと格納されて欲しいが、計算が入る場合の精度とスケールは小数点23位まで保持されない。このパターンの結果は<code>0.33330000000000000000000</code>となり、<code>小数点4位</code>まで保持されて、以降はゼロ詰めされている。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> test;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> test(a decimal(<span style="color:#ae81ff">8</span>,<span style="color:#ae81ff">2</span>), b decimal(<span style="color:#ae81ff">8</span>,<span style="color:#ae81ff">7</span>),<span style="color:#66d9ef">c</span> decimal(<span style="color:#ae81ff">38</span>,<span style="color:#ae81ff">23</span>));
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> test <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">3</span>,<span style="color:#66d9ef">null</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> test;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> test(<span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">select</span> a<span style="color:#f92672">/</span>b <span style="color:#66d9ef">from</span> test;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> test;
+</span></span></code></pre></div><p>実行ログは次の通り。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> test;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">TABLE</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> test(a decimal(<span style="color:#ae81ff">8</span>,<span style="color:#ae81ff">2</span>), b decimal(<span style="color:#ae81ff">8</span>,<span style="color:#ae81ff">7</span>),<span style="color:#66d9ef">c</span> decimal(<span style="color:#ae81ff">38</span>,<span style="color:#ae81ff">23</span>));
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> test <span style="color:#66d9ef">values</span>(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">3</span>,<span style="color:#66d9ef">null</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> 
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> test;
+</span></span><span style="display:flex;"><span>  a   <span style="color:#f92672">|</span>     b     <span style="color:#f92672">|</span> <span style="color:#66d9ef">c</span> 
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------+-----------+---
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">0000000</span> <span style="color:#f92672">|</span>  
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> test(<span style="color:#66d9ef">c</span>) <span style="color:#66d9ef">select</span> a<span style="color:#f92672">/</span>b <span style="color:#66d9ef">from</span> test;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>mydb<span style="color:#f92672">=#</span> <span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> test;
+</span></span><span style="display:flex;"><span>  a   <span style="color:#f92672">|</span>     b     <span style="color:#f92672">|</span>             <span style="color:#66d9ef">c</span>             
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------+-----------+---------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#ae81ff">1</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span> <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">0000000</span> <span style="color:#f92672">|</span>                          
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">|</span>           <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">33330000000000000000000</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">2</span> <span style="color:#66d9ef">rows</span>)
+</span></span></code></pre></div><p>このような結果になるのは次の計算式が適用されるため。（マニュアルからの抜粋）</p>
+<p>今回は除算なので、スケールは<code>max(4,s1+p2-s2+1)</code>、精度は<code>p1-s1+s2+scale</code>で計算する必要がある。</p>
+<table>
+<thead>
+<tr>
+<th>オペレーション</th>
+<th>分類</th>
+<th>計算式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+ または -</td>
+<td>スケール</td>
+<td>max(s1,s2)</td>
+</tr>
+<tr>
+<td>+ または -</td>
+<td>精度</td>
+<td>max(p1-s1,p2-s2)+1+scale</td>
+</tr>
+<tr>
+<td>*</td>
+<td>スケール</td>
+<td>s1+s2</td>
+</tr>
+<tr>
+<td>*</td>
+<td>精度</td>
+<td>p1+p2+1</td>
+</tr>
+<tr>
+<td>/</td>
+<td>スケール</td>
+<td>max(4,s1+p2-s2+1)</td>
+</tr>
+<tr>
+<td>/</td>
+<td>精度</td>
+<td>p1-s1+s2+scale</td>
+</tr>
+</tbody>
+</table>
+<p>表形式にするとこんな感じ。計算結果と格納先の<code>c</code>で格納出来る<code>スケール</code>、<code>精度</code>で差異が出た。このような仕様を理解した上でデータ型を決める必要がある。</p>
+<table>
+<thead>
+<tr>
+<th>カラム</th>
+<th>変数</th>
+<th>スケール、精度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a</td>
+<td>p1</td>
+<td>8</td>
+</tr>
+<tr>
+<td>a</td>
+<td>s1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>b</td>
+<td>p2</td>
+<td>8</td>
+</tr>
+<tr>
+<td>b</td>
+<td>s2</td>
+<td>7</td>
+</tr>
+<tr>
+<td>計算結果</td>
+<td>精度（全体の桁数）</td>
+<td>17</td>
+</tr>
+<tr>
+<td>計算結果</td>
+<td>スケール（小数点以下の桁数）</td>
+<td>4</td>
+</tr>
+<tr>
+<td>c（格納先）</td>
+<td>精度（全体の桁数）</td>
+<td>38</td>
+</tr>
+<tr>
+<td>c（格納先）</td>
+<td>スケール（小数点以下の桁数）</td>
+<td>23</td>
+</tr>
+</tbody>
+</table>
+<h3 id="補足">補足</h3>
+<p>各データベースで計算式が違う？下記はSQL Server。</p>
+<p><a href="https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?view=sql-server-ver15">https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?view=sql-server-ver15</a></p>
+<h3 id="参照">参照</h3>
+<blockquote>
+<p><a href="https://tech.tvisioninsights.co.jp/entry/2018/08/22/100000">https://tech.tvisioninsights.co.jp/entry/2018/08/22/100000</a></p>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_numeric_computations201.html</a></p>
+<p><a href="https://odashinsuke.hatenablog.com/entry/20100720/1279628893">https://odashinsuke.hatenablog.com/entry/20100720/1279628893</a></p>
+<p><a href="https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?redirectedfrom=MSDN&amp;view=sql-server-ver15">https://docs.microsoft.com/ja-jp/sql/t-sql/data-types/precision-scale-and-length-transact-sql?redirectedfrom=MSDN&amp;view=sql-server-ver15</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-redshift-skew-table-check/">Redshiftのskew tableを確認する</a></li>
+  
+  <li><a href="/aws-redshift-sample-database-tickit.html">Redshiftのサンプルデータベース（TICKIT）を作る</a></li>
+  
+  <li><a href="/aws-data-unload-redshift-to-s3.html">RedshiftのS3へのデータアンロード</a></li>
+  
+  <li><a href="/aws-redshift-tpcds-dataload.html">RedshiftにTPC-DSデータをロードしてクエリ実行</a></li>
+  
+  <li><a href="/aws-redshift-dataload-from-s3.html">Redshiftへのデータロード</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/redshift/">#Redshift</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

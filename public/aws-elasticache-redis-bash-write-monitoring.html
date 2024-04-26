@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>ElastiCache（Redis）への定期書き込み用スクリプト | my opinion is my own</title>
+<meta name="title" content="ElastiCache（Redis）への定期書き込み用スクリプト" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,ElastiCache,Redis,Bash," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-elasticache-redis-bash-write-monitoring.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="ElastiCache（Redis）への定期書き込み用スクリプト">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-04-07T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-04-07T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="ElastiCache">
+    <meta property="article:tag" content="Redis">
+    <meta property="article:tag" content="Bash">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="ElastiCache（Redis）への定期書き込み用スクリプト">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="ElastiCache（Redis）への定期書き込み用スクリプト">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-04-07T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-04-07T00:00:00+00:00">
+  <meta itemprop="wordCount" content="51">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,ElastiCache,Redis,Bash">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>ElastiCache（Redis）への定期書き込み用スクリプト</h1>
+
+<p>
+  <i>
+    <time datetime='2021-04-07' pubdate>
+      2021-04-07
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>ElastiCache Redisのフェイルオーバーやメンテナンス時にどのくらい影響があるかを調査する時に適当に準備したスクリプト</p>
+<ul>
+<li>タイムアウトを0.1秒に設定
+<ul>
+<li>接続不可の場合に、タイムアウトさせて次の処理に進むため</li>
+</ul>
+</li>
+<li>redis-cliの戻り値で処理成功か否かでsleep時間を微調整</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">for</span> a in <span style="color:#f92672">{</span>1..100000<span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>    dt_now<span style="color:#f92672">=</span><span style="color:#e6db74">`</span>date <span style="color:#e6db74">&#34;+%Y%m%d%H%M%S&#34;</span><span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;===================&#34;</span>
+</span></span><span style="display:flex;"><span>    timeout -sKILL 0.1 redis-cli -c -h redis-test11.xxxxx.ng.0001.apne1.cache.amazonaws.com -p <span style="color:#ae81ff">6379</span> set $dt_now $a
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> <span style="color:#f92672">[</span> $? !<span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">]</span>; <span style="color:#66d9ef">then</span> 
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># タイムアウトしたときの処理</span>
+</span></span><span style="display:flex;"><span>        echo <span style="color:#e6db74">&#34;異常終了orタイムアウト&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 正常終了したときの処理</span>
+</span></span><span style="display:flex;"><span>        echo <span style="color:#e6db74">&#34;正常終了&#34;</span>
+</span></span><span style="display:flex;"><span>        sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>    echo $dt_now
+</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;===================&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">done</span>
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-elasticache-redis-benchmark.html">ElastiCacheのRedisにベンチマークを実施する</a></li>
+  
+  <li><a href="/aws-redshift-tpcds-dataload.html">RedshiftにTPC-DSデータをロードしてクエリ実行</a></li>
+  
+  <li><a href="/aws-redshift-dataload-from-s3.html">Redshiftへのデータロード</a></li>
+  
+  <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/elasticache/">#ElastiCache</a>
+  
+  <a href="http://localhost:1313/blog/redis/">#Redis</a>
+  
+  <a href="http://localhost:1313/blog/bash/">#Bash</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

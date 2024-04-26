@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行 | my opinion is my own</title>
+<meta name="title" content="Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,CloudFront," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-cloudfront-apache-bench-ab-access/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-01-24T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-01-24T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="CloudFront">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2022-01-24T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-01-24T00:00:00+00:00">
+  <meta itemprop="wordCount" content="652">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,CloudFront">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行</h1>
+
+<p>
+  <i>
+    <time datetime='2022-01-24' pubdate>
+      2022-01-24
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="apacheをインストール">Apacheをインストール</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ sudo yum -y install apache
+</span></span><span style="display:flex;"><span>Loaded plugins: langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>amzn2-core                                                                                                         ～省略～                                                                          6/6 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  httpd.x86_64 0:2.4.51-1.amzn2                                                                                                                                                                                 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  generic-logos-httpd.noarch 0:18.0.0-4.amzn2    httpd-filesystem.noarch 0:2.4.51-1.amzn2    httpd-tools.x86_64 0:2.4.51-1.amzn2    mailcap.noarch 0:2.1.41-2.amzn2    mod_http2.x86_64 0:1.15.19-1.amzn2.0.1   
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span></code></pre></div><h3 id="abコマンドのオプション">abコマンドのオプション</h3>
+<p>よく使うのは<code>-n</code>、<code>-c</code>あたりか。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ ab
+</span></span><span style="display:flex;"><span>ab: wrong number of arguments
+</span></span><span style="display:flex;"><span>Usage: ab <span style="color:#f92672">[</span>options<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>http<span style="color:#f92672">[</span>s<span style="color:#f92672">]</span>://<span style="color:#f92672">]</span>hostname<span style="color:#f92672">[</span>:port<span style="color:#f92672">]</span>/path
+</span></span><span style="display:flex;"><span>Options are:
+</span></span><span style="display:flex;"><span>    -n requests     Number of requests to perform
+</span></span><span style="display:flex;"><span>    -c concurrency  Number of multiple requests to make at a time
+</span></span><span style="display:flex;"><span>    -t timelimit    Seconds to max. to spend on benchmarking
+</span></span><span style="display:flex;"><span>                    This implies -n <span style="color:#ae81ff">50000</span>
+</span></span><span style="display:flex;"><span>    -s timeout      Seconds to max. wait <span style="color:#66d9ef">for</span> each response
+</span></span><span style="display:flex;"><span>                    Default is <span style="color:#ae81ff">30</span> seconds
+</span></span><span style="display:flex;"><span>    -b windowsize   Size of TCP send/receive buffer, in bytes
+</span></span><span style="display:flex;"><span>    -B address      Address to bind to when making outgoing connections
+</span></span><span style="display:flex;"><span>    -p postfile     File containing data to POST. Remember also to set -T
+</span></span><span style="display:flex;"><span>    -u putfile      File containing data to PUT. Remember also to set -T
+</span></span><span style="display:flex;"><span>    -T content-type Content-type header to use <span style="color:#66d9ef">for</span> POST/PUT data, eg.
+</span></span><span style="display:flex;"><span>                    <span style="color:#e6db74">&#39;application/x-www-form-urlencoded&#39;</span>
+</span></span><span style="display:flex;"><span>                    Default is <span style="color:#e6db74">&#39;text/plain&#39;</span>
+</span></span><span style="display:flex;"><span>    -v verbosity    How much troubleshooting info to print
+</span></span><span style="display:flex;"><span>    -w              Print out results in HTML tables
+</span></span><span style="display:flex;"><span>    -i              Use HEAD instead of GET
+</span></span><span style="display:flex;"><span>    -x attributes   String to insert as table attributes
+</span></span><span style="display:flex;"><span>    -y attributes   String to insert as tr attributes
+</span></span><span style="display:flex;"><span>    -z attributes   String to insert as td or th attributes
+</span></span><span style="display:flex;"><span>    -C attribute    Add cookie, eg. <span style="color:#e6db74">&#39;Apache=1234&#39;</span>. <span style="color:#f92672">(</span>repeatable<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -H attribute    Add Arbitrary header line, eg. <span style="color:#e6db74">&#39;Accept-Encoding: gzip&#39;</span>
+</span></span><span style="display:flex;"><span>                    Inserted after all normal header lines. <span style="color:#f92672">(</span>repeatable<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -A attribute    Add Basic WWW Authentication, the attributes
+</span></span><span style="display:flex;"><span>                    are a colon separated username and password.
+</span></span><span style="display:flex;"><span>    -P attribute    Add Basic Proxy Authentication, the attributes
+</span></span><span style="display:flex;"><span>                    are a colon separated username and password.
+</span></span><span style="display:flex;"><span>    -X proxy:port   Proxyserver and port number to use
+</span></span><span style="display:flex;"><span>    -V              Print version number and exit
+</span></span><span style="display:flex;"><span>    -k              Use HTTP KeepAlive feature
+</span></span><span style="display:flex;"><span>    -d              Do not show percentiles served table.
+</span></span><span style="display:flex;"><span>    -S              Do not show confidence estimators and warnings.
+</span></span><span style="display:flex;"><span>    -q              Do not show progress when doing more than <span style="color:#ae81ff">150</span> requests
+</span></span><span style="display:flex;"><span>    -l              Accept variable document length <span style="color:#f92672">(</span>use this <span style="color:#66d9ef">for</span> dynamic pages<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -g filename     Output collected data to gnuplot format file.
+</span></span><span style="display:flex;"><span>    -e filename     Output CSV file with percentages served
+</span></span><span style="display:flex;"><span>    -r              Don<span style="color:#960050;background-color:#1e0010">&#39;</span>t exit on socket receive errors.
+</span></span><span style="display:flex;"><span>    -m method       Method name
+</span></span><span style="display:flex;"><span>    -h              Display usage information <span style="color:#f92672">(</span>this message<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -I              Disable TLS Server Name Indication <span style="color:#f92672">(</span>SNI<span style="color:#f92672">)</span> extension
+</span></span><span style="display:flex;"><span>    -Z ciphersuite  Specify SSL/TLS cipher suite <span style="color:#f92672">(</span>See openssl ciphers<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -f protocol     Specify SSL/TLS protocol
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">(</span>SSL3, TLS1, TLS1.1, TLS1.2 or ALL<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    -E certfile     Specify optional client certificate chain and private key
+</span></span></code></pre></div><h3 id="cloudfrontのディストリビューションに簡易的なアクセスを実施">CloudFrontのディストリビューションに簡易的なアクセスを実施</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ ab -n <span style="color:#ae81ff">10000</span> -c <span style="color:#ae81ff">10</span> https://d35onj12it5a8t.cloudfront.net/date.html
+</span></span><span style="display:flex;"><span>This is ApacheBench, Version 2.3 &lt;$Revision: <span style="color:#ae81ff">1879490</span> $&gt;
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#ae81ff">1996</span> Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+</span></span><span style="display:flex;"><span>Licensed to The Apache Software Foundation, http://www.apache.org/
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Benchmarking d35onj12it5a8t.cloudfront.net <span style="color:#f92672">(</span>be patient<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">1000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">2000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">3000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">4000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">5000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">6000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">7000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">8000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">9000</span> requests
+</span></span><span style="display:flex;"><span>Completed <span style="color:#ae81ff">10000</span> requests
+</span></span><span style="display:flex;"><span>Finished <span style="color:#ae81ff">10000</span> requests
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Server Software:        AmazonS3
+</span></span><span style="display:flex;"><span>Server Hostname:        d35onj12it5a8t.cloudfront.net
+</span></span><span style="display:flex;"><span>Server Port:            <span style="color:#ae81ff">443</span>
+</span></span><span style="display:flex;"><span>SSL/TLS Protocol:       TLSv1.2,ECDHE-RSA-AES128-GCM-SHA256,2048,128
+</span></span><span style="display:flex;"><span>Server Temp Key:        ECDH P-256 <span style="color:#ae81ff">256</span> bits
+</span></span><span style="display:flex;"><span>TLS Server Name:        d35onj12it5a8t.cloudfront.net
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Document Path:          /date.html
+</span></span><span style="display:flex;"><span>Document Length:        <span style="color:#ae81ff">469</span> bytes
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Concurrency Level:      <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>Time taken <span style="color:#66d9ef">for</span> tests:   12.832 seconds
+</span></span><span style="display:flex;"><span>Complete requests:      <span style="color:#ae81ff">10000</span>
+</span></span><span style="display:flex;"><span>Failed requests:        <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>Total transferred:      <span style="color:#ae81ff">9240000</span> bytes
+</span></span><span style="display:flex;"><span>HTML transferred:       <span style="color:#ae81ff">4690000</span> bytes
+</span></span><span style="display:flex;"><span>Requests per second:    779.33 <span style="color:#f92672">[</span><span style="color:#75715e">#/sec] (mean)</span>
+</span></span><span style="display:flex;"><span>Time per request:       12.832 <span style="color:#f92672">[</span>ms<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>mean<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Time per request:       1.283 <span style="color:#f92672">[</span>ms<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>mean, across all concurrent requests<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Transfer rate:          703.22 <span style="color:#f92672">[</span>Kbytes/sec<span style="color:#f92672">]</span> received
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Connection Times <span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>              min  mean<span style="color:#f92672">[</span>+/-sd<span style="color:#f92672">]</span> median   max
+</span></span><span style="display:flex;"><span>Connect:        <span style="color:#ae81ff">5</span>   <span style="color:#ae81ff">10</span>   2.8     <span style="color:#ae81ff">10</span>      <span style="color:#ae81ff">67</span>
+</span></span><span style="display:flex;"><span>Processing:     <span style="color:#ae81ff">1</span>    <span style="color:#ae81ff">3</span>   1.0      <span style="color:#ae81ff">3</span>      <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>Waiting:        <span style="color:#ae81ff">1</span>    <span style="color:#ae81ff">3</span>   1.0      <span style="color:#ae81ff">3</span>      <span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>Total:          <span style="color:#ae81ff">6</span>   <span style="color:#ae81ff">13</span>   3.7     <span style="color:#ae81ff">13</span>      <span style="color:#ae81ff">72</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Percentage of the requests served within a certain time <span style="color:#f92672">(</span>ms<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  50%     <span style="color:#ae81ff">13</span>
+</span></span><span style="display:flex;"><span>  66%     <span style="color:#ae81ff">13</span>
+</span></span><span style="display:flex;"><span>  75%     <span style="color:#ae81ff">16</span>
+</span></span><span style="display:flex;"><span>  80%     <span style="color:#ae81ff">17</span>
+</span></span><span style="display:flex;"><span>  90%     <span style="color:#ae81ff">18</span>
+</span></span><span style="display:flex;"><span>  95%     <span style="color:#ae81ff">18</span>
+</span></span><span style="display:flex;"><span>  98%     <span style="color:#ae81ff">19</span>
+</span></span><span style="display:flex;"><span>  99%     <span style="color:#ae81ff">20</span>
+</span></span><span style="display:flex;"><span> 100%     <span style="color:#ae81ff">72</span> <span style="color:#f92672">(</span>longest request<span style="color:#f92672">)</span>
+</span></span></code></pre></div><h3 id="結果から主に見るポイント">結果から主に見るポイント</h3>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>項目</th>
+<th>説明</th>
+<th>結果サンプル</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Concurrency Level</td>
+<td>同時実行数</td>
+<td>10</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Time taken for tests</td>
+<td>テスト時間</td>
+<td>12.832 seconds</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Complete requests</td>
+<td>総リクエスト数</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Failed requests</td>
+<td>失敗したリクエスト</td>
+<td>0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Total transferred</td>
+<td>転送量（全体）</td>
+<td>9240000 bytes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>HTML transferred</td>
+<td>転送量（HTML）</td>
+<td>4690000 bytes</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Requests per second</td>
+<td>1秒間あたりのリクエスト数</td>
+<td>779.33 [#/sec] (mean)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Transfer rate</td>
+<td>転送レート</td>
+<td>703.22 [Kbytes/sec] received</td>
+</tr>
+</tbody>
+</table>
+<h3 id="参考">参考</h3>
+<blockquote>
+<p>Apache Benchでサクッと性能テスト - Qiita <a href="https://qiita.com/flexfirm/items/ac5a2f53cfa933a37192">https://qiita.com/flexfirm/items/ac5a2f53cfa933a37192</a></p>
+<p>Apache Benchの結果の見方 - Qiita <a href="https://qiita.com/nnmr/items/2be82691e19da261c4e4">https://qiita.com/nnmr/items/2be82691e19da261c4e4</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-s3-object-checksum-how-to/">S3オブジェクトの整合性チェックをどのように行うのか</a></li>
+  
+  <li><a href="/aws-s3-object-md5-etag/">S3オブジェクトのmd5やEtagの関係性について整理する</a></li>
+  
+  <li><a href="/aws-ecr-container-push-pull/">ECRへのコンテナイメージのPush、Pullのメモ</a></li>
+  
+  <li><a href="/aws-mongodb-install/">Amazon LinuxにMongoDB(5.x系)をインストールする</a></li>
+  
+  <li><a href="/aws-tokyo-to-osaka-network-outbound-cost/">AWSで東京リージョンから大阪リージョンへのリージョン間のアウトバウンド通信コストを確認</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/cloudfront/">#CloudFront</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

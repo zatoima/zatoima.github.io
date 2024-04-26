@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>PostgreSQLの稼働状況確認用SQL | my opinion is my own</title>
+<meta name="title" content="PostgreSQLの稼働状況確認用SQL" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="http://localhost:1313/postgresql-monitoring-sql.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="PostgreSQLの稼働状況確認用SQL">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-01-22T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-01-22T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="PostgreSQLの稼働状況確認用SQL">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="PostgreSQLの稼働状況確認用SQL">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-01-22T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-01-22T00:00:00+00:00">
+  <meta itemprop="wordCount" content="626">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>PostgreSQLの稼働状況確認用SQL</h1>
+
+<p>
+  <i>
+    <time datetime='2020-01-22' pubdate>
+      2020-01-22
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>DB稼働状況の監視と性能解析用のツールは数あれど、やはりSQLを使った状況確認の機会は多いので、PostgreSQLの稼働状況確認時に使用するSQLをまとめた。必要に応じてまた都度追加していきたい。</p>
+<p>PostgreSQL 10.11のバージョンでSQLの確認を実施済。バージョンが上がるにつれて便利なシステムカタログが増えているので最新バージョンを触ってみたい。</p>
+<h4 id="バージョン">バージョン</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">=#</span> <span style="color:#66d9ef">select</span> <span style="color:#66d9ef">version</span>();
+</span></span><span style="display:flex;"><span>                                                 <span style="color:#66d9ef">version</span>                                                  
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> PostgreSQL <span style="color:#ae81ff">10</span>.<span style="color:#ae81ff">11</span> <span style="color:#66d9ef">on</span> x86_64<span style="color:#f92672">-</span>pc<span style="color:#f92672">-</span>linux<span style="color:#f92672">-</span>gnu, compiled <span style="color:#66d9ef">by</span> gcc (GCC) <span style="color:#ae81ff">4</span>.<span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">5</span> <span style="color:#ae81ff">20150623</span> (Red Hat <span style="color:#ae81ff">4</span>.<span style="color:#ae81ff">8</span>.<span style="color:#ae81ff">5</span><span style="color:#f92672">-</span><span style="color:#ae81ff">39</span>), <span style="color:#ae81ff">64</span><span style="color:#f92672">-</span>bit
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span> <span style="color:#66d9ef">row</span>)
+</span></span></code></pre></div><h4 id="commit数rollback数の確認">commit数/rollback数の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> datname, xact_commit, xact_rollback <span style="color:#66d9ef">FROM</span> pg_stat_database;
+</span></span></code></pre></div><h4 id="db単位のキャッシュヒット率の確認">DB単位のキャッシュヒット率の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> datname, round(blks_hit<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span><span style="color:#f92672">/</span>(blks_hit<span style="color:#f92672">+</span>blks_read), <span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">AS</span> cache_hit_ratio
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_database <span style="color:#66d9ef">WHERE</span> blks_read <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>;
+</span></span></code></pre></div><h4 id="tbl単位のキャッシュヒット率の確認">TBL単位のキャッシュヒット率の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname, round(heap_blks_hit<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span><span style="color:#f92672">/</span>(heap_blks_hit<span style="color:#f92672">+</span>heap_blks_read), <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">AS</span> cache_hit_ratio <span style="color:#66d9ef">FROM</span> pg_statio_user_tables
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> heap_blks_read <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> cache_hit_ratio;
+</span></span></code></pre></div><h4 id="index単位のキャッシュヒット率の確認">INDEX単位のキャッシュヒット率の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname, indexrelname, round(idx_blks_hit<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span><span style="color:#f92672">/</span>(idx_blks_hit<span style="color:#f92672">+</span>idx_blks_read), <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">AS</span> cache_hit_ratio <span style="color:#66d9ef">FROM</span> pg_statio_user_indexes
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> idx_blks_read <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> cache_hit_ratio;
+</span></span></code></pre></div><h4 id="表スキャンあたりの読み取り行数の確認">表スキャンあたりの読み取り行数の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname, seq_scan, seq_tup_read, seq_tup_read<span style="color:#f92672">/</span>seq_scan <span style="color:#66d9ef">AS</span> tup_per_read <span style="color:#66d9ef">FROM</span> pg_stat_user_tables
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> seq_scan <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> tup_per_read <span style="color:#66d9ef">DESC</span>;
+</span></span></code></pre></div><h4 id="hot更新の比率の確認">HOT更新の比率の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname, n_tup_upd, n_tup_hot_upd, round(n_tup_hot_upd<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span><span style="color:#f92672">/</span>n_tup_upd, <span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">AS</span> hot_upd_ratio
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_user_tables <span style="color:#66d9ef">WHERE</span> n_tup_upd <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> hot_upd_ratio;
+</span></span></code></pre></div><h4 id="稼働しているプロセスの確認">稼働しているプロセスの確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> pid, datname, usename, <span style="color:#66d9ef">state</span>, backend_type <span style="color:#66d9ef">FROM</span> pg_stat_activity;
+</span></span></code></pre></div><h4 id="実行されているsqlの確認">実行されているSQLの確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> pid, query_start, substr(query, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">50</span>) <span style="color:#66d9ef">FROM</span> pg_stat_activity <span style="color:#66d9ef">WHERE</span> <span style="color:#66d9ef">state</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;active&#39;</span> <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> query_start;
+</span></span></code></pre></div><h4 id="walアーカイブの確認">WALアーカイブの確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_stat_archiver;
+</span></span></code></pre></div><h4 id="デットロック回数の確認">デットロック回数の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> datname,deadlocks <span style="color:#66d9ef">FROM</span> pg_stat_database <span style="color:#66d9ef">where</span> datname <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;pgbench&#39;</span>;
+</span></span></code></pre></div><h4 id="デットロック状況の確認">デットロック状況の確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> l.pid, l.<span style="color:#66d9ef">granted</span>, d.datname, l.locktype, relation, relation::regclass, transactionid, l.<span style="color:#66d9ef">mode</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_locks l <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">JOIN</span> pg_database d <span style="color:#66d9ef">ON</span>  l.<span style="color:#66d9ef">database</span> <span style="color:#f92672">=</span> d.oid 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> l.pid <span style="color:#f92672">!=</span> pg_backend_pid() 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> l.pid ;
+</span></span></code></pre></div><h4 id="長時間かかっている処理を確認">長時間かかっている処理を確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> pid, <span style="color:#66d9ef">state</span>, wait_event, wait_event_type, (NOW() <span style="color:#f92672">-</span> xact_start)::INTERVAL(<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">AS</span> tx_duration, (NOW() <span style="color:#f92672">-</span> query_start)::INTERVAL(<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">AS</span> sql_duration, query 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_activity 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> pid <span style="color:#f92672">&lt;&gt;</span> pg_backend_pid() ;
+</span></span></code></pre></div><h4 id="チェックポイント">チェックポイント</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    checkpoints_timed,
+</span></span><span style="display:flex;"><span>    checkpoints_req,
+</span></span><span style="display:flex;"><span>    checkpoint_write_time,
+</span></span><span style="display:flex;"><span>    checkpoint_sync_time,
+</span></span><span style="display:flex;"><span>    buffers_checkpoint
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    pg_stat_bgwriter;
+</span></span></code></pre></div><h4 id="vacuum">VACUUM</h4>
+<p>last_vacuum, last_autovacuum でVACUUM, 自動VACUUMがいつ実行されたか、n_dead_tupで不要なタプルが何行削除されたか</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname,n_live_tup,n_dead_tup,last_autovacuum,autovacuum_count
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_user_tables;
+</span></span></code></pre></div><h4 id="analyze">ANALYZE</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> relname,last_analyze,last_autoanalyze,analyze_count,autoanalyze_count
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_user_tables;
+</span></span></code></pre></div><h4 id="一時ファイルの書き出し">一時ファイルの書き出し</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> datname,temp_files,temp_bytes <span style="color:#66d9ef">from</span> pg_stat_database;
+</span></span></code></pre></div><h4 id="トータルの実行時間が長いsql実行回数が多いsqlを確認pg_stat_statementsの事前設定が必要">トータルの実行時間が長いSQL/実行回数が多いSQLを確認。pg_stat_statementsの事前設定が必要。</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> datname, <span style="color:#66d9ef">SUBSTRING</span>(query, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">40</span>) <span style="color:#66d9ef">AS</span> query, calls, TRUNC( total_time::NUMERIC, <span style="color:#ae81ff">3</span> ) <span style="color:#66d9ef">AS</span> total_time 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_stat_statements <span style="color:#66d9ef">LEFT</span> <span style="color:#66d9ef">OUTER</span> <span style="color:#66d9ef">JOIN</span> pg_database <span style="color:#66d9ef">ON</span>  pg_stat_statements.dbid <span style="color:#f92672">=</span> pg_database.oid 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> datname <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;pgbench&#39;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> total_time <span style="color:#66d9ef">DESC</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LIMIT</span> <span style="color:#ae81ff">5</span> ;
+</span></span></code></pre></div><h4 id="データベースのサイズを確認">データベースのサイズを確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> pg_size_pretty(pg_database_size(<span style="color:#e6db74">&#39;pgbench&#39;</span>));
+</span></span></code></pre></div><h4 id="テーブルのサイズを確認">テーブルのサイズを確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> pg_relation_size(<span style="color:#e6db74">&#39;pgbench&#39;</span>);
+</span></span></code></pre></div><h4 id="テーブルとインデックスのサイズ合計を確認">テーブルとインデックスのサイズ合計を確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> pg_total_relation_size(<span style="color:#e6db74">&#39;pgbench&#39;</span>);
+</span></span></code></pre></div><h4 id="各テーブルごとのサイズタプル数をチェックする">各テーブルごとのサイズ/タプル数をチェックする</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> pgn.nspname, relname, pg_size_pretty(relpages::bigint <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1024</span>) <span style="color:#66d9ef">AS</span> <span style="color:#66d9ef">size</span>, <span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> relkind <span style="color:#f92672">=</span> 
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;t&#39;</span> <span style="color:#66d9ef">THEN</span> (<span style="color:#66d9ef">SELECT</span> pgd.relname <span style="color:#66d9ef">FROM</span> pg_class pgd <span style="color:#66d9ef">WHERE</span> pgd.reltoastrelid <span style="color:#f92672">=</span> pg.oid) <span style="color:#66d9ef">WHEN</span> nspname <span style="color:#f92672">=</span> 
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;pg_toast&#39;</span> <span style="color:#66d9ef">AND</span> relkind <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;i&#39;</span> <span style="color:#66d9ef">THEN</span> (<span style="color:#66d9ef">SELECT</span> pgt.relname <span style="color:#66d9ef">FROM</span> pg_class pgt <span style="color:#66d9ef">WHERE</span> <span style="color:#66d9ef">SUBSTRING</span>(pgt.relname 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> <span style="color:#ae81ff">10</span>) <span style="color:#f92672">=</span> <span style="color:#66d9ef">REPLACE</span>(<span style="color:#66d9ef">SUBSTRING</span>(pg.relname <span style="color:#66d9ef">FROM</span> <span style="color:#ae81ff">10</span>), <span style="color:#e6db74">&#39;_index&#39;</span>, <span style="color:#e6db74">&#39;&#39;</span>)) <span style="color:#66d9ef">ELSE</span> (<span style="color:#66d9ef">SELECT</span> pgc.relname <span style="color:#66d9ef">FROM</span> 
+</span></span><span style="display:flex;"><span>pg_class pgc <span style="color:#66d9ef">WHERE</span> pg.reltoastrelid <span style="color:#f92672">=</span> pgc.oid) <span style="color:#66d9ef">END</span>::varchar <span style="color:#66d9ef">AS</span> refrelname, <span style="color:#66d9ef">CASE</span> <span style="color:#66d9ef">WHEN</span> nspname <span style="color:#f92672">=</span> 
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;pg_toast&#39;</span> <span style="color:#66d9ef">AND</span> relkind <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;i&#39;</span> <span style="color:#66d9ef">THEN</span> (<span style="color:#66d9ef">SELECT</span> pgts.relname <span style="color:#66d9ef">FROM</span> pg_class pgts <span style="color:#66d9ef">WHERE</span> pgts.reltoastrelid <span style="color:#f92672">=</span> 
+</span></span><span style="display:flex;"><span>(<span style="color:#66d9ef">SELECT</span> pgt.oid <span style="color:#66d9ef">FROM</span> pg_class pgt <span style="color:#66d9ef">WHERE</span> <span style="color:#66d9ef">SUBSTRING</span>(pgt.relname <span style="color:#66d9ef">FROM</span> <span style="color:#ae81ff">10</span>) <span style="color:#f92672">=</span> <span style="color:#66d9ef">REPLACE</span>(<span style="color:#66d9ef">SUBSTRING</span>(pg.relname 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> <span style="color:#ae81ff">10</span>), <span style="color:#e6db74">&#39;_index&#39;</span>, <span style="color:#e6db74">&#39;&#39;</span>))) <span style="color:#66d9ef">END</span> <span style="color:#66d9ef">AS</span> relidxrefrelname, relfilenode, relkind, reltuples::bigint, relpages 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> pg_class pg, pg_namespace pgn <span style="color:#66d9ef">WHERE</span> pg.relnamespace <span style="color:#f92672">=</span> pgn.oid <span style="color:#66d9ef">AND</span> pgn.nspname <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">IN</span> 
+</span></span><span style="display:flex;"><span>(<span style="color:#e6db74">&#39;information_schema&#39;</span>, <span style="color:#e6db74">&#39;pg_catalog&#39;</span>) <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> relpages <span style="color:#66d9ef">DESC</span>; 
+</span></span></code></pre></div><h4 id="各テーブルの行長を取得">各テーブルの行長を取得</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> tablename, attname, avg_width <span style="color:#66d9ef">from</span> pg_stats;
+</span></span></code></pre></div><h4 id="各テーブル列単位の統計情報を確認pg_statビューを使用">各テーブル（列単位）の統計情報を確認（pg_statビューを使用）</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> pg_stats <span style="color:#66d9ef">WHERE</span> tablename <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;xxxxxxx&#39;</span>;
+</span></span></code></pre></div><h4 id="dmlごとの実行回数を取得">DMLごとの実行回数を取得</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> relname, n_tup_ins <span style="color:#66d9ef">as</span> insert_cnt, n_tup_upd <span style="color:#66d9ef">as</span> update_cnt, n_tup_del <span style="color:#66d9ef">as</span> delete_cnt <span style="color:#66d9ef">from</span> pg_stat_user_tables;
+</span></span></code></pre></div><h4 id="ディスクソートの実行回数を取得">ディスクソートの実行回数を取得</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> datname, temp_files, pg_size_pretty(temp_bytes) <span style="color:#66d9ef">as</span> temp_bytes, pg_size_pretty(round(temp_bytes<span style="color:#f92672">/</span>temp_files,<span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">as</span> temp_file_size
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_database
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">where</span> temp_files <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>;
+</span></span></code></pre></div><h4 id="大量の行を読み取っている表スキャンを確認">大量の行を読み取っている表スキャンを確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> relname, seq_scan, seq_tup_read,seq_tup_read<span style="color:#f92672">/</span>seq_scan <span style="color:#66d9ef">as</span> tup_per_read 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_user_tables
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">where</span> seq_scan <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> tup_per_read <span style="color:#66d9ef">desc</span>;
+</span></span></code></pre></div><h4 id="dead-tupleが多いテーブルを確認">dead tupleが多いテーブルを確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> relname, n_live_tup, n_dead_tup,round(n_dead_tup<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span><span style="color:#f92672">/</span>(n_dead_tup<span style="color:#f92672">+</span>n_live_tup), <span style="color:#ae81ff">2</span>)  <span style="color:#66d9ef">as</span> dead_ratio,pg_size_pretty(pg_relation_size(relid))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_user_tables
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">where</span> n_live_tup <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> dead_ratio <span style="color:#66d9ef">desc</span>;
+</span></span></code></pre></div><h4 id="ioに関する情報取得">IOに関する情報取得</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_statio_all_tables;
+</span></span></code></pre></div><h4 id="sqlの総実行回数総実行時間を確認するpg_stat_statements">SQLの総実行回数、総実行時間を確認する(pg_stat_statements)</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> substr(query, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">160</span>) <span style="color:#66d9ef">as</span> query, calls
+</span></span><span style="display:flex;"><span>  ,(total_time <span style="color:#f92672">/</span> <span style="color:#ae81ff">1000</span>)::numeric(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">as</span> total_time_sec
+</span></span><span style="display:flex;"><span>  ,(mean_time <span style="color:#f92672">/</span> <span style="color:#ae81ff">1000</span>)::numeric(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">as</span> avg_time_sec
+</span></span><span style="display:flex;"><span>  ,(min_time <span style="color:#f92672">/</span> <span style="color:#ae81ff">1000</span>)::numeric(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">as</span> min_time_sec
+</span></span><span style="display:flex;"><span> ,(max_time <span style="color:#f92672">/</span> <span style="color:#ae81ff">1000</span>)::numeric(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">as</span> max_time_sec
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_statements
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> total_time <span style="color:#66d9ef">desc</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">10</span>;
+</span></span></code></pre></div><h4 id="vaccumの進捗状況を確認">vaccumの進捗状況を確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> v.pid, v.datname, <span style="color:#66d9ef">c</span>.relname, v.phase, v.heap_blks_total, v.heap_blks_scanned, v.heap_blks_vacuumed, v.index_vacuum_count, v.max_dead_tuples, v.num_dead_tuples 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_progress_vacuum <span style="color:#66d9ef">as</span> v <span style="color:#66d9ef">join</span> pg_class <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">c</span> <span style="color:#66d9ef">on</span>  v.relid <span style="color:#f92672">=</span> <span style="color:#66d9ef">c</span>.relfilenode ;
+</span></span></code></pre></div><h4 id="テーブルのoidを確認">テーブルのoidを確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> relid,relname <span style="color:#66d9ef">from</span> pg_stat_all_tables;
+</span></span></code></pre></div><h4 id="アクセス頻度の多いテーブル">アクセス頻度の多いテーブル</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> 
+</span></span><span style="display:flex;"><span>    relname,
+</span></span><span style="display:flex;"><span>    coalesce(seq_tup_read,<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>coalesce(idx_tup_fetch,<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>    coalesce(n_tup_ins,<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>coalesce(n_tup_upd,<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>coalesce(n_tup_del,<span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">as</span> total,
+</span></span><span style="display:flex;"><span>    coalesce(seq_tup_read,<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>coalesce(idx_tup_fetch,<span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">select</span>,
+</span></span><span style="display:flex;"><span>    coalesce(n_tup_ins,<span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">insert</span>,
+</span></span><span style="display:flex;"><span>    coalesce(n_tup_upd,<span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">update</span>,
+</span></span><span style="display:flex;"><span>    coalesce(n_tup_del,<span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">delete</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_stat_user_tables
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> total <span style="color:#66d9ef">desc</span>;
+</span></span></code></pre></div><h4 id="io回数キャッシュヒット率">I/O回数＆キャッシュヒット率</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span>,(heap_blks_hit<span style="color:#f92672">*</span><span style="color:#ae81ff">100</span>) <span style="color:#f92672">/</span> (heap_blks_read<span style="color:#f92672">+</span>heap_blks_hit) <span style="color:#66d9ef">as</span> ritu 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_statio_all_tables 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">where</span> heap_blks_hit <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">1</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> ritu;
+</span></span></code></pre></div><h4 id="インデックス毎のアクセスに関する統計情報を確認">インデックス毎のアクセスに関する統計情報を確認</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> pg_stat_all_indexes;
+</span></span></code></pre></div><h4 id="パラメータ一覧と反映タイミング">パラメータ一覧と反映タイミング</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> name,setting,unit,context <span style="color:#66d9ef">FROM</span> pg_settings;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>internal<span style="color:#960050;background-color:#1e0010">：変更不可</span>(<span style="color:#960050;background-color:#1e0010">構築時設定確認用</span>)
+</span></span><span style="display:flex;"><span>postmaster<span style="color:#960050;background-color:#1e0010">：サーバ起動時</span>
+</span></span><span style="display:flex;"><span>sighup<span style="color:#960050;background-color:#1e0010">：設定ファイルの再読み込み</span>
+</span></span><span style="display:flex;"><span>backend<span style="color:#960050;background-color:#1e0010">：セッション確立時に決定</span>
+</span></span><span style="display:flex;"><span>superuser<span style="color:#960050;background-color:#1e0010">：スーパユーザ権限で動的変更可能</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">user</span><span style="color:#960050;background-color:#1e0010">：一般ユーザで動的変更可能</span>
+</span></span></code></pre></div><h4 id="参考">参考：</h4>
+<blockquote>
+<p>稼動統計情報を活用しよう by Let&rsquo;s Postgres
+PGECons 2018年度WG3活動報告書 性能トラブル調査編
+［改訂新版］内部構造から学ぶPostgreSQL 設計・運用計画の鉄則
+PostgreSQL徹底入門 第4版
+参考資料ダウンロード(LPI-JAPAN OSS-DB) OSS-DB Exam Gold技術解説無料セミナー</p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/postgresql-pgBadger-test.html">PostgreSQLのログ分析ツール pgBadgerを試す</a></li>
+  
+  <li><a href="/postgresql-logical-decoding.html">PostgreSQLのLogical Decodingについて</a></li>
+  
+  <li><a href="/postgresql-ec2-insatll.html">EC2(Amazon Linux2)にPostgreSQLをインストールする</a></li>
+  
+  <li><a href="/postgresql-addtable-logical-replication.html">PostgreSQLで論理レプリケーションするテーブルを追加</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-replication.html">Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

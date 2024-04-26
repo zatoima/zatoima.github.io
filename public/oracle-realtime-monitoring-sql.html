@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>OracleのリアルタイムSQL監視 | my opinion is my own</title>
+<meta name="title" content="OracleのリアルタイムSQL監視" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,RDS," />
+
+
+<meta property="og:url" content="http://localhost:1313/oracle-realtime-monitoring-sql.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="OracleのリアルタイムSQL監視">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-04-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-04-25T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="RDS">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="OracleのリアルタイムSQL監視">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="OracleのリアルタイムSQL監視">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-04-25T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-04-25T00:00:00+00:00">
+  <meta itemprop="wordCount" content="533">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,RDS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>OracleのリアルタイムSQL監視</h1>
+
+<p>
+  <i>
+    <time datetime='2021-04-25' pubdate>
+      2021-04-25
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>チューニングや解析時にAWR、ASHと並んで便利だと思っているリアルタイムSQL監視のメモ。実行中のSQLを自動で監視し、詳細な統計を取得出来る。パラレルクエリ、もしくは5秒以上のSQLであれば自動で収集されているが、ヒント文を付与することでも本機能を使用することが出来る。TEXTタイプとACTIVEタイプがある。</p>
+<h1 id="sql実行">SQL実行</h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">exec</span> rdsadmin.rdsadmin_util.flush_shared_pool;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">exec</span> rdsadmin.rdsadmin_util.flush_buffer_cache;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">set</span> autotrace <span style="color:#66d9ef">on</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">set</span> timing <span style="color:#66d9ef">on</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#75715e">/*+ MONITOR */</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> PARTTEST_EE_PART <span style="color:#66d9ef">where</span> ymd <span style="color:#66d9ef">between</span> to_date(<span style="color:#e6db74">&#39;2017/05/01 11:00:00&#39;</span>,<span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>) <span style="color:#66d9ef">and</span> to_date(<span style="color:#e6db74">&#39;2019/05/11 12:00:00&#39;</span>,<span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>);
+</span></span></code></pre></div><h1 id="sql_idの確認">SQL_IDの確認</h1>
+<pre tabindex="0"><code>SELECT sql_id, hash_value, substr(sql_text,1,40) sql_text  
+FROM  v$sql 
+WHERE sql_text like &#39;select /*+ MONITOR */ count(*) from%&#39;;
+</code></pre><h1 id="リアルタイムsql監視の実行text">リアルタイムSQL監視の実行<!-- raw HTML omitted --></h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> LONG <span style="color:#ae81ff">1000000</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> LONGC <span style="color:#ae81ff">1000000</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> LINESIZE <span style="color:#ae81ff">300</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> PAGESIZE <span style="color:#ae81ff">1000</span>;
+</span></span><span style="display:flex;"><span>VAR c_rep <span style="color:#66d9ef">CLOB</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">EXEC</span> :c_rep :<span style="color:#f92672">=</span> DBMS_SQLTUNE.REPORT_SQL_MONITOR(sql_id <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;4yd6vvn27rar4&#39;</span>, <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;TEXT&#39;</span>);
+</span></span><span style="display:flex;"><span>PRINT c_rep;
+</span></span></code></pre></div><h1 id="実行ログ">実行ログ</h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> dbms_sqltune.report_sql_monitor(sql_id <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;4yd6vvn27rar4&#39;</span>, <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;TEXT&#39;</span>) <span style="color:#66d9ef">from</span> dual;
+</span></span><span style="display:flex;"><span>                                                                                        DBMS_SQLTUNE.REPORT_SQL_MONITOR(SQL_ID<span style="color:#f92672">=&gt;</span><span style="color:#e6db74">&#39;4YD6VVN27RAR4&#39;</span>,<span style="color:#66d9ef">TYPE</span><span style="color:#f92672">=&gt;</span><span style="color:#e6db74">&#39;TEXT&#39;</span>) 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span> Monitoring Report
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span> Text
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">select</span> <span style="color:#75715e">/*+ MONITOR */</span> <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">from</span> PARTTEST_EE_PART <span style="color:#66d9ef">where</span> ymd <span style="color:#66d9ef">between</span> to_date(<span style="color:#e6db74">&#39;2017/05/01 11:00:00&#39;</span>,<span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>) <span style="color:#66d9ef">and</span> to_date(<span style="color:#e6db74">&#39;2019/05/11 12:00:00&#39;</span>,<span style="color:#e6db74">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">Global</span> Information
+</span></span><span style="display:flex;"><span><span style="color:#75715e">------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> Status              :  DONE (<span style="color:#66d9ef">ALL</span> <span style="color:#66d9ef">ROWS</span>)       
+</span></span><span style="display:flex;"><span> Instance ID         :  <span style="color:#ae81ff">1</span>                     
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">Session</span>             :  TESTPART (<span style="color:#ae81ff">1291</span>:<span style="color:#ae81ff">39506</span>) 
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">SQL</span> ID              :  <span style="color:#ae81ff">4</span>yd6vvn27rar4         
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">SQL</span> Execution ID    :  <span style="color:#ae81ff">16777217</span>              
+</span></span><span style="display:flex;"><span> Execution Started   :  <span style="color:#ae81ff">04</span><span style="color:#f92672">/</span><span style="color:#ae81ff">25</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2021</span> <span style="color:#ae81ff">02</span>:<span style="color:#ae81ff">33</span>:<span style="color:#ae81ff">34</span>   
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">First</span> Refresh Time  :  <span style="color:#ae81ff">04</span><span style="color:#f92672">/</span><span style="color:#ae81ff">25</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2021</span> <span style="color:#ae81ff">02</span>:<span style="color:#ae81ff">33</span>:<span style="color:#ae81ff">34</span>   
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">Last</span> Refresh Time   :  <span style="color:#ae81ff">04</span><span style="color:#f92672">/</span><span style="color:#ae81ff">25</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2021</span> <span style="color:#ae81ff">02</span>:<span style="color:#ae81ff">33</span>:<span style="color:#ae81ff">39</span>   
+</span></span><span style="display:flex;"><span> Duration            :  <span style="color:#ae81ff">5</span>s                    
+</span></span><span style="display:flex;"><span> Module<span style="color:#f92672">/</span>Action       :  SQLcl<span style="color:#f92672">/-</span>               
+</span></span><span style="display:flex;"><span> Service             :  SYS$USERS             
+</span></span><span style="display:flex;"><span> Program             :  SQLcl                 
+</span></span><span style="display:flex;"><span> <span style="color:#66d9ef">Fetch</span> Calls         :  <span style="color:#ae81ff">1</span>                     
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">Global</span> Stats
+</span></span><span style="display:flex;"><span><span style="color:#f92672">=================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> Elapsed <span style="color:#f92672">|</span>   Cpu   <span style="color:#f92672">|</span>  Other   <span style="color:#f92672">|</span> <span style="color:#66d9ef">Fetch</span> <span style="color:#f92672">|</span> Buffer <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> Time(s) <span style="color:#f92672">|</span> Time(s) <span style="color:#f92672">|</span> Waits(s) <span style="color:#f92672">|</span> Calls <span style="color:#f92672">|</span>  Gets  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">=================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>      <span style="color:#ae81ff">10</span> <span style="color:#f92672">|</span>      <span style="color:#ae81ff">10</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">68826</span> <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">=================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Parallel Execution Details (DOP<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span> , Servers Allocated<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">==========================================================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>      Name      <span style="color:#f92672">|</span> <span style="color:#66d9ef">Type</span>  <span style="color:#f92672">|</span> Server<span style="color:#f92672">#</span> <span style="color:#f92672">|</span> Elapsed <span style="color:#f92672">|</span>   Cpu   <span style="color:#f92672">|</span>  Other   <span style="color:#f92672">|</span> Buffer <span style="color:#f92672">|</span> Wait Events <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>                <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span> Time(s) <span style="color:#f92672">|</span> Time(s) <span style="color:#f92672">|</span> Waits(s) <span style="color:#f92672">|</span>  Gets  <span style="color:#f92672">|</span> (sample <span style="color:#f92672">#</span>)  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">==========================================================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> PX Coordinator <span style="color:#f92672">|</span> QC    <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span>    <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>      <span style="color:#ae81ff">9</span> <span style="color:#f92672">|</span>             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> p000           <span style="color:#f92672">|</span> <span style="color:#66d9ef">Set</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">4</span>.<span style="color:#ae81ff">92</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">4</span>.<span style="color:#ae81ff">92</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>  <span style="color:#ae81ff">33963</span> <span style="color:#f92672">|</span>             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> p001           <span style="color:#f92672">|</span> <span style="color:#66d9ef">Set</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">08</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">3</span>.<span style="color:#ae81ff">08</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>  <span style="color:#ae81ff">22698</span> <span style="color:#f92672">|</span>             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> p002           <span style="color:#f92672">|</span> <span style="color:#66d9ef">Set</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">2</span>.<span style="color:#ae81ff">12</span> <span style="color:#f92672">|</span>    <span style="color:#ae81ff">2</span>.<span style="color:#ae81ff">12</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span> <span style="color:#f92672">|</span>  <span style="color:#ae81ff">12156</span> <span style="color:#f92672">|</span>             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">==========================================================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span> Plan Monitoring Details (Plan Hash Value<span style="color:#f92672">=</span><span style="color:#ae81ff">2795901320</span>)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">========================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> Id <span style="color:#f92672">|</span>             <span style="color:#66d9ef">Operation</span>             <span style="color:#f92672">|</span>         Name         <span style="color:#f92672">|</span>  <span style="color:#66d9ef">Rows</span>   <span style="color:#f92672">|</span> Cost  <span style="color:#f92672">|</span>   Time    <span style="color:#f92672">|</span> <span style="color:#66d9ef">Start</span>  <span style="color:#f92672">|</span> Execs <span style="color:#f92672">|</span>   <span style="color:#66d9ef">Rows</span>   <span style="color:#f92672">|</span> Activity <span style="color:#f92672">|</span> Activity Detail <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>    <span style="color:#f92672">|</span>                                   <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span> (Estim) <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span> Active(s) <span style="color:#f92672">|</span> Active <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span> (Actual) <span style="color:#f92672">|</span>   (<span style="color:#f92672">%</span>)    <span style="color:#f92672">|</span>   (<span style="color:#f92672">#</span> samples)   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">========================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span> <span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">STATEMENT</span>                  <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>   SORT <span style="color:#66d9ef">AGGREGATE</span>                  <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span>       <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span>    PX COORDINATOR                 <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span>         <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>     PX SEND QC (RANDOM)           <span style="color:#f92672">|</span> :TQ10000             <span style="color:#f92672">|</span>       <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span>      SORT <span style="color:#66d9ef">AGGREGATE</span>               <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span>       <span style="color:#ae81ff">1</span> <span style="color:#f92672">|</span>       <span style="color:#f92672">|</span>         <span style="color:#ae81ff">4</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>        <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">5</span> <span style="color:#f92672">|</span>       PX PARTITION RANGE ITERATOR <span style="color:#f92672">|</span>                      <span style="color:#f92672">|</span>     <span style="color:#ae81ff">26</span>M <span style="color:#f92672">|</span> <span style="color:#ae81ff">69179</span> <span style="color:#f92672">|</span>         <span style="color:#ae81ff">6</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>      <span style="color:#ae81ff">26</span>M <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>  <span style="color:#ae81ff">6</span> <span style="color:#f92672">|</span>        <span style="color:#66d9ef">INDEX</span> RANGE SCAN           <span style="color:#f92672">|</span> PARTTEST_EE_PART_IDX <span style="color:#f92672">|</span>     <span style="color:#ae81ff">26</span>M <span style="color:#f92672">|</span> <span style="color:#ae81ff">69179</span> <span style="color:#f92672">|</span>         <span style="color:#ae81ff">6</span> <span style="color:#f92672">|</span>     <span style="color:#f92672">+</span><span style="color:#ae81ff">0</span> <span style="color:#f92672">|</span>     <span style="color:#ae81ff">3</span> <span style="color:#f92672">|</span>      <span style="color:#ae81ff">26</span>M <span style="color:#f92672">|</span>          <span style="color:#f92672">|</span>                 <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">========================================================================================================================================================</span>    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Elapsed: <span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">00</span>:<span style="color:#ae81ff">00</span>.<span style="color:#ae81ff">045</span>
+</span></span></code></pre></div><h1 id="リアルタイムsql監視の実行active">リアルタイムSQL監視の実行<!-- raw HTML omitted --></h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>spool sqlmon_active.html
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> dbms_sqltune.report_sql_monitor(sql_id <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;4yd6vvn27rar4&#39;</span>, <span style="color:#66d9ef">TYPE</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#39;ACTIVE&#39;</span>) <span style="color:#66d9ef">from</span> dual;
+</span></span><span style="display:flex;"><span>spool <span style="color:#66d9ef">off</span>
+</span></span></code></pre></div><h1 id="レポート">レポート</h1>
+<!-- raw HTML omitted -->
+<h1 id="参照">参照</h1>
+<blockquote>
+<p>複雑なSQLチューニングもラクにする！SQL監視機能とは <a href="https://www.oracle.com/technetwork/jp/ondemand/db-basic/d-16-ssqltuning-1448439-ja.pdf">https://www.oracle.com/technetwork/jp/ondemand/db-basic/d-16-ssqltuning-1448439-ja.pdf</a></p>
+<p>データベース操作の監視 <a href="https://docs.oracle.com/cd/F19136_01/tgsql/monitoring-database-operations.html#GUID-4048D00E-2635-42C8-A37D-71EFAC619062">https://docs.oracle.com/cd/F19136_01/tgsql/monitoring-database-operations.html#GUID-4048D00E-2635-42C8-A37D-71EFAC619062</a></p>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/oracle-ee-se2-migration-to-aws-rds-for-oracle.html">Oracle Enterprise EditionからStandard Editionへのダウングレード検討メモ</a></li>
+  
+  <li><a href="/aws-rds-oracle-datapump-import.html">RDS(Oracle)にData Pumpでインポートする</a></li>
+  
+  <li><a href="/oracle-19c-extended-varchar2.html">Oracle 19cで拡張VARCHAR2型を導入</a></li>
+  
+  <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/rds/">#RDS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>OracleとPostgreSQLのシーケンスキャッシュの動作差異 | my opinion is my own</title>
+<meta name="title" content="OracleとPostgreSQLのシーケンスキャッシュの動作差異" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,PostgreSQL,DB Migration," />
+
+
+<meta property="og:url" content="http://localhost:1313/oracle-postgresql-sequence-cache-incompatible.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="OracleとPostgreSQLのシーケンスキャッシュの動作差異">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-04-30T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-04-30T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="DB Migration">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="OracleとPostgreSQLのシーケンスキャッシュの動作差異">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="OracleとPostgreSQLのシーケンスキャッシュの動作差異">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-04-30T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-04-30T00:00:00+00:00">
+  <meta itemprop="wordCount" content="165">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,PostgreSQL,DB Migration">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>OracleとPostgreSQLのシーケンスキャッシュの動作差異</h1>
+
+<p>
+  <i>
+    <time datetime='2021-04-30' pubdate>
+      2021-04-30
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>OracleとPostgreSQLのシーケンスキャッシュを使用した場合の動作差異についてメモ。PostgreSQLの<code>cache</code>はデフォルト1なので、変更しない限りは同じような採番になると思われるが、実際はそうはならない。ここではPostgreSQLのCache値を変更した場合の注意点を記載。</p>
+<h3 id="シーケンスの作成">シーケンスの作成</h3>
+<p>OracleとPostgreSQL両方ともシーケンスの始まりを「1」、キャッシュを「20」と設定。</p>
+<h5 id="oracle">Oracle</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> sequence oraseq1;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> sequence oraseq1 <span style="color:#66d9ef">start</span> <span style="color:#66d9ef">with</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">increment</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">cache</span> <span style="color:#ae81ff">20</span>;
+</span></span></code></pre></div><h5 id="postgresql">PostgreSQL</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> sequence pgsqlseq1;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> sequence pgsqlseq1 <span style="color:#66d9ef">start</span> <span style="color:#66d9ef">with</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">increment</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">cache</span> <span style="color:#ae81ff">20</span>;
+</span></span></code></pre></div><h3 id="oracle環境での動作">Oracle環境での動作</h3>
+<h5 id="session-a">Session A</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span></code></pre></div><p>結果は当然シーケンス値は「1」となる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   NEXTVAL
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	 <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><h5 id="session-b">Session B</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span></code></pre></div><p>別セッションでシーケンスを取得する場合、Oracleではnextvalもcurrvalが「2」となる。※ここの動作がOracleとPostgreSQLが異なる</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   NEXTVAL
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	 <span style="color:#ae81ff">2</span>
+</span></span></code></pre></div><h5 id="session-a-1">Session A</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SQL</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> oraseq1.nextval <span style="color:#66d9ef">from</span> dual;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   NEXTVAL
+</span></span><span style="display:flex;"><span><span style="color:#75715e">----------
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	 <span style="color:#ae81ff">3</span>
+</span></span></code></pre></div><h3 id="postgresql環境での動作">PostgreSQL環境での動作</h3>
+<h5 id="session-a-2">Session A</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);                                                      
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> nextval   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">1</span>         <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span></code></pre></div><h5 id="session-b-1">Session B</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);                                                      
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> nextval   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">21</span>        <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span></code></pre></div><h5 id="session-a-3">Session A</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">select</span> nextval(<span style="color:#e6db74">&#39;pgsqlseq1&#39;</span>);                                                      
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> nextval   <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span><span style="color:#75715e">-----------|
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">|</span> <span style="color:#ae81ff">2</span>         <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+</span><span style="color:#75715e">-----------+
+</span></span></span></code></pre></div><h3 id="結果">結果</h3>
+<h4 id="start-1cache--20のシーケンスでnextvalを実行した場合のシーケンス値について">start 1、cache  20のシーケンスでnextvalを実行した場合のシーケンス値について</h4>
+<p>こうなる。※OracleはOrderオプション指定無しを前提</p>
+<table>
+<thead>
+<tr>
+<th>実行順序</th>
+<th>セッション</th>
+<th>Oracle</th>
+<th>PostgreSQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>↓</td>
+<td>Session A</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>↓</td>
+<td>Session B</td>
+<td>2</td>
+<td>21</td>
+</tr>
+<tr>
+<td>↓</td>
+<td>Session A</td>
+<td>3</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="最後に">最後に</h3>
+<p>Oracleでは特定事象が起きないとシーケンスは飛び番にはならないと思っているが、Cache値をデフォルトから変更すると、PostgreSQLは安易に起こりうる。**<!-- raw HTML omitted -->連番ではなく、一意を保証という点でで使うべき<!-- raw HTML omitted -->**である。そもそもキャッシュしている時点で連番になることを保証するのはOracleでも難しいはず。Oracleのインスタンス障害や共有プールからのエージアウト等があった場合にはキャッシュ分は飛ぶので。</p>
+<p>下記の通り、マニュアルでも欠番のないシーケンス用途では使えないと書かれている。トランザクションのロールバックを行った場合、nextval や setval はロールバックされないので欠番になるし、再起動にもメモリ上に格納されたキャッシュは消えてしまう。</p>
+<blockquote>
+<ul>
+<li>9.17. シーケンス操作関数 <a href="https://www.postgresql.jp/document/13/html/functions-sequence.html">https://www.postgresql.jp/document/13/html/functions-sequence.html</a>
+<ul>
+<li>従って、PostgreSQLのシーケンスオブジェクトは*「欠番のない」シーケンスを得るために使うことはできません*。</li>
+</ul>
+</li>
+<li>CREATE SEQUENCE <a href="https://www.postgresql.jp/document/13/html/sql-createsequence.html">https://www.postgresql.jp/document/13/html/sql-createsequence.html</a>
+<ul>
+<li><code>nextval</code>と<code>setval</code>の呼び出しは決してロールバックされないので、シーケンスの番号について「欠番のない」割り当てが必要な場合には、シーケンスオブジェクトを使うことはできません。</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-sct-ora2pg-conversion-compare.html">ora2pgとSCTの変換結果の差異</a></li>
+  
+  <li><a href="/oracle-postgresql-ora2pg-migration.html">ora2pgを使用してOracleからPostgreSQLのスキーマ移行を実施</a></li>
+  
+  <li><a href="/oracle-postgresql-char-varchar-byte.html">OracleとPostgreSQL(&#43;Redshift)のchar、varcharのバイトと文字数の違い</a></li>
+  
+  <li><a href="/aws-ora2pg-oracle-to-aurora-postgresql-conversion.html">ora2pgを使用したOracleからPostgreSQLへの変換結果</a></li>
+  
+  <li><a href="/oracle-postgresql-transaction-different.html">OracleとPostgreSQLのトランザクション差異について整理する</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="http://localhost:1313/blog/db-migration/">#DB Migration</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

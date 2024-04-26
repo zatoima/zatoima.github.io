@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理 | my opinion is my own</title>
+<meta name="title" content="Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-aurora-postgresql-parameter-store-connect.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-06-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-06-25T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2020-06-25T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2020-06-25T00:00:00+00:00">
+  <meta itemprop="wordCount" content="302">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,Aurora,PostgreSQL">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>Systems Managerのパラメータストアを使用してAurora PostgreSQLのパスワードを管理</h1>
+
+<p>
+  <i>
+    <time datetime='2020-06-25' pubdate>
+      2020-06-25
+    </time>
+  </i>
+</p>
+
+<content>
+  <h3 id="事前準備">事前準備</h3>
+<h4 id="はじめに">はじめに</h4>
+<p>Aurora PostgreSQL側にユーザ名<code>testuser</code>、パスワード<code>p@sstest</code>で作成。</p>
+<pre tabindex="0"><code>CREATE ROLE testuser WITH LOGIN PASSWORD &#39;p@sstest&#39;;
+</code></pre><p>psqlでログインする場合には環境変数に設定して下記のように接続。パスワードをどこかに持つ必要があってセキュアな状態とは言えない。。。</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ export PGUSER=testuser
+[ec2-user@bastin ~]$ export PGPASSWORD=xxxxx
+[ec2-user@bastin ~]$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres
+psql (11.5, server 11.7)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type &#34;help&#34; for help.
+postgres=&gt; \conninfo
+You are connected to database &#34;postgres&#34; as user &#34;testuser&#34; on host &#34;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34; at port &#34;5432&#34;.
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+</code></pre><h4 id="systems-managerにパラメータを格納">Systems Managerにパラメータを格納</h4>
+<p>2つのパラメータを格納してみる。useridは<code>平文(String)</code>でpasswordは<code>SecureString</code>で格納。</p>
+<pre tabindex="0"><code>aws ssm put-parameter --name &#39;pgsql.connect.userid&#39; --type &#39;String&#39; --value &#39;testuser&#39;
+aws ssm put-parameter --name &#39;pgsql.connect.password&#39; --type &#39;SecureString&#39; --value &#39;p@sstest&#39;
+</code></pre><p>パラメータを取得してみる。<code>pgsql.connect.userid</code>を取得する。</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.userid&#39;
+{
+    &#34;InvalidParameters&#34;: [], 
+    &#34;Parameters&#34;: [
+        {
+            &#34;Name&#34;: &#34;pgsql.connect.userid&#34;, 
+            &#34;DataType&#34;: &#34;text&#34;, 
+            &#34;LastModifiedDate&#34;: 1592740003.175, 
+            &#34;Value&#34;: &#34;testuser&#34;, 
+            &#34;Version&#34;: 1, 
+            &#34;Type&#34;: &#34;String&#34;, 
+            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.userid&#34;
+        }
+    ]
+}
+</code></pre><p>次に<code>pgsql.connect.password</code>を取得。<code>SecureString</code>で格納したパラメータについては<code>--with-decryption</code>を付与してコマンドを実行する必要がある。このオプションがないと暗号化された状態でvalueが出力される。（内部的にはKMSが使用されており、KMSの使用権限を持っていなければ復号化が出来ない。）</p>
+<pre tabindex="0"><code>[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39;
+{
+    &#34;InvalidParameters&#34;: [], 
+    &#34;Parameters&#34;: [
+        {
+            &#34;Name&#34;: &#34;pgsql.connect.password&#34;, 
+            &#34;DataType&#34;: &#34;text&#34;, 
+            &#34;LastModifiedDate&#34;: 1592740007.647, 
+            &#34;Value&#34;: &#34;AQICAHimGbBDsXKAeEMDoI4Kw/rpZAgukrSwYmqXyAKBupBtkwFYzzG2rJ2dnIePkkrTPZdsAAAAZjBkBgkqhkiG9w0BBwagVzBVAgEAMFAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMoiJHw/NeYmZj35gYAgEQgCNgQlRcIz7EgkLxyHV4weHFwONVhdTI9m3OilaP2ikVHLbqQg==&#34;, 
+            &#34;Version&#34;: 1, 
+            &#34;Type&#34;: &#34;SecureString&#34;, 
+            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&#34;
+        }
+    ]
+}
+[ec2-user@bastin ~]$ 
+[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39; --with-decryption
+{
+    &#34;InvalidParameters&#34;: [], 
+    &#34;Parameters&#34;: [
+        {
+            &#34;Name&#34;: &#34;pgsql.connect.password&#34;, 
+            &#34;DataType&#34;: &#34;text&#34;, 
+            &#34;LastModifiedDate&#34;: 1592740007.647, 
+            &#34;Value&#34;: &#34;p@sstest&#34;, 
+            &#34;Version&#34;: 1, 
+            &#34;Type&#34;: &#34;SecureString&#34;, 
+            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&#34;
+        }
+    ]
+}
+</code></pre><h4 id="aurorapostgresqlへ接続">Aurora(PostgreSQL)へ接続</h4>
+<p><code>aws ssm get-parameters</code>コマンドを使用することでパスワードを直書きするというセキュリティ的なリスクが無くなる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ export PGUSER<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>aws ssm get-parameters --name <span style="color:#e6db74">&#39;pgsql.connect.userid&#39;</span> | jq -r <span style="color:#e6db74">&#39;.Parameters[].Value&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ export PGPASSWORD<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>aws ssm get-parameters --name <span style="color:#e6db74">&#39;pgsql.connect.password&#39;</span> --with-decryption | jq -r <span style="color:#e6db74">&#39;.Parameters[].Value&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ echo $PGUSER
+</span></span><span style="display:flex;"><span>testuser
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ echo $PGPASSWORD
+</span></span><span style="display:flex;"><span>p@sstest
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@bastin ~<span style="color:#f92672">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres
+</span></span><span style="display:flex;"><span>psql <span style="color:#f92672">(</span>11.5, server 11.7<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#f92672">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Type <span style="color:#e6db74">&#34;help&#34;</span> <span style="color:#66d9ef">for</span> help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span>&gt; <span style="color:#ae81ff">\c</span>onninfo
+</span></span><span style="display:flex;"><span>You are connected to database <span style="color:#e6db74">&#34;postgres&#34;</span> as user <span style="color:#e6db74">&#34;testuser&#34;</span> on host <span style="color:#e6db74">&#34;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34;</span> at port <span style="color:#e6db74">&#34;5432&#34;</span>.
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#f92672">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#f92672">=</span>&gt; 
+</span></span></code></pre></div><p>次は同じような使い方が出来る<code>AWS Secrets Manager</code>を触ってみる。</p>
+<h4 id="その他参考情報">その他参考情報</h4>
+<p>任意のパラメータを格納できる EC2 Systems Manager「パラメータストア」を試したら便利だった - kakakakakku blog <a href="https://kakakakakku.hatenablog.com/entry/2017/06/10/181603">https://kakakakakku.hatenablog.com/entry/2017/06/10/181603</a></p>
+<p>AWSのParameter StoreとSecrets Manager、結局どちらを使えばいいのか？比較 - Qiita <a href="https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5">https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5</a></p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-aurora-bytea-insert-binary-data.html">Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</a></li>
+  
+  <li><a href="/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li>
+  
+  <li><a href="/aws-aurora-rds-log-download.html">指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li>
+  
+  <li><a href="/postgresql-aozora-bunko-data-import.html">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li>
+  
+  <li><a href="/aws-ec2-postgresql-pgcli-install-howto.html">EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/aurora/">#Aurora</a>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

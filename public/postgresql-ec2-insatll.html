@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>EC2(Amazon Linux2)にPostgreSQLをインストールする | my opinion is my own</title>
+<meta name="title" content="EC2(Amazon Linux2)にPostgreSQLをインストールする" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL,EC2,AWS," />
+
+
+<meta property="og:url" content="http://localhost:1313/postgresql-ec2-insatll.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="EC2(Amazon Linux2)にPostgreSQLをインストールする">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-12-28T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-12-28T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="article:tag" content="EC2">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="EC2(Amazon Linux2)にPostgreSQLをインストールする">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="EC2(Amazon Linux2)にPostgreSQLをインストールする">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-12-28T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-12-28T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1572">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="PostgreSQL,EC2,AWS">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>EC2(Amazon Linux2)にPostgreSQLをインストールする</h1>
+
+<p>
+  <i>
+    <time datetime='2019-12-28' pubdate>
+      2019-12-28
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>Amazon LinuxにRed hat用のリポジトリからyumでインストールしようとするとエラーになるので無理やりAmazon Linux2でYumでインストールしようという内容。</p>
+<p>ちなみに、PostgreSQLのコミュニティでは下記がYumで利用可能なプラットフォームとされていますのでご注意ください。</p>
+<blockquote>
+<p>PostgreSQL RPM Repository (with Yum) <a href="https://yum.postgresql.org/">https://yum.postgresql.org/</a></p>
+<h2 id="available-platforms">Available Platforms</h2>
+<ul>
+<li>Red Hat Enterprise Linux/CentOS/Oracle Enterprise Linux 8</li>
+<li>Red Hat Enterprise Linux/CentOS/Oracle Enterprise Linux/Scientific Linux 7</li>
+<li>Red Hat Enterprise Linux/CentOS/Oracle Enterprise Linux/Scientific Linux 6</li>
+<li>SuSE Enterprise Linux 12 SP5</li>
+<li>Fedora 32</li>
+<li>Fedora 31</li>
+<li>Fedora 30</li>
+</ul>
+</blockquote>
+<p>デフォルトで参照しているAmazon Linuxのリポジトリは古いので、リポジトリをlocalにinsatllする。ただ、Amazon Linuxにredhat用のリポジトリをyumでインストールしようとするとエラーになる。</p>
+<blockquote>
+<p>Error: Package: pgdg-redhat-repo-42.0-5.noarch (/pgdg-redhat-repo-latest.noarch)
+Requires: /etc/redhat-release</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ sudo yum -y localinstall https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>pgdg-redhat-repo-latest.noarch.rpm                                                                                                                                   | 5.8 kB  00:00:00     
+</span></span><span style="display:flex;"><span>Examining /var/tmp/yum-root-Ie6yep/pgdg-redhat-repo-latest.noarch.rpm: pgdg-redhat-repo-42.0-5.noarch
+</span></span><span style="display:flex;"><span>Marking /var/tmp/yum-root-Ie6yep/pgdg-redhat-repo-latest.noarch.rpm to be installed
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package pgdg-redhat-repo.noarch 0:42.0-5 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: /etc/redhat-release <span style="color:#66d9ef">for</span> package: pgdg-redhat-repo-42.0-5.noarch
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: /etc/redhat-release <span style="color:#66d9ef">for</span> package: pgdg-redhat-repo-42.0-5.noarch
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>Error: Package: pgdg-redhat-repo-42.0-5.noarch <span style="color:#f92672">(</span>/pgdg-redhat-repo-latest.noarch<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>           Requires: /etc/redhat-release
+</span></span><span style="display:flex;"><span> You could try using --skip-broken to work around the problem
+</span></span><span style="display:flex;"><span> You could try running: rpm -Va --nofiles --nodigest
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>Amazon Linux用のリポジトリがないので、rpmをダウンロードしてpgdg-redhat-all.repoを書き換える。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ wget https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+</span></span><span style="display:flex;"><span>--2019-12-15 04:39:47--  https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+</span></span><span style="display:flex;"><span>Resolving download.postgresql.org <span style="color:#f92672">(</span>download.postgresql.org<span style="color:#f92672">)</span>... 217.196.149.55, 72.32.157.246, 87.238.57.227, ...
+</span></span><span style="display:flex;"><span>Connecting to download.postgresql.org <span style="color:#f92672">(</span>download.postgresql.org<span style="color:#f92672">)</span>|217.196.149.55|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... <span style="color:#ae81ff">200</span> OK
+</span></span><span style="display:flex;"><span>Length: <span style="color:#ae81ff">5932</span> <span style="color:#f92672">(</span>5.8K<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>application/x-redhat-package-manager<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>Saving to: ‘pgdg-redhat-repo-latest.noarch.rpm’
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>100%<span style="color:#f92672">[==================================================================================================================================================</span>&gt;<span style="color:#f92672">]</span> 5,932       --.-K/s   in 0s      
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2019-12-15 04:39:49 <span style="color:#f92672">(</span><span style="color:#ae81ff">189</span> MB/s<span style="color:#f92672">)</span> - ‘pgdg-redhat-repo-latest.noarch.rpm’ saved <span style="color:#f92672">[</span>5932/5932<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ sudo rpm -Uvh --nodeps pgdg-redhat-repo-latest.noarch.rpm
+</span></span><span style="display:flex;"><span>warning: pgdg-redhat-repo-latest.noarch.rpm: Header V4 DSA/SHA1 Signature, key ID 442df0f8: NOKEY
+</span></span><span style="display:flex;"><span>Preparing...                          <span style="color:#75715e">################################# [100%]</span>
+</span></span><span style="display:flex;"><span>Updating / installing...
+</span></span><span style="display:flex;"><span>   1:pgdg-redhat-repo-42.0-5          <span style="color:#75715e">################################# [100%]</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ sudo sed --in-place -e <span style="color:#e6db74">&#34;s/\$releasever/7/g&#34;</span> /etc/yum.repos.d/pgdg-redhat-all.repo
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>リポジトリ導入後のPostgreSQLパッケージの確認</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ yum info postgresql10-server
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>amzn2-core                                                             | 2.4 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg10                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg11                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg12                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg94                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg95                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg96                                                                 | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>1/12<span style="color:#f92672">)</span>: pgdg12/x86_64/group_gz                                         |  <span style="color:#ae81ff">245</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>2/12<span style="color:#f92672">)</span>: pgdg11/x86_64/group_gz                                         |  <span style="color:#ae81ff">245</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>3/12<span style="color:#f92672">)</span>: pgdg10/x86_64/group_gz                                         |  <span style="color:#ae81ff">245</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>4/12<span style="color:#f92672">)</span>: pgdg94/x86_64/group_gz                                         |  <span style="color:#ae81ff">247</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>5/12<span style="color:#f92672">)</span>: pgdg95/x86_64/group_gz                                         |  <span style="color:#ae81ff">249</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>6/12<span style="color:#f92672">)</span>: pgdg12/x86_64/primary_db                                       | <span style="color:#ae81ff">139</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>7/12<span style="color:#f92672">)</span>: pgdg96/x86_64/group_gz                                         |  <span style="color:#ae81ff">249</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>8/12<span style="color:#f92672">)</span>: pgdg94/x86_64/primary_db                                       | <span style="color:#ae81ff">389</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>9/12<span style="color:#f92672">)</span>: pgdg96/x86_64/primary_db                                       | <span style="color:#ae81ff">413</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>10/12<span style="color:#f92672">)</span>: pgdg95/x86_64/primary_db                                      | <span style="color:#ae81ff">401</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>11/12<span style="color:#f92672">)</span>: pgdg10/x86_64/primary_db                                      | <span style="color:#ae81ff">406</span> kB  00:00:02     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>12/12<span style="color:#f92672">)</span>: pgdg11/x86_64/primary_db                                      | <span style="color:#ae81ff">362</span> kB  00:00:02     
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Available Packages
+</span></span><span style="display:flex;"><span>Name        : postgresql10-server
+</span></span><span style="display:flex;"><span>Arch        : x86_64
+</span></span><span style="display:flex;"><span>Version     : 10.11
+</span></span><span style="display:flex;"><span>Release     : 2PGDG.rhel7
+</span></span><span style="display:flex;"><span>Size        : 4.5 M
+</span></span><span style="display:flex;"><span>Repo        : pgdg10/x86_64
+</span></span><span style="display:flex;"><span>Summary     : The programs needed to create and run a PostgreSQL server
+</span></span><span style="display:flex;"><span>URL         : https://www.postgresql.org/
+</span></span><span style="display:flex;"><span>License     : PostgreSQL
+</span></span><span style="display:flex;"><span>Description : PostgreSQL is an advanced Object-Relational database management system <span style="color:#f92672">(</span>DBMS<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>            : The postgresql10-server package contains the programs needed to create
+</span></span><span style="display:flex;"><span>            : and run a PostgreSQL server, which will in turn allow you to create
+</span></span><span style="display:flex;"><span>            : and maintain PostgreSQL databases.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>PostgreSQL11 と PostgreSQL12もインストール可能な状態。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ yum info postgresql11-server
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Available Packages
+</span></span><span style="display:flex;"><span>Name        : postgresql11-server
+</span></span><span style="display:flex;"><span>Arch        : x86_64
+</span></span><span style="display:flex;"><span>Version     : 11.6
+</span></span><span style="display:flex;"><span>Release     : 2PGDG.rhel7
+</span></span><span style="display:flex;"><span>Size        : 4.7 M
+</span></span><span style="display:flex;"><span>Repo        : pgdg11/x86_64
+</span></span><span style="display:flex;"><span>Summary     : The programs needed to create and run a PostgreSQL server
+</span></span><span style="display:flex;"><span>URL         : https://www.postgresql.org/
+</span></span><span style="display:flex;"><span>License     : PostgreSQL
+</span></span><span style="display:flex;"><span>Description : PostgreSQL is an advanced Object-Relational database management system <span style="color:#f92672">(</span>DBMS<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>            : The postgresql11-server package contains the programs needed to create
+</span></span><span style="display:flex;"><span>            : and run a PostgreSQL server, which will in turn allow you to create
+</span></span><span style="display:flex;"><span>            : and maintain PostgreSQL databases.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ yum info postgresql12-server
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Available Packages
+</span></span><span style="display:flex;"><span>Name        : postgresql12-server
+</span></span><span style="display:flex;"><span>Arch        : x86_64
+</span></span><span style="display:flex;"><span>Version     : 12.1
+</span></span><span style="display:flex;"><span>Release     : 2PGDG.rhel7
+</span></span><span style="display:flex;"><span>Size        : <span style="color:#ae81ff">13</span> M
+</span></span><span style="display:flex;"><span>Repo        : pgdg12/x86_64
+</span></span><span style="display:flex;"><span>Summary     : The programs needed to create and run a PostgreSQL server
+</span></span><span style="display:flex;"><span>URL         : https://www.postgresql.org/
+</span></span><span style="display:flex;"><span>License     : PostgreSQL
+</span></span><span style="display:flex;"><span>Description : PostgreSQL is an advanced Object-Relational database management system <span style="color:#f92672">(</span>DBMS<span style="color:#f92672">)</span>.
+</span></span><span style="display:flex;"><span>            : The postgresql12-server package contains the programs needed to create
+</span></span><span style="display:flex;"><span>            : and run a PostgreSQL server, which will in turn allow you to create
+</span></span><span style="display:flex;"><span>            : and maintain PostgreSQL databases.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>PostgreSQL10をインストールする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ sudo yum -y install postgresql10-server
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>amzn2-core                                                       | 2.4 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg10                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg11                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg12                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg94                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg95                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span>pgdg96                                                           | 3.6 kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>1/12<span style="color:#f92672">)</span>: pgdg11/x86_64/group_gz                                   |  <span style="color:#ae81ff">245</span> B  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>2/12<span style="color:#f92672">)</span>: pgdg12/x86_64/group_gz                                   |  <span style="color:#ae81ff">245</span> B  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>3/12<span style="color:#f92672">)</span>: pgdg10/x86_64/group_gz                                   |  <span style="color:#ae81ff">245</span> B  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>4/12<span style="color:#f92672">)</span>: pgdg10/x86_64/primary_db                                 | <span style="color:#ae81ff">406</span> kB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>5/12<span style="color:#f92672">)</span>: pgdg11/x86_64/primary_db                                 | <span style="color:#ae81ff">362</span> kB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>6/12<span style="color:#f92672">)</span>: pgdg95/x86_64/group_gz                                   |  <span style="color:#ae81ff">249</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>7/12<span style="color:#f92672">)</span>: pgdg94/x86_64/group_gz                                   |  <span style="color:#ae81ff">247</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>8/12<span style="color:#f92672">)</span>: pgdg96/x86_64/group_gz                                   |  <span style="color:#ae81ff">249</span> B  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>9/12<span style="color:#f92672">)</span>: pgdg95/x86_64/primary_db                                 | <span style="color:#ae81ff">401</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>10/12<span style="color:#f92672">)</span>: pgdg12/x86_64/primary_db                                | <span style="color:#ae81ff">139</span> kB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>11/12<span style="color:#f92672">)</span>: pgdg94/x86_64/primary_db                                | <span style="color:#ae81ff">389</span> kB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>12/12<span style="color:#f92672">)</span>: pgdg96/x86_64/primary_db                                                                                                                                    | <span style="color:#ae81ff">413</span> kB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql10-server.x86_64 0:10.11-2PGDG.rhel7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: postgresql10-libs<span style="color:#f92672">(</span>x86-64<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> 10.11-2PGDG.rhel7 <span style="color:#66d9ef">for</span> package: postgresql10-server-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: postgresql10<span style="color:#f92672">(</span>x86-64<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> 10.11-2PGDG.rhel7 <span style="color:#66d9ef">for</span> package: postgresql10-server-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libpq.so.5<span style="color:#f92672">()(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql10-server-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql10.x86_64 0:10.11-2PGDG.rhel7 will be installed
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql10-libs.x86_64 0:10.11-2PGDG.rhel7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies Resolved
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">================================================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                                             Arch                                   Version                                            Repository                              Size
+</span></span><span style="display:flex;"><span><span style="color:#f92672">================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> postgresql10-server                                 x86_64                                 10.11-2PGDG.rhel7                                  pgdg10                                 4.5 M
+</span></span><span style="display:flex;"><span>Installing <span style="color:#66d9ef">for</span> dependencies:
+</span></span><span style="display:flex;"><span> postgresql10                                        x86_64                                 10.11-2PGDG.rhel7                                  pgdg10                                 1.6 M
+</span></span><span style="display:flex;"><span> postgresql10-libs                                   x86_64                                 10.11-2PGDG.rhel7                                  pgdg10                                 <span style="color:#ae81ff">356</span> k
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction Summary
+</span></span><span style="display:flex;"><span><span style="color:#f92672">================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#ae81ff">1</span> Package <span style="color:#f92672">(</span>+2 Dependent packages<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total download size: 6.5 M
+</span></span><span style="display:flex;"><span>Installed size: <span style="color:#ae81ff">28</span> M
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span>warning: /var/cache/yum/x86_64/2/pgdg10/packages/postgresql10-10.11-2PGDG.rhel7.x86_64.rpm: Header V4 DSA/SHA1 Signature, key ID 442df0f8: NOKEY          <span style="color:#f92672">]</span> <span style="color:#ae81ff">979</span> kB/s | <span style="color:#ae81ff">960</span> kB  00:00:05 ETA 
+</span></span><span style="display:flex;"><span>Public key <span style="color:#66d9ef">for</span> postgresql10-10.11-2PGDG.rhel7.x86_64.rpm is not installed
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>1/3<span style="color:#f92672">)</span>: postgresql10-10.11-2PGDG.rhel7.x86_64.rpm                                                       | 1.6 MB  00:00:01     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>2/3<span style="color:#f92672">)</span>: postgresql10-libs-10.11-2PGDG.rhel7.x86_64.rpm                                                  | <span style="color:#ae81ff">356</span> kB  00:00:02     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>3/3<span style="color:#f92672">)</span>: postgresql10-server-10.11-2PGDG.rhel7.x86_64.rpm                                                | 4.5 MB  00:00:00     
+</span></span><span style="display:flex;"><span>-----------------------------------------------------------
+</span></span><span style="display:flex;"><span>Total                                                                                                                                                       2.7 MB/s | 6.5 MB  00:00:02     
+</span></span><span style="display:flex;"><span>Retrieving key from file:///etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
+</span></span><span style="display:flex;"><span>Importing GPG key 0x442DF0F8:
+</span></span><span style="display:flex;"><span> Userid     : <span style="color:#e6db74">&#34;PostgreSQL RPM Building Project &lt;pgsqlrpms-hackers@pgfoundry.org&gt;&#34;</span>
+</span></span><span style="display:flex;"><span> Fingerprint: 68c9 e2b9 1a37 d136 fe74 d176 1f16 d2e1 442d f0f8
+</span></span><span style="display:flex;"><span> Package    : pgdg-redhat-repo-42.0-5.noarch <span style="color:#f92672">(</span>installed<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span> From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-PGDG
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction test
+</span></span><span style="display:flex;"><span>Transaction test succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>** Found <span style="color:#ae81ff">1</span> pre-existing rpmdb problem<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span>, <span style="color:#e6db74">&#39;yum check&#39;</span> output follows:
+</span></span><span style="display:flex;"><span>pgdg-redhat-repo-42.0-5.noarch has missing requires of /etc/redhat-release
+</span></span><span style="display:flex;"><span>  Installing : postgresql10-libs-10.11-2PGDG.rhel7.x86_64                                                        1/3 
+</span></span><span style="display:flex;"><span>  Installing : postgresql10-10.11-2PGDG.rhel7.x86_64                                                             2/3 
+</span></span><span style="display:flex;"><span>  Installing : postgresql10-server-10.11-2PGDG.rhel7.x86_64                                                      3/3 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql10-libs-10.11-2PGDG.rhel7.x86_64                                                        1/3 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql10-server-10.11-2PGDG.rhel7.x86_64                                                      2/3 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql10-10.11-2PGDG.rhel7.x86_64                                                             3/3 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  postgresql10-server.x86_64 0:10.11-2PGDG.rhel7                                                                                                                                            
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  postgresql10.x86_64 0:10.11-2PGDG.rhel7                                                    postgresql10-libs.x86_64 0:10.11-2PGDG.rhel7                                                   
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ /usr/pgsql-10/bin/postgres --version
+</span></span><span style="display:flex;"><span>postgres <span style="color:#f92672">(</span>PostgreSQL<span style="color:#f92672">)</span> 10.11
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb ~<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>OS側にpostgresユーザが作成される。</p>
+<pre tabindex="0"><code>[ec2-user@postdb ~]$ cat /etc/passwd
+～中略～
+ec2-user:x:1000:1000:EC2 Default User:/home/ec2-user:/bin/bash
+postgres:x:26:26:PostgreSQL Server:/var/lib/pgsql:/bin/bash
+[ec2-user@postdb ~]$ 
+</code></pre><p>postgresql10-contribとpostgresql10-develも合わせてインストールする。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># yum install postgresql10-devel</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql10-devel.x86_64 0:10.11-2PGDG.rhel7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libicu-devel <span style="color:#66d9ef">for</span> package: postgresql10-devel-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package libicu-devel.x86_64 0:50.1.2-17.amzn2 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies Resolved
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                   Arch          Version                    Repository         Size
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> postgresql10-devel        x86_64        10.11-2PGDG.rhel7          pgdg10            2.0 M
+</span></span><span style="display:flex;"><span>Installing <span style="color:#66d9ef">for</span> dependencies:
+</span></span><span style="display:flex;"><span> libicu-devel              x86_64        50.1.2-17.amzn2            amzn2-core        <span style="color:#ae81ff">702</span> k
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction Summary
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#ae81ff">1</span> Package <span style="color:#f92672">(</span>+1 Dependent package<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total download size: 2.7 M
+</span></span><span style="display:flex;"><span>Installed size: <span style="color:#ae81ff">13</span> M
+</span></span><span style="display:flex;"><span>Is this ok <span style="color:#f92672">[</span>y/d/N<span style="color:#f92672">]</span>: n
+</span></span><span style="display:flex;"><span>Exiting on user command
+</span></span><span style="display:flex;"><span>Your transaction was saved, rerun it with:
+</span></span><span style="display:flex;"><span> yum load-transaction /tmp/yum_save_tx.2019-12-28.11-00.54JiTC.yumtx
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># </span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># yum install postgresql10-contrib</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">105</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package postgresql10-contrib.x86_64 0:10.11-2PGDG.rhel7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libxslt.so.1<span style="color:#f92672">(</span>LIBXML2_1.0.22<span style="color:#f92672">)(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libxslt.so.1<span style="color:#f92672">(</span>LIBXML2_1.0.18<span style="color:#f92672">)(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libxslt.so.1<span style="color:#f92672">(</span>LIBXML2_1.0.11<span style="color:#f92672">)(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libxslt.so.1<span style="color:#f92672">()(</span>64bit<span style="color:#f92672">)</span> <span style="color:#66d9ef">for</span> package: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package libxslt.x86_64 0:1.1.28-5.amzn2.0.2 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies Resolved
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                    Arch         Version                     Repository        Size
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> postgresql10-contrib       x86_64       10.11-2PGDG.rhel7           pgdg10           <span style="color:#ae81ff">587</span> k
+</span></span><span style="display:flex;"><span>Installing <span style="color:#66d9ef">for</span> dependencies:
+</span></span><span style="display:flex;"><span> libxslt                    x86_64       1.1.28-5.amzn2.0.2          amzn2-core       <span style="color:#ae81ff">243</span> k
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction Summary
+</span></span><span style="display:flex;"><span><span style="color:#f92672">============================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#ae81ff">1</span> Package <span style="color:#f92672">(</span>+1 Dependent package<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total download size: <span style="color:#ae81ff">830</span> k
+</span></span><span style="display:flex;"><span>Installed size: 2.5 M
+</span></span><span style="display:flex;"><span>Is this ok <span style="color:#f92672">[</span>y/d/N<span style="color:#f92672">]</span>: y
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>1/2<span style="color:#f92672">)</span>: libxslt-1.1.28-5.amzn2.0.2.x86_64.rpm                         | <span style="color:#ae81ff">243</span> kB  00:00:00     
+</span></span><span style="display:flex;"><span><span style="color:#f92672">(</span>2/2<span style="color:#f92672">)</span>: postgresql10-contrib-10.11-2PGDG.rhel7.x86_64.rpm             | <span style="color:#ae81ff">587</span> kB  00:00:02     
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>Total                                                       <span style="color:#ae81ff">281</span> kB/s | <span style="color:#ae81ff">830</span> kB  00:00:02     
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction test
+</span></span><span style="display:flex;"><span>Transaction test succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>  Installing : libxslt-1.1.28-5.amzn2.0.2.x86_64                                        1/2 
+</span></span><span style="display:flex;"><span>  Installing : postgresql10-contrib-10.11-2PGDG.rhel7.x86_64                            2/2 
+</span></span><span style="display:flex;"><span>  Verifying  : libxslt-1.1.28-5.amzn2.0.2.x86_64                                        1/2 
+</span></span><span style="display:flex;"><span>  Verifying  : postgresql10-contrib-10.11-2PGDG.rhel7.x86_64                            2/2 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  postgresql10-contrib.x86_64 0:10.11-2PGDG.rhel7                                           
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  libxslt.x86_64 0:1.1.28-5.amzn2.0.2                                                       
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># </span>
+</span></span></code></pre></div><p>DBの初期化を行う。rootで実施。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># /usr/pgsql-10/bin/postgresql-10-setup initdb</span>
+</span></span><span style="display:flex;"><span>Initializing database ... OK
+</span></span></code></pre></div><p>自動起動設定を行う</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>root@postdb ~<span style="color:#f92672">]</span><span style="color:#75715e"># systemctl enable postgresql-10</span>
+</span></span><span style="display:flex;"><span>Created symlink from /etc/systemd/system/multi-user.target.wants/postgresql-10.service to /usr/lib/systemd/system/postgresql-10.service.
+</span></span></code></pre></div><p>PostgreSQLの起動、停止、再起動方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo systemctl start postgresql-10.service
+</span></span><span style="display:flex;"><span>sudo systemctl stop postgresql-10.service
+</span></span><span style="display:flex;"><span>sudo systemctl restart postgresql-10.service
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ sudo systemctl start postgresql-10.service
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ echo $?
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ ps -ef | grep postgres | grep -v grep
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4184</span>     <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 /usr/pgsql-10/bin/postmaster -D /var/lib/pgsql/10/data/
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4187</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: logger process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4189</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: checkpointer process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4190</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: writer process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4191</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: wal writer process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4192</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: autovacuum launcher process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4193</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: stats collector process   
+</span></span><span style="display:flex;"><span>postgres  <span style="color:#ae81ff">4194</span>  <span style="color:#ae81ff">4184</span>  <span style="color:#ae81ff">0</span> 04:58 ?        00:00:00 postgres: bgworker: logical replication launcher   
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ sudo systemctl stop postgresql-10.service
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ ps -ef | grep postgres | grep -v grep
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>ec2-user@postdb pgsql-10<span style="color:#f92672">]</span>$ 
+</span></span></code></pre></div><p>接続してみる。</p>
+<pre tabindex="0"><code>[ec2-user@postdb pgsql-10]$ su - postgres
+Password: 
+Last login: Sun Dec 15 04:59:38 UTC 2019 on pts/1
+-bash-4.2$ 
+-bash-4.2$ psql --version
+psql (PostgreSQL) 10.11
+-bash-4.2$ 
+-bash-4.2$ 
+-bash-4.2$ psql
+psql (10.11)
+Type &#34;help&#34; for help.
+
+postgres=# 
+postgres=# select version();
+                                                 version                                                  
+----------------------------------------------------------------------------------------------------------
+ PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+(1 row)
+</code></pre>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-ec2-psql-install.html">EC2上からpsqlでAurora(PostgreSQL)に接続するまで</a></li>
+  
+  <li><a href="/aws-aurora-rds-postgresql-replication.html">Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li>
+  
+  <li><a href="/postgresql-logical-replication-monitoring.html">PostgreSQL論理レプリケーションの遅延監視</a></li>
+  
+  <li><a href="/aws-rds-repllication-error-conflict.html">RDS(PostgreSQL)の論理レプリケーションの競合エラーを解消する</a></li>
+  
+  <li><a href="/aws-rds-pg-replication-origin-status-error.html">RDS(PostgreSQL)でpg_replication_origin_statusにアクセス出来ない(permission denied)</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/postgresql/">#PostgreSQL</a>
+  
+  <a href="http://localhost:1313/blog/ec2/">#EC2</a>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

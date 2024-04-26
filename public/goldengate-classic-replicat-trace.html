@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法 | my opinion is my own</title>
+<meta name="title" content="GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法" />
+<meta name="description" content="" />
+<meta name="keywords" content="Oracle,GoldenGate," />
+
+
+<meta property="og:url" content="http://localhost:1313/goldengate-classic-replicat-trace.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-04-17T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-04-17T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="GoldenGate">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2019-04-17T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2019-04-17T00:00:00+00:00">
+  <meta itemprop="wordCount" content="154">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="Oracle,GoldenGate">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>GoldenGate Classic Replicatプロセスが適用するSQLの10046トレース取得方法</h1>
+
+<p>
+  <i>
+    <time datetime='2019-04-17' pubdate>
+      2019-04-17
+    </time>
+  </i>
+</p>
+
+<content>
+  <h4 id="はじめに"><strong>はじめに</strong></h4>
+<p>GoldenGateのReplicatプロセスが適用するSQLの調査をする場面があります。SQLの性能調査の場合はSQLトレースを取得して解析という流れになると思いますが、DB層からの操作ではGoldenGateセッション単位での設定は出来ないので、DB単位で設定する必要があります。</p>
+<p>一方、GoldenGateにはSQLEXECというパラメータが用意されてありますので、こちらをReplicatプロセスのパラメータ・ファイルに記載することでReplicatが適用するSQLのみ10046トレースが取得が可能です。</p>
+<blockquote>
+<p>SQLEXEC <a href="https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/gg_parameters156.htm">https://docs.oracle.com/cd/E51849_01/gg-winux/GWURF/gg_parameters156.htm</a></p>
+<p><code>SQLEXEC</code>パラメータでは、Oracle GoldenGate処理の範囲でストアド・プロシージャ、問合せまたはデータベース・コマンドを実行します。<code>SQLEXEC</code>により、Oracle GoldenGateはデータベースと直接通信し、データベースによってサポートされている処理を実行できます。</p>
+</blockquote>
+<h4 id="設定方法"><strong>設定方法</strong></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>～省略～
+</span></span><span style="display:flex;"><span>REPORTCOUNT EVERY <span style="color:#ae81ff">10</span> MINUTES, RATE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SQLEXEC  <span style="color:#e6db74">&#34;ALTER  SESSION  SET  TRACEFILE_IDENTIFIER=&#39;GG_DEBUG&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>SQLEXEC  <span style="color:#e6db74">&#34;alter session set events &#39;10046 trace name context forever,level 12&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>BATCHSQL
+</span></span><span style="display:flex;"><span>MAP ggtest.* ,TARGET db18p1.ggtest.*;
+</span></span><span style="display:flex;"><span>～省略～
+</span></span></code></pre></div><p>※この方法で10046トレースが取得できるのはClassic Replicatの場合のみです。Integrated Replicatでは他の方法を使用してSQL性能情報を取得する必要があります。</p>
+<h4 id="実行結果"><strong>実行結果</strong></h4>
+<p>TRACEFILE_IDENTIFIERで「GG_DEBUG」を付与しているため、トレースファイルには「GG_DEBUG」がついたファイルが生成されます。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg trace<span style="color:#f92672">]</span>$ pwd
+</span></span><span style="display:flex;"><span>/u01/app/oracle/diag/rdbms/db18s/db18s/trace
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg trace<span style="color:#f92672">]</span>$ ls -ltr | tail
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">1737</span>  4月  <span style="color:#ae81ff">3</span> 10:49 <span style="color:#ae81ff">2019</span> db18s_m000_3762.trm
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">8661</span>  4月  <span style="color:#ae81ff">3</span> 10:49 <span style="color:#ae81ff">2019</span> db18s_m000_3762.trc
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">1160</span>  4月  <span style="color:#ae81ff">3</span> 10:49 <span style="color:#ae81ff">2019</span> db18s_dbrm_3705.trm
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">4775</span>  4月  <span style="color:#ae81ff">3</span> 10:49 <span style="color:#ae81ff">2019</span> db18s_dbrm_3705.trc
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">1646</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_m003_4089.trm
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">7495</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_m003_4089.trc
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall    <span style="color:#ae81ff">1894</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_m002_4087.trm
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall   <span style="color:#ae81ff">11111</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_m002_4087.trc
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall  <span style="color:#ae81ff">234008</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_ora_5208_GG_DEBUG.trm
+</span></span><span style="display:flex;"><span>-rw-r----- <span style="color:#ae81ff">1</span> oracle oinstall <span style="color:#ae81ff">1339711</span>  4月  <span style="color:#ae81ff">3</span> 10:50 <span style="color:#ae81ff">2019</span> db18s_ora_5208_GG_DEBUG.trc
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>oracle@dbvgg trace<span style="color:#f92672">]</span>$
+</span></span></code></pre></div>
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/goldengate-classic-replicat-create.html">GoldenGateのClassic Replicat(非統合Replicat)の作成手順</a></li>
+  
+  <li><a href="/goldengate-opentransaction-getinfo.html">GoldenGateのコマンドを使用してオープントランザクションを特定する</a></li>
+  
+  <li><a href="/goldengate-flashbackscn-instantiationSCN.html">expdp時にFLASHBACK_SCNを使用した場合のインスタンス化SCNについて</a></li>
+  
+  <li><a href="/goldengate-12c-18c-install-implement.html">GoldenGateをインストールしてDB間のレプリケーション環境を構築する</a></li>
+  
+  <li><a href="/goldengate-merge-replication.html">MERGE文のGoldenGateによる伝搬</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/oracle/">#Oracle</a>
+  
+  <a href="http://localhost:1313/blog/goldengate/">#GoldenGate</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>

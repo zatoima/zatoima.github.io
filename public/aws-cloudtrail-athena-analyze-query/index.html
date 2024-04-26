@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="http://localhost:1313/images/favicon.png" />
+<title>AthenaでCloudTrail の証跡を分析 | my opinion is my own</title>
+<meta name="title" content="AthenaでCloudTrail の証跡を分析" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Athena,CloudTrail," />
+
+
+<meta property="og:url" content="http://localhost:1313/aws-cloudtrail-athena-analyze-query/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="AthenaでCloudTrail の証跡を分析">
+  <meta property="og:description" content="memo blog">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-11-18T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-11-18T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Athena">
+    <meta property="article:tag" content="CloudTrail">
+    <meta property="og:image" content="http://localhost:1313/images/share.png">
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://localhost:1313/images/share.png"><meta name="twitter:title" content="AthenaでCloudTrail の証跡を分析">
+<meta name="twitter:description" content="">
+
+
+
+
+  <meta itemprop="name" content="AthenaでCloudTrail の証跡を分析">
+  <meta itemprop="description" content="memo blog">
+  <meta itemprop="datePublished" content="2021-11-18T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2021-11-18T00:00:00+00:00">
+  <meta itemprop="wordCount" content="192">
+  <meta itemprop="image" content="http://localhost:1313/images/share.png">
+  <meta itemprop="keywords" content="AWS,Athena,CloudTrail">
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <style>
+  body {
+    font-family: Verdana, sans-serif;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: #fff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: #444;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b {
+    color: #222;
+  }
+
+  a {
+    color: #3273dc;
+     
+  }
+
+  .title {
+    text-decoration: none;
+    border: 0;
+  }
+
+  .title span {
+    font-weight: 400;
+  }
+
+  nav a {
+    margin-right: 10px;
+  }
+
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 16px;
+  }
+
+  content {
+    line-height: 1.6;
+  }
+
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    padding: 2px 5px;
+    background-color: #f2f2f2;
+  }
+
+  pre code {
+    color: #222;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  div.highlight pre {
+    background-color: initial;
+    color: initial;
+  }
+
+  div.highlight code {
+    background-color: unset;
+    color: unset;
+  }
+
+  blockquote {
+    border-left: 1px solid #999;
+    color: #222;
+    padding-left: 20px;
+    font-style: italic;
+  }
+
+  footer {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .helptext {
+    color: #777;
+    font-size: small;
+  }
+
+  .errorlist {
+    color: #eba613;
+    font-size: small;
+  }
+
+   
+  ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+  }
+
+  ul.blog-posts li {
+    display: flex;
+  }
+
+  ul.blog-posts li span {
+    flex: 0 0 130px;
+  }
+
+  ul.blog-posts li a:visited {
+    color: #8b6fcb;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #333;
+      color: #ddd;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    strong,
+    b {
+      color: #eee;
+    }
+
+    a {
+      color: #8cc2dd;
+    }
+
+    code {
+      background-color: #777;
+    }
+
+    pre code {
+      color: #ddd;
+    }
+
+    blockquote {
+      color: #ccc;
+    }
+
+    textarea,
+    input {
+      background-color: #252525;
+      color: #ddd;
+    }
+
+    .helptext {
+      color: #aaa;
+    }
+  }
+
+</style>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=XXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'XXXX');
+</script>
+</head>
+
+<body>
+  <header><a href="/" class="title">
+  <h2>my opinion is my own</h2>
+</a>
+<nav>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+</nav>
+</header>
+  <main>
+<h1>AthenaでCloudTrail の証跡を分析</h1>
+
+<p>
+  <i>
+    <time datetime='2021-11-18' pubdate>
+      2021-11-18
+    </time>
+  </i>
+</p>
+
+<content>
+  <p>CloudTrailのマネージメントコンソール上には「Athenaテーブルを作成」という機能がある。ここからAthenaで検索ができるようにDDLを用意してくれているが、これに落とし穴があった。S3上のファイル自体は日付ごとに格納されてパーティション化されているが、このDDL定義がパーティションに対応していない。余計なコストを発生させないために、Partition Projectionに対応したDDLを別途用意する必要がある。</p>
+<p><img src="image-20211118205236035.png" alt="image-20211118205236035"></p>
+<p><img src="image-20211118205206916.png" alt="image-20211118205206916"></p>
+<h3 id="athenaでテーブルを作成する">Athenaでテーブルを作成する</h3>
+<ul>
+<li><a href="https://dev.classmethod.jp/articles/cloudtrail-athena-partition-projection-table/">【全リージョン対応】CloudTrailのログをAthenaのPartition Projectionなテーブルで作る | DevelopersIO</a></li>
+<li><a href="https://blog.serverworks.co.jp/2020/11/25/114449">Athenaのパーティションプロジェクションを利用してCloudTrailのログ検索をする - サーバーワークスエンジニアブログ</a></li>
+</ul>
+<pre tabindex="0"><code>drop table cloudtrail_logs;
+</code></pre><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">EXTERNAL</span> <span style="color:#66d9ef">TABLE</span> cloudtrail_logs (
+</span></span><span style="display:flex;"><span>    eventVersion STRING,
+</span></span><span style="display:flex;"><span>    userIdentity STRUCT<span style="color:#f92672">&lt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">type</span>: STRING,
+</span></span><span style="display:flex;"><span>        principalId: STRING,
+</span></span><span style="display:flex;"><span>        arn: STRING,
+</span></span><span style="display:flex;"><span>        accountId: STRING,
+</span></span><span style="display:flex;"><span>        invokedBy: STRING,
+</span></span><span style="display:flex;"><span>        accessKeyId: STRING,
+</span></span><span style="display:flex;"><span>        userName: STRING,
+</span></span><span style="display:flex;"><span>        sessionContext: STRUCT<span style="color:#f92672">&lt;</span>
+</span></span><span style="display:flex;"><span>            attributes: STRUCT<span style="color:#f92672">&lt;</span>
+</span></span><span style="display:flex;"><span>                mfaAuthenticated: STRING,
+</span></span><span style="display:flex;"><span>                creationDate: STRING<span style="color:#f92672">&gt;</span>,
+</span></span><span style="display:flex;"><span>            sessionIssuer: STRUCT<span style="color:#f92672">&lt;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">type</span>: STRING,
+</span></span><span style="display:flex;"><span>                principalId: STRING,
+</span></span><span style="display:flex;"><span>                arn: STRING,
+</span></span><span style="display:flex;"><span>                accountId: STRING,
+</span></span><span style="display:flex;"><span>                userName: STRING<span style="color:#f92672">&gt;&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>    eventTime STRING,
+</span></span><span style="display:flex;"><span>    eventSource STRING,
+</span></span><span style="display:flex;"><span>    eventName STRING,
+</span></span><span style="display:flex;"><span>    awsRegion STRING,
+</span></span><span style="display:flex;"><span>    sourceIpAddress STRING,
+</span></span><span style="display:flex;"><span>    userAgent STRING,
+</span></span><span style="display:flex;"><span>    errorCode STRING,
+</span></span><span style="display:flex;"><span>    errorMessage STRING,
+</span></span><span style="display:flex;"><span>    requestParameters STRING,
+</span></span><span style="display:flex;"><span>    responseElements STRING,
+</span></span><span style="display:flex;"><span>    additionalEventData STRING,
+</span></span><span style="display:flex;"><span>    requestId STRING,
+</span></span><span style="display:flex;"><span>    eventId STRING,
+</span></span><span style="display:flex;"><span>    resources ARRAY<span style="color:#f92672">&lt;</span>STRUCT<span style="color:#f92672">&lt;</span>
+</span></span><span style="display:flex;"><span>        arn: STRING,
+</span></span><span style="display:flex;"><span>        accountId: STRING,
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">type</span>: STRING<span style="color:#f92672">&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>    eventType STRING,
+</span></span><span style="display:flex;"><span>    apiVersion STRING,
+</span></span><span style="display:flex;"><span>    readOnly STRING,
+</span></span><span style="display:flex;"><span>    recipientAccountId STRING,
+</span></span><span style="display:flex;"><span>    serviceEventDetails STRING,
+</span></span><span style="display:flex;"><span>    sharedEventID STRING,
+</span></span><span style="display:flex;"><span>    vpcEndpointId STRING
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">COMMENT</span> <span style="color:#e6db74">&#39;CloudTrail table for ${BucketName} bucket&#39;</span>
+</span></span><span style="display:flex;"><span>PARTITIONED <span style="color:#66d9ef">BY</span> (region string, date string)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ROW</span> FORMAT SERDE <span style="color:#e6db74">&#39;com.amazon.emr.hive.serde.CloudTrailSerde&#39;</span>
+</span></span><span style="display:flex;"><span>STORED <span style="color:#66d9ef">AS</span> INPUTFORMAT <span style="color:#e6db74">&#39;com.amazon.emr.cloudtrail.CloudTrailInputFormat&#39;</span>
+</span></span><span style="display:flex;"><span>OUTPUTFORMAT <span style="color:#e6db74">&#39;org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">LOCATION</span> <span style="color:#e6db74">&#39;s3://z3-cloudtrail/AWSLogs/&lt;Acclout ID&gt;/CloudTrail/&#39;</span>
+</span></span><span style="display:flex;"><span>TBLPROPERTIES (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.enabled&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;true&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.date.type&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;date&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.date.range&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;NOW-1YEARS,NOW&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.date.format&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;yyyy/MM/dd&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.date.interval&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.date.interval.unit&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;DAYS&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.region.type&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;enum&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;projection.region.values&#39;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;us-east-1,us-east-2,us-west-1,us-west-2,af-south-1,ap-east-1,ap-south-1,ap-northeast-2,ap-southeast-1,ap-southeast-2,ap-northeast-1,ca-central-1,eu-central-1,eu-west-1,eu-west-2,eu-south-1,eu-west-3,eu-north-1,me-south-1,sa-east-1&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;storage.location.template&#39;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;s3://z3-cloudtrail/AWSLogs/&lt;Acclout ID&gt;/CloudTrail/${region}/${date}&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;classification&#39;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;cloudtrail&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;compressionType&#39;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;gzip&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;typeOfData&#39;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;file&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;classification&#39;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#39;cloudtrail&#39;</span>
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><h3 id="分析クエリの発行">分析クエリの発行</h3>
+<p>東京リージョンで2021年11月に発行されたAPIでeventsource、eventnameごとに集計する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+</span></span><span style="display:flex;"><span>    awsregion,
+</span></span><span style="display:flex;"><span>    eventsource,
+</span></span><span style="display:flex;"><span>    eventname,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">COUNT</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">as</span> cnt
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span>    cloudtrail_logs
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span>
+</span></span><span style="display:flex;"><span>    date<span style="color:#f92672">&gt;=</span><span style="color:#e6db74">&#39;2021/11/01&#39;</span> <span style="color:#66d9ef">AND</span>
+</span></span><span style="display:flex;"><span>    region <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;ap-northeast-1&#39;</span>    
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span>
+</span></span><span style="display:flex;"><span>    awsregion,
+</span></span><span style="display:flex;"><span>    eventsource,
+</span></span><span style="display:flex;"><span>    eventname
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> cnt <span style="color:#66d9ef">DESC</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">10</span>;
+</span></span></code></pre></div><p>実行時間も全量検索に比べて高速化している。スキャンしたデータも一部分のみ。</p>
+<p><img src="image-20211118211826079.png" alt="image-20211118211826079"></p>
+
+</content>
+---
+
+<p>関連しているかもしれない記事</p>
+ 
+<ul>
+  
+  <li><a href="/aws-athena-cli-query-execute/">AthenaをCLIベースで実行する（AWS CLI、athenacli）</a></li>
+  
+  <li><a href="/aws-athena-alb-log-analitics.html">ALB(Application Load Balancer)のログをAthenaで分析</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-select-data-catalog/">Redshift SpectrumからGlue Data Catalogのテーブルを参照する</a></li>
+  
+  <li><a href="/aws-athena-glue-awswrangler-csv-to-parquet/">awswranglerを使用してCSV to Parquet</a></li>
+  
+  <li><a href="/aws-redshift-spectrum-best-practice/">Redshift Spectrumのベストプラクティス</a></li>
+  
+</ul>
+
+<br>
+
+<p>
+  
+  <a href="http://localhost:1313/blog/aws/">#AWS</a>
+  
+  <a href="http://localhost:1313/blog/athena/">#Athena</a>
+  
+  <a href="http://localhost:1313/blog/cloudtrail/">#CloudTrail</a>
+  
+</p>
+
+
+  </main>
+  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
+</footer>
+
+    
+</body>
+
+</html>
