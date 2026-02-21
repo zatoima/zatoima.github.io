@@ -1,28 +1,67 @@
 {{ define "main" }}
-<content>
+<div class="container">
   {{ if .Data.Singular }}
-  <h3 style="margin-bottom:0">Filtering for "{{ .Title }}"</h3>
-  <small>
-    <a href="/posts">Remove filter</a>
-  </small>
+  <h2 class="section-title">📂 「{{ .Title }}」の記事一覧</h2>
+  {{ else }}
+  <h2 class="section-title">📂 {{ .Title }}</h2>
   {{ end }}
-  <ul class="blog-posts">
-    {{ range .Pages }}
-    <li>
-      <span>
-        <i>
-          <time datetime='{{ .Date.Format "2006-01-02" }}' pubdate>
-            {{ .Date.Format (default "02 Jan, 2006" .Site.Params.dateFormat) }}
-          </time>
-        </i>
-      </span>
-      <a href="{{ .Permalink }}">{{ .Title }}</a>
+  <ul class="card-list">
+    {{ $paginator := .Paginate .Pages 20 }}
+    {{ range $paginator.Pages }}
+    <li class="card-item">
+      <a href="{{ .Permalink }}" class="card-link">
+        <span class="card-emoji">{{ with .Params.emoji }}{{ . }}{{ else }}📝{{ end }}</span>
+        <div class="card-body">
+          <span class="card-title">{{ .Title }}</span>
+          <div class="card-bottom">
+            <span class="card-date">
+              <time datetime='{{ .Date.Format "2006-01-02" }}'>
+                {{ .Date.Format "2006/01/02" }}
+              </time>
+            </span>
+            {{ $wordCount := .WordCount }}
+            {{ $readingTime := div $wordCount 500 }}
+            {{ if lt $readingTime 1 }}{{ $readingTime = 1 }}{{ end }}
+            <span class="card-reading-time">📖 約{{ $readingTime }}分</span>
+            {{ with (.GetTerms "tags") }}
+            <span class="card-tags">
+              {{ range (first 3 .) }}
+              <span class="card-tag-badge">{{ .LinkTitle }}</span>
+              {{ end }}
+            </span>
+            {{ end }}
+          </div>
+        </div>
+      </a>
     </li>
     {{ else }}
-    <li>
-      No posts yet
+    <li class="card-item">
+      <div class="card-link">
+        <span class="card-title">記事がありません</span>
+      </div>
     </li>
     {{ end }}
   </ul>
-</content>
+
+  <!-- Pagination -->
+  {{ if gt $paginator.TotalPages 1 }}
+  <nav class="pagination">
+    {{ if $paginator.HasPrev }}
+    <a href="{{ $paginator.Prev.URL }}" class="pagination-link pagination-prev">← 前へ</a>
+    {{ end }}
+    <div class="pagination-pages">
+      {{ range $paginator.Pagers }}
+      {{ if eq . $paginator }}
+      <span class="pagination-link pagination-current">{{ .PageNumber }}</span>
+      {{ else }}
+      <a href="{{ .URL }}" class="pagination-link">{{ .PageNumber }}</a>
+      {{ end }}
+      {{ end }}
+    </div>
+    {{ if $paginator.HasNext }}
+    <a href="{{ $paginator.Next.URL }}" class="pagination-link pagination-next">次へ →</a>
+    {{ end }}
+  </nav>
+  {{ end }}
+</div>
 {{ end }}

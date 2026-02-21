@@ -1,220 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=55417&amp;path=livereload" data-no-instant defer></script>
-  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="http://localhost:55417/favicon.ico" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
 <title>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ | my opinion is my own</title>
 <meta name="title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ" />
 <meta name="description" content="" />
 <meta name="keywords" content="PostgreSQL," />
 
 
-<meta property="og:url" content="http://localhost:55417/postgresql-auto-vacuum-parameter-timing.html">
-  <meta property="og:site_name" content="my opinion is my own">
-  <meta property="og:title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ">
-  <meta property="og:description" content="memo blog">
-  <meta property="og:locale" content="en">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="blog">
-    <meta property="article:published_time" content="2020-03-16T00:00:00+00:00">
-    <meta property="article:modified_time" content="2020-03-16T00:00:00+00:00">
-    <meta property="article:tag" content="PostgreSQL">
-    <meta property="og:image" content="http://localhost:55417/images/share.png">
-
-
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://localhost:55417/images/share.png"><meta name="twitter:title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ">
-<meta name="twitter:description" content="">
+<meta property="og:title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://zatoima.github.io/postgresql-auto-vacuum-parameter-timing.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2020-03-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-03-16T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
 
 
 
 
-  <meta itemprop="name" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ">
-  <meta itemprop="description" content="memo blog">
-  <meta itemprop="datePublished" content="2020-03-16T00:00:00+00:00">
-  <meta itemprop="dateModified" content="2020-03-16T00:00:00+00:00">
-  <meta itemprop="wordCount" content="226">
-  <meta itemprop="image" content="http://localhost:55417/images/share.png">
-  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
+
+<meta name="twitter:title" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ"/>
+<meta name="twitter:description" content=""/>
+
+
+
+<meta itemprop="name" content="PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-03-16T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2020-03-16T00:00:00+00:00" />
+<meta itemprop="wordCount" content="226"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
+<meta itemprop="keywords" content="PostgreSQL," />
 <meta name="referrer" content="no-referrer-when-downgrade" />
 
-  <style>
-  body {
-    font-family: Verdana, sans-serif;
-    margin: auto;
-    padding: 20px;
-    max-width: 720px;
-    text-align: left;
-    background-color: #fff;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    line-height: 1.5;
-    color: #444;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  strong,
-  b {
-    color: #222;
-  }
-
-  a {
-    color: #3273dc;
-     
-  }
-
-  .title {
-    text-decoration: none;
-    border: 0;
-  }
-
-  .title span {
-    font-weight: 400;
-  }
-
-  nav a {
-    margin-right: 10px;
-  }
-
-  textarea {
-    width: 100%;
-    font-size: 16px;
-  }
-
-  input {
-    font-size: 16px;
-  }
-
-  content {
-    line-height: 1.6;
-  }
-
-  table {
-    width: 100%;
-  }
-
-  img {
-    max-width: 100%;
-  }
-
-  code {
-    padding: 2px 5px;
-    background-color: #f2f2f2;
-  }
-
-  pre code {
-    color: #222;
-    display: block;
-    padding: 20px;
-    white-space: pre-wrap;
-    font-size: 14px;
-    overflow-x: auto;
-  }
-
-  div.highlight pre {
-    background-color: initial;
-    color: initial;
-  }
-
-  div.highlight code {
-    background-color: unset;
-    color: unset;
-  }
-
-  blockquote {
-    border-left: 1px solid #999;
-    color: #222;
-    padding-left: 20px;
-    font-style: italic;
-  }
-
-  footer {
-    padding: 25px;
-    text-align: center;
-  }
-
-  .helptext {
-    color: #777;
-    font-size: small;
-  }
-
-  .errorlist {
-    color: #eba613;
-    font-size: small;
-  }
-
-   
-  ul.blog-posts {
-    list-style-type: none;
-    padding: unset;
-  }
-
-  ul.blog-posts li {
-    display: flex;
-  }
-
-  ul.blog-posts li span {
-    flex: 0 0 130px;
-  }
-
-  ul.blog-posts li a:visited {
-    color: #8b6fcb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: #333;
-      color: #ddd;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    strong,
-    b {
-      color: #eee;
-    }
-
-    a {
-      color: #8cc2dd;
-    }
-
-    code {
-      background-color: #777;
-    }
-
-    pre code {
-      color: #ddd;
-    }
-
-    blockquote {
-      color: #ccc;
-    }
-
-    textarea,
-    input {
-      background-color: #252525;
-      color: #ddd;
-    }
-
-    .helptext {
-      color: #aaa;
-    }
-  }
-
-</style>
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -227,29 +56,77 @@
 </head>
 
 <body>
-  <header><a href="/" class="title">
-  <h2>my opinion is my own</h2>
-</a>
-<nav>
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
 <a href="/about/">About</a>
 <a href="/blog/">Blog</a>
 <a href="/index.xml">RSS</a>
 <a href="/other/">Other</a>
 </nav>
-</header>
-  <main>
-<h1>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</h1>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
+          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
 
-<p>
-  <i>
-    <time datetime='2020-03-16' pubdate>
-      2020-03-16
-    </time>
-  </i>
-</p>
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
 
-<content>
-  <h3 id="auto-vacuumの概要">Auto Vacuumの概要</h3>
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>PostgreSQLの自動Vacuumの実行タイミングと関連するパラメータ</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2020-03-16'>
+            2020/03/16 に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約1分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="auto-vacuumの概要">Auto Vacuumの概要</h3>
 <p>デフォルトでonになっているAuto Vacuum。Vacuumと同時にAnalyzeも実施してくれます。マニュアル的にはAuto Vacuumが推奨です。</p>
 <blockquote>
 <p>24.1. 定常的なバキューム作業 <a href="https://www.postgresql.jp/document/10/html/routine-vacuuming.html">https://www.postgresql.jp/document/10/html/routine-vacuuming.html</a></p>
@@ -322,8 +199,8 @@
 </tbody>
 </table>
 <h3 id="実行履歴の確認方法">実行履歴の確認方法</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">\</span>x
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>\x
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
 </span></span><span style="display:flex;"><span>    schemaname,
 </span></span><span style="display:flex;"><span>    relname,
 </span></span><span style="display:flex;"><span>    last_vacuum,
@@ -333,87 +210,157 @@
 </span></span><span style="display:flex;"><span>    vacuum_count,
 </span></span><span style="display:flex;"><span>    autovacuum_count,
 </span></span><span style="display:flex;"><span>    autoanalyze_count
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span>
 </span></span><span style="display:flex;"><span>    pg_stat_user_tables;
 </span></span></code></pre></div><h3 id="実行結果">実行結果</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">1</span> ]<span style="color:#75715e">-----+------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>schemaname        <span style="color:#f92672">|</span> <span style="color:#66d9ef">public</span>
-</span></span><span style="display:flex;"><span>relname           <span style="color:#f92672">|</span> pgbench_tellers
-</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">682063</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">58</span>.<span style="color:#ae81ff">708216</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">682594</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">58</span>.<span style="color:#ae81ff">708747</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#f92672">|</span> <span style="color:#ae81ff">8</span>
-</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#f92672">|</span> <span style="color:#ae81ff">28</span>
-</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#f92672">|</span> <span style="color:#ae81ff">27</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">2</span> ]<span style="color:#75715e">-----+------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>schemaname        <span style="color:#f92672">|</span> <span style="color:#66d9ef">public</span>
-</span></span><span style="display:flex;"><span>relname           <span style="color:#f92672">|</span> pgbench_history
-</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">73807</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#f92672">|</span> 
-</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">747484</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">58</span>.<span style="color:#ae81ff">744441</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#f92672">|</span> <span style="color:#ae81ff">3</span>
-</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#f92672">|</span> <span style="color:#ae81ff">20</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">3</span> ]<span style="color:#75715e">-----+------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>schemaname        <span style="color:#f92672">|</span> <span style="color:#66d9ef">public</span>
-</span></span><span style="display:flex;"><span>relname           <span style="color:#f92672">|</span> pgbench_branches
-</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">683765</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">58</span>.<span style="color:#ae81ff">721649</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">683963</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">05</span>:<span style="color:#ae81ff">40</span>:<span style="color:#ae81ff">58</span>.<span style="color:#ae81ff">72242</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#f92672">|</span> <span style="color:#ae81ff">8</span>
-</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#f92672">|</span> <span style="color:#ae81ff">28</span>
-</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#f92672">|</span> <span style="color:#ae81ff">27</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">-</span>[ RECORD <span style="color:#ae81ff">4</span> ]<span style="color:#75715e">-----+------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>schemaname        <span style="color:#f92672">|</span> <span style="color:#66d9ef">public</span>
-</span></span><span style="display:flex;"><span>relname           <span style="color:#f92672">|</span> pgbench_accounts
-</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">69804</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#f92672">|</span> 
-</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">29</span> <span style="color:#ae81ff">07</span>:<span style="color:#ae81ff">29</span>:<span style="color:#ae81ff">38</span>.<span style="color:#ae81ff">734999</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#f92672">|</span> <span style="color:#ae81ff">2020</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">27</span> <span style="color:#ae81ff">13</span>:<span style="color:#ae81ff">24</span>:<span style="color:#ae81ff">59</span>.<span style="color:#ae81ff">247779</span><span style="color:#f92672">+</span><span style="color:#ae81ff">00</span>
-</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#f92672">|</span> <span style="color:#ae81ff">3</span>
-</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#f92672">|</span> <span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#f92672">|</span> <span style="color:#ae81ff">25</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">1</span> ]<span style="color:#6272a4">-----+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>schemaname        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>
+</span></span><span style="display:flex;"><span>relname           <span style="color:#ff79c6">|</span> pgbench_tellers
+</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">682063</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">05</span>:<span style="color:#bd93f9">40</span>:<span style="color:#bd93f9">58</span>.<span style="color:#bd93f9">708216</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">682594</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">05</span>:<span style="color:#bd93f9">40</span>:<span style="color:#bd93f9">58</span>.<span style="color:#bd93f9">708747</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">8</span>
+</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">28</span>
+</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">27</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">2</span> ]<span style="color:#6272a4">-----+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>schemaname        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>
+</span></span><span style="display:flex;"><span>relname           <span style="color:#ff79c6">|</span> pgbench_history
+</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">73807</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#ff79c6">|</span> 
+</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">747484</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">05</span>:<span style="color:#bd93f9">40</span>:<span style="color:#bd93f9">58</span>.<span style="color:#bd93f9">744441</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span>
+</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">20</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">3</span> ]<span style="color:#6272a4">-----+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>schemaname        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>
+</span></span><span style="display:flex;"><span>relname           <span style="color:#ff79c6">|</span> pgbench_branches
+</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">683765</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">05</span>:<span style="color:#bd93f9">40</span>:<span style="color:#bd93f9">58</span>.<span style="color:#bd93f9">721649</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">683963</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">05</span>:<span style="color:#bd93f9">40</span>:<span style="color:#bd93f9">58</span>.<span style="color:#bd93f9">72242</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">8</span>
+</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">28</span>
+</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">27</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">4</span> ]<span style="color:#6272a4">-----+------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>schemaname        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>
+</span></span><span style="display:flex;"><span>relname           <span style="color:#ff79c6">|</span> pgbench_accounts
+</span></span><span style="display:flex;"><span>last_vacuum       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">69804</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autovacuum   <span style="color:#ff79c6">|</span> 
+</span></span><span style="display:flex;"><span>last_analyze      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">29</span> <span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">29</span>:<span style="color:#bd93f9">38</span>.<span style="color:#bd93f9">734999</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>last_autoanalyze  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">02</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span> <span style="color:#bd93f9">13</span>:<span style="color:#bd93f9">24</span>:<span style="color:#bd93f9">59</span>.<span style="color:#bd93f9">247779</span><span style="color:#ff79c6">+</span><span style="color:#bd93f9">00</span>
+</span></span><span style="display:flex;"><span>vacuum_count      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span>
+</span></span><span style="display:flex;"><span>autovacuum_count  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>autoanalyze_count <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">25</span>
 </span></span></code></pre></div><p>参考</p>
 <blockquote>
 <p>19.10. 自動Vacuum作業 <a href="https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html">https://www.postgresql.jp/document/10/html/runtime-config-autovacuum.html</a></p>
 </blockquote>
 
-</content>
----
-
-<p>関連しているかもしれない記事</p>
- 
-<ul>
-  
-  <li><a href="/postgresql-hugepages-setting.html">PostgreSQLのHugePagesの設定</a></li>
-  
-  <li><a href="/postgresql-about-checkpoint_completion_target.html">PostgreSQLのcheckpoint_completion_targetについてメモ</a></li>
-  
-  <li><a href="/postgresql-sql-statement-cancell.html">PostgreSQLの実行中のSQLをキャンセルする</a></li>
-  
-  <li><a href="/postgresql-signal-process-term-int-hup.html">シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響</a></li>
-  
-  <li><a href="/postgresql-about-monitoring-log.html">PostgreSQLの監視のためのログ設定について</a></li>
-  
-</ul>
-
-<br>
-
-<p>
-  
-  <a href="http://localhost:55417/blog/postgresql/">#PostgreSQL</a>
-  
-</p>
-
-
-  </main>
-  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
-</footer>
+      </div>
+    </div>
 
     
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/postgresql-hugepages-setting.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">PostgreSQLのHugePagesの設定</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/postgresql-pg_trgm-about.html" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">PostgreSQLの全文検索エンジンであるpg_trgmを使ってみる</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgresql-auto-vacuum-parameter-timing.html&text=PostgreSQL%E3%81%AE%E8%87%AA%E5%8B%95Vacuum%E3%81%AE%E5%AE%9F%E8%A1%8C%E3%82%BF%E3%82%A4%E3%83%9F%E3%83%B3%E3%82%B0%E3%81%A8%E9%96%A2%E9%80%A3%E3%81%99%E3%82%8B%E3%83%91%E3%83%A9%E3%83%A1%E3%83%BC%E3%82%BF" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgresql-auto-vacuum-parameter-timing.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/postgresql-hugepages-setting.html">PostgreSQLのHugePagesの設定</a></li>
+    
+    <li><a href="/postgresql-about-checkpoint_completion_target.html">PostgreSQLのcheckpoint_completion_targetについてメモ</a></li>
+    
+    <li><a href="/postgresql-sql-statement-cancell.html">PostgreSQLの実行中のSQLをキャンセルする</a></li>
+    
+    <li><a href="/postgresql-signal-process-term-int-hup.html">シグナル(TERM／INT／HUP)によるPostgresプロセスへの影響</a></li>
+    
+    <li><a href="/postgresql-about-monitoring-log.html">PostgreSQLの監視のためのログ設定について</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">#PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#auto-vacuumの概要">Auto Vacuumの概要</a></li>
+        <li><a href="#auto--vacuumの実行タイミング">Auto  Vacuumの実行タイミング</a></li>
+        <li><a href="#auto--vacuumのパラメータについて">Auto  Vacuumのパラメータについて</a></li>
+        <li><a href="#実行履歴の確認方法">実行履歴の確認方法</a></li>
+        <li><a href="#実行結果">実行結果</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
 </body>
 
 </html>

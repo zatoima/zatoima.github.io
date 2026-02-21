@@ -1,220 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=55417&amp;path=livereload" data-no-instant defer></script>
-  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="http://localhost:55417/favicon.ico" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
 <title>PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法 | my opinion is my own</title>
 <meta name="title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法" />
 <meta name="description" content="" />
 <meta name="keywords" content="PostgreSQL," />
 
 
-<meta property="og:url" content="http://localhost:55417/postgres-disk-external-merge-sort/">
-  <meta property="og:site_name" content="my opinion is my own">
-  <meta property="og:title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法">
-  <meta property="og:description" content="memo blog">
-  <meta property="og:locale" content="en">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="blog">
-    <meta property="article:published_time" content="2022-01-20T00:00:00+00:00">
-    <meta property="article:modified_time" content="2022-01-20T00:00:00+00:00">
-    <meta property="article:tag" content="PostgreSQL">
-    <meta property="og:image" content="http://localhost:55417/images/share.png">
-
-
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://localhost:55417/images/share.png"><meta name="twitter:title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法">
-<meta name="twitter:description" content="">
+<meta property="og:title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://zatoima.github.io/postgres-disk-external-merge-sort/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2022-01-20T00:00:00+00:00" />
+<meta property="article:modified_time" content="2022-01-20T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
 
 
 
 
-  <meta itemprop="name" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法">
-  <meta itemprop="description" content="memo blog">
-  <meta itemprop="datePublished" content="2022-01-20T00:00:00+00:00">
-  <meta itemprop="dateModified" content="2022-01-20T00:00:00+00:00">
-  <meta itemprop="wordCount" content="201">
-  <meta itemprop="image" content="http://localhost:55417/images/share.png">
-  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
+
+<meta name="twitter:title" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法"/>
+<meta name="twitter:description" content=""/>
+
+
+
+<meta itemprop="name" content="PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-01-20T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2022-01-20T00:00:00+00:00" />
+<meta itemprop="wordCount" content="201"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
+<meta itemprop="keywords" content="PostgreSQL," />
 <meta name="referrer" content="no-referrer-when-downgrade" />
 
-  <style>
-  body {
-    font-family: Verdana, sans-serif;
-    margin: auto;
-    padding: 20px;
-    max-width: 720px;
-    text-align: left;
-    background-color: #fff;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    line-height: 1.5;
-    color: #444;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  strong,
-  b {
-    color: #222;
-  }
-
-  a {
-    color: #3273dc;
-     
-  }
-
-  .title {
-    text-decoration: none;
-    border: 0;
-  }
-
-  .title span {
-    font-weight: 400;
-  }
-
-  nav a {
-    margin-right: 10px;
-  }
-
-  textarea {
-    width: 100%;
-    font-size: 16px;
-  }
-
-  input {
-    font-size: 16px;
-  }
-
-  content {
-    line-height: 1.6;
-  }
-
-  table {
-    width: 100%;
-  }
-
-  img {
-    max-width: 100%;
-  }
-
-  code {
-    padding: 2px 5px;
-    background-color: #f2f2f2;
-  }
-
-  pre code {
-    color: #222;
-    display: block;
-    padding: 20px;
-    white-space: pre-wrap;
-    font-size: 14px;
-    overflow-x: auto;
-  }
-
-  div.highlight pre {
-    background-color: initial;
-    color: initial;
-  }
-
-  div.highlight code {
-    background-color: unset;
-    color: unset;
-  }
-
-  blockquote {
-    border-left: 1px solid #999;
-    color: #222;
-    padding-left: 20px;
-    font-style: italic;
-  }
-
-  footer {
-    padding: 25px;
-    text-align: center;
-  }
-
-  .helptext {
-    color: #777;
-    font-size: small;
-  }
-
-  .errorlist {
-    color: #eba613;
-    font-size: small;
-  }
-
-   
-  ul.blog-posts {
-    list-style-type: none;
-    padding: unset;
-  }
-
-  ul.blog-posts li {
-    display: flex;
-  }
-
-  ul.blog-posts li span {
-    flex: 0 0 130px;
-  }
-
-  ul.blog-posts li a:visited {
-    color: #8b6fcb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: #333;
-      color: #ddd;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    strong,
-    b {
-      color: #eee;
-    }
-
-    a {
-      color: #8cc2dd;
-    }
-
-    code {
-      background-color: #777;
-    }
-
-    pre code {
-      color: #ddd;
-    }
-
-    blockquote {
-      color: #ccc;
-    }
-
-    textarea,
-    input {
-      background-color: #252525;
-      color: #ddd;
-    }
-
-    .helptext {
-      color: #aaa;
-    }
-  }
-
-</style>
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -227,101 +56,217 @@
 </head>
 
 <body>
-  <header><a href="/" class="title">
-  <h2>my opinion is my own</h2>
-</a>
-<nav>
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
 <a href="/about/">About</a>
 <a href="/blog/">Blog</a>
 <a href="/index.xml">RSS</a>
 <a href="/other/">Other</a>
 </nav>
-</header>
-  <main>
-<h1>PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法</h1>
-
-<p>
-  <i>
-    <time datetime='2022-01-20' pubdate>
-      2022-01-20
-    </time>
-  </i>
-</p>
-
-<content>
-  <h3 id="pgbenchでデータ生成">pgbenchでデータ生成</h3>
-<p>適宜スケールファクターの数値を設定する</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">database</span> pgbench;
-</span></span><span style="display:flex;"><span>pgbench <span style="color:#f92672">-</span>i <span style="color:#f92672">-</span>s <span style="color:#ae81ff">100</span> <span style="color:#f92672">-</span>U postgres <span style="color:#f92672">-</span>h  aurorapgsqlv1.<span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>xxx.ap<span style="color:#f92672">-</span>northeast<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>.rds.amazonaws.com
-</span></span></code></pre></div><h3 id="work_memを低い数値に設定してsqlを実行">work_memを低い数値に設定してSQLを実行</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SET</span> work_mem<span style="color:#f92672">=</span><span style="color:#ae81ff">1024</span>;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">EXPLAIN</span> (<span style="color:#66d9ef">ANALYZE</span>,BUFFERS) <span style="color:#66d9ef">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#66d9ef">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#66d9ef">where</span> t1.bid<span style="color:#f92672">=</span>t2.bid <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> t1.abalance <span style="color:#66d9ef">DESC</span>;
-</span></span></code></pre></div><h3 id="実行ログ">実行ログ</h3>
-<p>external merge Diskが発生していて147秒もかかっている。大部分がSort部分。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>pgbench<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">SET</span> work_mem<span style="color:#f92672">=</span><span style="color:#ae81ff">1024</span>;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SET</span>
-</span></span><span style="display:flex;"><span>pgbench<span style="color:#f92672">=&gt;</span> 
-</span></span><span style="display:flex;"><span>pgbench<span style="color:#f92672">=&gt;</span> <span style="color:#66d9ef">EXPLAIN</span> (<span style="color:#66d9ef">ANALYZE</span>,BUFFERS) <span style="color:#66d9ef">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#66d9ef">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#66d9ef">where</span> t1.bid<span style="color:#f92672">=</span>t2.bid <span style="color:#66d9ef">ORDER</span> <span style="color:#66d9ef">BY</span> t1.abalance <span style="color:#66d9ef">DESC</span>;
-</span></span><span style="display:flex;"><span>                                                                           QUERY PLAN                                                                           
-</span></span><span style="display:flex;"><span><span style="color:#75715e">----------------------------------------------------------------------------------------------------------------------------------------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> Gather Merge  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">11000684</span>.<span style="color:#ae81ff">94</span>..<span style="color:#ae81ff">20723586</span>.<span style="color:#ae81ff">06</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">83333334</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">110248</span>.<span style="color:#ae81ff">334</span>..<span style="color:#ae81ff">141130</span>.<span style="color:#ae81ff">354</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">100000000</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
-</span></span><span style="display:flex;"><span>   Workers Planned: <span style="color:#ae81ff">2</span>
-</span></span><span style="display:flex;"><span>   Workers Launched: <span style="color:#ae81ff">2</span>
-</span></span><span style="display:flex;"><span>   Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">1639508</span>, temp <span style="color:#66d9ef">read</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1828307</span> written<span style="color:#f92672">=</span><span style="color:#ae81ff">1835749</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  Sort  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">10999684</span>.<span style="color:#ae81ff">91</span>..<span style="color:#ae81ff">11103851</span>.<span style="color:#ae81ff">58</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">41666667</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">109509</span>.<span style="color:#ae81ff">807</span>..<span style="color:#ae81ff">113561</span>.<span style="color:#ae81ff">825</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">33333333</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
-</span></span><span style="display:flex;"><span>         Sort <span style="color:#66d9ef">Key</span>: t1.abalance <span style="color:#66d9ef">DESC</span>
-</span></span><span style="display:flex;"><span>         Sort <span style="color:#66d9ef">Method</span>: <span style="color:#66d9ef">external</span> merge  Disk: <span style="color:#ae81ff">852192</span>kB
-</span></span><span style="display:flex;"><span>         Worker <span style="color:#ae81ff">0</span>:  Sort <span style="color:#66d9ef">Method</span>: <span style="color:#66d9ef">external</span> merge  Disk: <span style="color:#ae81ff">855776</span>kB
-</span></span><span style="display:flex;"><span>         Worker <span style="color:#ae81ff">1</span>:  Sort <span style="color:#66d9ef">Method</span>: <span style="color:#66d9ef">external</span> merge  Disk: <span style="color:#ae81ff">836160</span>kB
-</span></span><span style="display:flex;"><span>         Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">1639508</span>, temp <span style="color:#66d9ef">read</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1828307</span> written<span style="color:#f92672">=</span><span style="color:#ae81ff">1835749</span>
-</span></span><span style="display:flex;"><span>         <span style="color:#f92672">-&gt;</span>  Hash <span style="color:#66d9ef">Join</span>  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">27</span>.<span style="color:#ae81ff">50</span>..<span style="color:#ae81ff">2165877</span>.<span style="color:#ae81ff">71</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">41666667</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">328</span>..<span style="color:#ae81ff">10296</span>.<span style="color:#ae81ff">741</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">33333333</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
-</span></span><span style="display:flex;"><span>               Hash Cond: (t1.bid <span style="color:#f92672">=</span> t2.bid)
-</span></span><span style="display:flex;"><span>               Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">1639414</span>
-</span></span><span style="display:flex;"><span>               <span style="color:#f92672">-&gt;</span>  Parallel Seq Scan <span style="color:#66d9ef">on</span> pgbench_accounts t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">2056011</span>.<span style="color:#ae81ff">67</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">41666667</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">12</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">004</span>..<span style="color:#ae81ff">4573</span>.<span style="color:#ae81ff">584</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">33333333</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
-</span></span><span style="display:flex;"><span>                     Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">1639345</span>
-</span></span><span style="display:flex;"><span>               <span style="color:#f92672">-&gt;</span>  Hash  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">15</span>.<span style="color:#ae81ff">00</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">272</span>..<span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">273</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
-</span></span><span style="display:flex;"><span>                     Buckets: <span style="color:#ae81ff">1024</span>  Batches: <span style="color:#ae81ff">1</span>  Memory <span style="color:#66d9ef">Usage</span>: <span style="color:#ae81ff">48</span>kB
-</span></span><span style="display:flex;"><span>                     Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#f92672">-&gt;</span>  Seq Scan <span style="color:#66d9ef">on</span> pgbench_branches t2  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">15</span>.<span style="color:#ae81ff">00</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">005</span>..<span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">107</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>)
-</span></span><span style="display:flex;"><span>                           Buffers: shared hit<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>
-</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">386</span> ms
-</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#ae81ff">147284</span>.<span style="color:#ae81ff">085</span> ms
-</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">22</span> <span style="color:#66d9ef">rows</span>)
-</span></span></code></pre></div>
-</content>
----
-
-<p>関連しているかもしれない記事</p>
- 
-<ul>
-  
-  <li><a href="/oracle-postgresql-dbms-stats-analyze-sampling/">OracleとPostgreSQLの統計情報取得のサンプリング数の違いについて</a></li>
-  
-  <li><a href="/postgres-merge-upsert-tuning/">PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した</a></li>
-  
-  <li><a href="/postgres-extension-pg-prewarm-buffer-cache/">PostgreSQLでバッファキャッシュ上にデータをのせる</a></li>
-  
-  <li><a href="/postgres-extension-fdw-install/">PostgreSQLのpostgres_fdw拡張機能の実行</a></li>
-  
-  <li><a href="/postgres-extension-dblink-install-and-causion/">PostgreSQLのdblink拡張機能の実行と注意点</a></li>
-  
-</ul>
-
-<br>
-
-<p>
-  
-  <a href="http://localhost:55417/blog/postgresql/">#PostgreSQL</a>
-  
-</p>
-
-
-  </main>
-  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
-</footer>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
+          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
 
     
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>PostgreSQLでソートをメモリでは無く敢えてディスクで発生させる方法</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-01-20'>
+            2022/01/20 に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約1分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="pgbenchでデータ生成">pgbenchでデータ生成</h3>
+<p>適宜スケールファクターの数値を設定する</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">database</span> pgbench;
+</span></span><span style="display:flex;"><span>pgbench <span style="color:#ff79c6">-</span>i <span style="color:#ff79c6">-</span>s <span style="color:#bd93f9">100</span> <span style="color:#ff79c6">-</span>U postgres <span style="color:#ff79c6">-</span>h  aurorapgsqlv1.<span style="color:#ff79c6">cluster</span><span style="color:#ff79c6">-</span>xxx.ap<span style="color:#ff79c6">-</span>northeast<span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span>.rds.amazonaws.com
+</span></span></code></pre></div><h3 id="work_memを低い数値に設定してsqlを実行">work_memを低い数値に設定してSQLを実行</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> work_mem<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1024</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">EXPLAIN</span> (<span style="color:#ff79c6">ANALYZE</span>,BUFFERS) <span style="color:#ff79c6">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#ff79c6">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#ff79c6">where</span> t1.bid<span style="color:#ff79c6">=</span>t2.bid <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> t1.abalance <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><h3 id="実行ログ">実行ログ</h3>
+<p>external merge Diskが発生していて147秒もかかっている。大部分がSort部分。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pgbench<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SET</span> work_mem<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1024</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SET</span>
+</span></span><span style="display:flex;"><span>pgbench<span style="color:#ff79c6">=&gt;</span> 
+</span></span><span style="display:flex;"><span>pgbench<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">EXPLAIN</span> (<span style="color:#ff79c6">ANALYZE</span>,BUFFERS) <span style="color:#ff79c6">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#ff79c6">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#ff79c6">where</span> t1.bid<span style="color:#ff79c6">=</span>t2.bid <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> t1.abalance <span style="color:#ff79c6">DESC</span>;
+</span></span><span style="display:flex;"><span>                                                                           QUERY PLAN                                                                           
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">----------------------------------------------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> Gather Merge  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">11000684</span>.<span style="color:#bd93f9">94</span>..<span style="color:#bd93f9">20723586</span>.<span style="color:#bd93f9">06</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">83333334</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">110248</span>.<span style="color:#bd93f9">334</span>..<span style="color:#bd93f9">141130</span>.<span style="color:#bd93f9">354</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">100000000</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   Workers Planned: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   Workers Launched: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1639508</span>, temp <span style="color:#ff79c6">read</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1828307</span> written<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1835749</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Sort  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">10999684</span>.<span style="color:#bd93f9">91</span>..<span style="color:#bd93f9">11103851</span>.<span style="color:#bd93f9">58</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">41666667</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">109509</span>.<span style="color:#bd93f9">807</span>..<span style="color:#bd93f9">113561</span>.<span style="color:#bd93f9">825</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">33333333</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>         Sort <span style="color:#ff79c6">Key</span>: t1.abalance <span style="color:#ff79c6">DESC</span>
+</span></span><span style="display:flex;"><span>         Sort <span style="color:#ff79c6">Method</span>: <span style="color:#ff79c6">external</span> merge  Disk: <span style="color:#bd93f9">852192</span>kB
+</span></span><span style="display:flex;"><span>         Worker <span style="color:#bd93f9">0</span>:  Sort <span style="color:#ff79c6">Method</span>: <span style="color:#ff79c6">external</span> merge  Disk: <span style="color:#bd93f9">855776</span>kB
+</span></span><span style="display:flex;"><span>         Worker <span style="color:#bd93f9">1</span>:  Sort <span style="color:#ff79c6">Method</span>: <span style="color:#ff79c6">external</span> merge  Disk: <span style="color:#bd93f9">836160</span>kB
+</span></span><span style="display:flex;"><span>         Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1639508</span>, temp <span style="color:#ff79c6">read</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1828307</span> written<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1835749</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">-&gt;</span>  Hash <span style="color:#ff79c6">Join</span>  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">27</span>.<span style="color:#bd93f9">50</span>..<span style="color:#bd93f9">2165877</span>.<span style="color:#bd93f9">71</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">41666667</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">328</span>..<span style="color:#bd93f9">10296</span>.<span style="color:#bd93f9">741</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">33333333</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>               Hash Cond: (t1.bid <span style="color:#ff79c6">=</span> t2.bid)
+</span></span><span style="display:flex;"><span>               Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1639414</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#ff79c6">-&gt;</span>  Parallel Seq Scan <span style="color:#ff79c6">on</span> pgbench_accounts t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">2056011</span>.<span style="color:#bd93f9">67</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">41666667</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">12</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">004</span>..<span style="color:#bd93f9">4573</span>.<span style="color:#bd93f9">584</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">33333333</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>                     Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1639345</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#ff79c6">-&gt;</span>  Hash  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">15</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">15</span>.<span style="color:#bd93f9">00</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">8</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">272</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">273</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>                     Buckets: <span style="color:#bd93f9">1024</span>  Batches: <span style="color:#bd93f9">1</span>  Memory <span style="color:#ff79c6">Usage</span>: <span style="color:#bd93f9">48</span>kB
+</span></span><span style="display:flex;"><span>                     Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">15</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#ff79c6">-&gt;</span>  Seq Scan <span style="color:#ff79c6">on</span> pgbench_branches t2  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">15</span>.<span style="color:#bd93f9">00</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">8</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">005</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">107</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>                           Buffers: shared hit<span style="color:#ff79c6">=</span><span style="color:#bd93f9">15</span>
+</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">386</span> ms
+</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#bd93f9">147284</span>.<span style="color:#bd93f9">085</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">22</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/oracle-postgresql-dbms-stats-analyze-sampling/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">OracleとPostgreSQLの統計情報取得のサンプリング数の違いについて</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/aws-cloudfront-apache-bench-ab-access/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">Apache Bench（abコマンド）で簡易的なアクセスをCloudFrontに実行</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgres-disk-external-merge-sort%2f&text=PostgreSQL%E3%81%A7%E3%82%BD%E3%83%BC%E3%83%88%E3%82%92%E3%83%A1%E3%83%A2%E3%83%AA%E3%81%A7%E3%81%AF%E7%84%A1%E3%81%8F%E6%95%A2%E3%81%88%E3%81%A6%E3%83%87%E3%82%A3%E3%82%B9%E3%82%AF%E3%81%A7%E7%99%BA%E7%94%9F%E3%81%95%E3%81%9B%E3%82%8B%E6%96%B9%E6%B3%95" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgres-disk-external-merge-sort/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/oracle-postgresql-dbms-stats-analyze-sampling/">OracleとPostgreSQLの統計情報取得のサンプリング数の違いについて</a></li>
+    
+    <li><a href="/postgres-merge-upsert-tuning/">PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した</a></li>
+    
+    <li><a href="/postgres-extension-pg-prewarm-buffer-cache/">PostgreSQLでバッファキャッシュ上にデータをのせる</a></li>
+    
+    <li><a href="/postgres-extension-fdw-install/">PostgreSQLのpostgres_fdw拡張機能の実行</a></li>
+    
+    <li><a href="/postgres-extension-dblink-install-and-causion/">PostgreSQLのdblink拡張機能の実行と注意点</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">#PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#pgbenchでデータ生成">pgbenchでデータ生成</a></li>
+        <li><a href="#work_memを低い数値に設定してsqlを実行">work_memを低い数値に設定してSQLを実行</a></li>
+        <li><a href="#実行ログ">実行ログ</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
 </body>
 
 </html>
