@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 
 <head>
-  <meta http-equiv="X-Clacks-Overhead" content="GNU Terry Pratchett" />
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
@@ -12,209 +11,39 @@
 <meta name="keywords" content="PostgreSQL," />
 
 
-<meta property="og:url" content="https://zatoima.github.io/postgres-merge-upsert-tuning/">
-  <meta property="og:site_name" content="my opinion is my own">
-  <meta property="og:title" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した">
-  <meta property="og:description" content="memo blog">
-  <meta property="og:locale" content="en">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="blog">
-    <meta property="article:published_time" content="2022-01-05T00:00:00+00:00">
-    <meta property="article:modified_time" content="2022-01-05T00:00:00+00:00">
-    <meta property="article:tag" content="PostgreSQL">
-    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
-
-
-
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"><meta name="twitter:title" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した">
-<meta name="twitter:description" content="">
+<meta property="og:title" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://zatoima.github.io/postgres-merge-upsert-tuning/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2022-01-05T00:00:00+00:00" />
+<meta property="article:modified_time" content="2022-01-05T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
 
 
 
 
-  <meta itemprop="name" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した">
-  <meta itemprop="description" content="memo blog">
-  <meta itemprop="datePublished" content="2022-01-05T00:00:00+00:00">
-  <meta itemprop="dateModified" content="2022-01-05T00:00:00+00:00">
-  <meta itemprop="wordCount" content="426">
-  <meta itemprop="image" content="https://zatoima.github.io/images/share.png">
-  <meta itemprop="keywords" content="PostgreSQL">
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
+
+<meta name="twitter:title" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した"/>
+<meta name="twitter:description" content=""/>
+
+
+
+<meta itemprop="name" content="PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した">
+<meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-01-05T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2022-01-05T00:00:00+00:00" />
+<meta itemprop="wordCount" content="426"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
+<meta itemprop="keywords" content="PostgreSQL," />
 <meta name="referrer" content="no-referrer-when-downgrade" />
 
-  <style>
-  body {
-    font-family: Verdana, sans-serif;
-    margin: auto;
-    padding: 20px;
-    max-width: 720px;
-    text-align: left;
-    background-color: #fff;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    line-height: 1.5;
-    color: #444;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  strong,
-  b {
-    color: #222;
-  }
-
-  a {
-    color: #3273dc;
-     
-  }
-
-  .title {
-    text-decoration: none;
-    border: 0;
-  }
-
-  .title span {
-    font-weight: 400;
-  }
-
-  nav a {
-    margin-right: 10px;
-  }
-
-  textarea {
-    width: 100%;
-    font-size: 16px;
-  }
-
-  input {
-    font-size: 16px;
-  }
-
-  content {
-    line-height: 1.6;
-  }
-
-  table {
-    width: 100%;
-  }
-
-  img {
-    max-width: 100%;
-  }
-
-  code {
-    padding: 2px 5px;
-    background-color: #f2f2f2;
-  }
-
-  pre code {
-    color: #222;
-    display: block;
-    padding: 20px;
-    white-space: pre-wrap;
-    font-size: 14px;
-    overflow-x: auto;
-  }
-
-  div.highlight pre {
-    background-color: initial;
-    color: initial;
-  }
-
-  div.highlight code {
-    background-color: unset;
-    color: unset;
-  }
-
-  blockquote {
-    border-left: 1px solid #999;
-    color: #222;
-    padding-left: 20px;
-    font-style: italic;
-  }
-
-  footer {
-    padding: 25px;
-    text-align: center;
-  }
-
-  .helptext {
-    color: #777;
-    font-size: small;
-  }
-
-  .errorlist {
-    color: #eba613;
-    font-size: small;
-  }
-
-   
-  ul.blog-posts {
-    list-style-type: none;
-    padding: unset;
-  }
-
-  ul.blog-posts li {
-    display: flex;
-  }
-
-  ul.blog-posts li span {
-    flex: 0 0 130px;
-  }
-
-  ul.blog-posts li a:visited {
-    color: #8b6fcb;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: #333;
-      color: #ddd;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    strong,
-    b {
-      color: #eee;
-    }
-
-    a {
-      color: #8cc2dd;
-    }
-
-    code {
-      background-color: #777;
-    }
-
-    pre code {
-      color: #ddd;
-    }
-
-    blockquote {
-      color: #ccc;
-    }
-
-    textarea,
-    input {
-      background-color: #252525;
-      color: #ddd;
-    }
-
-    .helptext {
-      color: #aaa;
-    }
-  }
-
-</style>
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -227,67 +56,115 @@
 </head>
 
 <body>
-  <header><a href="/" class="title">
-  <h2>my opinion is my own</h2>
-</a>
-<nav>
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
 <a href="/about/">About</a>
 <a href="/blog/">Blog</a>
 <a href="/index.xml">RSS</a>
 <a href="/other/">Other</a>
 </nav>
-</header>
-  <main>
-<h1>PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した</h1>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
+          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
 
-<p>
-  <i>
-    <time datetime='2022-01-05' pubdate>
-      2022-01-05
-    </time>
-  </i>
-</p>
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
 
-<content>
-  <h2 id="検証用環境の作成">検証用環境の作成</h2>
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決 …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>PostgreSQLでMerge／Upsertを実行したら遅かったので力技で解決した</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-01-05'>
+            2022/01/05 に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約1分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="検証用環境の作成">検証用環境の作成</h2>
 <h3 id="テーブル作成">テーブル作成</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> t1;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> t1(a numeric,b varchar(<span style="color:#ae81ff">100</span>) ,<span style="color:#66d9ef">c</span> varchar(<span style="color:#ae81ff">100</span>) ,d varchar(<span style="color:#ae81ff">100</span>) ,e varchar(<span style="color:#ae81ff">100</span>) , f varchar(<span style="color:#ae81ff">100</span>) , <span style="color:#66d9ef">g</span> varchar(<span style="color:#ae81ff">100</span>) , h varchar(<span style="color:#ae81ff">100</span>) , i varchar(<span style="color:#ae81ff">100</span>) , j varchar(<span style="color:#ae81ff">100</span>) , k varchar(<span style="color:#ae81ff">100</span>) , l varchar(<span style="color:#ae81ff">100</span>) , m varchar(<span style="color:#ae81ff">100</span>) , n varchar(<span style="color:#ae81ff">100</span>) );
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">drop</span> <span style="color:#ff79c6">table</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">table</span> t1(a <span style="color:#8be9fd;font-style:italic">numeric</span>,b <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,<span style="color:#ff79c6">c</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,d <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,e <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , f <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , <span style="color:#ff79c6">g</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , h <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , i <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , j <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , k <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , l <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , m <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , n <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) );
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">drop</span> <span style="color:#66d9ef">table</span> t2_delta;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> t2_delta(a numeric,b varchar(<span style="color:#ae81ff">100</span>) ,<span style="color:#66d9ef">c</span> varchar(<span style="color:#ae81ff">100</span>) ,d varchar(<span style="color:#ae81ff">100</span>) ,e varchar(<span style="color:#ae81ff">100</span>) , f varchar(<span style="color:#ae81ff">100</span>) , <span style="color:#66d9ef">g</span> varchar(<span style="color:#ae81ff">100</span>) , h varchar(<span style="color:#ae81ff">100</span>) , i varchar(<span style="color:#ae81ff">100</span>) , j varchar(<span style="color:#ae81ff">100</span>) , k varchar(<span style="color:#ae81ff">100</span>) , l varchar(<span style="color:#ae81ff">100</span>) , m varchar(<span style="color:#ae81ff">100</span>) , n varchar(<span style="color:#ae81ff">100</span>) );
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">drop</span> <span style="color:#ff79c6">table</span> t2_delta;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">table</span> t2_delta(a <span style="color:#8be9fd;font-style:italic">numeric</span>,b <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,<span style="color:#ff79c6">c</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,d <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) ,e <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , f <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , <span style="color:#ff79c6">g</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , h <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , i <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , j <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , k <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , l <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , m <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) , n <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">100</span>) );
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">DROP</span> <span style="color:#66d9ef">CONSTRAINT</span> t1_PKEY;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> t1 <span style="color:#66d9ef">ADD</span> <span style="color:#66d9ef">CONSTRAINT</span> t1_PKEY <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span>(a,b,<span style="color:#66d9ef">c</span>,d);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> t1 <span style="color:#ff79c6">DROP</span> <span style="color:#ff79c6">CONSTRAINT</span> t1_PKEY;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> t1 <span style="color:#ff79c6">ADD</span> <span style="color:#ff79c6">CONSTRAINT</span> t1_PKEY <span style="color:#ff79c6">PRIMARY</span> <span style="color:#ff79c6">KEY</span>(a,b,<span style="color:#ff79c6">c</span>,d);
 </span></span></code></pre></div><h3 id="データ作成">データ作成</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">truncate</span> <span style="color:#66d9ef">table</span> t1;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t1
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i, i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>, i<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span> ,i<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>)
-</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">FROM</span> 
-</span></span><span style="display:flex;"><span>   (<span style="color:#66d9ef">SELECT</span> md5(clock_timestamp()::text) <span style="color:#66d9ef">as</span> str , i
-</span></span><span style="display:flex;"><span>     <span style="color:#66d9ef">FROM</span>  generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">length</span>, generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">10</span>) num(i)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">truncate</span> <span style="color:#ff79c6">table</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> i, i<span style="color:#ff79c6">+</span><span style="color:#bd93f9">1</span>, i<span style="color:#ff79c6">*</span><span style="color:#bd93f9">2</span> ,i<span style="color:#ff79c6">/</span><span style="color:#bd93f9">2</span> ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">FROM</span> 
+</span></span><span style="display:flex;"><span>   (<span style="color:#ff79c6">SELECT</span> md5(clock_timestamp()::<span style="color:#8be9fd;font-style:italic">text</span>) <span style="color:#ff79c6">as</span> str , i
+</span></span><span style="display:flex;"><span>     <span style="color:#ff79c6">FROM</span>  generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>) <span style="color:#ff79c6">length</span>, generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">10</span>) num(i)
 </span></span><span style="display:flex;"><span>   )t
-</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> i;
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> i;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">truncate</span> <span style="color:#66d9ef">table</span> t2_delta;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">insert</span> <span style="color:#66d9ef">into</span> t2_delta
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>  i, i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>, i<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span> ,i<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>) ,string_agg(str, <span style="color:#e6db74">&#39;&#39;</span>)
-</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">FROM</span> 
-</span></span><span style="display:flex;"><span>   (<span style="color:#66d9ef">SELECT</span> md5(clock_timestamp()::text) <span style="color:#66d9ef">as</span> str , i
-</span></span><span style="display:flex;"><span>     <span style="color:#66d9ef">FROM</span>  generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">length</span>, generate_series(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">10000000</span>) num(i)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">truncate</span> <span style="color:#ff79c6">table</span> t2_delta;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t2_delta
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>  i, i<span style="color:#ff79c6">+</span><span style="color:#bd93f9">1</span>, i<span style="color:#ff79c6">*</span><span style="color:#bd93f9">2</span> ,i<span style="color:#ff79c6">/</span><span style="color:#bd93f9">2</span> ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>) ,string_agg(str, <span style="color:#f1fa8c">&#39;&#39;</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">FROM</span> 
+</span></span><span style="display:flex;"><span>   (<span style="color:#ff79c6">SELECT</span> md5(clock_timestamp()::<span style="color:#8be9fd;font-style:italic">text</span>) <span style="color:#ff79c6">as</span> str , i
+</span></span><span style="display:flex;"><span>     <span style="color:#ff79c6">FROM</span>  generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>) <span style="color:#ff79c6">length</span>, generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">10000000</span>) num(i)
 </span></span><span style="display:flex;"><span>   )t
-</span></span><span style="display:flex;"><span>   <span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> i;
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> i;
 </span></span></code></pre></div><h2 id="1000万規模のupsert処理の実行">1000万規模のUPSERT処理の実行</h2>
 <h3 id="upsert処理">UPSERT処理</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">explain</span> <span style="color:#66d9ef">analyze</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> t1(a,b,<span style="color:#66d9ef">c</span>,d,e,f,<span style="color:#66d9ef">g</span>,h,i,j,k,l,m,n)
-</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">SELECT</span> src.a,
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> t1(a,b,<span style="color:#ff79c6">c</span>,d,e,f,<span style="color:#ff79c6">g</span>,h,i,j,k,l,m,n)
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">SELECT</span> src.a,
 </span></span><span style="display:flex;"><span>         src.b,
-</span></span><span style="display:flex;"><span>         src.<span style="color:#66d9ef">c</span>,
+</span></span><span style="display:flex;"><span>         src.<span style="color:#ff79c6">c</span>,
 </span></span><span style="display:flex;"><span>         src.d,
 </span></span><span style="display:flex;"><span>         src.e,
 </span></span><span style="display:flex;"><span>         src.f,
-</span></span><span style="display:flex;"><span>         src.<span style="color:#66d9ef">g</span>,
+</span></span><span style="display:flex;"><span>         src.<span style="color:#ff79c6">g</span>,
 </span></span><span style="display:flex;"><span>         src.h,
 </span></span><span style="display:flex;"><span>         src.i,
 </span></span><span style="display:flex;"><span>         src.j,
@@ -295,101 +172,174 @@
 </span></span><span style="display:flex;"><span>         src.l,
 </span></span><span style="display:flex;"><span>         src.m,
 </span></span><span style="display:flex;"><span>         src.n
-</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">FROM</span> ( <span style="color:#66d9ef">SELECT</span>
-</span></span><span style="display:flex;"><span>         		a,b,<span style="color:#66d9ef">c</span>,d,e,f,<span style="color:#66d9ef">g</span>,h,i,j,k,l,m,n
-</span></span><span style="display:flex;"><span>        	<span style="color:#66d9ef">FROM</span> t2_delta
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">FROM</span> ( <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>         		a,b,<span style="color:#ff79c6">c</span>,d,e,f,<span style="color:#ff79c6">g</span>,h,i,j,k,l,m,n
+</span></span><span style="display:flex;"><span>        	<span style="color:#ff79c6">FROM</span> t2_delta
 </span></span><span style="display:flex;"><span>  ) src
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ON</span> CONFLICT <span style="color:#66d9ef">ON</span> <span style="color:#66d9ef">CONSTRAINT</span> t1_PKEY
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">DO</span> <span style="color:#66d9ef">UPDATE</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#66d9ef">SET</span>
-</span></span><span style="display:flex;"><span>         a <span style="color:#f92672">=</span> excluded.a,
-</span></span><span style="display:flex;"><span>         b <span style="color:#f92672">=</span> excluded.b,
-</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">c</span> <span style="color:#f92672">=</span> excluded.<span style="color:#66d9ef">c</span>,
-</span></span><span style="display:flex;"><span>         d <span style="color:#f92672">=</span> excluded.d,
-</span></span><span style="display:flex;"><span>         f <span style="color:#f92672">=</span> excluded.f,
-</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">g</span> <span style="color:#f92672">=</span> excluded.<span style="color:#66d9ef">g</span>,
-</span></span><span style="display:flex;"><span>         h <span style="color:#f92672">=</span> excluded.h,
-</span></span><span style="display:flex;"><span>         i <span style="color:#f92672">=</span> excluded.i,
-</span></span><span style="display:flex;"><span>         j <span style="color:#f92672">=</span> excluded.j,
-</span></span><span style="display:flex;"><span>         k <span style="color:#f92672">=</span> excluded.k,
-</span></span><span style="display:flex;"><span>         l <span style="color:#f92672">=</span> excluded.l,
-</span></span><span style="display:flex;"><span>         m <span style="color:#f92672">=</span> excluded.m,
-</span></span><span style="display:flex;"><span>         n <span style="color:#f92672">=</span> excluded.n
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ON</span> CONFLICT <span style="color:#ff79c6">ON</span> <span style="color:#ff79c6">CONSTRAINT</span> t1_PKEY
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">DO</span> <span style="color:#ff79c6">UPDATE</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#ff79c6">SET</span>
+</span></span><span style="display:flex;"><span>         a <span style="color:#ff79c6">=</span> excluded.a,
+</span></span><span style="display:flex;"><span>         b <span style="color:#ff79c6">=</span> excluded.b,
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">=</span> excluded.<span style="color:#ff79c6">c</span>,
+</span></span><span style="display:flex;"><span>         d <span style="color:#ff79c6">=</span> excluded.d,
+</span></span><span style="display:flex;"><span>         f <span style="color:#ff79c6">=</span> excluded.f,
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">g</span> <span style="color:#ff79c6">=</span> excluded.<span style="color:#ff79c6">g</span>,
+</span></span><span style="display:flex;"><span>         h <span style="color:#ff79c6">=</span> excluded.h,
+</span></span><span style="display:flex;"><span>         i <span style="color:#ff79c6">=</span> excluded.i,
+</span></span><span style="display:flex;"><span>         j <span style="color:#ff79c6">=</span> excluded.j,
+</span></span><span style="display:flex;"><span>         k <span style="color:#ff79c6">=</span> excluded.k,
+</span></span><span style="display:flex;"><span>         l <span style="color:#ff79c6">=</span> excluded.l,
+</span></span><span style="display:flex;"><span>         m <span style="color:#ff79c6">=</span> excluded.m,
+</span></span><span style="display:flex;"><span>         n <span style="color:#ff79c6">=</span> excluded.n
 </span></span><span style="display:flex;"><span>         ;
 </span></span></code></pre></div><h3 id="このupsert時の実行計画">このUPSERT時の実行計画</h3>
 <p>キャッシュにテーブルとインデックスがない場合に非常に時間が掛かった。<code>2407秒</code>。PostgreSQLのInsert on Conflictの場合の実行計画はどこがボトルネックになっているのか分かりづらい。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">----------------------------------------------------------------------------------------------------------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">Insert</span> <span style="color:#66d9ef">on</span> t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">1009091</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000001</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">678</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">2407550</span>.<span style="color:#ae81ff">457</span>..<span style="color:#ae81ff">2407550</span>.<span style="color:#ae81ff">458</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
-</span></span><span style="display:flex;"><span>   Conflict Resolution: <span style="color:#66d9ef">UPDATE</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">----------------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> <span style="color:#ff79c6">Insert</span> <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1009091</span>.<span style="color:#bd93f9">01</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000001</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">678</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">2407550</span>.<span style="color:#bd93f9">457</span>..<span style="color:#bd93f9">2407550</span>.<span style="color:#bd93f9">458</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   Conflict Resolution: <span style="color:#ff79c6">UPDATE</span>
 </span></span><span style="display:flex;"><span>   Conflict Arbiter Indexes: t1_pkey
-</span></span><span style="display:flex;"><span>   Tuples Inserted: <span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>   Conflicting Tuples: <span style="color:#ae81ff">10000000</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  Seq Scan <span style="color:#66d9ef">on</span> t2_delta  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">1009091</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000001</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">678</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>.<span style="color:#ae81ff">484</span>..<span style="color:#ae81ff">10999</span>.<span style="color:#ae81ff">718</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000000</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
-</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">143</span> ms
-</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#ae81ff">2407607</span>.<span style="color:#ae81ff">917</span> ms
-</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">8</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>   Tuples Inserted: <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>   Conflicting Tuples: <span style="color:#bd93f9">10000000</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Seq Scan <span style="color:#ff79c6">on</span> t2_delta  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1009091</span>.<span style="color:#bd93f9">01</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000001</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">678</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">2</span>.<span style="color:#bd93f9">484</span>..<span style="color:#bd93f9">10999</span>.<span style="color:#bd93f9">718</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000000</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">143</span> ms
+</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#bd93f9">2407607</span>.<span style="color:#bd93f9">917</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">8</span> <span style="color:#ff79c6">rows</span>)
 </span></span></code></pre></div><p>実行時の待機イベントをPerformance insightsで確認したところIO待ちがほとんどに…</p>
 <p><img src="image-20211223214810446.png" alt="image-20211223214810446"></p>
 <p>力技でバッファキャッシュに乗せて再実行したら早くなった。<code>2407秒</code>から<code>398秒</code>へ</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> extension pg_prewarm;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> extension pg_prewarm;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span>
-</span></span><span style="display:flex;"><span>     pg_prewarm(<span style="color:#e6db74">&#39;t1&#39;</span>, <span style="color:#e6db74">&#39;buffer&#39;</span>, <span style="color:#e6db74">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#e6db74">&#39;t2_delta&#39;</span>, <span style="color:#e6db74">&#39;buffer&#39;</span>, <span style="color:#e6db74">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#e6db74">&#39;t1_pkey&#39;</span>, <span style="color:#e6db74">&#39;buffer&#39;</span>, <span style="color:#e6db74">&#39;main&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>     pg_prewarm(<span style="color:#f1fa8c">&#39;t1&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
+</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#f1fa8c">&#39;t2_delta&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
+</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#f1fa8c">&#39;t1_pkey&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
 </span></span><span style="display:flex;"><span>    ; 
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">create</span> extension pg_buffercache;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">create</span> extension pg_buffercache;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#66d9ef">c</span>.relname, <span style="color:#66d9ef">count</span>(<span style="color:#f92672">*</span>) <span style="color:#66d9ef">as</span> buffers
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">from</span> pg_buffercache <span style="color:#66d9ef">as</span> b
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">inner</span> <span style="color:#66d9ef">join</span> pg_class <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">c</span> <span style="color:#66d9ef">on</span> b.relfilenode <span style="color:#f92672">=</span> pg_relation_filenode(<span style="color:#66d9ef">c</span>.oid) <span style="color:#66d9ef">and</span> b.reldatabase <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">0</span>, (<span style="color:#66d9ef">select</span> oid <span style="color:#66d9ef">from</span> pg_database <span style="color:#66d9ef">where</span> datname <span style="color:#f92672">=</span> current_database()))
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">group</span> <span style="color:#66d9ef">by</span> <span style="color:#66d9ef">c</span>.relname
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">order</span> <span style="color:#66d9ef">by</span> <span style="color:#ae81ff">2</span> <span style="color:#66d9ef">desc</span>;
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">---------------------------------------------------------------------------------------------------------------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span> <span style="color:#66d9ef">Insert</span> <span style="color:#66d9ef">on</span> t1  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">1009091</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000001</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">678</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">398525</span>.<span style="color:#ae81ff">649</span>..<span style="color:#ae81ff">398525</span>.<span style="color:#ae81ff">650</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
-</span></span><span style="display:flex;"><span>   Conflict Resolution: <span style="color:#66d9ef">UPDATE</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">c</span>.relname, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> buffers
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">from</span> pg_buffercache <span style="color:#ff79c6">as</span> b
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">inner</span> <span style="color:#ff79c6">join</span> pg_class <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">on</span> b.relfilenode <span style="color:#ff79c6">=</span> pg_relation_filenode(<span style="color:#ff79c6">c</span>.oid) <span style="color:#ff79c6">and</span> b.reldatabase <span style="color:#ff79c6">in</span> (<span style="color:#bd93f9">0</span>, (<span style="color:#ff79c6">select</span> oid <span style="color:#ff79c6">from</span> pg_database <span style="color:#ff79c6">where</span> datname <span style="color:#ff79c6">=</span> current_database()))
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">group</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">c</span>.relname
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">order</span> <span style="color:#ff79c6">by</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">desc</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">---------------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> <span style="color:#ff79c6">Insert</span> <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1009091</span>.<span style="color:#bd93f9">01</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000001</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">678</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">398525</span>.<span style="color:#bd93f9">649</span>..<span style="color:#bd93f9">398525</span>.<span style="color:#bd93f9">650</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   Conflict Resolution: <span style="color:#ff79c6">UPDATE</span>
 </span></span><span style="display:flex;"><span>   Conflict Arbiter Indexes: t1_pkey
-</span></span><span style="display:flex;"><span>   Tuples Inserted: <span style="color:#ae81ff">0</span>
-</span></span><span style="display:flex;"><span>   Conflicting Tuples: <span style="color:#ae81ff">10000000</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#f92672">-&gt;</span>  Seq Scan <span style="color:#66d9ef">on</span> t2_delta  (cost<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">00</span>..<span style="color:#ae81ff">1009091</span>.<span style="color:#ae81ff">01</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000001</span> width<span style="color:#f92672">=</span><span style="color:#ae81ff">678</span>) (actual time<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">013</span>..<span style="color:#ae81ff">2481</span>.<span style="color:#ae81ff">678</span> <span style="color:#66d9ef">rows</span><span style="color:#f92672">=</span><span style="color:#ae81ff">10000000</span> loops<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
-</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#ae81ff">0</span>.<span style="color:#ae81ff">944</span> ms
-</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#ae81ff">398550</span>.<span style="color:#ae81ff">088</span> ms
-</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">8</span> <span style="color:#66d9ef">rows</span>)
+</span></span><span style="display:flex;"><span>   Tuples Inserted: <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>   Conflicting Tuples: <span style="color:#bd93f9">10000000</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Seq Scan <span style="color:#ff79c6">on</span> t2_delta  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1009091</span>.<span style="color:#bd93f9">01</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000001</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">678</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">013</span>..<span style="color:#bd93f9">2481</span>.<span style="color:#bd93f9">678</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000000</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span> Planning Time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">944</span> ms
+</span></span><span style="display:flex;"><span> Execution Time: <span style="color:#bd93f9">398550</span>.<span style="color:#bd93f9">088</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">8</span> <span style="color:#ff79c6">rows</span>)
 </span></span></code></pre></div>
-</content>
----
-
-<p>関連しているかもしれない記事</p>
- 
-<ul>
-  
-  <li><a href="/postgres-extension-pg-prewarm-buffer-cache/">PostgreSQLでバッファキャッシュ上にデータをのせる</a></li>
-  
-  <li><a href="/postgres-extension-fdw-install/">PostgreSQLのpostgres_fdw拡張機能の実行</a></li>
-  
-  <li><a href="/postgres-extension-dblink-install-and-causion/">PostgreSQLのdblink拡張機能の実行と注意点</a></li>
-  
-  <li><a href="/postgres-docker-compose-install/">docker-composeでPostgreSQL構築</a></li>
-  
-  <li><a href="/postgresql-database-logical-backup-restore-table/">PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする</a></li>
-  
-</ul>
-
-<br>
-
-<p>
-  
-  <a href="https://zatoima.github.io/blog/postgresql/">#PostgreSQL</a>
-  
-</p>
-
-
-  </main>
-  <footer>Made with <a href="https://github.com/janraasch/hugo-bearblog/">Hugo ʕ•ᴥ•ʔ Bear</a>
-</footer>
+      </div>
+    </div>
 
     
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/postgres-merge-upsert/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">PostgreSQLでMerge／Upsertを行う</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/aws-ecr-container-push-pull/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">ECRへのコンテナイメージのPush、Pullのメモ</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgres-merge-upsert-tuning%2f&text=PostgreSQL%E3%81%A7Merge%EF%BC%8FUpsert%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%9F%E3%82%89%E9%81%85%E3%81%8B%E3%81%A3%E3%81%9F%E3%81%AE%E3%81%A7%E5%8A%9B%E6%8A%80%E3%81%A7%E8%A7%A3%E6%B1%BA%E3%81%97%E3%81%9F" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgres-merge-upsert-tuning/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/postgres-extension-pg-prewarm-buffer-cache/">PostgreSQLでバッファキャッシュ上にデータをのせる</a></li>
+    
+    <li><a href="/postgres-extension-fdw-install/">PostgreSQLのpostgres_fdw拡張機能の実行</a></li>
+    
+    <li><a href="/postgres-extension-dblink-install-and-causion/">PostgreSQLのdblink拡張機能の実行と注意点</a></li>
+    
+    <li><a href="/postgres-docker-compose-install/">docker-composeでPostgreSQL構築</a></li>
+    
+    <li><a href="/postgresql-database-logical-backup-restore-table/">PostgreSQLでデータベース全体の論理バックアップから個別テーブルをリストアする</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge">#PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#検証用環境の作成">検証用環境の作成</a>
+      <ul>
+        <li><a href="#テーブル作成">テーブル作成</a></li>
+        <li><a href="#データ作成">データ作成</a></li>
+      </ul>
+    </li>
+    <li><a href="#1000万規模のupsert処理の実行">1000万規模のUPSERT処理の実行</a>
+      <ul>
+        <li><a href="#upsert処理">UPSERT処理</a></li>
+        <li><a href="#このupsert時の実行計画">このUPSERT時の実行計画</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
 </body>
 
 </html>
