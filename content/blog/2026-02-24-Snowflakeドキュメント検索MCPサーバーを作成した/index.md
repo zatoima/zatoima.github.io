@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Snowflakeドキュメント検索MCPサーバーの仕組み"
+title: "Snowflakeドキュメント検索MCPサーバーを作成した"
 subtitle: ""
 summary: " "
 tags: ["Snowflake","MCP","Claude Code"]
