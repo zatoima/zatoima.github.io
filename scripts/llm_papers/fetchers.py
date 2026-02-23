@@ -39,6 +39,7 @@ class Paper:
     arxiv_id: str | None = None
     doi: str | None = None
     categories: list[str] = field(default_factory=list)
+    popularity_score: float = 0.0  # Higher = more popular
 
 
 def _retry_request(func, *args, **kwargs):
@@ -133,6 +134,8 @@ def _parse_s2_paper(item: dict, today: str) -> Paper | None:
     if arxiv_id:
         url = f"https://arxiv.org/abs/{arxiv_id}"
 
+    citation_count = item.get("citationCount", 0) or 0
+
     return Paper(
         paper_id=paper_id,
         title=item["title"].strip(),
@@ -143,6 +146,7 @@ def _parse_s2_paper(item: dict, today: str) -> Paper | None:
         source="semantic_scholar",
         arxiv_id=arxiv_id,
         doi=doi,
+        popularity_score=float(citation_count),
     )
 
 
@@ -167,7 +171,7 @@ def fetch_semantic_scholar_papers() -> list[Paper]:
         params = {
             "query": keyword,
             "limit": SEMANTIC_SCHOLAR_LIMIT,
-            "fields": "title,authors,abstract,externalIds,publicationDate,url,openAccessPdf",
+            "fields": "title,authors,abstract,externalIds,publicationDate,url,openAccessPdf,citationCount",
             "publicationDateOrYear": f"{one_week_ago}:{today}",
             "openAccessPdf": "",
         }
@@ -216,6 +220,8 @@ def _parse_hf_paper(item: dict) -> Paper | None:
     if pub_date:
         pub_date = pub_date[:10]
 
+    upvotes = paper_info.get("upvotes", 0) or 0
+
     return Paper(
         paper_id=f"arxiv:{arxiv_id}" if arxiv_id else f"hf:{title[:50]}",
         title=title,
@@ -227,6 +233,7 @@ def _parse_hf_paper(item: dict) -> Paper | None:
         else f"https://huggingface.co/papers/{arxiv_id}",
         source="huggingface",
         arxiv_id=arxiv_id if arxiv_id else None,
+        popularity_score=float(upvotes),
     )
 
 
@@ -280,6 +287,44 @@ def deduplicate_papers(papers: list[Paper]) -> list[Paper]:
     return unique
 
 
+def _enrich_popularity_from_s2(papers: list[Paper]) -> None:
+    """Enrich papers that have no popularity score with Semantic Scholar citation data."""
+    papers_to_enrich = [p for p in papers if p.popularity_score < 0.1 and p.arxiv_id]
+    if not papers_to_enrich:
+        return
+
+    logger.info("Enriching %d papers with Semantic Scholar citation data...", len(papers_to_enrich))
+
+    # Batch lookup via S2 API (up to 500 per request)
+    arxiv_ids = [f"ArXiv:{p.arxiv_id}" for p in papers_to_enrich]
+
+    try:
+        time.sleep(REQUEST_DELAY)
+        resp = requests.post(
+            "https://api.semanticscholar.org/graph/v1/paper/batch",
+            json={"ids": arxiv_ids[:500]},
+            params={"fields": "citationCount,externalIds"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        results = resp.json()
+
+        id_to_citations = {}
+        for item in results:
+            if item and item.get("externalIds", {}).get("ArXiv"):
+                aid = item["externalIds"]["ArXiv"]
+                id_to_citations[aid] = item.get("citationCount", 0) or 0
+
+        for paper in papers_to_enrich:
+            if paper.arxiv_id in id_to_citations:
+                paper.popularity_score = float(id_to_citations[paper.arxiv_id])
+
+        logger.info("Enriched popularity scores for %d papers", len(id_to_citations))
+
+    except Exception as e:
+        logger.warning("Failed to enrich popularity from S2: %s", e)
+
+
 def fetch_all_papers() -> list[Paper]:
     """Fetch papers from all sources and deduplicate."""
     all_papers = []
@@ -290,7 +335,10 @@ def fetch_all_papers() -> list[Paper]:
 
     unique = deduplicate_papers(all_papers)
 
-    # Sort by publication date (newest first)
-    unique.sort(key=lambda p: p.published, reverse=True)
+    # Enrich arXiv-only papers with S2 citation data
+    _enrich_popularity_from_s2(unique)
+
+    # Sort by popularity (descending), then by date (newest first)
+    unique.sort(key=lambda p: (p.popularity_score, p.published), reverse=True)
 
     return unique

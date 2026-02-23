@@ -15,6 +15,7 @@ from pathlib import Path
 
 from config import LOG_FILE, PROJECT_ROOT, TOP_N_PAPERS
 from fetchers import fetch_all_papers
+from notifier import notify_slack
 from publisher import generate_hugo_content
 from screenshot import capture_screenshots
 from state import is_processed, load_state, mark_processed, save_state
@@ -164,6 +165,10 @@ def run_pipeline(
         git_commit_and_push(post_dir)
     else:
         logger.info("--- Step 5: Skipping git push ---")
+
+    # 9. Slack notification
+    logger.info("--- Step 6: Sending Slack notification ---")
+    notify_slack(featured_papers, summaries, today)
 
     logger.info("=== Pipeline Complete ===")
 
