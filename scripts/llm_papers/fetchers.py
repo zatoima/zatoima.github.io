@@ -13,6 +13,7 @@ from config import (
     ARXIV_CATEGORIES,
     ARXIV_KEYWORDS,
     ARXIV_MAX_RESULTS,
+    FETCH_WINDOW_DAYS,
     HF_DAILY_PAPERS_URL,
     LLM_FILTER_KEYWORDS,
     MAX_RETRIES,
@@ -163,7 +164,7 @@ def fetch_semantic_scholar_papers() -> list[Paper]:
     papers = []
     base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
 
-    one_week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    one_week_ago = (datetime.now() - timedelta(days=FETCH_WINDOW_DAYS)).strftime("%Y-%m-%d")
     today = datetime.now().strftime("%Y-%m-%d")
 
     for keyword in SEMANTIC_SCHOLAR_KEYWORDS:

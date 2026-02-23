@@ -51,6 +51,9 @@ LLM_FILTER_KEYWORDS = [
     "question answering", "NLP", "embedding",
 ]
 
+# Fetch window (days to look back for papers)
+FETCH_WINDOW_DAYS = 3
+
 # Pipeline settings
 TOP_N_PAPERS = 5  # Number of papers to feature with screenshots
 MAX_RETRIES = 3
