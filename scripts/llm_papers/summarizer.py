@@ -1,9 +1,9 @@
-"""Summary generation using Anthropic API."""
+"""Summary generation using Claude Code CLI."""
 
+import json
 import logging
+import subprocess
 import time
-
-import anthropic
 
 from config import REQUEST_DELAY
 from fetchers import Paper
@@ -12,29 +12,40 @@ logger = logging.getLogger(__name__)
 
 
 def generate_summary(paper: Paper) -> str:
-    """Generate a Japanese summary of a paper using Claude API."""
-    client = anthropic.Anthropic()
-
-    prompt = f"""以下の論文のAbstractを日本語で要約してください。要約は3〜5文程度で、技術的な内容を正確に伝えてください。
-
-タイトル: {paper.title}
-著者: {', '.join(paper.authors[:5])}{'...' if len(paper.authors) > 5 else ''}
-Abstract:
-{paper.abstract}
-
-要約（日本語で）:"""
+    """Generate a Japanese summary of a paper using claude CLI."""
+    prompt = (
+        f"以下の論文のAbstractを日本語で要約してください。要約は3〜5文程度で、"
+        f"技術的な内容を正確に伝えてください。要約のテキストのみを出力し、"
+        f"前置きや説明は不要です。\n\n"
+        f"タイトル: {paper.title}\n"
+        f"著者: {', '.join(paper.authors[:5])}{'...' if len(paper.authors) > 5 else ''}\n"
+        f"Abstract:\n{paper.abstract}"
+    )
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
-        summary = message.content[0].text.strip()
-        logger.info("Generated summary for: %s", paper.title[:50])
-        return summary
-    except Exception as e:
-        logger.error("Failed to generate summary for '%s': %s", paper.title, e)
+        if result.returncode == 0 and result.stdout.strip():
+            summary = result.stdout.strip()
+            logger.info("Generated summary for: %s", paper.title[:50])
+            return summary
+        else:
+            logger.error(
+                "claude CLI failed for '%s': rc=%d, stderr=%s",
+                paper.title[:40],
+                result.returncode,
+                result.stderr[:200],
+            )
+            return paper.abstract[:300] + "..."
+    except subprocess.TimeoutExpired:
+        logger.error("claude CLI timed out for '%s'", paper.title[:40])
+        return paper.abstract[:300] + "..."
+    except FileNotFoundError:
+        logger.error("claude CLI not found. Is Claude Code installed?")
         return paper.abstract[:300] + "..."
 
 
