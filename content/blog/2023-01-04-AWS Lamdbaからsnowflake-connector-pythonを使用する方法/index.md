@@ -36,7 +36,6 @@ snowflake-connector-pythonのようなLambdaで対応していないPythonライ
 
 ここに至るまでに試した方法は下記の通り。
 
-- [[How to: Use Snowflake with AWS Lambda](https://community.snowflake.com/s/article/How-to-Use-Snowflake-with-AWS-Lambda)](https://oznetnerd.com/2020/11/11/lambda-packaging-the-right-way/)
 - [Lambda から Snowflake にシュッとつなぎたい！ \- Qiita](https://qiita.com/foursue/items/394f39786693ee362fef)
 - [Lambda packaging the right way \- OzNetNerd\.com](https://oznetnerd.com/2020/11/11/lambda-packaging-the-right-way/)
 - [python \- AWS Lambda: Unable to import module 'python\_handler': No module named '\_cffi\_backend' \- Stack Overflow](https://stackoverflow.com/questions/57189352/aws-lambda-unable-to-import-module-python-handler-no-module-named-cffi-bac)
@@ -230,3 +229,13 @@ drwxr-xr-x@ 44 jimazato  staff      1408  1  4 10:07 python
 
 - [Lambda レイヤーの作成と共有 \- AWS Lambda](https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/configuration-layers.html)
 - [AWS Lambda Layersでライブラリを共通化 \- Qiita](https://qiita.com/t_okkan/items/394a15577bd1aad46ec3)
+
+---
+
+### 追記（2026-02-23）
+
+本記事の執筆時点ではPython 3.8を使用していましたが、以下の点にご注意ください。
+
+- **Python 3.8はAWS Lambdaで非推奨・サポート終了済み**：2025年2月以降、Python 3.8での新規Lambda関数の作成はできなくなっています。現在はPython 3.13が最新のサポートランタイムです。新規で構築する場合は`aws-sam-cli-build-image-python3.12`以降のイメージを使用してください
+- **Docker Compose V1（`docker-compose`コマンド）は非推奨**：2023年7月にサポート終了しています。`docker compose`（ハイフンなし）コマンドに移行してください
+- **`docker-compose.yml`の`version`フィールドは不要**：Docker Compose V2ではCompose Specificationが採用され、`version`キーは無視されます。削除しても問題ありません
