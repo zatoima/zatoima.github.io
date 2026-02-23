@@ -26,7 +26,7 @@ image:
 
 こちらのサイトのスクリプトにメールアドレス"だけ"を抽出するファンクションを追加したり検索条件を変えただけ。
 
-> - [Gmailの検索と内容取得をするGAS – TD シネックスブログ](https://blog.synnex.co.jp/google/gmail-gas/)
+> - [Gmailの検索と内容取得をするGAS – TD シネックスブログ](https://jp.tdsynnex.com/blog/google/gmail-gas/)
 
 ```js
 function searchMails() {

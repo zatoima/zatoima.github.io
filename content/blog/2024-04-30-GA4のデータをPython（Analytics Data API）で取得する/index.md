@@ -20,15 +20,15 @@ image:
   preview_only: fals
 ---
 
-### はじめに
+## はじめに
 
 PythonのAnalytics Data APIを利用すると、GA4のデータを柔軟に取得し、分析やレポーティングに活用できる。GA4のデータをPythonから扱ってHugoの静的ジェネレーターに貼り付けるためのステップを検討。
 
-### Analytics Data APIとは
+## Analytics Data APIとは
 
 Analytics Data APIは、GA4のデータにプログラムでアクセスするためのAPI。レポートのデータを取得したり、カスタムレポートを作成したりできる。GCPの使用が前提でアカウントは必須な模様。
 
-### Pythonでの利用方法
+## Pythonでの利用方法
 
 PythonからAnalytics Data APIを使う場合、`google-api-python-client`と`google-analytics-data `パッケージを利用する。
 
@@ -37,7 +37,7 @@ pip install google-api-python-client
 pip install google-analytics-data
 ```
 
-### Analytics Data APIの有効化
+## Analytics Data APIの有効化
 
 https://developers.google.com/analytics/devguides/reporting/data/v1/quickstart-client-libraries?hl=ja
 
@@ -66,14 +66,14 @@ https://developers.google.com/analytics/devguides/reporting/data/v1/quickstart-c
 
 credentials.jsonの名前を`ga4_prifile.json`に変更した。
 
-### 環境変数の設定
+## 環境変数の設定
 
 ```python
 export GOOGLE_APPLICATION_CREDENTIALS=./ga4_prifile.json
 export GA_PROPERTY_ID=384740337
 ```
 
-パッケージのインストールと環境変数を設定後、以下のようにAPIを呼び出してレポートデータを取得できます。
+パッケージのインストールと環境変数を設定後、以下のようにAPIを呼び出してレポートデータを取得できる。
 
 ```python
 import os
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
 このスクリプトでは、`過去1年間のページ別のページビュー数を、ページビューの多い順に15件取得`。
 
-### アウトプット
+## アウトプット
 
 > Most viewed articles in the last year:
 >

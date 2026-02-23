@@ -20,7 +20,7 @@ image:
   preview_only: fals
 ---
 
-### 前提条件
+## 前提条件
 
 1. CLIツールのインストール：
 
@@ -32,7 +32,7 @@ image:
 
      - https://docs.snowflake.com/ja/user-guide/sample-data-using
 
-### 手順
+## 手順
 
 ### 作業用ディレクトリを削除し、再作成
 
@@ -87,7 +87,7 @@ use database sandbox;
 put file://~/work/temp/upload/* @my_stage;
 ```
 
-### 参照
+## 参照
 
 > [Snowflake CLI \| Snowflake Documentation](https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/index)
 >
