@@ -1,7 +1,7 @@
 """Summary generation using Claude Code CLI."""
 
-import json
 import logging
+import os
 import subprocess
 import time
 
@@ -9,6 +9,13 @@ from config import REQUEST_DELAY
 from fetchers import Paper
 
 logger = logging.getLogger(__name__)
+
+
+def _get_claude_env() -> dict:
+    """Get environment with CLAUDECODE unset to allow nested invocation."""
+    env = os.environ.copy()
+    env.pop("CLAUDECODE", None)
+    return env
 
 
 def generate_summary(paper: Paper) -> str:
@@ -27,7 +34,8 @@ def generate_summary(paper: Paper) -> str:
             ["claude", "-p", prompt],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=120,
+            env=_get_claude_env(),
         )
         if result.returncode == 0 and result.stdout.strip():
             summary = result.stdout.strip()

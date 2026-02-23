@@ -12,10 +12,14 @@ logger = logging.getLogger(__name__)
 
 def load_state() -> dict:
     """Load processed papers state from JSON file."""
+    default = {"processed_ids": {}, "last_run": None}
     if STATE_FILE.exists():
         with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"processed_ids": {}, "last_run": None}
+            data = json.load(f)
+        if "processed_ids" not in data:
+            return default
+        return data
+    return default
 
 
 def save_state(state: dict) -> None:
