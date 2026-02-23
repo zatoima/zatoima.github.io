@@ -9,6 +9,35 @@ url: https://zatoima.github.io/
 
 ---
 
+### Hugo製ブログにMCP Serverとllms.txtを実装する
+
+date: 2026-02-23
+url: https://zatoima.github.io/hugo-blog-mcp-server-llms-txt/
+tags: Hugo, Claude Code
+
+はじめに 自分のHugoブログ（GitHub Pages）に対して、以下2つのアプローチでAI/LLM向けのインターフェースを実装した。
+MCP Server - Claude Codeから記事の検索・閲覧ができるMCPサーバー（リポジトリのクローン不要、HTTPフェッチ方式） llms.txt - Webサイト上でLLM向けにコンテンツを公開する標準フォーマット MCP（Model Context Protocol）とは MCPはAnthropicが提唱するプロトコルで、AIモデルが外部のデータソースやツールと連携するための標準的な仕組みである。MCP Serverを作ることで、Claude CodeなどのAIツールからブログの記事検索・閲覧が可能になる。
+MCP Serverの実装 データ取得方式 当初はリポジトリをクローンしてローカルのMarkdownファイルを直接読む方式だったが、利用者にクローンを強いるのは不便なため、サイトが公開しているllms-full.txtをHTTPで取得する方式に変更した。
+┌──────────────┐ HTTP GET ┌──────────────────────┐ │ MCP Server │ ───────────────── │ zatoima.github.io │ │ (Node.js) │ /llms-full.txt │ (GitHub Pages) │ └──────────────┘ └──────────────────────┘ │ │ stdio ▼ ┌──────────────┐ │ Claude Code │ └──────────────┘ これにより、リポジトリのクローンは不要になった。MCP Serverのソースコードだけ取得してビルドすればよい。データは10分間キャッシュされ、キャッシュ期限後は自動で再取得される。
+構成 mcp-server/ ├── package.json ├── tsconfig.json ├── src/ │ └── index.ts └── dist/ └── index.js 依存ライブラリは @modelcontextprotocol/sdk のみ。Node.js標準のfetchでllms-full.txtを取得し、テキストパースで記事データを抽出する。
+提供ツール MCP Serverでは5つのツールを実装した。
+ツール名 説明 search_posts キーワードでタイトル・本文・タグを全文検索 read_post slugまたはタイトルの一部から記事全文を取得 list_posts 記事一覧の取得（タグ・カテゴリ・年でフィルタ可） list_tags 全タグと記事数の一覧 blog_stats ブログの統計情報（記事数、年別投稿数、人気タグ） 実装のポイント llms-full.txtは---で区切られた記事の連続テキストであるため、これをパースして構造化データに変換する。
+import { McpServer } from &#34;@modelcontextprotocol/sdk/server/mcp.js&#34;; import { StdioServerTransport } from &#34;@modelcontextprotocol/sdk/server/stdio.js&#34;; import { z } from &#34;zod&#34;; const SITE_URL = &#34;https://zatoima.github.io&#34;; // llms-full.txtからデータを取得・パース async function getPosts(): Promise&lt;BlogPost[]&gt; { const res = await fetch(`${SITE_URL}/llms-full.txt`); const text = await res.text(); return parseLlmsFullTxt(text); // テキストを記事データに変換 } // ツール登録の例: 記事検索 server.tool( &#34;search_posts&#34;, &#34;ブログ記事をキーワードで検索する&#34;, { query: z.string().describe(&#34;検索キーワード&#34;), limit: z.number().optional().default(10), }, async ({ query, limit }) =&gt; { const posts = await getPosts(); const q = query.toLowerCase(); const results = posts .filter( (p) =&gt; p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q) || p.tags.some((t) =&gt; t.toLowerCase().includes(q)) ) .slice(0, limit); // ... 結果を返す } ); セットアップ リポジトリ全体のクローンは不要。MCP Serverのソースコードだけ取得してビルドする。
+# MCP Serverのソースを取得してビルド git clone --depth 1 --filter=blob:none --sparse https://github.com/zatoima/zatoima.github.io.git cd zatoima.github.io &amp;&amp; git sparse-checkout set mcp-server cd mcp-server &amp;&amp; npm install &amp;&amp; npx tsc # Claude Codeに登録 claude mcp add zatoima-blog node $(pwd)/dist/index.js 登録後、Claude Codeのセッション内で以下のように使用できる。
+# 記事検索 mcp__zatoima-blog__search_posts(query=&#34;Aurora&#34;) # 統計情報 mcp__zatoima-blog__blog_stats() llms.txtの実装 llms.txtとは llms.txtはWebサイトの内容をLLMに理解させるためのフォーマットである。robots.txtのAI版のようなもので、サイトの概要と記事一覧をプレーンテキストで提供する。
+/llms.txt - 記事タイトル・URL・タグの一覧（軽量版） /llms-full.txt - 全記事の本文を含む完全版 Hugoでの生成方法 1. hugo.tomlにカスタム出力フォーマットを定義 [mediaTypes] [mediaTypes.&#34;text/llms&#34;] suffixes = [&#34;txt&#34;] [mediaTypes.&#34;text/llms-full&#34;] suffixes = [&#34;txt&#34;] [outputFormats] [outputFormats.llms] mediaType = &#34;text/llms&#34; baseName = &#34;llms&#34; isPlainText = true notAlternative = true [outputFormats.llms-full] mediaType = &#34;text/llms-full&#34; baseName = &#34;llms-full&#34; isPlainText = true notAlternative = true [outputs] home = [&#34;HTML&#34;, &#34;RSS&#34;, &#34;JSON&#34;, &#34;llms&#34;, &#34;llms-full&#34;] 2. テンプレートファイルの作成 layouts/_default/index.llms.txt（軽量版）:
+# {{ .Site.Title }} &gt; {{ .Site.Params.description }} author: zatoima url: {{ .Site.BaseURL }} ## Blog Posts {{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }} {{ range $pages }} - [{{ .Title }}]({{ .Permalink }}) ({{ .Date.Format &#34;2006-01-02&#34; }}){{ with .Params.tags }} [{{ delimit . &#34;, &#34; }}]{{ end }} {{- end }} layouts/_default/index.llms-full.txt（完全版）:
+{{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }} {{ range $pages }} --- ### {{ .Title }} date: {{ .Date.Format &#34;2006-01-02&#34; }} url: {{ .Permalink }} {{ .Plain }} {{ end }} 3. HTMLヘッダーへのリンク追加 layouts/_default/baseof.htmlの&lt;head&gt;内に以下を追加する。
+&lt;link rel=&#34;alternate&#34; type=&#34;text/plain&#34; href=&#34;/llms.txt&#34; title=&#34;LLMs.txt&#34; /&gt; &lt;link rel=&#34;alternate&#34; type=&#34;text/plain&#34; href=&#34;/llms-full.txt&#34; title=&#34;LLMs-full.txt&#34; /&gt; ナビゲーションにもリンクを追加した。
+&lt;a href=&#34;/llms.txt&#34; title=&#34;LLMs.txt - AI/LLM向けサイト情報&#34;&gt;llms.txt&lt;/a&gt; 生成結果 ファイル 行数 内容 llms.txt 414行 記事タイトル・URL・タグの一覧 llms-full.txt 7,448行 全記事の本文を含む完全版 コンテキストウィンドウへの影響 MCP Serverはllms-full.txt（約1.8MB / 推定50万トークン）を起動時にHTTPで取得しメモリ上に保持する。しかし、この全データがClaude Codeのコンテキストウィンドウに流れるわけではない。
+各ツールがClaude Codeに返すデータ量は以下の通り。
+ツール 返すデータ コンテキスト消費 search_posts タイトル一覧のみ 小 list_posts タイトル一覧のみ 小 list_tags タグと件数の集計 小 blog_stats 統計サマリ 小 read_post 1記事の全文 記事による（大） read_post以外のツールは検索・集計結果のサマリのみを返すため、コンテキストウィンドウへの影響は小さい。1.8MBの全記事データはMCP Serverプロセスのメモリに留まり、Claude Codeには流れない。read_postだけは記事全文を返すため、長い記事の場合はコンテキストを圧迫する可能性がある。
+まとめ Hugo製の静的ブログに対して、2つの異なるアプローチでAI/LLMとの連携を実装した。
+方式 用途 動作環境 クローン MCP Server Claude Codeからの記事操作 ローカル（Node.js） 不要（HTTPフェッチ） llms.txt Web上でのLLM向けコンテンツ公開 GitHub Pages（静的ファイル） 不要 MCP Serverはllms-full.txtをHTTPで取得する方式にしたことで、リポジトリのクローンが不要になった。llms.txtがMCP Serverのデータソースを兼ねる構成になっており、Hugoビルド時に記事データが自動更新される。静的サイトでも工夫次第でAIフレンドリーな対応が可能である。
+参考資料 Model Context Protocol llms.txt proposal Hugo Custom Output Formats 
+
+---
+
 ### Snowflakeのディレクトリテーブルとメタデータ自動更新
 
 date: 2024-05-17
