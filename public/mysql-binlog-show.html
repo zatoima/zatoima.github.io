@@ -1,436 +1,211 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>MySQLのバイナリログを確認してみた | my opinion is my own</title>
-<meta name="title" content="MySQLのバイナリログを確認してみた" />
-<meta name="description" content="" />
-<meta name="keywords" content="MySQL," />
-
-
-<meta property="og:title" content="MySQLのバイナリログを確認してみた" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/mysql-binlog-show.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-07-18T00:00:00+00:00" />
-<meta property="article:modified_time" content="2019-07-18T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="MySQLのバイナリログを確認してみた"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="MySQLのバイナリログを確認してみた">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-07-18T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2019-07-18T00:00:00+00:00" />
-<meta itemprop="wordCount" content="935"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="MySQL," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">MySQLのバイナリログを確認してみた</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-icon" loading="lazy"></div>
-        <h1>MySQLのバイナリログを確認してみた</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2019-07-18'>
-            2019/07/18 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <p>バイナリログを確認</p>
-<h3 id="実行コマンド">実行コマンド</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- login
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>mysql <span style="color:#ff79c6">-</span>u myuser <span style="color:#ff79c6">-</span>pmysql
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- 既存のバイナリログを確認、及びバイナリログのスイッチ
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">show</span> <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span>flush <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">show</span> <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- バイナリログを確認
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- この時にはバイナリのログの中には何も更新情報はない
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>use mydb;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">desc</span> t1;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#bd93f9">1</span>,<span style="color:#f1fa8c">&#39;1度目のInsert&#39;</span>,<span style="color:#f1fa8c">&#39;testテスト&#39;</span>,<span style="color:#bd93f9">5555</span>,now());
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- バイナリログを確認
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- 上記Insertが記録されている
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- binlog_formatを変更した後に実行
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">set</span> <span style="color:#ff79c6">session</span> binlog_format<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;STATEMENT&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#bd93f9">2</span>,<span style="color:#f1fa8c">&#39;2度目のInsert&#39;</span>,<span style="color:#f1fa8c">&#39;testテスト&#39;</span>,<span style="color:#bd93f9">5555</span>,now());
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span></code></pre></div><h3 id="実行結果">実行結果</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span><span style="color:#ff79c6">user</span><span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 <span style="color:#ff79c6">~</span>]$
-</span></span><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span><span style="color:#ff79c6">user</span><span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 <span style="color:#ff79c6">~</span>]$
-</span></span><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span><span style="color:#ff79c6">user</span><span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 <span style="color:#ff79c6">~</span>]$
-</span></span><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span><span style="color:#ff79c6">user</span><span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 <span style="color:#ff79c6">~</span>]$ mysql <span style="color:#ff79c6">-</span>u myuser <span style="color:#ff79c6">-</span>pmysql
-</span></span><span style="display:flex;"><span>mysql: [Warning] <span style="color:#ff79c6">Using</span> a password <span style="color:#ff79c6">on</span> the command line interface can be insecure.
-</span></span><span style="display:flex;"><span>Welcome <span style="color:#ff79c6">to</span> the MySQL monitor.  Commands <span style="color:#ff79c6">end</span> <span style="color:#ff79c6">with</span> ; <span style="color:#ff79c6">or</span> \<span style="color:#ff79c6">g</span>.
-</span></span><span style="display:flex;"><span>Your MySQL <span style="color:#ff79c6">connection</span> id <span style="color:#ff79c6">is</span> <span style="color:#bd93f9">15</span>
-</span></span><span style="display:flex;"><span>Server <span style="color:#ff79c6">version</span>: <span style="color:#bd93f9">5</span>.<span style="color:#bd93f9">7</span>.<span style="color:#bd93f9">26</span><span style="color:#ff79c6">-</span>log MySQL Community Server (GPL)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Copyright (<span style="color:#ff79c6">c</span>) <span style="color:#bd93f9">2000</span>, <span style="color:#bd93f9">2019</span>, Oracle <span style="color:#ff79c6">and</span><span style="color:#ff79c6">/</span><span style="color:#ff79c6">or</span> its affiliates. <span style="color:#ff79c6">All</span> rights reserved.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Oracle <span style="color:#ff79c6">is</span> a registered trademark <span style="color:#ff79c6">of</span> Oracle Corporation <span style="color:#ff79c6">and</span><span style="color:#ff79c6">/</span><span style="color:#ff79c6">or</span> its
-</span></span><span style="display:flex;"><span>affiliates. Other <span style="color:#ff79c6">names</span> may be trademarks <span style="color:#ff79c6">of</span> their respective
-</span></span><span style="display:flex;"><span>owners.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">Type</span> <span style="color:#f1fa8c">&#39;help;&#39;</span> <span style="color:#ff79c6">or</span> <span style="color:#f1fa8c">&#39;\h&#39;</span> <span style="color:#ff79c6">for</span> help. <span style="color:#ff79c6">Type</span> <span style="color:#f1fa8c">&#39;\c&#39;</span> <span style="color:#ff79c6">to</span> clear the <span style="color:#ff79c6">current</span> <span style="color:#ff79c6">input</span> <span style="color:#ff79c6">statement</span>.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Log_name                <span style="color:#ff79c6">|</span> File_size <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000001</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">42128655</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000002</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000003</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">3533</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000004</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000005</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000006</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">1164</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000007</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">84251908</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000008</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">1270</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000009</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">248</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000010</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">10</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> flush <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">rows</span> affected (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> <span style="color:#8be9fd;font-style:italic">binary</span> logs;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Log_name                <span style="color:#ff79c6">|</span> File_size <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000001</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">42128655</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000002</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000003</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">3533</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000004</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000005</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">217</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000006</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">1164</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000007</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">84251908</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000008</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">1270</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000009</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">248</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000010</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">248</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">11</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Log_name                <span style="color:#ff79c6">|</span> Pos <span style="color:#ff79c6">|</span> Event_type     <span style="color:#ff79c6">|</span> Server_id <span style="color:#ff79c6">|</span> End_log_pos <span style="color:#ff79c6">|</span> Info                                      <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">|</span> Format_desc    <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Server ver: <span style="color:#bd93f9">5</span>.<span style="color:#bd93f9">7</span>.<span style="color:#bd93f9">26</span><span style="color:#ff79c6">-</span>log, Binlog ver: <span style="color:#bd93f9">4</span>     <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Previous_gtids <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">1</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">72</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">2</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Variable_name <span style="color:#ff79c6">|</span> Value <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> binlog_format <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">ROW</span>   <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> use mydb;
-</span></span><span style="display:flex;"><span>Reading <span style="color:#ff79c6">table</span> information <span style="color:#ff79c6">for</span> <span style="color:#ff79c6">completion</span> <span style="color:#ff79c6">of</span> <span style="color:#ff79c6">table</span> <span style="color:#ff79c6">and</span> <span style="color:#ff79c6">column</span> <span style="color:#ff79c6">names</span>
-</span></span><span style="display:flex;"><span>You can turn <span style="color:#ff79c6">off</span> this feature <span style="color:#ff79c6">to</span> <span style="color:#ff79c6">get</span> a quicker startup <span style="color:#ff79c6">with</span> <span style="color:#ff79c6">-</span>A
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">Database</span> changed
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">desc</span> t1
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">-&gt;</span> ;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------+------------------+------+-----+---------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Field <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Type</span>             <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Null</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Key</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Default</span> <span style="color:#ff79c6">|</span> Extra          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------+------------------+------+-----+---------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> a     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">int</span>(<span style="color:#bd93f9">11</span>)          <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NO</span>   <span style="color:#ff79c6">|</span> PRI <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>    <span style="color:#ff79c6">|</span> auto_increment <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> b     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">10</span>)      <span style="color:#ff79c6">|</span> YES  <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>    <span style="color:#ff79c6">|</span>                <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#ff79c6">c</span>     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">30</span>)      <span style="color:#ff79c6">|</span> YES  <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>    <span style="color:#ff79c6">|</span>                <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> d     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">int</span>(<span style="color:#bd93f9">10</span>) unsigned <span style="color:#ff79c6">|</span> YES  <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>    <span style="color:#ff79c6">|</span>                <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> e     <span style="color:#ff79c6">|</span> datetime         <span style="color:#ff79c6">|</span> YES  <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>    <span style="color:#ff79c6">|</span>                <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------+------------------+------+-----+---------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">5</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#bd93f9">1</span>,<span style="color:#f1fa8c">&#39;1度目のInsert&#39;</span>,<span style="color:#f1fa8c">&#39;testテスト&#39;</span>,<span style="color:#bd93f9">5555</span>,now());
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> affected (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Log_name                <span style="color:#ff79c6">|</span> Pos <span style="color:#ff79c6">|</span> Event_type     <span style="color:#ff79c6">|</span> Server_id <span style="color:#ff79c6">|</span> End_log_pos <span style="color:#ff79c6">|</span> Info            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">|</span> Format_desc    <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Server ver: <span style="color:#bd93f9">5</span>.<span style="color:#bd93f9">7</span>.<span style="color:#bd93f9">26</span><span style="color:#ff79c6">-</span>log, Binlog ver: <span style="color:#bd93f9">4</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Previous_gtids <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">1</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">72</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span> Gtid           <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">259</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">SET</span> <span style="color:#ff79c6">@@</span><span style="color:#ff79c6">SESSION</span>.GTID_NEXT<span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39;</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">259</span> <span style="color:#ff79c6">|</span> Query          <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">339</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">BEGIN</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">339</span> <span style="color:#ff79c6">|</span> Table_map      <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">393</span> <span style="color:#ff79c6">|</span> table_id: <span style="color:#bd93f9">110</span> (mydb.t1)            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">393</span> <span style="color:#ff79c6">|</span> Write_rows     <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">473</span> <span style="color:#ff79c6">|</span> table_id: <span style="color:#bd93f9">110</span> flags: STMT_END_F            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">473</span> <span style="color:#ff79c6">|</span> Xid            <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">504</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">COMMIT</span> <span style="color:#6272a4">/* xid=178 */</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">7</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Variable_name <span style="color:#ff79c6">|</span> Value <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> binlog_format <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">ROW</span>   <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">set</span> <span style="color:#ff79c6">session</span> binlog_format<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;STATEMENT&#39;</span>;
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">rows</span> affected (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;binlog_format&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Variable_name <span style="color:#ff79c6">|</span> Value     <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> binlog_format <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">STATEMENT</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------+-----------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#bd93f9">2</span>,<span style="color:#f1fa8c">&#39;2度目のInsert&#39;</span>,<span style="color:#f1fa8c">&#39;testテスト&#39;</span>,<span style="color:#bd93f9">5555</span>,now());
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> affected (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> binlog events <span style="color:#ff79c6">in</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000011&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> Log_name                <span style="color:#ff79c6">|</span> Pos <span style="color:#ff79c6">|</span> Event_type     <span style="color:#ff79c6">|</span> Server_id <span style="color:#ff79c6">|</span> End_log_pos <span style="color:#ff79c6">|</span> Info                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">|</span> Format_desc    <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Server ver: <span style="color:#bd93f9">5</span>.<span style="color:#bd93f9">7</span>.<span style="color:#bd93f9">26</span><span style="color:#ff79c6">-</span>log, Binlog ver: <span style="color:#bd93f9">4</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">123</span> <span style="color:#ff79c6">|</span> Previous_gtids <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">1</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">72</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">194</span> <span style="color:#ff79c6">|</span> Gtid           <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">259</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">SET</span> <span style="color:#ff79c6">@@</span><span style="color:#ff79c6">SESSION</span>.GTID_NEXT<span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39;</span>                 <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">259</span> <span style="color:#ff79c6">|</span> Query          <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">339</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">BEGIN</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">339</span> <span style="color:#ff79c6">|</span> Table_map      <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">393</span> <span style="color:#ff79c6">|</span> table_id: <span style="color:#bd93f9">110</span> (mydb.t1)                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">393</span> <span style="color:#ff79c6">|</span> Write_rows     <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">473</span> <span style="color:#ff79c6">|</span> table_id: <span style="color:#bd93f9">110</span> flags: STMT_END_F                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">473</span> <span style="color:#ff79c6">|</span> Xid            <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">504</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">COMMIT</span> <span style="color:#6272a4">/* xid=178 */</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">504</span> <span style="color:#ff79c6">|</span> Gtid           <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">569</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">SET</span> <span style="color:#ff79c6">@@</span><span style="color:#ff79c6">SESSION</span>.GTID_NEXT<span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:74&#39;</span>                 <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">569</span> <span style="color:#ff79c6">|</span> Query          <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">656</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">BEGIN</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">656</span> <span style="color:#ff79c6">|</span> Query          <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">808</span> <span style="color:#ff79c6">|</span> use <span style="color:#ff79c6">`</span>mydb<span style="color:#ff79c6">`</span>; <span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#bd93f9">2</span>,<span style="color:#f1fa8c">&#39;2度目のInsert&#39;</span>,<span style="color:#f1fa8c">&#39;testテスト&#39;</span>,<span style="color:#bd93f9">5555</span>,now())       <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000011</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">808</span> <span style="color:#ff79c6">|</span> Xid            <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>         <span style="color:#bd93f9">839</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">COMMIT</span> <span style="color:#6272a4">/* xid=183 */</span>                            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">11</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span></code></pre></div>
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/mysql-password-space.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">MySQLクライアントのパスワード指定でスペースを入れてはいけない理由</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/mysql-buffer-pool-load.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">MySQLのInnoDB バッファープールのプリロード</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fmysql-binlog-show.html&text=MySQL%E3%81%AE%E3%83%90%E3%82%A4%E3%83%8A%E3%83%AA%E3%83%AD%E3%82%B0%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%A6%E3%81%BF%E3%81%9F" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/mysql-binlog-show.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/mysql-password-space.html">MySQLクライアントのパスワード指定でスペースを入れてはいけない理由</a></li>
-    
-    <li><a href="/mysql-replication-version.html">MySQLレプリケーション間のバージョン制限について</a></li>
-    
-    <li><a href="/mysql-slow_query_log_file-error.html">MySQLでslow_query_log_fileのファイルは事前に作成する必要あり</a></li>
-    
-    <li><a href="/mysql-aws-ec2-replication.html">AWS EC2上のMySQL環境でレプリケーション構成を構築する</a></li>
-    
-    <li><a href="/mysql-flush-privileges.html">MySQLのFLUSH PRIVILEGESが必要なケース</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#実行コマンド">実行コマンド</a></li>
-        <li><a href="#実行結果">実行結果</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>MySQLのバイナリログを確認してみた | my opinion is my own</title><meta name=title content="MySQLのバイナリログを確認してみた"><meta name=description content><meta name=keywords content="MySQL,"><meta property="og:title" content="MySQLのバイナリログを確認してみた"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/mysql-binlog-show.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2019-07-18T00:00:00+00:00"><meta property="article:modified_time" content="2019-07-18T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="MySQLのバイナリログを確認してみた"><meta name=twitter:description content><meta itemprop=name content="MySQLのバイナリログを確認してみた"><meta itemprop=description content><meta itemprop=datePublished content="2019-07-18T00:00:00+00:00"><meta itemprop=dateModified content="2019-07-18T00:00:00+00:00"><meta itemprop=wordCount content="935"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="MySQL,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>MySQLのバイナリログを確認してみた</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/mysql.svg alt=MySQL class=tag-icon loading=lazy></div><h1>MySQLのバイナリログを確認してみた</h1><div class=article-meta><time class=article-date datetime=2019-07-18>2019/07/18 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a></div></div><div class=article-content><p>バイナリログを確認</p><h3 id=実行コマンド>実行コマンド</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#6272a4>-- login
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>mysql <span style=color:#ff79c6>-</span>u myuser <span style=color:#ff79c6>-</span>pmysql
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>-- 既存のバイナリログを確認、及びバイナリログのスイッチ
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>show</span> <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span>flush <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>show</span> <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>-- バイナリログを確認
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>-- この時にはバイナリのログの中には何も更新情報はない
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>use mydb;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>desc</span> t1;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> t1 <span style=color:#ff79c6>values</span>(<span style=color:#bd93f9>1</span>,<span style=color:#f1fa8c>&#39;1度目のInsert&#39;</span>,<span style=color:#f1fa8c>&#39;testテスト&#39;</span>,<span style=color:#bd93f9>5555</span>,now());
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>-- バイナリログを確認
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>-- 上記Insertが記録されている
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>-- binlog_formatを変更した後に実行
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>set</span> <span style=color:#ff79c6>session</span> binlog_format<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;STATEMENT&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> t1 <span style=color:#ff79c6>values</span>(<span style=color:#bd93f9>2</span>,<span style=color:#f1fa8c>&#39;2度目のInsert&#39;</span>,<span style=color:#f1fa8c>&#39;testテスト&#39;</span>,<span style=color:#bd93f9>5555</span>,now());
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span></code></pre></div><h3 id=実行結果>実行結果</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>[ec2<span style=color:#ff79c6>-</span><span style=color:#ff79c6>user</span><span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db001 <span style=color:#ff79c6>~</span>]$
+</span></span><span style=display:flex><span>[ec2<span style=color:#ff79c6>-</span><span style=color:#ff79c6>user</span><span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db001 <span style=color:#ff79c6>~</span>]$
+</span></span><span style=display:flex><span>[ec2<span style=color:#ff79c6>-</span><span style=color:#ff79c6>user</span><span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db001 <span style=color:#ff79c6>~</span>]$
+</span></span><span style=display:flex><span>[ec2<span style=color:#ff79c6>-</span><span style=color:#ff79c6>user</span><span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db001 <span style=color:#ff79c6>~</span>]$ mysql <span style=color:#ff79c6>-</span>u myuser <span style=color:#ff79c6>-</span>pmysql
+</span></span><span style=display:flex><span>mysql: [Warning] <span style=color:#ff79c6>Using</span> a password <span style=color:#ff79c6>on</span> the command line interface can be insecure.
+</span></span><span style=display:flex><span>Welcome <span style=color:#ff79c6>to</span> the MySQL monitor.  Commands <span style=color:#ff79c6>end</span> <span style=color:#ff79c6>with</span> ; <span style=color:#ff79c6>or</span> \<span style=color:#ff79c6>g</span>.
+</span></span><span style=display:flex><span>Your MySQL <span style=color:#ff79c6>connection</span> id <span style=color:#ff79c6>is</span> <span style=color:#bd93f9>15</span>
+</span></span><span style=display:flex><span>Server <span style=color:#ff79c6>version</span>: <span style=color:#bd93f9>5</span>.<span style=color:#bd93f9>7</span>.<span style=color:#bd93f9>26</span><span style=color:#ff79c6>-</span>log MySQL Community Server (GPL)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Copyright (<span style=color:#ff79c6>c</span>) <span style=color:#bd93f9>2000</span>, <span style=color:#bd93f9>2019</span>, Oracle <span style=color:#ff79c6>and</span><span style=color:#ff79c6>/</span><span style=color:#ff79c6>or</span> its affiliates. <span style=color:#ff79c6>All</span> rights reserved.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Oracle <span style=color:#ff79c6>is</span> a registered trademark <span style=color:#ff79c6>of</span> Oracle Corporation <span style=color:#ff79c6>and</span><span style=color:#ff79c6>/</span><span style=color:#ff79c6>or</span> its
+</span></span><span style=display:flex><span>affiliates. Other <span style=color:#ff79c6>names</span> may be trademarks <span style=color:#ff79c6>of</span> their respective
+</span></span><span style=display:flex><span>owners.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>Type</span> <span style=color:#f1fa8c>&#39;help;&#39;</span> <span style=color:#ff79c6>or</span> <span style=color:#f1fa8c>&#39;\h&#39;</span> <span style=color:#ff79c6>for</span> help. <span style=color:#ff79c6>Type</span> <span style=color:#f1fa8c>&#39;\c&#39;</span> <span style=color:#ff79c6>to</span> clear the <span style=color:#ff79c6>current</span> <span style=color:#ff79c6>input</span> <span style=color:#ff79c6>statement</span>.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Log_name                <span style=color:#ff79c6>|</span> File_size <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000001</span> <span style=color:#ff79c6>|</span>  <span style=color:#bd93f9>42128655</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000002</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000003</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>3533</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000004</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000005</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000006</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>1164</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000007</span> <span style=color:#ff79c6>|</span>  <span style=color:#bd93f9>84251908</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000008</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>1270</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000009</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>248</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000010</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>10</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> flush <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>rows</span> affected (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>01</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> <span style=color:#8be9fd;font-style:italic>binary</span> logs;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Log_name                <span style=color:#ff79c6>|</span> File_size <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000001</span> <span style=color:#ff79c6>|</span>  <span style=color:#bd93f9>42128655</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000002</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000003</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>3533</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000004</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000005</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>217</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000006</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>1164</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000007</span> <span style=color:#ff79c6>|</span>  <span style=color:#bd93f9>84251908</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000008</span> <span style=color:#ff79c6>|</span>      <span style=color:#bd93f9>1270</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000009</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>248</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000010</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>248</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span>       <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>11</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Log_name                <span style=color:#ff79c6>|</span> Pos <span style=color:#ff79c6>|</span> Event_type     <span style=color:#ff79c6>|</span> Server_id <span style=color:#ff79c6>|</span> End_log_pos <span style=color:#ff79c6>|</span> Info                                      <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>4</span> <span style=color:#ff79c6>|</span> Format_desc    <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Server ver: <span style=color:#bd93f9>5</span>.<span style=color:#bd93f9>7</span>.<span style=color:#bd93f9>26</span><span style=color:#ff79c6>-</span>log, Binlog ver: <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Previous_gtids <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>1</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>72</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+-------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>2</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Variable_name <span style=color:#ff79c6>|</span> Value <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> binlog_format <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>ROW</span>   <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> use mydb;
+</span></span><span style=display:flex><span>Reading <span style=color:#ff79c6>table</span> information <span style=color:#ff79c6>for</span> <span style=color:#ff79c6>completion</span> <span style=color:#ff79c6>of</span> <span style=color:#ff79c6>table</span> <span style=color:#ff79c6>and</span> <span style=color:#ff79c6>column</span> <span style=color:#ff79c6>names</span>
+</span></span><span style=display:flex><span>You can turn <span style=color:#ff79c6>off</span> this feature <span style=color:#ff79c6>to</span> <span style=color:#ff79c6>get</span> a quicker startup <span style=color:#ff79c6>with</span> <span style=color:#ff79c6>-</span>A
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>Database</span> changed
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>desc</span> t1
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>-&gt;</span> ;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------+------------------+------+-----+---------+----------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Field <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>Type</span>             <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>Null</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>Key</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>Default</span> <span style=color:#ff79c6>|</span> Extra          <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------+------------------+------+-----+---------+----------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> a     <span style=color:#ff79c6>|</span> <span style=color:#8be9fd;font-style:italic>int</span>(<span style=color:#bd93f9>11</span>)          <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NO</span>   <span style=color:#ff79c6>|</span> PRI <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NULL</span>    <span style=color:#ff79c6>|</span> auto_increment <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> b     <span style=color:#ff79c6>|</span> <span style=color:#8be9fd;font-style:italic>varchar</span>(<span style=color:#bd93f9>10</span>)      <span style=color:#ff79c6>|</span> YES  <span style=color:#ff79c6>|</span>     <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NULL</span>    <span style=color:#ff79c6>|</span>                <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> <span style=color:#ff79c6>c</span>     <span style=color:#ff79c6>|</span> <span style=color:#8be9fd;font-style:italic>varchar</span>(<span style=color:#bd93f9>30</span>)      <span style=color:#ff79c6>|</span> YES  <span style=color:#ff79c6>|</span>     <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NULL</span>    <span style=color:#ff79c6>|</span>                <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> d     <span style=color:#ff79c6>|</span> <span style=color:#8be9fd;font-style:italic>int</span>(<span style=color:#bd93f9>10</span>) unsigned <span style=color:#ff79c6>|</span> YES  <span style=color:#ff79c6>|</span>     <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NULL</span>    <span style=color:#ff79c6>|</span>                <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> e     <span style=color:#ff79c6>|</span> datetime         <span style=color:#ff79c6>|</span> YES  <span style=color:#ff79c6>|</span>     <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>NULL</span>    <span style=color:#ff79c6>|</span>                <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------+------------------+------+-----+---------+----------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>5</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> t1 <span style=color:#ff79c6>values</span>(<span style=color:#bd93f9>1</span>,<span style=color:#f1fa8c>&#39;1度目のInsert&#39;</span>,<span style=color:#f1fa8c>&#39;testテスト&#39;</span>,<span style=color:#bd93f9>5555</span>,now());
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> affected (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Log_name                <span style=color:#ff79c6>|</span> Pos <span style=color:#ff79c6>|</span> Event_type     <span style=color:#ff79c6>|</span> Server_id <span style=color:#ff79c6>|</span> End_log_pos <span style=color:#ff79c6>|</span> Info            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>4</span> <span style=color:#ff79c6>|</span> Format_desc    <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Server ver: <span style=color:#bd93f9>5</span>.<span style=color:#bd93f9>7</span>.<span style=color:#bd93f9>26</span><span style=color:#ff79c6>-</span>log, Binlog ver: <span style=color:#bd93f9>4</span>            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Previous_gtids <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>1</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>72</span>            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span> Gtid           <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>259</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>SET</span> <span style=color:#ff79c6>@@</span><span style=color:#ff79c6>SESSION</span>.GTID_NEXT<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39;</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>259</span> <span style=color:#ff79c6>|</span> Query          <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>339</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>BEGIN</span>            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>339</span> <span style=color:#ff79c6>|</span> Table_map      <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>393</span> <span style=color:#ff79c6>|</span> table_id: <span style=color:#bd93f9>110</span> (mydb.t1)            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>393</span> <span style=color:#ff79c6>|</span> Write_rows     <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>473</span> <span style=color:#ff79c6>|</span> table_id: <span style=color:#bd93f9>110</span> flags: STMT_END_F            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>473</span> <span style=color:#ff79c6>|</span> Xid            <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>504</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>COMMIT</span> <span style=color:#6272a4>/* xid=178 */</span>            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>7</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Variable_name <span style=color:#ff79c6>|</span> Value <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> binlog_format <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>ROW</span>   <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>01</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>set</span> <span style=color:#ff79c6>session</span> binlog_format<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;STATEMENT&#39;</span>;
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>rows</span> affected (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> variables <span style=color:#ff79c6>like</span> <span style=color:#f1fa8c>&#39;binlog_format&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Variable_name <span style=color:#ff79c6>|</span> Value     <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> binlog_format <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>STATEMENT</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>---------------+-----------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>01</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> t1 <span style=color:#ff79c6>values</span>(<span style=color:#bd93f9>2</span>,<span style=color:#f1fa8c>&#39;2度目のInsert&#39;</span>,<span style=color:#f1fa8c>&#39;testテスト&#39;</span>,<span style=color:#bd93f9>5555</span>,now());
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> affected (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> binlog events <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000011&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> Log_name                <span style=color:#ff79c6>|</span> Pos <span style=color:#ff79c6>|</span> Event_type     <span style=color:#ff79c6>|</span> Server_id <span style=color:#ff79c6>|</span> End_log_pos <span style=color:#ff79c6>|</span> Info                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>4</span> <span style=color:#ff79c6>|</span> Format_desc    <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Server ver: <span style=color:#bd93f9>5</span>.<span style=color:#bd93f9>7</span>.<span style=color:#bd93f9>26</span><span style=color:#ff79c6>-</span>log, Binlog ver: <span style=color:#bd93f9>4</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>123</span> <span style=color:#ff79c6>|</span> Previous_gtids <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>1</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>72</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>194</span> <span style=color:#ff79c6>|</span> Gtid           <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>259</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>SET</span> <span style=color:#ff79c6>@@</span><span style=color:#ff79c6>SESSION</span>.GTID_NEXT<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:73&#39;</span>                 <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>259</span> <span style=color:#ff79c6>|</span> Query          <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>339</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>BEGIN</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>339</span> <span style=color:#ff79c6>|</span> Table_map      <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>393</span> <span style=color:#ff79c6>|</span> table_id: <span style=color:#bd93f9>110</span> (mydb.t1)                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>393</span> <span style=color:#ff79c6>|</span> Write_rows     <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>473</span> <span style=color:#ff79c6>|</span> table_id: <span style=color:#bd93f9>110</span> flags: STMT_END_F                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>473</span> <span style=color:#ff79c6>|</span> Xid            <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>504</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>COMMIT</span> <span style=color:#6272a4>/* xid=178 */</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>504</span> <span style=color:#ff79c6>|</span> Gtid           <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>569</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>SET</span> <span style=color:#ff79c6>@@</span><span style=color:#ff79c6>SESSION</span>.GTID_NEXT<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;86a2b2da-9683-11e9-9dd6-067b425ce144:74&#39;</span>                 <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>569</span> <span style=color:#ff79c6>|</span> Query          <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>656</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>BEGIN</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>656</span> <span style=color:#ff79c6>|</span> Query          <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>808</span> <span style=color:#ff79c6>|</span> use <span style=color:#ff79c6>`</span>mydb<span style=color:#ff79c6>`</span>; <span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> t1 <span style=color:#ff79c6>values</span>(<span style=color:#bd93f9>2</span>,<span style=color:#f1fa8c>&#39;2度目のInsert&#39;</span>,<span style=color:#f1fa8c>&#39;testテスト&#39;</span>,<span style=color:#bd93f9>5555</span>,now())       <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000011</span> <span style=color:#ff79c6>|</span> <span style=color:#bd93f9>808</span> <span style=color:#ff79c6>|</span> Xid            <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>         <span style=color:#bd93f9>839</span> <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>COMMIT</span> <span style=color:#6272a4>/* xid=183 */</span>                            <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-------------------------+-----+----------------+-----------+-------------+------------------------------------------------------------------------------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>11</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span></code></pre></div></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/mysql-password-space.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>MySQLクライアントのパスワード指定でスペースを入れてはいけない理由</span></a>
+<a href=https://zatoima.github.io/mysql-buffer-pool-load.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>MySQLのInnoDB バッファープールのプリロード</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fmysql-binlog-show.html&text=MySQL%E3%81%AE%E3%83%90%E3%82%A4%E3%83%8A%E3%83%AA%E3%83%AD%E3%82%B0%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%97%E3%81%A6%E3%81%BF%E3%81%9F" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/mysql-binlog-show.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/mysql-password-space.html>MySQLクライアントのパスワード指定でスペースを入れてはいけない理由</a></li><li><a href=/mysql-replication-version.html>MySQLレプリケーション間のバージョン制限について</a></li><li><a href=/mysql-slow_query_log_file-error.html>MySQLでslow_query_log_fileのファイルは事前に作成する必要あり</a></li><li><a href=/mysql-aws-ec2-replication.html>AWS EC2上のMySQL環境でレプリケーション構成を構築する</a></li><li><a href=/mysql-flush-privileges.html>MySQLのFLUSH PRIVILEGESが必要なケース</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#実行コマンド>実行コマンド</a></li><li><a href=#実行結果>実行結果</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

@@ -1,468 +1,93 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>ALB(Application Load Balancer)のログをAthenaで分析 | my opinion is my own</title>
-<meta name="title" content="ALB(Application Load Balancer)のログをAthenaで分析" />
-<meta name="description" content="" />
-<meta name="keywords" content="AWS,ALB,Athena," />
-
-
-<meta property="og:title" content="ALB(Application Load Balancer)のログをAthenaで分析" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-athena-alb-log-analitics.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2020-09-02T00:00:00+00:00" />
-<meta property="article:modified_time" content="2020-09-02T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="ALB(Application Load Balancer)のログをAthenaで分析"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="ALB(Application Load Balancer)のログをAthenaで分析">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-09-02T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2020-09-02T00:00:00+00:00" />
-<meta itemprop="wordCount" content="495"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="AWS,ALB,Athena," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">ALB(Application Load Balancer)のログをAthena …</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
-        <h1>ALB(Application Load Balancer)のログをAthenaで分析</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2020-09-02'>
-            2020/09/02 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-          <a href="https://zatoima.github.io/blog/alb/" class="tag-badge">ALB</a>
-          
-          <a href="https://zatoima.github.io/blog/athena/" class="tag-badge">Athena</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="elbのログの有効化">ELBのログの有効化</h3>
-<p>属性の「属性の編集」からアクセスログを有効化。しばらく放置するとS3の指定したバケットにELBにログが蓄積されていく。</p>
-<p><img src="image-20200902205725025.png" alt="image-20200902205725025"></p>
-<p><img src="image-20200902205749483.png" alt="image-20200902205749483"></p>
-<h3 id="athena">Athena</h3>
-<h4 id="athenaでデータベース作成">Athenaでデータベース作成</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">database</span> alb_db
-</span></span></code></pre></div><h4 id="athenaでテーブル作成">Athenaでテーブル作成</h4>
-<p>LOCATIONに指定するパスはELBアクセスログの設定した時に指定したBucketとpathとなる。このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">EXTERNAL</span> <span style="color:#ff79c6">TABLE</span> <span style="color:#ff79c6">IF</span> <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">EXISTS</span> alb_logs (
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">type</span> string,
-</span></span><span style="display:flex;"><span>            time string,
-</span></span><span style="display:flex;"><span>            elb string,
-</span></span><span style="display:flex;"><span>            client_ip string,
-</span></span><span style="display:flex;"><span>            client_port <span style="color:#8be9fd;font-style:italic">int</span>,
-</span></span><span style="display:flex;"><span>            target_ip string,
-</span></span><span style="display:flex;"><span>            target_port <span style="color:#8be9fd;font-style:italic">int</span>,
-</span></span><span style="display:flex;"><span>            request_processing_time double,
-</span></span><span style="display:flex;"><span>            target_processing_time double,
-</span></span><span style="display:flex;"><span>            response_processing_time double,
-</span></span><span style="display:flex;"><span>            elb_status_code string,
-</span></span><span style="display:flex;"><span>            target_status_code string,
-</span></span><span style="display:flex;"><span>            received_bytes <span style="color:#8be9fd;font-style:italic">bigint</span>,
-</span></span><span style="display:flex;"><span>            sent_bytes <span style="color:#8be9fd;font-style:italic">bigint</span>,
-</span></span><span style="display:flex;"><span>            request_verb string,
-</span></span><span style="display:flex;"><span>            request_url string,
-</span></span><span style="display:flex;"><span>            request_proto string,
-</span></span><span style="display:flex;"><span>            user_agent string,
-</span></span><span style="display:flex;"><span>            ssl_cipher string,
-</span></span><span style="display:flex;"><span>            ssl_protocol string,
-</span></span><span style="display:flex;"><span>            target_group_arn string,
-</span></span><span style="display:flex;"><span>            trace_id string,
-</span></span><span style="display:flex;"><span>            domain_name string,
-</span></span><span style="display:flex;"><span>            chosen_cert_arn string,
-</span></span><span style="display:flex;"><span>            matched_rule_priority string,
-</span></span><span style="display:flex;"><span>            request_creation_time string,
-</span></span><span style="display:flex;"><span>            actions_executed string,
-</span></span><span style="display:flex;"><span>            redirect_url string,
-</span></span><span style="display:flex;"><span>            lambda_error_reason string,
-</span></span><span style="display:flex;"><span>            target_port_list string,
-</span></span><span style="display:flex;"><span>            target_status_code_list string,
-</span></span><span style="display:flex;"><span>            new_field string
-</span></span><span style="display:flex;"><span>            )
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">ROW</span> FORMAT SERDE <span style="color:#f1fa8c">&#39;org.apache.hadoop.hive.serde2.RegexSerDe&#39;</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">WITH</span> SERDEPROPERTIES (
-</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#39;serialization.format&#39;</span> <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;1&#39;</span>,
-</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#39;input.regex&#39;</span> <span style="color:#ff79c6">=</span> 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#39;([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) ([-.0-9]*) ([-.0-9]*) ([-.0-9]*) (|[-0-9]*) (-|[-0-9]*) ([-0-9]*) ([-0-9]*) \&#34;([^ ]*) ([^ ]*) (- |[^ ]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([A-Z0-9-]+) ([A-Za-z0-9.-]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([-.0-9]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^ ]*)\&#34; \&#34;([^\s]+)\&#34; \&#34;([^\s]+)\&#34;(.*)&#39;</span>)
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">LOCATION</span> <span style="color:#f1fa8c">&#39;s3://&lt;Bucket name&gt;/AWSLogs/&lt;Account ID&gt;/elasticloadbalancing/ap-northeast-1/&#39;</span>;
-</span></span></code></pre></div><p>このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。作成後のテーブル↓</p>
-<p><img src="image-20200902210737819.png" alt="image-20200902210737819"></p>
-<p>各列の説明は下記を参照。</p>
-<blockquote>
-<p><a href="https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html">https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html</a></p>
-</blockquote>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">Field</th>
-<th style="text-align:left">説明:</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">type</td>
-<td style="text-align:left">リクエストまたは接続のタイプ。有効な値は次のとおりです (その他の値は無視してください)。<code>http</code> — HTTP<code>https</code> — HTTP over SSL/TLS<code>h2</code> — HTTP/2 over SSL/TLS<code>ws</code> — WebSockets<code>wss</code> — WebSockets over SSL/TLS</td>
-</tr>
-<tr>
-<td style="text-align:left">time</td>
-<td style="text-align:left">ロードバランサーがクライアントに対してレスポンスを生成した時刻 (ISO 8601 形式)。WebSocket の場合、これは接続を閉じる時間です。</td>
-</tr>
-<tr>
-<td style="text-align:left">elb</td>
-<td style="text-align:left">ロードバランサーのリソース ID。アクセスログエントリを解析する場合、リソース ID にはスラッシュ (/) を含めることができます。</td>
-</tr>
-<tr>
-<td style="text-align:left">client:port</td>
-<td style="text-align:left">リクエストを送信したクライアントの IP アドレスとポート。</td>
-</tr>
-<tr>
-<td style="text-align:left">target:port</td>
-<td style="text-align:left">このリクエストを処理したターゲットの IP アドレスとポート。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">request_processing_time</td>
-<td style="text-align:left">ロードバランサーがリクエストを受け取った時点からターゲットに送信するまでの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。</td>
-</tr>
-<tr>
-<td style="text-align:left">target_processing_time</td>
-<td style="text-align:left">ロードバランサーがターゲットにリクエストを送信した時点から、そのターゲットが応答ヘッダーの送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。</td>
-</tr>
-<tr>
-<td style="text-align:left">response_processing_time</td>
-<td style="text-align:left">ロードバランサーがターゲットから応答ヘッダーを受け取った時点から、クライアントへの応答の送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。これには、ロードバランサーでの待機時間と、ロードバランサーからクライアントへの接続の取得時間の両方が含まれます。ロードバランサーがリクエストをターゲットに送信できない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。</td>
-</tr>
-<tr>
-<td style="text-align:left">elb_status_code</td>
-<td style="text-align:left">ロードバランサーからの応答のステータスコード。</td>
-</tr>
-<tr>
-<td style="text-align:left">target_status_code</td>
-<td style="text-align:left">ターゲットから応答のステータスコード。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">received_bytes</td>
-<td style="text-align:left">クライアント (リクエスタ) から受け取ったリクエストのサイズ (バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントから受信した合計バイト数です。</td>
-</tr>
-<tr>
-<td style="text-align:left">sent_bytes</td>
-<td style="text-align:left">クライアント (リクエスタ) に返される応答のサイズ(バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントに送信した合計バイト数です。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;request&rdquo;</td>
-<td style="text-align:left">クライアントからのリクエスト行。二重引用符で囲まれ、次の形式でログされます。HTTP メソッド + プロトコル://host:port/uri + HTTP バージョン。ロードバランサーは、リクエスト URI を記録するときに、クライアントから送信された URL をそのまま保持します。アクセスログファイルのコンテンツタイプは設定されません。このフィールドを処理するときは、クライアントが URL を送信した方法を考慮してください。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;user_agent&rdquo;</td>
-<td style="text-align:left">リクエスト元のクライアントを特定する User-Agent 文字列 (二重引用符で囲まれます)。この文字列は、1 つ以上の製品 ID (製品[/バージョン]) から構成されます。文字列が 8 KB より長い場合は切り捨てられます。</td>
-</tr>
-<tr>
-<td style="text-align:left">ssl_cipher</td>
-<td style="text-align:left">[HTTPS リスナー] SSL 暗号。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">ssl_protocol</td>
-<td style="text-align:left">[HTTPS リスナー] SSL プロトコル。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">target_group_arn</td>
-<td style="text-align:left">ターゲットグループの Amazon リソースネーム (ARN)。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;trace_id&rdquo;</td>
-<td style="text-align:left"><strong>X-Amzn-Trace-Id</strong> ヘッダーのコンテンツ (二重引用符で囲まれます)。</td>
-</tr>
-<tr>
-<td style="text-align:left">&lt;domain_name&gt;</td>
-<td style="text-align:left">[HTTPS リスナー] TLS ハンドシェイク中にクライアントから提供される SNI ドメイン (二重引用符で囲まれます)。クライアントが SNI をサポートしない場合、あるいはドメインが証明書と一致せず、デフォルトの証明書がクライアントに提示された場合、この値は - となります。</td>
-</tr>
-<tr>
-<td style="text-align:left">chosen_cert_arn</td>
-<td style="text-align:left">[HTTPS リスナー] クライアントに提示される証明書の ARN (二重引用符で囲まれます)。セッションが再利用される場合、この値は <code>session-reused</code> に設定されます。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">matched_rule_priority</td>
-<td style="text-align:left">リクエストに一致したルールの優先度の値。ルールが一致した場合、この値は 1～50,000 になります。一致するルールがなく、デフォルトのアクションが実行された場合、この値は 0 に設定されます。ルールの評価中にエラーが発生した場合は、-1 に設定されます。その他のエラーの場合は、- に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">request_creation_time</td>
-<td style="text-align:left">ロードバランサーがクライアントからリクエストを受け取った時刻 (ISO 8601 形式)。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;actions_executed&rdquo;</td>
-<td style="text-align:left">リクエストの処理時に実行されるアクション (二重引用符で囲まれます)。この値は、「<a href="https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#actions-taken">Actions taken</a>」で説明されている値を含めることができるカンマ区切りリストです。形式が正しくないリクエストなどでアクションが実行されない場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;redirect_url&rdquo;</td>
-<td style="text-align:left">HTTP レスポンスのロケーションヘッダーのリダイレクトターゲットの URL (二重引用文字で囲む)。リダイレクトアクションが実行されなかった場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;error_reason&rdquo;</td>
-<td style="text-align:left">エラー理由コード (二重引用符で囲まれます)。リクエストが失敗した場合、これは「<a href="https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#error-reason-codes">Error reason codes</a>」で説明されているいずれかのエラーコードになります。実行されたアクションが認証アクションを含まない、またはターゲットが Lambda 関数ではない場合、この値は - に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;target:port_list&rdquo;</td>
-<td style="text-align:left">このリクエストを処理したターゲットの IP アドレスとポートのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target:port フィールドと一致します。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。</td>
-</tr>
-<tr>
-<td style="text-align:left">&ldquo;target_status_code_list&rdquo;</td>
-<td style="text-align:left">ターゲットの応答からのステータスコードのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target_status_code フィールドと一致します。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。</td>
-</tr>
-</tbody>
-</table>
-<p>クエリサンプル例はこちら。外向けに公開しているELBの場合、怪しげのアタックがたくさん来ていることがわかると思います。</p>
-<h5 id="最初の-100-個のアクセスログエントリを新しい順に表示">最初の 100 個のアクセスログエントリを新しい順に表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> time <span style="color:#ff79c6">ASC</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">100</span>;
-</span></span></code></pre></div><h5 id="alb-にアクセスしたすべてのクライアント-ip-アドレスとそれらが-alb-にアクセスした回数を一覧表示">ALB にアクセスしたすべてのクライアント IP アドレスと、それらが ALB にアクセスした回数を一覧表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">distinct</span> client_ip, <span style="color:#ff79c6">count</span>() <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">from</span> alb_logs
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span>() <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><h5 id="リクエストレスポンスのペアで-alb-を通過しているデータの平均量-キロバイト-を一覧表示">リクエスト/レスポンスのペアで ALB を通過しているデータの平均量 (キロバイト) を一覧表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> (<span style="color:#ff79c6">avg</span>(sent_bytes)<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">0</span> <span style="color:#ff79c6">+</span> <span style="color:#ff79c6">avg</span>(received_bytes)<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">0</span>)
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">as</span> prewarm_kilobytes <span style="color:#ff79c6">from</span> alb_logs;
-</span></span></code></pre></div><h5 id="指定された-url-を訪問した回数をクライアント別降順に一覧表示">指定された URL を訪問した回数をクライアント別、降順に一覧表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> client_ip, elb, request_url, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">from</span> alb_logs
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip, elb, request_url
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><h5 id="firefox-ユーザーが最も頻繁にアクセスした上位-10-個の-url-を一覧表示">Firefox ユーザーが最も頻繁にアクセスした上位 10 個の URL を一覧表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> request_url, user_agent, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> user_agent <span style="color:#ff79c6">LIKE</span> <span style="color:#f1fa8c">&#39;%Firefox%&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> request_url, user_agent
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">DESC</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">10</span>;
-</span></span></code></pre></div><h5 id="alb-へのリクエストで送信したデータ量-メガバイト-でクライアント別降順で一覧表示">ALB へのリクエストで送信したデータ量 (メガバイト) で、クライアント別、降順で一覧表示</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> client_ip, <span style="color:#ff79c6">sum</span>(received_bytes<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000000</span>.<span style="color:#bd93f9">0</span>) <span style="color:#ff79c6">as</span> client_datareceived_megabytes
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> client_datareceived_megabytes <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><h3 id="参考">参考</h3>
-<blockquote>
-<p>Athena を使用してロードバランサーのアクセスログを分析する <a href="https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/">https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/</a></p>
-</blockquote>
-
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/aws-ec2-userdata-apache-install.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">ユーザデータを使用してEC2作成時にApacheを自動インストール</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/aws-docs-guthub-commit-log.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">AWSのドキュメントの更新履歴をgithubで確認してRSSフィードを取得</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-athena-alb-log-analitics.html&text=ALB%28Application&#43;Load&#43;Balancer%29%E3%81%AE%E3%83%AD%E3%82%B0%E3%82%92Athena%E3%81%A7%E5%88%86%E6%9E%90" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-athena-alb-log-analitics.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-ec2-userdata-apache-install.html">ユーザデータを使用してEC2作成時にApacheを自動インストール</a></li>
-    
-    <li><a href="/aws-postgresql-rdsproxy-failover.html">RDS Proxyを使用してAurora PostgreSQLのフェイルオーバーを実行する</a></li>
-    
-    <li><a href="/aws-elasticsearch-csv-output.html">Amazon Elasicsearch Serviceの検索結果をCSV形式で出力</a></li>
-    
-    <li><a href="/aws-sct-ora2pg-conversion-compare.html">ora2pgとSCTの変換結果の差異</a></li>
-    
-    <li><a href="/aws-elasticsearch-max_result_window_parameter.html">Amazon Elasticsearch Serviceでindex.max_result_windowの値を変更</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-  <a href="https://zatoima.github.io/blog/alb/" class="tag-badge">ALB</a>
-  
-  <a href="https://zatoima.github.io/blog/athena/" class="tag-badge">Athena</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#elbのログの有効化">ELBのログの有効化</a></li>
-        <li><a href="#athena">Athena</a>
-          <ul>
-            <li><a href="#athenaでデータベース作成">Athenaでデータベース作成</a></li>
-            <li><a href="#athenaでテーブル作成">Athenaでテーブル作成</a></li>
-          </ul>
-        </li>
-        <li><a href="#参考">参考</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>ALB(Application Load Balancer)のログをAthenaで分析 | my opinion is my own</title><meta name=title content="ALB(Application Load Balancer)のログをAthenaで分析"><meta name=description content><meta name=keywords content="AWS,ALB,Athena,"><meta property="og:title" content="ALB(Application Load Balancer)のログをAthenaで分析"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/aws-athena-alb-log-analitics.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2020-09-02T00:00:00+00:00"><meta property="article:modified_time" content="2020-09-02T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="ALB(Application Load Balancer)のログをAthenaで分析"><meta name=twitter:description content><meta itemprop=name content="ALB(Application Load Balancer)のログをAthenaで分析"><meta itemprop=description content><meta itemprop=datePublished content="2020-09-02T00:00:00+00:00"><meta itemprop=dateModified content="2020-09-02T00:00:00+00:00"><meta itemprop=wordCount content="495"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="AWS,ALB,Athena,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>ALB(Application Load Balancer)のログをAthena …</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/aws.svg alt=AWS class=tag-icon loading=lazy></div><h1>ALB(Application Load Balancer)のログをAthenaで分析</h1><div class=article-meta><time class=article-date datetime=2020-09-02>2020/09/02 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/alb/ class=tag-badge>ALB</a>
+<a href=https://zatoima.github.io/blog/athena/ class=tag-badge>Athena</a></div></div><div class=article-content><h3 id=elbのログの有効化>ELBのログの有効化</h3><p>属性の「属性の編集」からアクセスログを有効化。しばらく放置するとS3の指定したバケットにELBにログが蓄積されていく。</p><p><img src=image-20200902205725025.png alt=image-20200902205725025></p><p><img src=image-20200902205749483.png alt=image-20200902205749483></p><h3 id=athena>Athena</h3><h4 id=athenaでデータベース作成>Athenaでデータベース作成</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>create</span> <span style=color:#ff79c6>database</span> alb_db
+</span></span></code></pre></div><h4 id=athenaでテーブル作成>Athenaでテーブル作成</h4><p>LOCATIONに指定するパスはELBアクセスログの設定した時に指定したBucketとpathとなる。このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>EXTERNAL</span> <span style=color:#ff79c6>TABLE</span> <span style=color:#ff79c6>IF</span> <span style=color:#ff79c6>NOT</span> <span style=color:#ff79c6>EXISTS</span> alb_logs (
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>type</span> string,
+</span></span><span style=display:flex><span>            time string,
+</span></span><span style=display:flex><span>            elb string,
+</span></span><span style=display:flex><span>            client_ip string,
+</span></span><span style=display:flex><span>            client_port <span style=color:#8be9fd;font-style:italic>int</span>,
+</span></span><span style=display:flex><span>            target_ip string,
+</span></span><span style=display:flex><span>            target_port <span style=color:#8be9fd;font-style:italic>int</span>,
+</span></span><span style=display:flex><span>            request_processing_time double,
+</span></span><span style=display:flex><span>            target_processing_time double,
+</span></span><span style=display:flex><span>            response_processing_time double,
+</span></span><span style=display:flex><span>            elb_status_code string,
+</span></span><span style=display:flex><span>            target_status_code string,
+</span></span><span style=display:flex><span>            received_bytes <span style=color:#8be9fd;font-style:italic>bigint</span>,
+</span></span><span style=display:flex><span>            sent_bytes <span style=color:#8be9fd;font-style:italic>bigint</span>,
+</span></span><span style=display:flex><span>            request_verb string,
+</span></span><span style=display:flex><span>            request_url string,
+</span></span><span style=display:flex><span>            request_proto string,
+</span></span><span style=display:flex><span>            user_agent string,
+</span></span><span style=display:flex><span>            ssl_cipher string,
+</span></span><span style=display:flex><span>            ssl_protocol string,
+</span></span><span style=display:flex><span>            target_group_arn string,
+</span></span><span style=display:flex><span>            trace_id string,
+</span></span><span style=display:flex><span>            domain_name string,
+</span></span><span style=display:flex><span>            chosen_cert_arn string,
+</span></span><span style=display:flex><span>            matched_rule_priority string,
+</span></span><span style=display:flex><span>            request_creation_time string,
+</span></span><span style=display:flex><span>            actions_executed string,
+</span></span><span style=display:flex><span>            redirect_url string,
+</span></span><span style=display:flex><span>            lambda_error_reason string,
+</span></span><span style=display:flex><span>            target_port_list string,
+</span></span><span style=display:flex><span>            target_status_code_list string,
+</span></span><span style=display:flex><span>            new_field string
+</span></span><span style=display:flex><span>            )
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>ROW</span> FORMAT SERDE <span style=color:#f1fa8c>&#39;org.apache.hadoop.hive.serde2.RegexSerDe&#39;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>WITH</span> SERDEPROPERTIES (
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#39;serialization.format&#39;</span> <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;1&#39;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#39;input.regex&#39;</span> <span style=color:#ff79c6>=</span> 
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#39;([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) ([-.0-9]*) ([-.0-9]*) ([-.0-9]*) (|[-0-9]*) (-|[-0-9]*) ([-0-9]*) ([-0-9]*) \&#34;([^ ]*) ([^ ]*) (- |[^ ]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([A-Z0-9-]+) ([A-Za-z0-9.-]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([-.0-9]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^ ]*)\&#34; \&#34;([^\s]+)\&#34; \&#34;([^\s]+)\&#34;(.*)&#39;</span>)
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>LOCATION</span> <span style=color:#f1fa8c>&#39;s3://&lt;Bucket name&gt;/AWSLogs/&lt;Account ID&gt;/elasticloadbalancing/ap-northeast-1/&#39;</span>;
+</span></span></code></pre></div><p>このテーブル作成後は、Athenaを使用してSQLベースでクエリを発行することが出来る。作成後のテーブル↓</p><p><img src=image-20200902210737819.png alt=image-20200902210737819></p><p>各列の説明は下記を参照。</p><blockquote><p><a href=https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html>https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html</a></p></blockquote><table><thead><tr><th style=text-align:left>Field</th><th style=text-align:left>説明:</th></tr></thead><tbody><tr><td style=text-align:left>type</td><td style=text-align:left>リクエストまたは接続のタイプ。有効な値は次のとおりです (その他の値は無視してください)。<code>http</code> — HTTP<code>https</code> — HTTP over SSL/TLS<code>h2</code> — HTTP/2 over SSL/TLS<code>ws</code> — WebSockets<code>wss</code> — WebSockets over SSL/TLS</td></tr><tr><td style=text-align:left>time</td><td style=text-align:left>ロードバランサーがクライアントに対してレスポンスを生成した時刻 (ISO 8601 形式)。WebSocket の場合、これは接続を閉じる時間です。</td></tr><tr><td style=text-align:left>elb</td><td style=text-align:left>ロードバランサーのリソース ID。アクセスログエントリを解析する場合、リソース ID にはスラッシュ (/) を含めることができます。</td></tr><tr><td style=text-align:left>client:port</td><td style=text-align:left>リクエストを送信したクライアントの IP アドレスとポート。</td></tr><tr><td style=text-align:left>target:port</td><td style=text-align:left>このリクエストを処理したターゲットの IP アドレスとポート。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。</td></tr><tr><td style=text-align:left>request_processing_time</td><td style=text-align:left>ロードバランサーがリクエストを受け取った時点からターゲットに送信するまでの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。</td></tr><tr><td style=text-align:left>target_processing_time</td><td style=text-align:left>ロードバランサーがターゲットにリクエストを送信した時点から、そのターゲットが応答ヘッダーの送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。ロードバランサーがリクエストをターゲットにディスパッチできない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。登録済みターゲットからアイドルタイムアウトまで応答がない場合にも、この値は -1 に設定される場合があります。</td></tr><tr><td style=text-align:left>response_processing_time</td><td style=text-align:left>ロードバランサーがターゲットから応答ヘッダーを受け取った時点から、クライアントへの応答の送信を開始した時点までの合計経過時間 (ミリ秒精度の秒単位)。これには、ロードバランサーでの待機時間と、ロードバランサーからクライアントへの接続の取得時間の両方が含まれます。ロードバランサーがリクエストをターゲットに送信できない場合、この値は -1 に設定されます。この状況が発生するのは、ターゲットがアイドルタイムアウト前に接続を閉じた場合か、クライアントが誤った形式のリクエストを送信した場合です。</td></tr><tr><td style=text-align:left>elb_status_code</td><td style=text-align:left>ロードバランサーからの応答のステータスコード。</td></tr><tr><td style=text-align:left>target_status_code</td><td style=text-align:left>ターゲットから応答のステータスコード。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。</td></tr><tr><td style=text-align:left>received_bytes</td><td style=text-align:left>クライアント (リクエスタ) から受け取ったリクエストのサイズ (バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントから受信した合計バイト数です。</td></tr><tr><td style=text-align:left>sent_bytes</td><td style=text-align:left>クライアント (リクエスタ) に返される応答のサイズ(バイト単位)。HTTP リクエストの場合、これにはヘッダーが含まれます。WebSocket の場合、これは接続でクライアントに送信した合計バイト数です。</td></tr><tr><td style=text-align:left>&ldquo;request&rdquo;</td><td style=text-align:left>クライアントからのリクエスト行。二重引用符で囲まれ、次の形式でログされます。HTTP メソッド + プロトコル://host:port/uri + HTTP バージョン。ロードバランサーは、リクエスト URI を記録するときに、クライアントから送信された URL をそのまま保持します。アクセスログファイルのコンテンツタイプは設定されません。このフィールドを処理するときは、クライアントが URL を送信した方法を考慮してください。</td></tr><tr><td style=text-align:left>&ldquo;user_agent&rdquo;</td><td style=text-align:left>リクエスト元のクライアントを特定する User-Agent 文字列 (二重引用符で囲まれます)。この文字列は、1 つ以上の製品 ID (製品[/バージョン]) から構成されます。文字列が 8 KB より長い場合は切り捨てられます。</td></tr><tr><td style=text-align:left>ssl_cipher</td><td style=text-align:left>[HTTPS リスナー] SSL 暗号。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>ssl_protocol</td><td style=text-align:left>[HTTPS リスナー] SSL プロトコル。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>target_group_arn</td><td style=text-align:left>ターゲットグループの Amazon リソースネーム (ARN)。</td></tr><tr><td style=text-align:left>&ldquo;trace_id&rdquo;</td><td style=text-align:left><strong>X-Amzn-Trace-Id</strong> ヘッダーのコンテンツ (二重引用符で囲まれます)。</td></tr><tr><td style=text-align:left>&lt;domain_name></td><td style=text-align:left>[HTTPS リスナー] TLS ハンドシェイク中にクライアントから提供される SNI ドメイン (二重引用符で囲まれます)。クライアントが SNI をサポートしない場合、あるいはドメインが証明書と一致せず、デフォルトの証明書がクライアントに提示された場合、この値は - となります。</td></tr><tr><td style=text-align:left>chosen_cert_arn</td><td style=text-align:left>[HTTPS リスナー] クライアントに提示される証明書の ARN (二重引用符で囲まれます)。セッションが再利用される場合、この値は <code>session-reused</code> に設定されます。リスナーが HTTPS リスナーではない場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>matched_rule_priority</td><td style=text-align:left>リクエストに一致したルールの優先度の値。ルールが一致した場合、この値は 1～50,000 になります。一致するルールがなく、デフォルトのアクションが実行された場合、この値は 0 に設定されます。ルールの評価中にエラーが発生した場合は、-1 に設定されます。その他のエラーの場合は、- に設定されます。</td></tr><tr><td style=text-align:left>request_creation_time</td><td style=text-align:left>ロードバランサーがクライアントからリクエストを受け取った時刻 (ISO 8601 形式)。</td></tr><tr><td style=text-align:left>&ldquo;actions_executed&rdquo;</td><td style=text-align:left>リクエストの処理時に実行されるアクション (二重引用符で囲まれます)。この値は、「<a href=https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#actions-taken>Actions taken</a>」で説明されている値を含めることができるカンマ区切りリストです。形式が正しくないリクエストなどでアクションが実行されない場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>&ldquo;redirect_url&rdquo;</td><td style=text-align:left>HTTP レスポンスのロケーションヘッダーのリダイレクトターゲットの URL (二重引用文字で囲む)。リダイレクトアクションが実行されなかった場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>&ldquo;error_reason&rdquo;</td><td style=text-align:left>エラー理由コード (二重引用符で囲まれます)。リクエストが失敗した場合、これは「<a href=https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html#error-reason-codes>Error reason codes</a>」で説明されているいずれかのエラーコードになります。実行されたアクションが認証アクションを含まない、またはターゲットが Lambda 関数ではない場合、この値は - に設定されます。</td></tr><tr><td style=text-align:left>&ldquo;target:port_list&rdquo;</td><td style=text-align:left>このリクエストを処理したターゲットの IP アドレスとポートのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target:port フィールドと一致します。クライアントがリクエスト全体を送信しなかった場合、ロードバランサーはターゲットにリクエストをディスパッチできず、この値が - に設定されます。ターゲットが Lambda 関数の場合、この値は - に設定されます。リクエストが AWS WAF によってブロックされた場合、この値は - に設定され、elb_status_code の値は 403 に設定されます。</td></tr><tr><td style=text-align:left>&ldquo;target_status_code_list&rdquo;</td><td style=text-align:left>ターゲットの応答からのステータスコードのスペース区切りのリスト (二重引用符で囲まれます)。現在、このリストには 1 つの項目を含めることができ、target_status_code フィールドと一致します。この値は、ターゲットへの接続が確立され、ターゲットが応答を送信した場合のみ記録されます。それ以外の場合は、- に設定されます。</td></tr></tbody></table><p>クエリサンプル例はこちら。外向けに公開しているELBの場合、怪しげのアタックがたくさん来ていることがわかると思います。</p><h5 id=最初の-100-個のアクセスログエントリを新しい順に表示>最初の 100 個のアクセスログエントリを新しい順に表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>*</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>FROM</span> alb_logs
+</span></span><span style=display:flex><span><span style=color:#ff79c6>ORDER</span> <span style=color:#ff79c6>by</span> time <span style=color:#ff79c6>ASC</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>LIMIT</span> <span style=color:#bd93f9>100</span>;
+</span></span></code></pre></div><h5 id=alb-にアクセスしたすべてのクライアント-ip-アドレスとそれらが-alb-にアクセスした回数を一覧表示>ALB にアクセスしたすべてのクライアント IP アドレスと、それらが ALB にアクセスした回数を一覧表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>distinct</span> client_ip, <span style=color:#ff79c6>count</span>() <span style=color:#ff79c6>as</span> <span style=color:#ff79c6>count</span> <span style=color:#ff79c6>from</span> alb_logs
+</span></span><span style=display:flex><span><span style=color:#ff79c6>GROUP</span> <span style=color:#ff79c6>by</span> client_ip
+</span></span><span style=display:flex><span><span style=color:#ff79c6>ORDER</span> <span style=color:#ff79c6>by</span> <span style=color:#ff79c6>count</span>() <span style=color:#ff79c6>DESC</span>;
+</span></span></code></pre></div><h5 id=リクエストレスポンスのペアで-alb-を通過しているデータの平均量-キロバイト-を一覧表示>リクエスト/レスポンスのペアで ALB を通過しているデータの平均量 (キロバイト) を一覧表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> (<span style=color:#ff79c6>avg</span>(sent_bytes)<span style=color:#ff79c6>/</span><span style=color:#bd93f9>1000</span>.<span style=color:#bd93f9>0</span> <span style=color:#ff79c6>+</span> <span style=color:#ff79c6>avg</span>(received_bytes)<span style=color:#ff79c6>/</span><span style=color:#bd93f9>1000</span>.<span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span><span style=color:#ff79c6>as</span> prewarm_kilobytes <span style=color:#ff79c6>from</span> alb_logs;
+</span></span></code></pre></div><h5 id=指定された-url-を訪問した回数をクライアント別降順に一覧表示>指定された URL を訪問した回数をクライアント別、降順に一覧表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> client_ip, elb, request_url, <span style=color:#ff79c6>count</span>(<span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>as</span> <span style=color:#ff79c6>count</span> <span style=color:#ff79c6>from</span> alb_logs
+</span></span><span style=display:flex><span><span style=color:#ff79c6>GROUP</span> <span style=color:#ff79c6>by</span> client_ip, elb, request_url
+</span></span><span style=display:flex><span><span style=color:#ff79c6>ORDER</span> <span style=color:#ff79c6>by</span> <span style=color:#ff79c6>count</span> <span style=color:#ff79c6>DESC</span>;
+</span></span></code></pre></div><h5 id=firefox-ユーザーが最も頻繁にアクセスした上位-10-個の-url-を一覧表示>Firefox ユーザーが最も頻繁にアクセスした上位 10 個の URL を一覧表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> request_url, user_agent, <span style=color:#ff79c6>count</span>(<span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>as</span> <span style=color:#ff79c6>count</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>FROM</span> alb_logs
+</span></span><span style=display:flex><span><span style=color:#ff79c6>WHERE</span> user_agent <span style=color:#ff79c6>LIKE</span> <span style=color:#f1fa8c>&#39;%Firefox%&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>GROUP</span> <span style=color:#ff79c6>by</span> request_url, user_agent
+</span></span><span style=display:flex><span><span style=color:#ff79c6>ORDER</span> <span style=color:#ff79c6>by</span> <span style=color:#ff79c6>count</span>(<span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>DESC</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>LIMIT</span> <span style=color:#bd93f9>10</span>;
+</span></span></code></pre></div><h5 id=alb-へのリクエストで送信したデータ量-メガバイト-でクライアント別降順で一覧表示>ALB へのリクエストで送信したデータ量 (メガバイト) で、クライアント別、降順で一覧表示</h5><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>SELECT</span> client_ip, <span style=color:#ff79c6>sum</span>(received_bytes<span style=color:#ff79c6>/</span><span style=color:#bd93f9>1000000</span>.<span style=color:#bd93f9>0</span>) <span style=color:#ff79c6>as</span> client_datareceived_megabytes
+</span></span><span style=display:flex><span><span style=color:#ff79c6>FROM</span> alb_logs
+</span></span><span style=display:flex><span><span style=color:#ff79c6>GROUP</span> <span style=color:#ff79c6>by</span> client_ip
+</span></span><span style=display:flex><span><span style=color:#ff79c6>ORDER</span> <span style=color:#ff79c6>by</span> client_datareceived_megabytes <span style=color:#ff79c6>DESC</span>;
+</span></span></code></pre></div><h3 id=参考>参考</h3><blockquote><p>Athena を使用してロードバランサーのアクセスログを分析する <a href=https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/>https://aws.amazon.com/jp/premiumsupport/knowledge-center/athena-analyze-access-logs/</a></p></blockquote></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/aws-ec2-userdata-apache-install.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>ユーザデータを使用してEC2作成時にApacheを自動インストール</span></a>
+<a href=https://zatoima.github.io/aws-docs-guthub-commit-log.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>AWSのドキュメントの更新履歴をgithubで確認してRSSフィードを取得</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-athena-alb-log-analitics.html&text=ALB%28Application&#43;Load+Balancer%29%E3%81%AE%E3%83%AD%E3%82%B0%E3%82%92Athena%E3%81%A7%E5%88%86%E6%9E%90" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-athena-alb-log-analitics.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-ec2-userdata-apache-install.html>ユーザデータを使用してEC2作成時にApacheを自動インストール</a></li><li><a href=/aws-postgresql-rdsproxy-failover.html>RDS Proxyを使用してAurora PostgreSQLのフェイルオーバーを実行する</a></li><li><a href=/aws-elasticsearch-csv-output.html>Amazon Elasicsearch Serviceの検索結果をCSV形式で出力</a></li><li><a href=/aws-sct-ora2pg-conversion-compare.html>ora2pgとSCTの変換結果の差異</a></li><li><a href=/aws-elasticsearch-max_result_window_parameter.html>Amazon Elasticsearch Serviceでindex.max_result_windowの値を変更</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/alb/ class=tag-badge>ALB</a>
+<a href=https://zatoima.github.io/blog/athena/ class=tag-badge>Athena</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#elbのログの有効化>ELBのログの有効化</a></li><li><a href=#athena>Athena</a><ul><li><a href=#athenaでデータベース作成>Athenaでデータベース作成</a></li><li><a href=#athenaでテーブル作成>Athenaでテーブル作成</a></li></ul></li><li><a href=#参考>参考</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

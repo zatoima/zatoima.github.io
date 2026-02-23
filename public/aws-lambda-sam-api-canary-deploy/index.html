@@ -1,593 +1,346 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>API Gateway&#43;LambdaのSAMでCanaryデプロイを実施 | my opinion is my own</title>
-<meta name="title" content="API Gateway&#43;LambdaのSAMでCanaryデプロイを実施" />
-<meta name="description" content="" />
-<meta name="keywords" content="AWS," />
-
-
-<meta property="og:title" content="API Gateway&#43;LambdaのSAMでCanaryデプロイを実施" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-lambda-sam-api-canary-deploy/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2022-05-31T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-05-31T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="API Gateway&#43;LambdaのSAMでCanaryデプロイを実施"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="API Gateway&#43;LambdaのSAMでCanaryデプロイを実施">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-05-31T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2022-05-31T00:00:00+00:00" />
-<meta itemprop="wordCount" content="1168"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="AWS," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">API Gateway+LambdaのSAMでCanaryデプロイを実施</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
-        <h1>API Gateway&#43;LambdaのSAMでCanaryデプロイを実施</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2022-05-31'>
-            2022/05/31 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約2分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="前提条件">前提条件</h3>
-<ul>
-<li>SAM CLIがインストールされていること</li>
-</ul>
-<h3 id="sam-init">SAM INIT</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin test<span style="color:#ff79c6">]</span>$ sam init
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>You can preselect a particular runtime or package <span style="color:#8be9fd;font-style:italic">type</span> when using the <span style="color:#f1fa8c">`</span>sam init<span style="color:#f1fa8c">`</span> experience.
-</span></span><span style="display:flex;"><span>Call <span style="color:#f1fa8c">`</span>sam init --help<span style="color:#f1fa8c">`</span> to learn more.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Which template <span style="color:#8be9fd;font-style:italic">source</span> would you like to use?
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">1</span> - AWS Quick Start Templates
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">2</span> - Custom Template Location
-</span></span><span style="display:flex;"><span>Choice: <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Choose an AWS Quick Start application template
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">1</span> - Hello World Example
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">2</span> - Multi-step workflow
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">3</span> - Serverless API
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">4</span> - Scheduled task
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">5</span> - Standalone <span style="color:#ff79c6">function</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">6</span> - Data processing
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">7</span> - Infrastructure event management
-</span></span><span style="display:flex;"><span>	<span style="color:#bd93f9">8</span> - Machine Learning
-</span></span><span style="display:flex;"><span>Template: <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Use the most popular runtime and package type? <span style="color:#ff79c6">(</span>Python and zip<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">[</span>y/N<span style="color:#ff79c6">]</span>: y
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Would you like to <span style="color:#8be9fd;font-style:italic">enable</span> X-Ray tracing on the <span style="color:#ff79c6">function</span><span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> in your application?  <span style="color:#ff79c6">[</span>y/N<span style="color:#ff79c6">]</span>: y
-</span></span><span style="display:flex;"><span>X-Ray will incur an additional cost. View https://aws.amazon.com/xray/pricing/ <span style="color:#ff79c6">for</span> more details
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Project name <span style="color:#ff79c6">[</span>sam-app<span style="color:#ff79c6">]</span>: 
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Cloning from https://github.com/aws/aws-sam-cli-app-templates <span style="color:#ff79c6">(</span>process may take a moment<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    -----------------------
-</span></span><span style="display:flex;"><span>    Generating application:
-</span></span><span style="display:flex;"><span>    -----------------------
-</span></span><span style="display:flex;"><span>    Name: sam-app
-</span></span><span style="display:flex;"><span>    Runtime: python3.9
-</span></span><span style="display:flex;"><span>    Architectures: x86_64
-</span></span><span style="display:flex;"><span>    Dependency Manager: pip
-</span></span><span style="display:flex;"><span>    Application Template: hello-world
-</span></span><span style="display:flex;"><span>    Output Directory: .
-</span></span><span style="display:flex;"><span>    
-</span></span><span style="display:flex;"><span>    Next steps can be found in the README file at ./sam-app/README.md
-</span></span><span style="display:flex;"><span>        
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    Commands you can use <span style="color:#8be9fd;font-style:italic">next</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">=========================</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Create pipeline: <span style="color:#8be9fd;font-style:italic">cd</span> sam-app <span style="color:#ff79c6">&amp;&amp;</span> sam pipeline init --bootstrap
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Validate SAM template: sam validate
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Test Function in the Cloud: sam sync --stack-name <span style="color:#ff79c6">{</span>stack-name<span style="color:#ff79c6">}</span> --watch
-</span></span><span style="display:flex;"><span>   
-</span></span></code></pre></div><h4 id="作成されたtemplateyaml">作成されたtemplate.yaml</h4>
-<p><code>Runtime: python3.8</code>だけ実環境に合わせて修正</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ cat template.yaml 
-</span></span><span style="display:flex;"><span>AWSTemplateFormatVersion: <span style="color:#f1fa8c">&#39;2010-09-09&#39;</span>
-</span></span><span style="display:flex;"><span>Transform: AWS::Serverless-2016-10-31
-</span></span><span style="display:flex;"><span>Description: &gt;
-</span></span><span style="display:flex;"><span>  sam-app
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  Sample SAM Template <span style="color:#ff79c6">for</span> sam-app
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst</span>
-</span></span><span style="display:flex;"><span>Globals:
-</span></span><span style="display:flex;"><span>  Function:
-</span></span><span style="display:flex;"><span>    Timeout: <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span>    Tracing: Active
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Resources:
-</span></span><span style="display:flex;"><span>  HelloWorldFunction:
-</span></span><span style="display:flex;"><span>    Type: AWS::Serverless::Function <span style="color:#6272a4"># More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction</span>
-</span></span><span style="display:flex;"><span>    Properties:
-</span></span><span style="display:flex;"><span>      CodeUri: hello_world/
-</span></span><span style="display:flex;"><span>      Handler: app.lambda_handler
-</span></span><span style="display:flex;"><span>      Runtime: python3.8
-</span></span><span style="display:flex;"><span>      Architectures:
-</span></span><span style="display:flex;"><span>        - x86_64
-</span></span><span style="display:flex;"><span>      Events:
-</span></span><span style="display:flex;"><span>        HelloWorld:
-</span></span><span style="display:flex;"><span>          Type: Api <span style="color:#6272a4"># More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api</span>
-</span></span><span style="display:flex;"><span>          Properties:
-</span></span><span style="display:flex;"><span>            Path: /hello
-</span></span><span style="display:flex;"><span>            Method: get
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Outputs:
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4"># ServerlessRestApi is an implicit API created out of Events key under Serverless::Function</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4"># Find out more about other implicit resources you can reference within SAM</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4"># https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api</span>
-</span></span><span style="display:flex;"><span>  HelloWorldApi:
-</span></span><span style="display:flex;"><span>    Description: <span style="color:#f1fa8c">&#34;API Gateway endpoint URL for Prod stage for Hello World function&#34;</span>
-</span></span><span style="display:flex;"><span>    Value: !Sub <span style="color:#f1fa8c">&#34;https://</span><span style="color:#f1fa8c">${</span><span style="color:#8be9fd;font-style:italic">ServerlessRestApi</span><span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">.execute-api.</span><span style="color:#f1fa8c">${</span><span style="color:#8be9fd;font-style:italic">AWS</span>::<span style="color:#8be9fd;font-style:italic">Region</span><span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">.amazonaws.com/Prod/hello/&#34;</span>
-</span></span><span style="display:flex;"><span>  HelloWorldFunction:
-</span></span><span style="display:flex;"><span>    Description: <span style="color:#f1fa8c">&#34;Hello World Lambda Function ARN&#34;</span>
-</span></span><span style="display:flex;"><span>    Value: !GetAtt HelloWorldFunction.Arn
-</span></span><span style="display:flex;"><span>  HelloWorldFunctionIamRole:
-</span></span><span style="display:flex;"><span>    Description: <span style="color:#f1fa8c">&#34;Implicit IAM Role created for Hello World function&#34;</span>
-</span></span><span style="display:flex;"><span>    Value: !GetAtt HelloWorldFunctionRole.Arn
-</span></span></code></pre></div><h3 id="sam-build">SAM BUILD</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ sam build
-</span></span><span style="display:flex;"><span>Your template contains a resource with logical ID <span style="color:#f1fa8c">&#34;ServerlessRestApi&#34;</span>, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
-</span></span><span style="display:flex;"><span>Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: <span style="color:#ff79c6">{}</span> architecture: x86_64 functions: <span style="color:#ff79c6">[</span><span style="color:#f1fa8c">&#39;HelloWorldFunction&#39;</span><span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>Running PythonPipBuilder:ResolveDependencies
-</span></span><span style="display:flex;"><span>Running PythonPipBuilder:CopySource
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Build Succeeded
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Built Artifacts  : .aws-sam/build
-</span></span><span style="display:flex;"><span>Built Template   : .aws-sam/build/template.yaml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Commands you can use <span style="color:#8be9fd;font-style:italic">next</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">=========================</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Validate SAM template: sam validate
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Invoke Function: sam <span style="color:#8be9fd;font-style:italic">local</span> invoke
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Test Function in the Cloud: sam sync --stack-name <span style="color:#ff79c6">{</span>stack-name<span style="color:#ff79c6">}</span> --watch
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Deploy: sam deploy --guided
-</span></span><span style="display:flex;"><span>        
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ 
-</span></span></code></pre></div><h3 id="sam-deploy">SAM DEPLOY</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ sam deploy --guided
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Configuring SAM <span style="color:#8be9fd;font-style:italic">deploy</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">======================</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Looking <span style="color:#ff79c6">for</span> config file <span style="color:#ff79c6">[</span>samconfig.toml<span style="color:#ff79c6">]</span> :  Not found
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Setting default arguments <span style="color:#ff79c6">for</span> <span style="color:#f1fa8c">&#39;sam deploy&#39;</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#ff79c6">=========================================</span>
-</span></span><span style="display:flex;"><span>	Stack Name <span style="color:#ff79c6">[</span>sam-app<span style="color:#ff79c6">]</span>: 
-</span></span><span style="display:flex;"><span>	AWS Region <span style="color:#ff79c6">[</span>ap-northeast-1<span style="color:#ff79c6">]</span>: 
-</span></span><span style="display:flex;"><span>	<span style="color:#6272a4">#Shows you resources changes to be deployed and require a &#39;Y&#39; to initiate deploy</span>
-</span></span><span style="display:flex;"><span>	Confirm changes before deploy <span style="color:#ff79c6">[</span>y/N<span style="color:#ff79c6">]</span>: n
-</span></span><span style="display:flex;"><span>	<span style="color:#6272a4">#SAM needs permission to be able to create roles to connect to the resources in your template</span>
-</span></span><span style="display:flex;"><span>	Allow SAM CLI IAM role creation <span style="color:#ff79c6">[</span>Y/n<span style="color:#ff79c6">]</span>: y
-</span></span><span style="display:flex;"><span>	<span style="color:#6272a4">#Preserves the state of previously provisioned resources when an operation fails</span>
-</span></span><span style="display:flex;"><span>	Disable rollback <span style="color:#ff79c6">[</span>y/N<span style="color:#ff79c6">]</span>: n
-</span></span><span style="display:flex;"><span>	HelloWorldFunction may not have authorization defined, Is this okay? <span style="color:#ff79c6">[</span>y/N<span style="color:#ff79c6">]</span>: y
-</span></span><span style="display:flex;"><span>	Save arguments to configuration file <span style="color:#ff79c6">[</span>Y/n<span style="color:#ff79c6">]</span>: y
-</span></span><span style="display:flex;"><span>	SAM configuration file <span style="color:#ff79c6">[</span>samconfig.toml<span style="color:#ff79c6">]</span>:  
-</span></span><span style="display:flex;"><span>	SAM configuration environment <span style="color:#ff79c6">[</span>default<span style="color:#ff79c6">]</span>: 
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Looking <span style="color:#ff79c6">for</span> resources needed <span style="color:#ff79c6">for</span> deployment:
-</span></span><span style="display:flex;"><span>	Creating the required resources...
-</span></span><span style="display:flex;"><span>	Successfully created!
-</span></span><span style="display:flex;"><span>	 Managed S3 bucket: aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
-</span></span><span style="display:flex;"><span>	 A different default S3 bucket can be <span style="color:#8be9fd;font-style:italic">set</span> in samconfig.toml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Saved arguments to config file
-</span></span><span style="display:flex;"><span>	Running <span style="color:#f1fa8c">&#39;sam deploy&#39;</span> <span style="color:#ff79c6">for</span> future deployments will use the parameters saved above.
-</span></span><span style="display:flex;"><span>	The above parameters can be changed by modifying samconfig.toml
-</span></span><span style="display:flex;"><span>	Learn more about samconfig.toml syntax at 
-</span></span><span style="display:flex;"><span>	https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Uploading to sam-app/abd834336b3b9a077d1ef4926a7e0945  <span style="color:#bd93f9">458806</span> / <span style="color:#bd93f9">458806</span>  <span style="color:#ff79c6">(</span>100.00%<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Deploying with following <span style="color:#8be9fd;font-style:italic">values</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#ff79c6">===============================</span>
-</span></span><span style="display:flex;"><span>	Stack name                   : sam-app
-</span></span><span style="display:flex;"><span>	Region                       : ap-northeast-1
-</span></span><span style="display:flex;"><span>	Confirm changeset            : False
-</span></span><span style="display:flex;"><span>	Disable rollback             : False
-</span></span><span style="display:flex;"><span>	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
-</span></span><span style="display:flex;"><span>	Capabilities                 : <span style="color:#ff79c6">[</span><span style="color:#f1fa8c">&#34;CAPABILITY_IAM&#34;</span><span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>	Parameter overrides          : <span style="color:#ff79c6">{}</span>
-</span></span><span style="display:flex;"><span>	Signing Profiles             : <span style="color:#ff79c6">{}</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Initiating <span style="color:#8be9fd;font-style:italic">deployment</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">=====================</span>
-</span></span><span style="display:flex;"><span>Uploading to sam-app/3c45e542dd42c86b02969d562b823531.template  <span style="color:#bd93f9">1199</span> / <span style="color:#bd93f9">1199</span>  <span style="color:#ff79c6">(</span>100.00%<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Waiting <span style="color:#ff79c6">for</span> changeset to be created..
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>～省略～
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Successfully created/updated stack - sam-app in ap-northeast-1
-</span></span></code></pre></div><p>試しに実行</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ <span style="color:#ff79c6">for</span> i in <span style="color:#ff79c6">{</span>1..10<span style="color:#ff79c6">}</span>; <span style="color:#ff79c6">do</span> curl -w <span style="color:#f1fa8c">&#39;\n&#39;</span> https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; <span style="color:#ff79c6">done</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ 
-</span></span></code></pre></div><p>Pythonコードを一部修正。<code>&quot;message&quot;: &quot;hello world v2&quot;,</code>に。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ cat hello_world/app.py 
-</span></span><span style="display:flex;"><span>import json
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># import requests</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>def lambda_handler<span style="color:#ff79c6">(</span>event, context<span style="color:#ff79c6">)</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;&#34;&#34;Sample pure Lambda function
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    Parameters
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    ----------
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    event: dict, required
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        API Gateway Lambda Proxy Input Format
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    context: object, required
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        Lambda Context runtime methods and attributes
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    Returns
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    ------
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    API Gateway Lambda Proxy Output Format: dict
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># try:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">#     ip = requests.get(&#34;http://checkip.amazonaws.com/&#34;)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># except requests.RequestException as e:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">#     # Send some context about this error to Lambda Logs</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">#     print(e)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">#     raise e</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> <span style="color:#ff79c6">{</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;statusCode&#34;</span>: 200,
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;body&#34;</span>: json.dumps<span style="color:#ff79c6">({</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span>,
-</span></span><span style="display:flex;"><span>            <span style="color:#6272a4"># &#34;location&#34;: ip.text.replace(&#34;\n&#34;, &#34;&#34;)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">})</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">}</span>
-</span></span></code></pre></div><p>SAMテンプレートを修正</p>
-<p>下記を追加</p>
-<blockquote>
-<pre><code>  AutoPublishAlias: live
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>API Gateway+LambdaのSAMでCanaryデプロイを実施 | my opinion is my own</title><meta name=title content="API Gateway+LambdaのSAMでCanaryデプロイを実施"><meta name=description content><meta name=keywords content="AWS,"><meta property="og:title" content="API Gateway+LambdaのSAMでCanaryデプロイを実施"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/aws-lambda-sam-api-canary-deploy/"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2022-05-31T00:00:00+00:00"><meta property="article:modified_time" content="2022-05-31T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="API Gateway+LambdaのSAMでCanaryデプロイを実施"><meta name=twitter:description content><meta itemprop=name content="API Gateway+LambdaのSAMでCanaryデプロイを実施"><meta itemprop=description content><meta itemprop=datePublished content="2022-05-31T00:00:00+00:00"><meta itemprop=dateModified content="2022-05-31T00:00:00+00:00"><meta itemprop=wordCount content="1168"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="AWS,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>API Gateway+LambdaのSAMでCanaryデプロイを実施</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/aws.svg alt=AWS class=tag-icon loading=lazy></div><h1>API Gateway+LambdaのSAMでCanaryデプロイを実施</h1><div class=article-meta><time class=article-date datetime=2022-05-31>2022/05/31 に公開</time>
+<span class=reading-time>📖 約2分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a></div></div><div class=article-content><h3 id=前提条件>前提条件</h3><ul><li>SAM CLIがインストールされていること</li></ul><h3 id=sam-init>SAM INIT</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin test<span style=color:#ff79c6>]</span>$ sam init
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>You can preselect a particular runtime or package <span style=color:#8be9fd;font-style:italic>type</span> when using the <span style=color:#f1fa8c>`</span>sam init<span style=color:#f1fa8c>`</span> experience.
+</span></span><span style=display:flex><span>Call <span style=color:#f1fa8c>`</span>sam init --help<span style=color:#f1fa8c>`</span> to learn more.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Which template <span style=color:#8be9fd;font-style:italic>source</span> would you like to use?
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>1</span> - AWS Quick Start Templates
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>2</span> - Custom Template Location
+</span></span><span style=display:flex><span>Choice: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Choose an AWS Quick Start application template
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>1</span> - Hello World Example
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>2</span> - Multi-step workflow
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>3</span> - Serverless API
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>4</span> - Scheduled task
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>5</span> - Standalone <span style=color:#ff79c6>function</span>
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>6</span> - Data processing
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>7</span> - Infrastructure event management
+</span></span><span style=display:flex><span>	<span style=color:#bd93f9>8</span> - Machine Learning
+</span></span><span style=display:flex><span>Template: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Use the most popular runtime and package type? <span style=color:#ff79c6>(</span>Python and zip<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>y/N<span style=color:#ff79c6>]</span>: y
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Would you like to <span style=color:#8be9fd;font-style:italic>enable</span> X-Ray tracing on the <span style=color:#ff79c6>function</span><span style=color:#ff79c6>(</span>s<span style=color:#ff79c6>)</span> in your application?  <span style=color:#ff79c6>[</span>y/N<span style=color:#ff79c6>]</span>: y
+</span></span><span style=display:flex><span>X-Ray will incur an additional cost. View https://aws.amazon.com/xray/pricing/ <span style=color:#ff79c6>for</span> more details
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Project name <span style=color:#ff79c6>[</span>sam-app<span style=color:#ff79c6>]</span>: 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Cloning from https://github.com/aws/aws-sam-cli-app-templates <span style=color:#ff79c6>(</span>process may take a moment<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    -----------------------
+</span></span><span style=display:flex><span>    Generating application:
+</span></span><span style=display:flex><span>    -----------------------
+</span></span><span style=display:flex><span>    Name: sam-app
+</span></span><span style=display:flex><span>    Runtime: python3.9
+</span></span><span style=display:flex><span>    Architectures: x86_64
+</span></span><span style=display:flex><span>    Dependency Manager: pip
+</span></span><span style=display:flex><span>    Application Template: hello-world
+</span></span><span style=display:flex><span>    Output Directory: .
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    Next steps can be found in the README file at ./sam-app/README.md
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    Commands you can use <span style=color:#8be9fd;font-style:italic>next</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>=========================</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Create pipeline: <span style=color:#8be9fd;font-style:italic>cd</span> sam-app <span style=color:#ff79c6>&amp;&amp;</span> sam pipeline init --bootstrap
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Validate SAM template: sam validate
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Test Function in the Cloud: sam sync --stack-name <span style=color:#ff79c6>{</span>stack-name<span style=color:#ff79c6>}</span> --watch
+</span></span><span style=display:flex><span>   
+</span></span></code></pre></div><h4 id=作成されたtemplateyaml>作成されたtemplate.yaml</h4><p><code>Runtime: python3.8</code>だけ実環境に合わせて修正</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ cat template.yaml 
+</span></span><span style=display:flex><span>AWSTemplateFormatVersion: <span style=color:#f1fa8c>&#39;2010-09-09&#39;</span>
+</span></span><span style=display:flex><span>Transform: AWS::Serverless-2016-10-31
+</span></span><span style=display:flex><span>Description: &gt;
+</span></span><span style=display:flex><span>  sam-app
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  Sample SAM Template <span style=color:#ff79c6>for</span> sam-app
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst</span>
+</span></span><span style=display:flex><span>Globals:
+</span></span><span style=display:flex><span>  Function:
+</span></span><span style=display:flex><span>    Timeout: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>    Tracing: Active
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Resources:
+</span></span><span style=display:flex><span>  HelloWorldFunction:
+</span></span><span style=display:flex><span>    Type: AWS::Serverless::Function <span style=color:#6272a4># More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction</span>
+</span></span><span style=display:flex><span>    Properties:
+</span></span><span style=display:flex><span>      CodeUri: hello_world/
+</span></span><span style=display:flex><span>      Handler: app.lambda_handler
+</span></span><span style=display:flex><span>      Runtime: python3.8
+</span></span><span style=display:flex><span>      Architectures:
+</span></span><span style=display:flex><span>        - x86_64
+</span></span><span style=display:flex><span>      Events:
+</span></span><span style=display:flex><span>        HelloWorld:
+</span></span><span style=display:flex><span>          Type: Api <span style=color:#6272a4># More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api</span>
+</span></span><span style=display:flex><span>          Properties:
+</span></span><span style=display:flex><span>            Path: /hello
+</span></span><span style=display:flex><span>            Method: get
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Outputs:
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># ServerlessRestApi is an implicit API created out of Events key under Serverless::Function</span>
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># Find out more about other implicit resources you can reference within SAM</span>
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api</span>
+</span></span><span style=display:flex><span>  HelloWorldApi:
+</span></span><span style=display:flex><span>    Description: <span style=color:#f1fa8c>&#34;API Gateway endpoint URL for Prod stage for Hello World function&#34;</span>
+</span></span><span style=display:flex><span>    Value: !Sub <span style=color:#f1fa8c>&#34;https://</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>ServerlessRestApi</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>.execute-api.</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>AWS</span>::<span style=color:#8be9fd;font-style:italic>Region</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>.amazonaws.com/Prod/hello/&#34;</span>
+</span></span><span style=display:flex><span>  HelloWorldFunction:
+</span></span><span style=display:flex><span>    Description: <span style=color:#f1fa8c>&#34;Hello World Lambda Function ARN&#34;</span>
+</span></span><span style=display:flex><span>    Value: !GetAtt HelloWorldFunction.Arn
+</span></span><span style=display:flex><span>  HelloWorldFunctionIamRole:
+</span></span><span style=display:flex><span>    Description: <span style=color:#f1fa8c>&#34;Implicit IAM Role created for Hello World function&#34;</span>
+</span></span><span style=display:flex><span>    Value: !GetAtt HelloWorldFunctionRole.Arn
+</span></span></code></pre></div><h3 id=sam-build>SAM BUILD</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ sam build
+</span></span><span style=display:flex><span>Your template contains a resource with logical ID <span style=color:#f1fa8c>&#34;ServerlessRestApi&#34;</span>, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
+</span></span><span style=display:flex><span>Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: <span style=color:#ff79c6>{}</span> architecture: x86_64 functions: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#39;HelloWorldFunction&#39;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Running PythonPipBuilder:ResolveDependencies
+</span></span><span style=display:flex><span>Running PythonPipBuilder:CopySource
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Build Succeeded
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Built Artifacts  : .aws-sam/build
+</span></span><span style=display:flex><span>Built Template   : .aws-sam/build/template.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Commands you can use <span style=color:#8be9fd;font-style:italic>next</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>=========================</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Validate SAM template: sam validate
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Invoke Function: sam <span style=color:#8be9fd;font-style:italic>local</span> invoke
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Test Function in the Cloud: sam sync --stack-name <span style=color:#ff79c6>{</span>stack-name<span style=color:#ff79c6>}</span> --watch
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Deploy: sam deploy --guided
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ 
+</span></span></code></pre></div><h3 id=sam-deploy>SAM DEPLOY</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ sam deploy --guided
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Configuring SAM <span style=color:#8be9fd;font-style:italic>deploy</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>======================</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Looking <span style=color:#ff79c6>for</span> config file <span style=color:#ff79c6>[</span>samconfig.toml<span style=color:#ff79c6>]</span> :  Not found
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Setting default arguments <span style=color:#ff79c6>for</span> <span style=color:#f1fa8c>&#39;sam deploy&#39;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>=========================================</span>
+</span></span><span style=display:flex><span>	Stack Name <span style=color:#ff79c6>[</span>sam-app<span style=color:#ff79c6>]</span>: 
+</span></span><span style=display:flex><span>	AWS Region <span style=color:#ff79c6>[</span>ap-northeast-1<span style=color:#ff79c6>]</span>: 
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>#Shows you resources changes to be deployed and require a &#39;Y&#39; to initiate deploy</span>
+</span></span><span style=display:flex><span>	Confirm changes before deploy <span style=color:#ff79c6>[</span>y/N<span style=color:#ff79c6>]</span>: n
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>#SAM needs permission to be able to create roles to connect to the resources in your template</span>
+</span></span><span style=display:flex><span>	Allow SAM CLI IAM role creation <span style=color:#ff79c6>[</span>Y/n<span style=color:#ff79c6>]</span>: y
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>#Preserves the state of previously provisioned resources when an operation fails</span>
+</span></span><span style=display:flex><span>	Disable rollback <span style=color:#ff79c6>[</span>y/N<span style=color:#ff79c6>]</span>: n
+</span></span><span style=display:flex><span>	HelloWorldFunction may not have authorization defined, Is this okay? <span style=color:#ff79c6>[</span>y/N<span style=color:#ff79c6>]</span>: y
+</span></span><span style=display:flex><span>	Save arguments to configuration file <span style=color:#ff79c6>[</span>Y/n<span style=color:#ff79c6>]</span>: y
+</span></span><span style=display:flex><span>	SAM configuration file <span style=color:#ff79c6>[</span>samconfig.toml<span style=color:#ff79c6>]</span>:  
+</span></span><span style=display:flex><span>	SAM configuration environment <span style=color:#ff79c6>[</span>default<span style=color:#ff79c6>]</span>: 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Looking <span style=color:#ff79c6>for</span> resources needed <span style=color:#ff79c6>for</span> deployment:
+</span></span><span style=display:flex><span>	Creating the required resources...
+</span></span><span style=display:flex><span>	Successfully created!
+</span></span><span style=display:flex><span>	 Managed S3 bucket: aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+</span></span><span style=display:flex><span>	 A different default S3 bucket can be <span style=color:#8be9fd;font-style:italic>set</span> in samconfig.toml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Saved arguments to config file
+</span></span><span style=display:flex><span>	Running <span style=color:#f1fa8c>&#39;sam deploy&#39;</span> <span style=color:#ff79c6>for</span> future deployments will use the parameters saved above.
+</span></span><span style=display:flex><span>	The above parameters can be changed by modifying samconfig.toml
+</span></span><span style=display:flex><span>	Learn more about samconfig.toml syntax at 
+</span></span><span style=display:flex><span>	https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Uploading to sam-app/abd834336b3b9a077d1ef4926a7e0945  <span style=color:#bd93f9>458806</span> / <span style=color:#bd93f9>458806</span>  <span style=color:#ff79c6>(</span>100.00%<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Deploying with following <span style=color:#8be9fd;font-style:italic>values</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>===============================</span>
+</span></span><span style=display:flex><span>	Stack name                   : sam-app
+</span></span><span style=display:flex><span>	Region                       : ap-northeast-1
+</span></span><span style=display:flex><span>	Confirm changeset            : False
+</span></span><span style=display:flex><span>	Disable rollback             : False
+</span></span><span style=display:flex><span>	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+</span></span><span style=display:flex><span>	Capabilities                 : <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;CAPABILITY_IAM&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>	Parameter overrides          : <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	Signing Profiles             : <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Initiating <span style=color:#8be9fd;font-style:italic>deployment</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>=====================</span>
+</span></span><span style=display:flex><span>Uploading to sam-app/3c45e542dd42c86b02969d562b823531.template  <span style=color:#bd93f9>1199</span> / <span style=color:#bd93f9>1199</span>  <span style=color:#ff79c6>(</span>100.00%<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Waiting <span style=color:#ff79c6>for</span> changeset to be created..
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>～省略～
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Successfully created/updated stack - sam-app in ap-northeast-1
+</span></span></code></pre></div><p>試しに実行</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ <span style=color:#ff79c6>for</span> i in <span style=color:#ff79c6>{</span>1..10<span style=color:#ff79c6>}</span>; <span style=color:#ff79c6>do</span> curl -w <span style=color:#f1fa8c>&#39;\n&#39;</span> https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; <span style=color:#ff79c6>done</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ 
+</span></span></code></pre></div><p>Pythonコードを一部修正。<code>"message": "hello world v2",</code>に。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ cat hello_world/app.py 
+</span></span><span style=display:flex><span>import json
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># import requests</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>def lambda_handler<span style=color:#ff79c6>(</span>event, context<span style=color:#ff79c6>)</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;&#34;&#34;Sample pure Lambda function
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    Parameters
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    ----------
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    event: dict, required
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        API Gateway Lambda Proxy Input Format
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    context: object, required
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        Lambda Context runtime methods and attributes
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    Returns
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    ------
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    API Gateway Lambda Proxy Output Format: dict
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    &#34;&#34;&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># try:</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>#     ip = requests.get(&#34;http://checkip.amazonaws.com/&#34;)</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># except requests.RequestException as e:</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>#     # Send some context about this error to Lambda Logs</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>#     print(e)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>#     raise e</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;statusCode&#34;</span>: 200,
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;body&#34;</span>: json.dumps<span style=color:#ff79c6>({</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># &#34;location&#34;: ip.text.replace(&#34;\n&#34;, &#34;&#34;)</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>})</span>,
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>SAMテンプレートを修正</p><p>下記を追加</p><blockquote><pre><code>  AutoPublishAlias: live
   DeploymentPreference:
     Type: Linear10PercentEvery10Minutes
-</code></pre>
-</blockquote>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ cat template.yaml 
-</span></span><span style="display:flex;"><span>AWSTemplateFormatVersion: <span style="color:#f1fa8c">&#39;2010-09-09&#39;</span>
-</span></span><span style="display:flex;"><span>Transform: AWS::Serverless-2016-10-31
-</span></span><span style="display:flex;"><span>Description: &gt;
-</span></span><span style="display:flex;"><span>  sam-app
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  Sample SAM Template <span style="color:#ff79c6">for</span> sam-app
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst</span>
-</span></span><span style="display:flex;"><span>Globals:
-</span></span><span style="display:flex;"><span>  Function:
-</span></span><span style="display:flex;"><span>    Timeout: <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span>    Tracing: Active
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Resources:
-</span></span><span style="display:flex;"><span>  HelloWorldFunction:
-</span></span><span style="display:flex;"><span>    Type: AWS::Serverless::Function <span style="color:#6272a4"># More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction</span>
-</span></span><span style="display:flex;"><span>    Properties:
-</span></span><span style="display:flex;"><span>      CodeUri: hello_world/
-</span></span><span style="display:flex;"><span>      Handler: app.lambda_handler
-</span></span><span style="display:flex;"><span>      Runtime: python3.8
-</span></span><span style="display:flex;"><span>      Architectures:
-</span></span><span style="display:flex;"><span>        - x86_64
-</span></span><span style="display:flex;"><span>      AutoPublishAlias: live
-</span></span><span style="display:flex;"><span>      DeploymentPreference:
-</span></span><span style="display:flex;"><span>        Type: Linear10PercentEvery10Minutes
-</span></span><span style="display:flex;"><span>      Events:
-</span></span><span style="display:flex;"><span>        HelloWorld:
-</span></span><span style="display:flex;"><span>          Type: Api <span style="color:#6272a4"># More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api</span>
-</span></span><span style="display:flex;"><span>          Properties:
-</span></span><span style="display:flex;"><span>            Path: /hello
-</span></span><span style="display:flex;"><span>            Method: get
-</span></span></code></pre></div><h3 id="sam-builddeploy">sam build＆Deploy</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ sam build
-</span></span><span style="display:flex;"><span>Your template contains a resource with logical ID <span style="color:#f1fa8c">&#34;ServerlessRestApi&#34;</span>, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
-</span></span><span style="display:flex;"><span>Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: <span style="color:#ff79c6">{}</span> architecture: x86_64 functions: <span style="color:#ff79c6">[</span><span style="color:#f1fa8c">&#39;HelloWorldFunction&#39;</span><span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>Running PythonPipBuilder:ResolveDependencies
-</span></span><span style="display:flex;"><span>Running PythonPipBuilder:CopySource
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Build Succeeded
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Built Artifacts  : .aws-sam/build
-</span></span><span style="display:flex;"><span>Built Template   : .aws-sam/build/template.yaml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Commands you can use <span style="color:#8be9fd;font-style:italic">next</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">=========================</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Validate SAM template: sam validate
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Invoke Function: sam <span style="color:#8be9fd;font-style:italic">local</span> invoke
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Test Function in the Cloud: sam sync --stack-name <span style="color:#ff79c6">{</span>stack-name<span style="color:#ff79c6">}</span> --watch
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>*<span style="color:#ff79c6">]</span> Deploy: sam deploy --guided
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin sam-app<span style="color:#ff79c6">]</span>$ sam deploy
-</span></span><span style="display:flex;"><span>Uploading to sam-app/81d9b12cbf5541a6c9ff2fcf17671808  <span style="color:#bd93f9">458809</span> / <span style="color:#bd93f9">458809</span>  <span style="color:#ff79c6">(</span>100.00%<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>	Deploying with following <span style="color:#8be9fd;font-style:italic">values</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#ff79c6">===============================</span>
-</span></span><span style="display:flex;"><span>	Stack name                   : sam-app
-</span></span><span style="display:flex;"><span>	Region                       : ap-northeast-1
-</span></span><span style="display:flex;"><span>	Confirm changeset            : False
-</span></span><span style="display:flex;"><span>	Disable rollback             : False
-</span></span><span style="display:flex;"><span>	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
-</span></span><span style="display:flex;"><span>	Capabilities                 : <span style="color:#ff79c6">[</span><span style="color:#f1fa8c">&#34;CAPABILITY_IAM&#34;</span><span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>	Parameter overrides          : <span style="color:#ff79c6">{}</span>
-</span></span><span style="display:flex;"><span>	Signing Profiles             : <span style="color:#ff79c6">{}</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Initiating <span style="color:#8be9fd;font-style:italic">deployment</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">=====================</span>
-</span></span><span style="display:flex;"><span>Uploading to sam-app/5e5bb4c759ce5a0dac0216a727528b16.template  <span style="color:#bd93f9">1300</span> / <span style="color:#bd93f9">1300</span>  <span style="color:#ff79c6">(</span>100.00%<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Waiting <span style="color:#ff79c6">for</span> changeset to be created..
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>~省略~
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Successfully created/updated stack - sam-app in ap-northeast-1
-</span></span></code></pre></div><p><strong><!-- raw HTML omitted -->DeploymentPreference直後はエイリアス管理されていないので2回ほどコードを修正して動作を確認する。<!-- raw HTML omitted --></strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#ff79c6">for</span> i in <span style="color:#ff79c6">{</span>1..20<span style="color:#ff79c6">}</span>; <span style="color:#ff79c6">do</span> curl -w <span style="color:#f1fa8c">&#39;\n&#39;</span> https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; <span style="color:#ff79c6">done</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v3&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span><span style="color:#f1fa8c">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;hello world v2&#34;</span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ 
-</span></span></code></pre></div>
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/aws-aurora-postgres-lambda-s3-event/" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブル …</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/aws-lambda-sam-codepipeline-deploy/" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">SAMを使用したLambdaのデプロイをCodePipelineに組み込む</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-lambda-sam-api-canary-deploy%2f&text=API&#43;Gateway%2BLambda%E3%81%AESAM%E3%81%A7Canary%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%AE%9F%E6%96%BD" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-lambda-sam-api-canary-deploy/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-aurora-postgres-lambda-s3-event/">S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード</a></li>
-    
-    <li><a href="/aws-lambda-sam-deploy/">AWS SAM CLI を使用したLambdaのデプロイ</a></li>
-    
-    <li><a href="/aws-aurora-postgres-psycopg2-lambda/">Lambdaからawslambda-psycopg2を使用してAurora PostgreSQLに接続</a></li>
-    
-    <li><a href="/aws-aurora-postgres-pgadmin4-bastin-connect/">pgAdmin4からAurora PostgreSQLへ踏み台サーバのポートフォワード経由で接続する</a></li>
-    
-    <li><a href="/aws-dynamodb-to-s3-csv-transform-python-lamdba/">DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#前提条件">前提条件</a></li>
-        <li><a href="#sam-init">SAM INIT</a>
-          <ul>
-            <li><a href="#作成されたtemplateyaml">作成されたtemplate.yaml</a></li>
-          </ul>
-        </li>
-        <li><a href="#sam-build">SAM BUILD</a></li>
-        <li><a href="#sam-deploy">SAM DEPLOY</a></li>
-        <li><a href="#sam-builddeploy">sam build＆Deploy</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+</code></pre></blockquote><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ cat template.yaml 
+</span></span><span style=display:flex><span>AWSTemplateFormatVersion: <span style=color:#f1fa8c>&#39;2010-09-09&#39;</span>
+</span></span><span style=display:flex><span>Transform: AWS::Serverless-2016-10-31
+</span></span><span style=display:flex><span>Description: &gt;
+</span></span><span style=display:flex><span>  sam-app
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  Sample SAM Template <span style=color:#ff79c6>for</span> sam-app
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst</span>
+</span></span><span style=display:flex><span>Globals:
+</span></span><span style=display:flex><span>  Function:
+</span></span><span style=display:flex><span>    Timeout: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>    Tracing: Active
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Resources:
+</span></span><span style=display:flex><span>  HelloWorldFunction:
+</span></span><span style=display:flex><span>    Type: AWS::Serverless::Function <span style=color:#6272a4># More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction</span>
+</span></span><span style=display:flex><span>    Properties:
+</span></span><span style=display:flex><span>      CodeUri: hello_world/
+</span></span><span style=display:flex><span>      Handler: app.lambda_handler
+</span></span><span style=display:flex><span>      Runtime: python3.8
+</span></span><span style=display:flex><span>      Architectures:
+</span></span><span style=display:flex><span>        - x86_64
+</span></span><span style=display:flex><span>      AutoPublishAlias: live
+</span></span><span style=display:flex><span>      DeploymentPreference:
+</span></span><span style=display:flex><span>        Type: Linear10PercentEvery10Minutes
+</span></span><span style=display:flex><span>      Events:
+</span></span><span style=display:flex><span>        HelloWorld:
+</span></span><span style=display:flex><span>          Type: Api <span style=color:#6272a4># More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api</span>
+</span></span><span style=display:flex><span>          Properties:
+</span></span><span style=display:flex><span>            Path: /hello
+</span></span><span style=display:flex><span>            Method: get
+</span></span></code></pre></div><h3 id=sam-builddeploy>sam build＆Deploy</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ sam build
+</span></span><span style=display:flex><span>Your template contains a resource with logical ID <span style=color:#f1fa8c>&#34;ServerlessRestApi&#34;</span>, which is a reserved logical ID in AWS SAM. It could result in unexpected behaviors and is not recommended.
+</span></span><span style=display:flex><span>Building codeuri: /home/ec2-user/tmp/test/sam-app/hello_world runtime: python3.8 metadata: <span style=color:#ff79c6>{}</span> architecture: x86_64 functions: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#39;HelloWorldFunction&#39;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Running PythonPipBuilder:ResolveDependencies
+</span></span><span style=display:flex><span>Running PythonPipBuilder:CopySource
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Build Succeeded
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Built Artifacts  : .aws-sam/build
+</span></span><span style=display:flex><span>Built Template   : .aws-sam/build/template.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Commands you can use <span style=color:#8be9fd;font-style:italic>next</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>=========================</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Validate SAM template: sam validate
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Invoke Function: sam <span style=color:#8be9fd;font-style:italic>local</span> invoke
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Test Function in the Cloud: sam sync --stack-name <span style=color:#ff79c6>{</span>stack-name<span style=color:#ff79c6>}</span> --watch
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>*<span style=color:#ff79c6>]</span> Deploy: sam deploy --guided
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin sam-app<span style=color:#ff79c6>]</span>$ sam deploy
+</span></span><span style=display:flex><span>Uploading to sam-app/81d9b12cbf5541a6c9ff2fcf17671808  <span style=color:#bd93f9>458809</span> / <span style=color:#bd93f9>458809</span>  <span style=color:#ff79c6>(</span>100.00%<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Deploying with following <span style=color:#8be9fd;font-style:italic>values</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>===============================</span>
+</span></span><span style=display:flex><span>	Stack name                   : sam-app
+</span></span><span style=display:flex><span>	Region                       : ap-northeast-1
+</span></span><span style=display:flex><span>	Confirm changeset            : False
+</span></span><span style=display:flex><span>	Disable rollback             : False
+</span></span><span style=display:flex><span>	Deployment s3 bucket         : aws-sam-cli-managed-default-samclisourcebucket-g2l8ba259m80
+</span></span><span style=display:flex><span>	Capabilities                 : <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;CAPABILITY_IAM&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>	Parameter overrides          : <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	Signing Profiles             : <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Initiating <span style=color:#8be9fd;font-style:italic>deployment</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>=====================</span>
+</span></span><span style=display:flex><span>Uploading to sam-app/5e5bb4c759ce5a0dac0216a727528b16.template  <span style=color:#bd93f9>1300</span> / <span style=color:#bd93f9>1300</span>  <span style=color:#ff79c6>(</span>100.00%<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Waiting <span style=color:#ff79c6>for</span> changeset to be created..
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>~省略~
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Successfully created/updated stack - sam-app in ap-northeast-1
+</span></span></code></pre></div><p><strong>DeploymentPreference直後はエイリアス管理されていないので2回ほどコードを修正して動作を確認する。</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin ~<span style=color:#ff79c6>]</span>$ <span style=color:#ff79c6>for</span> i in <span style=color:#ff79c6>{</span>1..20<span style=color:#ff79c6>}</span>; <span style=color:#ff79c6>do</span> curl -w <span style=color:#f1fa8c>&#39;\n&#39;</span> https://ody2prbd53.execute-api.ap-northeast-1.amazonaws.com/Prod/hello/; <span style=color:#ff79c6>done</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v3&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;message&#34;</span>: <span style=color:#f1fa8c>&#34;hello world v2&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>ec2-user@bastin ~<span style=color:#ff79c6>]</span>$ 
+</span></span></code></pre></div></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/aws-aurora-postgres-lambda-s3-event/ class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブル …</span></a>
+<a href=https://zatoima.github.io/aws-lambda-sam-codepipeline-deploy/ class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>SAMを使用したLambdaのデプロイをCodePipelineに組み込む</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-lambda-sam-api-canary-deploy%2f&text=API&#43;Gateway%2BLambda%E3%81%AESAM%E3%81%A7Canary%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%AE%9F%E6%96%BD" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-lambda-sam-api-canary-deploy/ target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-aurora-postgres-lambda-s3-event/>S3へのファイルのPUTを検知してLamdbaからAurora PostgreSQLのテーブルへCSV形式のデータをロード</a></li><li><a href=/aws-lambda-sam-deploy/>AWS SAM CLI を使用したLambdaのデプロイ</a></li><li><a href=/aws-aurora-postgres-psycopg2-lambda/>Lambdaからawslambda-psycopg2を使用してAurora PostgreSQLに接続</a></li><li><a href=/aws-aurora-postgres-pgadmin4-bastin-connect/>pgAdmin4からAurora PostgreSQLへ踏み台サーバのポートフォワード経由で接続する</a></li><li><a href=/aws-dynamodb-to-s3-csv-transform-python-lamdba/>DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#前提条件>前提条件</a></li><li><a href=#sam-init>SAM INIT</a><ul><li><a href=#作成されたtemplateyaml>作成されたtemplate.yaml</a></li></ul></li><li><a href=#sam-build>SAM BUILD</a></li><li><a href=#sam-deploy>SAM DEPLOY</a></li><li><a href=#sam-builddeploy>sam build＆Deploy</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

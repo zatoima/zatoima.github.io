@@ -1,504 +1,220 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う | my opinion is my own</title>
-<meta name="title" content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う" />
-<meta name="description" content="" />
-<meta name="keywords" content="PostgreSQL," />
-
-
-<meta property="og:title" content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/postgresql-pg_rman-backup-recovery.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2020-06-15T00:00:00+00:00" />
-<meta property="article:modified_time" content="2020-06-15T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-06-15T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2020-06-15T00:00:00+00:00" />
-<meta itemprop="wordCount" content="1092"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="PostgreSQL," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-icon" loading="lazy"></div>
-        <h1>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2020-06-15'>
-            2020/06/15 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約2分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="pg_rmanの概要">pg_rmanの概要</h3>
-<p>pg_rmanの手順メモ。rmanと名前についている通り、Oracle の Recovery Managerを意識した機能です。標準機能では使用できない増分バックアップが出来ることでバックアップの短縮に繋がるはず。</p>
-<ul>
-<li>全体バックアップに加え、増分バックアップが可能</li>
-<li>バックアップの圧縮が可能</li>
-<li>バックアップの世代管理やバックアップ一覧を表示できる</li>
-<li>バックアップの対象はデータベースクラスタの他にアーカイブログ、サーバログが含めることができる</li>
-<li>タイムライン指定、リカバリしたい日付時刻指定が可能</li>
-<li>データベースクラスタ外のテーブルスペースを含めたバックアップが可能</li>
-</ul>
-<h3 id="pg_rmanのインストール">pg_rmanのインストール</h3>
-<p>下記のgithubのリポジトリから最新のバージョンをインストールします。</p>
-<blockquote>
-<p>Releases · ossc-db/pg_rman <a href="https://github.com/ossc-db/pg_rman/releases">https://github.com/ossc-db/pg_rman/releases</a></p>
-</blockquote>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo wget https://github.com/ossc-db/pg_rman/releases/download/V1.3.9/pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
-</span></span><span style="display:flex;"><span>sudo rpm -ivh pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ pg_rman --help
-</span></span><span style="display:flex;"><span>pg_rman manage backup/recovery of PostgreSQL database.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Usage:
-</span></span><span style="display:flex;"><span>  pg_rman OPTION init
-</span></span><span style="display:flex;"><span>  pg_rman OPTION backup
-</span></span><span style="display:flex;"><span>  pg_rman OPTION restore
-</span></span><span style="display:flex;"><span>  pg_rman OPTION show <span style="color:#ff79c6">[</span>DATE<span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>  pg_rman OPTION show detail <span style="color:#ff79c6">[</span>DATE<span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>  pg_rman OPTION validate <span style="color:#ff79c6">[</span>DATE<span style="color:#ff79c6">]</span>
-</span></span><span style="display:flex;"><span>  pg_rman OPTION delete DATE
-</span></span><span style="display:flex;"><span>  pg_rman OPTION purge
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Common Options:
-</span></span><span style="display:flex;"><span>  -D, --pgdata<span style="color:#ff79c6">=</span>PATH         location of the database storage area
-</span></span><span style="display:flex;"><span>  -A, --arclog-path<span style="color:#ff79c6">=</span>PATH    location of archive WAL storage area
-</span></span><span style="display:flex;"><span>  -S, --srvlog-path<span style="color:#ff79c6">=</span>PATH    location of server log storage area
-</span></span><span style="display:flex;"><span>  -B, --backup-path<span style="color:#ff79c6">=</span>PATH    location of the backup storage area
-</span></span><span style="display:flex;"><span>  -c, --check               show what would have been <span style="color:#ff79c6">done</span>
-</span></span><span style="display:flex;"><span>  -v, --verbose             show what detail messages
-</span></span><span style="display:flex;"><span>  -P, --progress            show progress of processed files
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Backup options:
-</span></span><span style="display:flex;"><span>  -b, --backup-mode<span style="color:#ff79c6">=</span>MODE    full, incremental, or archive
-</span></span><span style="display:flex;"><span>  -s, --with-serverlog      also backup server log files
-</span></span><span style="display:flex;"><span>  -Z, --compress-data       compress data backup with zlib
-</span></span><span style="display:flex;"><span>  -C, --smooth-checkpoint   <span style="color:#ff79c6">do</span> smooth checkpoint before backup
-</span></span><span style="display:flex;"><span>  -F, --full-backup-on-error   switch to full backup mode
-</span></span><span style="display:flex;"><span>                               <span style="color:#ff79c6">if</span> pg_rman cannot find validate full backup
-</span></span><span style="display:flex;"><span>                               on current timeline
-</span></span><span style="display:flex;"><span>      NOTE: this option is only used in --backup-mode<span style="color:#ff79c6">=</span>incremental or archive.
-</span></span><span style="display:flex;"><span>  --keep-data-generations<span style="color:#ff79c6">=</span>NUM keep NUM generations of full data backup
-</span></span><span style="display:flex;"><span>  --keep-data-days<span style="color:#ff79c6">=</span>NUM        keep enough data backup to recover to N days ago
-</span></span><span style="display:flex;"><span>  --keep-arclog-files<span style="color:#ff79c6">=</span>NUM   keep NUM of archived WAL
-</span></span><span style="display:flex;"><span>  --keep-arclog-days<span style="color:#ff79c6">=</span>DAY    keep archived WAL modified in DAY days
-</span></span><span style="display:flex;"><span>  --keep-srvlog-files<span style="color:#ff79c6">=</span>NUM   keep NUM of serverlogs
-</span></span><span style="display:flex;"><span>  --keep-srvlog-days<span style="color:#ff79c6">=</span>DAY    keep serverlog modified in DAY days
-</span></span><span style="display:flex;"><span>  --standby-host<span style="color:#ff79c6">=</span>HOSTNAME   standby host when taking backup from standby
-</span></span><span style="display:flex;"><span>  --standby-port<span style="color:#ff79c6">=</span>PORT       standby port when taking backup from standby
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Restore options:
-</span></span><span style="display:flex;"><span>  --recovery-target-time    <span style="color:#8be9fd;font-style:italic">time</span> stamp up to which recovery will proceed
-</span></span><span style="display:flex;"><span>  --recovery-target-xid     transaction ID up to which recovery will proceed
-</span></span><span style="display:flex;"><span>  --recovery-target-inclusive whether we stop just after the recovery target
-</span></span><span style="display:flex;"><span>  --recovery-target-timeline  recovering into a particular timeline
-</span></span><span style="display:flex;"><span>  --hard-copy                 copying archivelog not symbolic link
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Catalog options:
-</span></span><span style="display:flex;"><span>  -a, --show-all            show deleted backup too
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Delete options:
-</span></span><span style="display:flex;"><span>  -f, --force               forcibly delete backup older than given DATE
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Connection options:
-</span></span><span style="display:flex;"><span>  -d, --dbname<span style="color:#ff79c6">=</span>DBNAME       database to connect
-</span></span><span style="display:flex;"><span>  -h, --host<span style="color:#ff79c6">=</span>HOSTNAME       database server host or socket directory
-</span></span><span style="display:flex;"><span>  -p, --port<span style="color:#ff79c6">=</span>PORT           database server port
-</span></span><span style="display:flex;"><span>  -U, --username<span style="color:#ff79c6">=</span>USERNAME   user name to connect as
-</span></span><span style="display:flex;"><span>  -w, --no-password         never prompt <span style="color:#ff79c6">for</span> password
-</span></span><span style="display:flex;"><span>  -W, --password            force password prompt
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Generic options:
-</span></span><span style="display:flex;"><span>  -q, --quiet               don&#39;t show any INFO or DEBUG messages
-</span></span><span style="display:flex;"><span>  --debug                   show DEBUG messages
-</span></span><span style="display:flex;"><span>  --help                    show this help, <span style="color:#ff79c6">then</span> <span style="color:#8be9fd;font-style:italic">exit</span>
-</span></span><span style="display:flex;"><span>  --version                 output version information, <span style="color:#ff79c6">then</span> <span style="color:#8be9fd;font-style:italic">exit</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Read the website <span style="color:#ff79c6">for</span> details. &lt;http://github.com/ossc-db/pg_rman&gt;
-</span></span><span style="display:flex;"><span>Report bugs to &lt;http://github.com/ossc-db/pg_rman/issues&gt;.
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ 
-</span></span></code></pre></div><h3 id="postgresqlconfの設定">postgresql.confの設定</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>archive_mode = on
-</span></span><span style="display:flex;"><span>archive_command = &#39;cp %p /var/lib/pgsql/10/data/pg_wal/archive/%f&#39;
-</span></span><span style="display:flex;"><span>wal_level = archive
-</span></span><span style="display:flex;"><span>log_directory = &#39;pg_log&#39;
-</span></span></code></pre></div><h3 id="環境変数編集">環境変数編集</h3>
-<p>BACKUP_PATHを下記の通りとします。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ export BACKUP_PATH=/var/lib/pgsql/pg_rman_backup
-</span></span></code></pre></div><h3 id="バックアップカタログの初期化">バックアップカタログの初期化</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman init
-</span></span><span style="display:flex;"><span>INFO: ARCLOG_PATH is set to &#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;
-</span></span><span style="display:flex;"><span>INFO: SRVLOG_PATH is set to &#39;/var/lib/pgsql/10/data/log&#39;
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span></code></pre></div><h3 id="フルバックアップの取得">フルバックアップの取得</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ pg_rman init
-</span></span><span style="display:flex;"><span>INFO: ARCLOG_PATH is <span style="color:#8be9fd;font-style:italic">set</span> to <span style="color:#f1fa8c">&#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;</span>
-</span></span><span style="display:flex;"><span>INFO: SRVLOG_PATH is <span style="color:#8be9fd;font-style:italic">set</span> to <span style="color:#f1fa8c">&#39;/var/lib/pgsql/10/data/log&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ 
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ 
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ pg_rman backup --backup-mode<span style="color:#ff79c6">=</span>full
-</span></span><span style="display:flex;"><span>INFO: copying database files
-</span></span><span style="display:flex;"><span>INFO: copying archived WAL files
-</span></span><span style="display:flex;"><span>INFO: backup <span style="color:#8be9fd;font-style:italic">complete</span>
-</span></span><span style="display:flex;"><span>INFO: Please execute <span style="color:#f1fa8c">&#39;pg_rman validate&#39;</span> to verify the files are correctly copied.
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>postgres@postdb ~<span style="color:#ff79c6">]</span>$ 
-</span></span></code></pre></div><h3 id="バックアップの検証">バックアップの検証</h3>
-<p>validateを実施しないとリストア出来ない。バックアップ後すぐに実施するのが良さそう。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman validate
-</span></span><span style="display:flex;"><span>INFO: validate: &#34;2020-03-04 12:55:57&#34; backup and archive log files by CRC
-</span></span><span style="display:flex;"><span>INFO: backup &#34;2020-03-04 12:55:57&#34; is valid
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span></code></pre></div><h3 id="バックアップ後のディレクトリ状態">バックアップ後のディレクトリ状態</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cd /var/lib/pgsql/pg_rman_backup
-</span></span><span style="display:flex;"><span>ls -l
-</span></span></code></pre></div><h3 id="増分バックアップの実施">増分バックアップの実施</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman backup --backup-mode=incremental --with-serverlog
-</span></span><span style="display:flex;"><span>INFO: copying database files
-</span></span><span style="display:flex;"><span>INFO: copying archived WAL files
-</span></span><span style="display:flex;"><span>INFO: copying server log files
-</span></span><span style="display:flex;"><span>INFO: backup complete
-</span></span><span style="display:flex;"><span>INFO: Please execute &#39;pg_rman validate&#39; to verify the files are correctly copied.
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman validate
-</span></span><span style="display:flex;"><span>INFO: validate: &#34;2020-03-04 12:58:38&#34; backup, archive log files and server log files by CRC
-</span></span><span style="display:flex;"><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span></code></pre></div><h3 id="バックアップ後のディレクトリ状態-1">バックアップ後のディレクトリ状態</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cd /var/lib/pgsql/pg_rman_backup
-</span></span><span style="display:flex;"><span>ls -l
-</span></span></code></pre></div><h3 id="バックアップの表示">バックアップの表示</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman show
-</span></span><span style="display:flex;"><span>=====================================================================
-</span></span><span style="display:flex;"><span> StartTime           EndTime              Mode    Size   TLI  Status 
-</span></span><span style="display:flex;"><span>=====================================================================
-</span></span><span style="display:flex;"><span>2020-03-04 12:58:38  2020-03-04 12:58:41  INCR    42MB     1  OK
-</span></span><span style="display:flex;"><span>2020-03-04 12:55:57  2020-03-04 12:56:15  FULL  1078MB     1  OK
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span></code></pre></div><h3 id="リストア前のdbの停止">リストア前のDBの停止</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_ctl stop
-</span></span><span style="display:flex;"><span>waiting for server to shut down.... done
-</span></span><span style="display:flex;"><span>server stopped
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span></code></pre></div><h3 id="dbの破壊">DBの破壊</h3>
-<p>雑にDBを破損させました。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb base]$ pwd
-</span></span><span style="display:flex;"><span>/var/lib/pgsql/10/data/base
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ ls -l
-</span></span><span style="display:flex;"><span>total 0
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ 
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ psql
-</span></span><span style="display:flex;"><span>psql: FATAL:  database &#34;postgres&#34; does not exist
-</span></span><span style="display:flex;"><span>DETAIL:  The database subdirectory &#34;base/13865&#34; is missing.
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ 
-</span></span></code></pre></div><h3 id="前回バックアップ時点の最新までリストア">前回バックアップ時点の最新までリストア</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb ~]$ pg_rman restore
-</span></span><span style="display:flex;"><span>INFO: the recovery target timeline ID is not given
-</span></span><span style="display:flex;"><span>INFO: use timeline ID of current database cluster as recovery target: 1
-</span></span><span style="display:flex;"><span>INFO: calculating timeline branches to be used to recovery target point
-</span></span><span style="display:flex;"><span>INFO: searching latest full backup which can be used as restore start point
-</span></span><span style="display:flex;"><span>INFO: found the full backup can be used as base in recovery: &#34;2020-03-04 12:55:57&#34;
-</span></span><span style="display:flex;"><span>INFO: copying online WAL files and server log files
-</span></span><span style="display:flex;"><span>INFO: clearing restore destination
-</span></span><span style="display:flex;"><span>INFO: validate: &#34;2020-03-04 12:55:57&#34; backup and archive log files by SIZE
-</span></span><span style="display:flex;"><span>INFO: backup &#34;2020-03-04 12:55:57&#34; is valid
-</span></span><span style="display:flex;"><span>INFO: restoring database files from the full mode backup &#34;2020-03-04 12:55:57&#34;
-</span></span><span style="display:flex;"><span>INFO: searching incremental backup to be restored
-</span></span><span style="display:flex;"><span>INFO: validate: &#34;2020-03-04 12:58:38&#34; backup, archive log files and server log files by SIZE
-</span></span><span style="display:flex;"><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
-</span></span><span style="display:flex;"><span>INFO: restoring database files from the incremental mode backup &#34;2020-03-04 12:58:38&#34;
-</span></span><span style="display:flex;"><span>INFO: searching backup which contained archived WAL files to be restored
-</span></span><span style="display:flex;"><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
-</span></span><span style="display:flex;"><span>INFO: restoring WAL files from backup &#34;2020-03-04 12:58:38&#34;
-</span></span><span style="display:flex;"><span>INFO: restoring online WAL files and server log files
-</span></span><span style="display:flex;"><span>INFO: generating recovery.conf
-</span></span><span style="display:flex;"><span>INFO: restore complete
-</span></span><span style="display:flex;"><span>HINT: Recovery will start automatically when the PostgreSQL server is started.
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ 
-</span></span><span style="display:flex;"><span>[postgres@postdb ~]$ pg_ctl status
-</span></span><span style="display:flex;"><span>pg_ctl: no server running
-</span></span></code></pre></div><p>pg_ctl start時のログ・ファイルを確認したところリカバリ処理が走っている。<code>2020-03-04 12:58:40.102645+00</code>時点まで戻ったことが確認出来る。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb log]$ cat postgresql-20200304.log 
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[1] LOG:  database system was interrupted; last known up at 2020-03-04 12:58:38 UTC
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[2] LOG:  starting archive recovery
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[3] LOG:  restored log file &#34;000000010000000000000047&#34; from archive
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[4] LOG:  redo starts at 0/47000028
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[5] LOG:  consistent recovery state reached at 0/470000F8
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17805[6] LOG:  database system is ready to accept read only connections
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:24 UTC]  17807[6] LOG:  restored log file &#34;000000010000000000000048&#34; from archive
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:25 UTC]  17807[7] LOG:  restored log file &#34;000000010000000000000049&#34; from archive
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:25 UTC]  17807[8] LOG:  restored log file &#34;00000001000000000000004A&#34; from archive
-</span></span><span style="display:flex;"><span>cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/archive/00000001000000000000004B’: No such file or directory
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:25 UTC]  17807[9] LOG:  invalid record length at 0/4B000098: wanted 24, got 0
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:25 UTC]  17807[10] LOG:  redo done at 0/4B000028
-</span></span><span style="display:flex;"><span>[2020-03-04 13:05:25 UTC]  17807[11] LOG:  last completed transaction was at log time 2020-03-04 12:58:40.102645+00
-</span></span></code></pre></div><p>物理ファイルもリストアされている。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[postgres@postdb base]$ pwd
-</span></span><span style="display:flex;"><span>/var/lib/pgsql/10/data/base
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ ls -l
-</span></span><span style="display:flex;"><span>total 60
-</span></span><span style="display:flex;"><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 1
-</span></span><span style="display:flex;"><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 13864
-</span></span><span style="display:flex;"><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 13865
-</span></span><span style="display:flex;"><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 16392
-</span></span><span style="display:flex;"><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 16456
-</span></span><span style="display:flex;"><span>[postgres@postdb base]$ find . | more
-</span></span><span style="display:flex;"><span>.
-</span></span><span style="display:flex;"><span>./1
-</span></span><span style="display:flex;"><span>./1/18121
-</span></span><span style="display:flex;"><span>./1/18121_fsm
-</span></span><span style="display:flex;"><span>./1/18121_vm
-</span></span><span style="display:flex;"><span>./1/18124
-</span></span><span style="display:flex;"><span>./1/18124_fsm
-</span></span><span style="display:flex;"><span>./1/18124_vm
-</span></span><span style="display:flex;"><span>./1/18126
-</span></span><span style="display:flex;"><span>./1/18127
-</span></span><span style="display:flex;"><span>./1/18128
-</span></span><span style="display:flex;"><span>./1/18128_fsm
-</span></span><span style="display:flex;"><span>./1/18128_vm
-</span></span><span style="display:flex;"><span>./1/18131
-</span></span></code></pre></div><h3 id="pitr">PITR</h3>
-<p>特定時点まで戻す場合は下記を実行する、</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>pg_rman restore --recovery-target-time &#39;2020-03-04 22:00:00&#39;
-</span></span></code></pre></div><h3 id="pg_rmanのコマンドオプション">pg_rmanのコマンド・オプション</h3>
-<h5 id="usage">Usage</h5>
-<blockquote>
-<p>pg_rman <a href="https://ossc-db.github.io/pg_rman/index-ja.html">https://ossc-db.github.io/pg_rman/index-ja.html</a></p>
-</blockquote>
-<h3 id="参考">参考</h3>
-<blockquote>
-<p>pg_rman (PostgreSQL のバックアップ/リストア管理ツール) <a href="https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/">https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/</a></p>
-</blockquote>
-
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/oracle-plsql-blob-insert.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/postgresql-create-database-locale-error.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">PostgreSQLでja_JP.UTF-8のデータベース作成時のlocaleエラー</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgresql-pg_rman-backup-recovery.html&text=PostgreSQL%E3%81%AEpg_rman%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E3%83%90%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%EF%BC%8F%E3%83%AA%E3%82%AB%E3%83%90%E3%83%AA%E3%82%92%E8%A1%8C%E3%81%86" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgresql-pg_rman-backup-recovery.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/oracle-plsql-blob-insert.html">Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</a></li>
-    
-    <li><a href="/aws-aurora-bytea-insert-binary-data.html">Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</a></li>
-    
-    <li><a href="/oracle-postgresql-transaction-different.html">OracleとPostgreSQLのトランザクション差異について整理する</a></li>
-    
-    <li><a href="/aws-sct-oracle-to-aurora-postgresql-conversion.html">AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</a></li>
-    
-    <li><a href="/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#pg_rmanの概要">pg_rmanの概要</a></li>
-        <li><a href="#pg_rmanのインストール">pg_rmanのインストール</a></li>
-        <li><a href="#postgresqlconfの設定">postgresql.confの設定</a></li>
-        <li><a href="#環境変数編集">環境変数編集</a></li>
-        <li><a href="#バックアップカタログの初期化">バックアップカタログの初期化</a></li>
-        <li><a href="#フルバックアップの取得">フルバックアップの取得</a></li>
-        <li><a href="#バックアップの検証">バックアップの検証</a></li>
-        <li><a href="#バックアップ後のディレクトリ状態">バックアップ後のディレクトリ状態</a></li>
-        <li><a href="#増分バックアップの実施">増分バックアップの実施</a></li>
-        <li><a href="#バックアップ後のディレクトリ状態-1">バックアップ後のディレクトリ状態</a></li>
-        <li><a href="#バックアップの表示">バックアップの表示</a></li>
-        <li><a href="#リストア前のdbの停止">リストア前のDBの停止</a></li>
-        <li><a href="#dbの破壊">DBの破壊</a></li>
-        <li><a href="#前回バックアップ時点の最新までリストア">前回バックアップ時点の最新までリストア</a></li>
-        <li><a href="#pitr">PITR</a></li>
-        <li><a href="#pg_rmanのコマンドオプション">pg_rmanのコマンド・オプション</a>
-          <ul>
-            <li></li>
-          </ul>
-        </li>
-        <li><a href="#参考">参考</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う | my opinion is my own</title><meta name=title content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う"><meta name=description content><meta name=keywords content="PostgreSQL,"><meta property="og:title" content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/postgresql-pg_rman-backup-recovery.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2020-06-15T00:00:00+00:00"><meta property="article:modified_time" content="2020-06-15T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う"><meta name=twitter:description content><meta itemprop=name content="PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う"><meta itemprop=description content><meta itemprop=datePublished content="2020-06-15T00:00:00+00:00"><meta itemprop=dateModified content="2020-06-15T00:00:00+00:00"><meta itemprop=wordCount content="1092"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="PostgreSQL,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-icon loading=lazy></div><h1>PostgreSQLのpg_rmanを使用してバックアップ／リカバリを行う</h1><div class=article-meta><time class=article-date datetime=2020-06-15>2020/06/15 に公開</time>
+<span class=reading-time>📖 約2分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></div><div class=article-content><h3 id=pg_rmanの概要>pg_rmanの概要</h3><p>pg_rmanの手順メモ。rmanと名前についている通り、Oracle の Recovery Managerを意識した機能です。標準機能では使用できない増分バックアップが出来ることでバックアップの短縮に繋がるはず。</p><ul><li>全体バックアップに加え、増分バックアップが可能</li><li>バックアップの圧縮が可能</li><li>バックアップの世代管理やバックアップ一覧を表示できる</li><li>バックアップの対象はデータベースクラスタの他にアーカイブログ、サーバログが含めることができる</li><li>タイムライン指定、リカバリしたい日付時刻指定が可能</li><li>データベースクラスタ外のテーブルスペースを含めたバックアップが可能</li></ul><h3 id=pg_rmanのインストール>pg_rmanのインストール</h3><p>下記のgithubのリポジトリから最新のバージョンをインストールします。</p><blockquote><p>Releases · ossc-db/pg_rman <a href=https://github.com/ossc-db/pg_rman/releases>https://github.com/ossc-db/pg_rman/releases</a></p></blockquote><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>sudo wget https://github.com/ossc-db/pg_rman/releases/download/V1.3.9/pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
+</span></span><span style=display:flex><span>sudo rpm -ivh pg_rman-1.3.9-1.pg10.rhel7.x86_64.rpm
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ pg_rman --help
+</span></span><span style=display:flex><span>pg_rman manage backup/recovery of PostgreSQL database.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Usage:
+</span></span><span style=display:flex><span>  pg_rman OPTION init
+</span></span><span style=display:flex><span>  pg_rman OPTION backup
+</span></span><span style=display:flex><span>  pg_rman OPTION restore
+</span></span><span style=display:flex><span>  pg_rman OPTION show <span style=color:#ff79c6>[</span>DATE<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>  pg_rman OPTION show detail <span style=color:#ff79c6>[</span>DATE<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>  pg_rman OPTION validate <span style=color:#ff79c6>[</span>DATE<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>  pg_rman OPTION delete DATE
+</span></span><span style=display:flex><span>  pg_rman OPTION purge
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Common Options:
+</span></span><span style=display:flex><span>  -D, --pgdata<span style=color:#ff79c6>=</span>PATH         location of the database storage area
+</span></span><span style=display:flex><span>  -A, --arclog-path<span style=color:#ff79c6>=</span>PATH    location of archive WAL storage area
+</span></span><span style=display:flex><span>  -S, --srvlog-path<span style=color:#ff79c6>=</span>PATH    location of server log storage area
+</span></span><span style=display:flex><span>  -B, --backup-path<span style=color:#ff79c6>=</span>PATH    location of the backup storage area
+</span></span><span style=display:flex><span>  -c, --check               show what would have been <span style=color:#ff79c6>done</span>
+</span></span><span style=display:flex><span>  -v, --verbose             show what detail messages
+</span></span><span style=display:flex><span>  -P, --progress            show progress of processed files
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Backup options:
+</span></span><span style=display:flex><span>  -b, --backup-mode<span style=color:#ff79c6>=</span>MODE    full, incremental, or archive
+</span></span><span style=display:flex><span>  -s, --with-serverlog      also backup server log files
+</span></span><span style=display:flex><span>  -Z, --compress-data       compress data backup with zlib
+</span></span><span style=display:flex><span>  -C, --smooth-checkpoint   <span style=color:#ff79c6>do</span> smooth checkpoint before backup
+</span></span><span style=display:flex><span>  -F, --full-backup-on-error   switch to full backup mode
+</span></span><span style=display:flex><span>                               <span style=color:#ff79c6>if</span> pg_rman cannot find validate full backup
+</span></span><span style=display:flex><span>                               on current timeline
+</span></span><span style=display:flex><span>      NOTE: this option is only used in --backup-mode<span style=color:#ff79c6>=</span>incremental or archive.
+</span></span><span style=display:flex><span>  --keep-data-generations<span style=color:#ff79c6>=</span>NUM keep NUM generations of full data backup
+</span></span><span style=display:flex><span>  --keep-data-days<span style=color:#ff79c6>=</span>NUM        keep enough data backup to recover to N days ago
+</span></span><span style=display:flex><span>  --keep-arclog-files<span style=color:#ff79c6>=</span>NUM   keep NUM of archived WAL
+</span></span><span style=display:flex><span>  --keep-arclog-days<span style=color:#ff79c6>=</span>DAY    keep archived WAL modified in DAY days
+</span></span><span style=display:flex><span>  --keep-srvlog-files<span style=color:#ff79c6>=</span>NUM   keep NUM of serverlogs
+</span></span><span style=display:flex><span>  --keep-srvlog-days<span style=color:#ff79c6>=</span>DAY    keep serverlog modified in DAY days
+</span></span><span style=display:flex><span>  --standby-host<span style=color:#ff79c6>=</span>HOSTNAME   standby host when taking backup from standby
+</span></span><span style=display:flex><span>  --standby-port<span style=color:#ff79c6>=</span>PORT       standby port when taking backup from standby
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Restore options:
+</span></span><span style=display:flex><span>  --recovery-target-time    <span style=color:#8be9fd;font-style:italic>time</span> stamp up to which recovery will proceed
+</span></span><span style=display:flex><span>  --recovery-target-xid     transaction ID up to which recovery will proceed
+</span></span><span style=display:flex><span>  --recovery-target-inclusive whether we stop just after the recovery target
+</span></span><span style=display:flex><span>  --recovery-target-timeline  recovering into a particular timeline
+</span></span><span style=display:flex><span>  --hard-copy                 copying archivelog not symbolic link
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Catalog options:
+</span></span><span style=display:flex><span>  -a, --show-all            show deleted backup too
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Delete options:
+</span></span><span style=display:flex><span>  -f, --force               forcibly delete backup older than given DATE
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Connection options:
+</span></span><span style=display:flex><span>  -d, --dbname<span style=color:#ff79c6>=</span>DBNAME       database to connect
+</span></span><span style=display:flex><span>  -h, --host<span style=color:#ff79c6>=</span>HOSTNAME       database server host or socket directory
+</span></span><span style=display:flex><span>  -p, --port<span style=color:#ff79c6>=</span>PORT           database server port
+</span></span><span style=display:flex><span>  -U, --username<span style=color:#ff79c6>=</span>USERNAME   user name to connect as
+</span></span><span style=display:flex><span>  -w, --no-password         never prompt <span style=color:#ff79c6>for</span> password
+</span></span><span style=display:flex><span>  -W, --password            force password prompt
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Generic options:
+</span></span><span style=display:flex><span>  -q, --quiet               don&#39;t show any INFO or DEBUG messages
+</span></span><span style=display:flex><span>  --debug                   show DEBUG messages
+</span></span><span style=display:flex><span>  --help                    show this help, <span style=color:#ff79c6>then</span> <span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span><span style=display:flex><span>  --version                 output version information, <span style=color:#ff79c6>then</span> <span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Read the website <span style=color:#ff79c6>for</span> details. &lt;http://github.com/ossc-db/pg_rman&gt;
+</span></span><span style=display:flex><span>Report bugs to &lt;http://github.com/ossc-db/pg_rman/issues&gt;.
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ 
+</span></span></code></pre></div><h3 id=postgresqlconfの設定>postgresql.confの設定</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>archive_mode = on
+</span></span><span style=display:flex><span>archive_command = &#39;cp %p /var/lib/pgsql/10/data/pg_wal/archive/%f&#39;
+</span></span><span style=display:flex><span>wal_level = archive
+</span></span><span style=display:flex><span>log_directory = &#39;pg_log&#39;
+</span></span></code></pre></div><h3 id=環境変数編集>環境変数編集</h3><p>BACKUP_PATHを下記の通りとします。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>$ export BACKUP_PATH=/var/lib/pgsql/pg_rman_backup
+</span></span></code></pre></div><h3 id=バックアップカタログの初期化>バックアップカタログの初期化</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_rman init
+</span></span><span style=display:flex><span>INFO: ARCLOG_PATH is set to &#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;
+</span></span><span style=display:flex><span>INFO: SRVLOG_PATH is set to &#39;/var/lib/pgsql/10/data/log&#39;
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span></code></pre></div><h3 id=フルバックアップの取得>フルバックアップの取得</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ pg_rman init
+</span></span><span style=display:flex><span>INFO: ARCLOG_PATH is <span style=color:#8be9fd;font-style:italic>set</span> to <span style=color:#f1fa8c>&#39;/var/lib/pgsql/10/data/pg_wal/archive&#39;</span>
+</span></span><span style=display:flex><span>INFO: SRVLOG_PATH is <span style=color:#8be9fd;font-style:italic>set</span> to <span style=color:#f1fa8c>&#39;/var/lib/pgsql/10/data/log&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ pg_rman backup --backup-mode<span style=color:#ff79c6>=</span>full
+</span></span><span style=display:flex><span>INFO: copying database files
+</span></span><span style=display:flex><span>INFO: copying archived WAL files
+</span></span><span style=display:flex><span>INFO: backup <span style=color:#8be9fd;font-style:italic>complete</span>
+</span></span><span style=display:flex><span>INFO: Please execute <span style=color:#f1fa8c>&#39;pg_rman validate&#39;</span> to verify the files are correctly copied.
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>postgres@postdb ~<span style=color:#ff79c6>]</span>$ 
+</span></span></code></pre></div><h3 id=バックアップの検証>バックアップの検証</h3><p>validateを実施しないとリストア出来ない。バックアップ後すぐに実施するのが良さそう。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_rman validate
+</span></span><span style=display:flex><span>INFO: validate: &#34;2020-03-04 12:55:57&#34; backup and archive log files by CRC
+</span></span><span style=display:flex><span>INFO: backup &#34;2020-03-04 12:55:57&#34; is valid
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span></code></pre></div><h3 id=バックアップ後のディレクトリ状態>バックアップ後のディレクトリ状態</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>cd /var/lib/pgsql/pg_rman_backup
+</span></span><span style=display:flex><span>ls -l
+</span></span></code></pre></div><h3 id=増分バックアップの実施>増分バックアップの実施</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_rman backup --backup-mode=incremental --with-serverlog
+</span></span><span style=display:flex><span>INFO: copying database files
+</span></span><span style=display:flex><span>INFO: copying archived WAL files
+</span></span><span style=display:flex><span>INFO: copying server log files
+</span></span><span style=display:flex><span>INFO: backup complete
+</span></span><span style=display:flex><span>INFO: Please execute &#39;pg_rman validate&#39; to verify the files are correctly copied.
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ pg_rman validate
+</span></span><span style=display:flex><span>INFO: validate: &#34;2020-03-04 12:58:38&#34; backup, archive log files and server log files by CRC
+</span></span><span style=display:flex><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span></code></pre></div><h3 id=バックアップ後のディレクトリ状態-1>バックアップ後のディレクトリ状態</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>cd /var/lib/pgsql/pg_rman_backup
+</span></span><span style=display:flex><span>ls -l
+</span></span></code></pre></div><h3 id=バックアップの表示>バックアップの表示</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_rman show
+</span></span><span style=display:flex><span>=====================================================================
+</span></span><span style=display:flex><span> StartTime           EndTime              Mode    Size   TLI  Status 
+</span></span><span style=display:flex><span>=====================================================================
+</span></span><span style=display:flex><span>2020-03-04 12:58:38  2020-03-04 12:58:41  INCR    42MB     1  OK
+</span></span><span style=display:flex><span>2020-03-04 12:55:57  2020-03-04 12:56:15  FULL  1078MB     1  OK
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span></code></pre></div><h3 id=リストア前のdbの停止>リストア前のDBの停止</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_ctl stop
+</span></span><span style=display:flex><span>waiting for server to shut down.... done
+</span></span><span style=display:flex><span>server stopped
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span></code></pre></div><h3 id=dbの破壊>DBの破壊</h3><p>雑にDBを破損させました。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb base]$ pwd
+</span></span><span style=display:flex><span>/var/lib/pgsql/10/data/base
+</span></span><span style=display:flex><span>[postgres@postdb base]$ ls -l
+</span></span><span style=display:flex><span>total 0
+</span></span><span style=display:flex><span>[postgres@postdb base]$ 
+</span></span><span style=display:flex><span>[postgres@postdb base]$ psql
+</span></span><span style=display:flex><span>psql: FATAL:  database &#34;postgres&#34; does not exist
+</span></span><span style=display:flex><span>DETAIL:  The database subdirectory &#34;base/13865&#34; is missing.
+</span></span><span style=display:flex><span>[postgres@postdb base]$ 
+</span></span></code></pre></div><h3 id=前回バックアップ時点の最新までリストア>前回バックアップ時点の最新までリストア</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb ~]$ pg_rman restore
+</span></span><span style=display:flex><span>INFO: the recovery target timeline ID is not given
+</span></span><span style=display:flex><span>INFO: use timeline ID of current database cluster as recovery target: 1
+</span></span><span style=display:flex><span>INFO: calculating timeline branches to be used to recovery target point
+</span></span><span style=display:flex><span>INFO: searching latest full backup which can be used as restore start point
+</span></span><span style=display:flex><span>INFO: found the full backup can be used as base in recovery: &#34;2020-03-04 12:55:57&#34;
+</span></span><span style=display:flex><span>INFO: copying online WAL files and server log files
+</span></span><span style=display:flex><span>INFO: clearing restore destination
+</span></span><span style=display:flex><span>INFO: validate: &#34;2020-03-04 12:55:57&#34; backup and archive log files by SIZE
+</span></span><span style=display:flex><span>INFO: backup &#34;2020-03-04 12:55:57&#34; is valid
+</span></span><span style=display:flex><span>INFO: restoring database files from the full mode backup &#34;2020-03-04 12:55:57&#34;
+</span></span><span style=display:flex><span>INFO: searching incremental backup to be restored
+</span></span><span style=display:flex><span>INFO: validate: &#34;2020-03-04 12:58:38&#34; backup, archive log files and server log files by SIZE
+</span></span><span style=display:flex><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
+</span></span><span style=display:flex><span>INFO: restoring database files from the incremental mode backup &#34;2020-03-04 12:58:38&#34;
+</span></span><span style=display:flex><span>INFO: searching backup which contained archived WAL files to be restored
+</span></span><span style=display:flex><span>INFO: backup &#34;2020-03-04 12:58:38&#34; is valid
+</span></span><span style=display:flex><span>INFO: restoring WAL files from backup &#34;2020-03-04 12:58:38&#34;
+</span></span><span style=display:flex><span>INFO: restoring online WAL files and server log files
+</span></span><span style=display:flex><span>INFO: generating recovery.conf
+</span></span><span style=display:flex><span>INFO: restore complete
+</span></span><span style=display:flex><span>HINT: Recovery will start automatically when the PostgreSQL server is started.
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ 
+</span></span><span style=display:flex><span>[postgres@postdb ~]$ pg_ctl status
+</span></span><span style=display:flex><span>pg_ctl: no server running
+</span></span></code></pre></div><p>pg_ctl start時のログ・ファイルを確認したところリカバリ処理が走っている。<code>2020-03-04 12:58:40.102645+00</code>時点まで戻ったことが確認出来る。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb log]$ cat postgresql-20200304.log 
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[1] LOG:  database system was interrupted; last known up at 2020-03-04 12:58:38 UTC
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[2] LOG:  starting archive recovery
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[3] LOG:  restored log file &#34;000000010000000000000047&#34; from archive
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[4] LOG:  redo starts at 0/47000028
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[5] LOG:  consistent recovery state reached at 0/470000F8
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17805[6] LOG:  database system is ready to accept read only connections
+</span></span><span style=display:flex><span>[2020-03-04 13:05:24 UTC]  17807[6] LOG:  restored log file &#34;000000010000000000000048&#34; from archive
+</span></span><span style=display:flex><span>[2020-03-04 13:05:25 UTC]  17807[7] LOG:  restored log file &#34;000000010000000000000049&#34; from archive
+</span></span><span style=display:flex><span>[2020-03-04 13:05:25 UTC]  17807[8] LOG:  restored log file &#34;00000001000000000000004A&#34; from archive
+</span></span><span style=display:flex><span>cp: cannot stat ‘/var/lib/pgsql/10/data/pg_wal/archive/00000001000000000000004B’: No such file or directory
+</span></span><span style=display:flex><span>[2020-03-04 13:05:25 UTC]  17807[9] LOG:  invalid record length at 0/4B000098: wanted 24, got 0
+</span></span><span style=display:flex><span>[2020-03-04 13:05:25 UTC]  17807[10] LOG:  redo done at 0/4B000028
+</span></span><span style=display:flex><span>[2020-03-04 13:05:25 UTC]  17807[11] LOG:  last completed transaction was at log time 2020-03-04 12:58:40.102645+00
+</span></span></code></pre></div><p>物理ファイルもリストアされている。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[postgres@postdb base]$ pwd
+</span></span><span style=display:flex><span>/var/lib/pgsql/10/data/base
+</span></span><span style=display:flex><span>[postgres@postdb base]$ ls -l
+</span></span><span style=display:flex><span>total 60
+</span></span><span style=display:flex><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 1
+</span></span><span style=display:flex><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 13864
+</span></span><span style=display:flex><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 13865
+</span></span><span style=display:flex><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 16392
+</span></span><span style=display:flex><span>drwx------ 2 postgres postgres 8192 Mar  4 13:03 16456
+</span></span><span style=display:flex><span>[postgres@postdb base]$ find . | more
+</span></span><span style=display:flex><span>.
+</span></span><span style=display:flex><span>./1
+</span></span><span style=display:flex><span>./1/18121
+</span></span><span style=display:flex><span>./1/18121_fsm
+</span></span><span style=display:flex><span>./1/18121_vm
+</span></span><span style=display:flex><span>./1/18124
+</span></span><span style=display:flex><span>./1/18124_fsm
+</span></span><span style=display:flex><span>./1/18124_vm
+</span></span><span style=display:flex><span>./1/18126
+</span></span><span style=display:flex><span>./1/18127
+</span></span><span style=display:flex><span>./1/18128
+</span></span><span style=display:flex><span>./1/18128_fsm
+</span></span><span style=display:flex><span>./1/18128_vm
+</span></span><span style=display:flex><span>./1/18131
+</span></span></code></pre></div><h3 id=pitr>PITR</h3><p>特定時点まで戻す場合は下記を実行する、</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>pg_rman restore --recovery-target-time &#39;2020-03-04 22:00:00&#39;
+</span></span></code></pre></div><h3 id=pg_rmanのコマンドオプション>pg_rmanのコマンド・オプション</h3><h5 id=usage>Usage</h5><blockquote><p>pg_rman <a href=https://ossc-db.github.io/pg_rman/index-ja.html>https://ossc-db.github.io/pg_rman/index-ja.html</a></p></blockquote><h3 id=参考>参考</h3><blockquote><p>pg_rman (PostgreSQL のバックアップ/リストア管理ツール) <a href=https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/>https://www.sraoss.co.jp/tech-blog/pgsql/pg_rman/</a></p></blockquote></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/oracle-plsql-blob-insert.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</span></a>
+<a href=https://zatoima.github.io/postgresql-create-database-locale-error.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>PostgreSQLでja_JP.UTF-8のデータベース作成時のlocaleエラー</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgresql-pg_rman-backup-recovery.html&text=PostgreSQL%E3%81%AEpg_rman%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E3%83%90%E3%83%83%E3%82%AF%E3%82%A2%E3%83%83%E3%83%97%EF%BC%8F%E3%83%AA%E3%82%AB%E3%83%90%E3%83%AA%E3%82%92%E8%A1%8C%E3%81%86" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgresql-pg_rman-backup-recovery.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/oracle-plsql-blob-insert.html>Oracle PL/SQLでバイナリデータ・ファイルをBLOBに挿入する</a></li><li><a href=/aws-aurora-bytea-insert-binary-data.html>Aurora(PostgreSQL)のbytea列にバイナリデータをpythonでインサートする</a></li><li><a href=/oracle-postgresql-transaction-different.html>OracleとPostgreSQLのトランザクション差異について整理する</a></li><li><a href=/aws-sct-oracle-to-aurora-postgresql-conversion.html>AWS Schema Conversion Toolを使用したOracleからAurora(PostgreSQL)への変換結果</a></li><li><a href=/aws-aurora-rds-s3-import.html>S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#pg_rmanの概要>pg_rmanの概要</a></li><li><a href=#pg_rmanのインストール>pg_rmanのインストール</a></li><li><a href=#postgresqlconfの設定>postgresql.confの設定</a></li><li><a href=#環境変数編集>環境変数編集</a></li><li><a href=#バックアップカタログの初期化>バックアップカタログの初期化</a></li><li><a href=#フルバックアップの取得>フルバックアップの取得</a></li><li><a href=#バックアップの検証>バックアップの検証</a></li><li><a href=#バックアップ後のディレクトリ状態>バックアップ後のディレクトリ状態</a></li><li><a href=#増分バックアップの実施>増分バックアップの実施</a></li><li><a href=#バックアップ後のディレクトリ状態-1>バックアップ後のディレクトリ状態</a></li><li><a href=#バックアップの表示>バックアップの表示</a></li><li><a href=#リストア前のdbの停止>リストア前のDBの停止</a></li><li><a href=#dbの破壊>DBの破壊</a></li><li><a href=#前回バックアップ時点の最新までリストア>前回バックアップ時点の最新までリストア</a></li><li><a href=#pitr>PITR</a></li><li><a href=#pg_rmanのコマンドオプション>pg_rmanのコマンド・オプション</a><ul><li></li></ul></li><li><a href=#参考>参考</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

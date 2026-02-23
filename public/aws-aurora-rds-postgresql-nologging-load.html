@@ -1,331 +1,65 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード | my opinion is my own</title>
-<meta name="title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード" />
-<meta name="description" content="" />
-<meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
-
-
-<meta property="og:title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-aurora-rds-postgresql-nologging-load.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2021-01-27T00:00:00+00:00" />
-<meta property="article:modified_time" content="2021-01-27T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2021-01-27T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2021-01-27T00:00:00+00:00" />
-<meta itemprop="wordCount" content="220"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データ …</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
-        <h1>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2021-01-27'>
-            2021/01/27 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-          <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-          
-          <a href="https://zatoima.github.io/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
-          
-          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h1 id="unloggedテーブルとは">UNLOGGEDテーブルとは</h1>
-<p>UNLOGGEDテーブルはOracle Databaseで言うところのUNLOGGINGテーブルでWALに書き出さないテーブルとなり、高速化が見込める。一方、クラッシュ時には当然WALにデータがないので、リカバリが出来ない。</p>
-<p>とは言え、データロード等のリトライ可能な処理には有効なので、効果含めて確認してみる</p>
-<h1 id="設定方法">設定方法</h1>
-<p>テーブル作成時にオプションを付けるかALTER TABLE文を使用するか。今回はALTER TABLEで実施してみる</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ALTER TABLE aozora SET UNLOGGED;
-</span></span><span style="display:flex;"><span>ALTER TABLE aozora SET LOGGED;
-</span></span></code></pre></div><blockquote>
-<p>CREATE TABLE <a href="https://www.postgresql.jp/document/12/html/sql-createtable.html">https://www.postgresql.jp/document/12/html/sql-createtable.html</a></p>
-<p>ALTER TABLE <a href="https://www.postgresql.jp/document/12/html/sql-altertable.html">https://www.postgresql.jp/document/12/html/sql-altertable.html</a></p>
-</blockquote>
-<h1 id="テーブル作成">テーブル作成</h1>
-<p>青空文庫のテキストデータをロード出来るようにテーブルを準備</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE TABLE aozora(file VARCHAR(30),num INT,row INT,word TEXT,subtype1 VARCHAR(30),subtype2 VARCHAR(30),subtype3 VARCHAR(30),subtype4 VARCHAR(10),conjtype VARCHAR(15),conjugation VARCHAR(15),basic TEXT,ruby TEXT,pronunce TEXT );
-</span></span><span style="display:flex;"><span>ALTER TABLE aozora SET UNLOGGED;
-</span></span></code></pre></div><p>作成後にテーブル定義を確認すると<code>Unlogged table &quot;public.aozora&quot;</code>と表示されるようになっている。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>postgres=&gt; \d aozora
-</span></span><span style="display:flex;"><span>                    Unlogged table &#34;public.aozora&#34;
-</span></span><span style="display:flex;"><span>   Column    |         Type          | Collation | Nullable | Default 
-</span></span><span style="display:flex;"><span>-------------+-----------------------+-----------+----------+---------
-</span></span><span style="display:flex;"><span> file        | character varying(30) |           |          | 
-</span></span><span style="display:flex;"><span> num         | integer               |           |          | 
-</span></span><span style="display:flex;"><span> row         | integer               |           |          | 
-</span></span><span style="display:flex;"><span> word        | text                  |           |          | 
-</span></span><span style="display:flex;"><span> subtype1    | character varying(30) |           |          | 
-</span></span><span style="display:flex;"><span> subtype2    | character varying(30) |           |          | 
-</span></span><span style="display:flex;"><span> subtype3    | character varying(30) |           |          | 
-</span></span><span style="display:flex;"><span> subtype4    | character varying(10) |           |          | 
-</span></span><span style="display:flex;"><span> conjtype    | character varying(15) |           |          | 
-</span></span><span style="display:flex;"><span> conjugation | character varying(15) |           |          | 
-</span></span><span style="display:flex;"><span> basic       | text                  |           |          | 
-</span></span><span style="display:flex;"><span> ruby        | text                  |           |          | 
-</span></span><span style="display:flex;"><span> pronunce    | text                  |           |          | 
-</span></span></code></pre></div><h1 id="結果">結果</h1>
-<p>約3割ほどUNLOGGEDテーブルの方が早い結果に。</p>
-<table>
-<thead>
-<tr>
-<th>テーブル種別</th>
-<th>時間</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>UNLOGGEDテーブル</td>
-<td>0:04:41</td>
-</tr>
-<tr>
-<td>LOGGEDテーブル</td>
-<td>0:06:11</td>
-</tr>
-</tbody>
-</table>
-<h4 id="unloggedテーブルの場合">UNLOGGEDテーブルの場合</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
-</span></span><span style="display:flex;"><span>COPY 87701673
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>real	4m41.921s
-</span></span><span style="display:flex;"><span>user	0m19.347s
-</span></span><span style="display:flex;"><span>sys	0m6.618s
-</span></span></code></pre></div><h4 id="loggedテーブルの場合">LOGGEDテーブルの場合</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
-</span></span><span style="display:flex;"><span>COPY 87701673
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>real	6m11.123s
-</span></span><span style="display:flex;"><span>user	0m18.744s
-</span></span><span style="display:flex;"><span>sys	0m6.738s
-</span></span></code></pre></div>
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/aws-systems-manager-memo-for-devops-pro.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">AWS Systems Managerの殴り書きメモ</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/aws-elastic-beanstalk-memo.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">AWS Elastic Beanstalkの殴り書きメモ</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-aurora-rds-postgresql-nologging-load.html&text=PostgreSQL%E3%81%A7NOLOGGING%E3%83%86%E3%83%BC%E3%83%96%E3%83%AB%EF%BC%88UNLOGGED%EF%BC%89%E3%81%AB%E5%A4%A7%E9%87%8F%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%83%AD%E3%83%BC%E3%83%89" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-aurora-rds-postgresql-nologging-load.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-aurora-rds-postgresql-parameter-change.html">RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</a></li>
-    
-    <li><a href="/aws-aurora-rds-postgresql-parameter-modifiable.html">RDSとAurora PostgreSQLで変更不可なパラメータ一覧</a></li>
-    
-    <li><a href="/aws-aurora-rds-s3-import.html">S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li>
-    
-    <li><a href="/aws-aurora-rds-log-download.html">指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li>
-    
-    <li><a href="/postgresql-aozora-bunko-data-import.html">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-  <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-  
-  <a href="https://zatoima.github.io/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
-  
-  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li>
-          <ul>
-            <li><a href="#unloggedテーブルの場合">UNLOGGEDテーブルの場合</a></li>
-            <li><a href="#loggedテーブルの場合">LOGGEDテーブルの場合</a></li>
-          </ul>
-        </li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード | my opinion is my own</title><meta name=title content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード"><meta name=description content><meta name=keywords content="AWS,Aurora,RDS,PostgreSQL,"><meta property="og:title" content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/aws-aurora-rds-postgresql-nologging-load.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2021-01-27T00:00:00+00:00"><meta property="article:modified_time" content="2021-01-27T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード"><meta name=twitter:description content><meta itemprop=name content="PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード"><meta itemprop=description content><meta itemprop=datePublished content="2021-01-27T00:00:00+00:00"><meta itemprop=dateModified content="2021-01-27T00:00:00+00:00"><meta itemprop=wordCount content="220"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="AWS,Aurora,RDS,PostgreSQL,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データ …</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/aws.svg alt=AWS class=tag-icon loading=lazy></div><h1>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</h1><div class=article-meta><time class=article-date datetime=2021-01-27>2021/01/27 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/rds/ class=tag-badge><img src=/images/tags/rds.svg alt=RDS class=tag-badge-icon loading=lazy>RDS</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></div><div class=article-content><h1 id=unloggedテーブルとは>UNLOGGEDテーブルとは</h1><p>UNLOGGEDテーブルはOracle Databaseで言うところのUNLOGGINGテーブルでWALに書き出さないテーブルとなり、高速化が見込める。一方、クラッシュ時には当然WALにデータがないので、リカバリが出来ない。</p><p>とは言え、データロード等のリトライ可能な処理には有効なので、効果含めて確認してみる</p><h1 id=設定方法>設定方法</h1><p>テーブル作成時にオプションを付けるかALTER TABLE文を使用するか。今回はALTER TABLEで実施してみる</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>ALTER TABLE aozora SET UNLOGGED;
+</span></span><span style=display:flex><span>ALTER TABLE aozora SET LOGGED;
+</span></span></code></pre></div><blockquote><p>CREATE TABLE <a href=https://www.postgresql.jp/document/12/html/sql-createtable.html>https://www.postgresql.jp/document/12/html/sql-createtable.html</a></p><p>ALTER TABLE <a href=https://www.postgresql.jp/document/12/html/sql-altertable.html>https://www.postgresql.jp/document/12/html/sql-altertable.html</a></p></blockquote><h1 id=テーブル作成>テーブル作成</h1><p>青空文庫のテキストデータをロード出来るようにテーブルを準備</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>CREATE TABLE aozora(file VARCHAR(30),num INT,row INT,word TEXT,subtype1 VARCHAR(30),subtype2 VARCHAR(30),subtype3 VARCHAR(30),subtype4 VARCHAR(10),conjtype VARCHAR(15),conjugation VARCHAR(15),basic TEXT,ruby TEXT,pronunce TEXT );
+</span></span><span style=display:flex><span>ALTER TABLE aozora SET UNLOGGED;
+</span></span></code></pre></div><p>作成後にテーブル定義を確認すると<code>Unlogged table "public.aozora"</code>と表示されるようになっている。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>postgres=&gt; \d aozora
+</span></span><span style=display:flex><span>                    Unlogged table &#34;public.aozora&#34;
+</span></span><span style=display:flex><span>   Column    |         Type          | Collation | Nullable | Default 
+</span></span><span style=display:flex><span>-------------+-----------------------+-----------+----------+---------
+</span></span><span style=display:flex><span> file        | character varying(30) |           |          | 
+</span></span><span style=display:flex><span> num         | integer               |           |          | 
+</span></span><span style=display:flex><span> row         | integer               |           |          | 
+</span></span><span style=display:flex><span> word        | text                  |           |          | 
+</span></span><span style=display:flex><span> subtype1    | character varying(30) |           |          | 
+</span></span><span style=display:flex><span> subtype2    | character varying(30) |           |          | 
+</span></span><span style=display:flex><span> subtype3    | character varying(30) |           |          | 
+</span></span><span style=display:flex><span> subtype4    | character varying(10) |           |          | 
+</span></span><span style=display:flex><span> conjtype    | character varying(15) |           |          | 
+</span></span><span style=display:flex><span> conjugation | character varying(15) |           |          | 
+</span></span><span style=display:flex><span> basic       | text                  |           |          | 
+</span></span><span style=display:flex><span> ruby        | text                  |           |          | 
+</span></span><span style=display:flex><span> pronunce    | text                  |           |          | 
+</span></span></code></pre></div><h1 id=結果>結果</h1><p>約3割ほどUNLOGGEDテーブルの方が早い結果に。</p><table><thead><tr><th>テーブル種別</th><th>時間</th></tr></thead><tbody><tr><td>UNLOGGEDテーブル</td><td>0:04:41</td></tr><tr><td>LOGGEDテーブル</td><td>0:06:11</td></tr></tbody></table><h4 id=unloggedテーブルの場合>UNLOGGEDテーブルの場合</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
+</span></span><span style=display:flex><span>COPY 87701673
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>real	4m41.921s
+</span></span><span style=display:flex><span>user	0m19.347s
+</span></span><span style=display:flex><span>sys	0m6.618s
+</span></span></code></pre></div><h4 id=loggedテーブルの場合>LOGGEDテーブルの場合</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ time psql -h aurorav1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;COPY aozora(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34; &lt; /home/ec2-user/utf8_all.csv
+</span></span><span style=display:flex><span>COPY 87701673
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>real	6m11.123s
+</span></span><span style=display:flex><span>user	0m18.744s
+</span></span><span style=display:flex><span>sys	0m6.738s
+</span></span></code></pre></div></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/aws-systems-manager-memo-for-devops-pro.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>AWS Systems Managerの殴り書きメモ</span></a>
+<a href=https://zatoima.github.io/aws-elastic-beanstalk-memo.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>AWS Elastic Beanstalkの殴り書きメモ</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-aurora-rds-postgresql-nologging-load.html&text=PostgreSQL%E3%81%A7NOLOGGING%E3%83%86%E3%83%BC%E3%83%96%E3%83%AB%EF%BC%88UNLOGGED%EF%BC%89%E3%81%AB%E5%A4%A7%E9%87%8F%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%83%AD%E3%83%BC%E3%83%89" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-aurora-rds-postgresql-nologging-load.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-aurora-rds-postgresql-parameter-change.html>RDSとAuroraで変更を検討するパラメータ(PostgreSQL)</a></li><li><a href=/aws-aurora-rds-postgresql-parameter-modifiable.html>RDSとAurora PostgreSQLで変更不可なパラメータ一覧</a></li><li><a href=/aws-aurora-rds-s3-import.html>S3からRDS/Aurora(PostgreSQL)にCSVファイルをインポートする</a></li><li><a href=/aws-aurora-rds-log-download.html>指定したRDS／AuroraのログをCLIで一括ダウンロードする</a></li><li><a href=/postgresql-aozora-bunko-data-import.html>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/rds/ class=tag-badge><img src=/images/tags/rds.svg alt=RDS class=tag-badge-icon loading=lazy>RDS</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><ul><li><a href=#unloggedテーブルの場合>UNLOGGEDテーブルの場合</a></li><li><a href=#loggedテーブルの場合>LOGGEDテーブルの場合</a></li></ul></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

@@ -1,334 +1,84 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする | my opinion is my own</title>
-<meta name="title" content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする" />
-<meta name="description" content="" />
-<meta name="keywords" content="PostgreSQL,AWS,Aurora,RDS," />
-
-
-<meta property="og:title" content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/postgresql-aozora-bunko-data-import.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2020-05-17T00:00:00+00:00" />
-<meta property="article:modified_time" content="2020-05-17T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2020-05-17T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2020-05-17T00:00:00+00:00" />
-<meta itemprop="wordCount" content="153"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="PostgreSQL,AWS,Aurora,RDS," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-icon" loading="lazy"></div>
-        <h1>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2020-05-17'>
-            2020/05/17 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-          <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-          
-          <a href="https://zatoima.github.io/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="はじめに">はじめに</h3>
-<p>形態素解析データを使用した分析をPostgreSQL上で実施したく、AWS上のRDS(PostgreSQL)へのロード方法をメモ。形態素解析データについてはこちらを使用させて頂きました。</p>
-<blockquote>
-<p>青空文庫形態素解析データ集 <a href="http://aozora-word.hahasoha.net/">http://aozora-word.hahasoha.net/</a></p>
-</blockquote>
-<h3 id="対象データ">対象データ</h3>
-<p>全データが含まれているこちらのファイルをPostgreSQLにロードすることにしました。</p>
-<blockquote>
-<p><a href="http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz">http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz</a></p>
-</blockquote>
-<p>こちらには青空文庫の全文章が下記のように形態素解析済のデータが格納されています。87701673行、ファイルサイズは約6GB。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>1000_15021.html,1,1,一,名詞,数,,,,,一,イチ,イチ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,1,「,記号,括弧開,,,,,「,「,「
-</span></span><span style="display:flex;"><span>1000_15021.html,2,2,むかし,名詞,副詞可能,,,,,むかし,ムカシ,ムカシ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,3,者,名詞,接尾,一般,,,,者,シャ,シャ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,4,の,助詞,連体化,,,,,の,ノ,ノ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,5,お話,名詞,サ変接続,,,,,お話,オハナシ,オハナシ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,6,は,助詞,係助詞,,,,,は,ハ,ワ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,7,とかく,名詞,副詞可能,,,,,とかく,トカク,トカク
-</span></span><span style="display:flex;"><span>1000_15021.html,2,8,前置き,名詞,サ変接続,,,,,前置き,マエオキ,マエオキ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,9,が,助詞,格助詞,一般,,,,が,ガ,ガ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,10,長い,形容詞,自立,,,形容詞・アウオ段,基本形,長い,ナガイ,ナガイ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,11,ので,助詞,接続助詞,,,,,ので,ノデ,ノデ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,12,、,記号,読点,,,,,、,、,、
-</span></span><span style="display:flex;"><span>1000_15021.html,2,13,今,名詞,副詞可能,,,,,今,イマ,イマ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,14,の,助詞,連体化,,,,,の,ノ,ノ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,15,若い,形容詞,自立,,,形容詞・アウオ段,基本形,若い,ワカイ,ワカイ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,16,方,名詞,接尾,特殊,,,,方,カタ,カタ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,17,たち,名詞,接尾,一般,,,,たち,タチ,タチ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,18,に,助詞,格助詞,一般,,,,に,ニ,ニ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,19,は,助詞,係助詞,,,,,は,ハ,ワ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,20,小,名詞,一般,,,,,小,ショウ,ショー
-</span></span><span style="display:flex;"><span>1000_15021.html,2,21,焦れったい,形容詞,自立,,,形容詞・アウオ段,基本形,焦れったい,ジレッタイ,ジレッタイ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,22,かも,助詞,副助詞,,,,,かも,カモ,カモ
-</span></span><span style="display:flex;"><span>1000_15021.html,2,23,知れ,動詞,自立,,,一段,連用形,知れる,シレ,シレ
-</span></span></code></pre></div><h5 id="postgresql側のテーブル作成">PostgreSQL側のテーブル作成</h5>
-<p>データ型はざっくりと。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> aozora_kaiseki(file <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">30</span>),num <span style="color:#8be9fd;font-style:italic">INT</span>,<span style="color:#ff79c6">row</span> <span style="color:#8be9fd;font-style:italic">INT</span>,word <span style="color:#8be9fd;font-style:italic">TEXT</span>,subtype1 <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">30</span>),subtype2 <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">30</span>),subtype3 <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">30</span>),subtype4 <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">10</span>),conjtype <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">15</span>),conjugation <span style="color:#8be9fd;font-style:italic">VARCHAR</span>(<span style="color:#bd93f9">15</span>),basic <span style="color:#8be9fd;font-style:italic">TEXT</span>,ruby <span style="color:#8be9fd;font-style:italic">TEXT</span>,pronunce <span style="color:#8be9fd;font-style:italic">TEXT</span> );
-</span></span></code></pre></div><h5 id="copyコマンドでロード">COPYコマンドでロード</h5>
-<p>データをwgetで取得</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>wget http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz
-</span></span><span style="display:flex;"><span>gzip -d utf8_all.csv.gz
-</span></span></code></pre></div><p>copyコマンドでロード</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>psql -h rdspgsqlv1.xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style="color:#f1fa8c">&#34;COPY aozora_kaiseki(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34;</span> &lt; /home/ec2-user/utf8_all.csv
-</span></span></code></pre></div><h5 id="事後確認">事後確認</h5>
-<p>約9.35GBのテーブルサイズでした。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>postgres@rdspgsqlv1:postgres&gt; <span style="color:#ff79c6">select</span> COUNT<span style="color:#ff79c6">(</span>*<span style="color:#ff79c6">)</span> from aozora_kaiseki;                                                                                                                          
-</span></span><span style="display:flex;"><span>+----------+
-</span></span><span style="display:flex;"><span>| count    |
-</span></span><span style="display:flex;"><span>|----------|
-</span></span><span style="display:flex;"><span>| <span style="color:#bd93f9">87701673</span> |
-</span></span><span style="display:flex;"><span>+----------+
-</span></span><span style="display:flex;"><span>SELECT <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>Time: 78.574s <span style="color:#ff79c6">(</span>a minute<span style="color:#ff79c6">)</span>, executed in: 78.562s <span style="color:#ff79c6">(</span>a minute<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>postgres@rdspgsqlv1:postgres&gt;  
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>postgres@rdspgsqlv1:postgres&gt; SELECT * FROM pgstattuple<span style="color:#ff79c6">(</span><span style="color:#f1fa8c">&#39;aozora_kaiseki&#39;</span><span style="color:#ff79c6">)</span>;                                                                                                                  
-</span></span><span style="display:flex;"><span>-<span style="color:#ff79c6">[</span> RECORD <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">]</span>-------------------------
-</span></span><span style="display:flex;"><span>table_len          | <span style="color:#bd93f9">10039386112</span>
-</span></span><span style="display:flex;"><span>tuple_count        | <span style="color:#bd93f9">87701673</span>
-</span></span><span style="display:flex;"><span>tuple_len          | <span style="color:#bd93f9">9306566707</span>
-</span></span><span style="display:flex;"><span>tuple_percent      | 92.7
-</span></span><span style="display:flex;"><span>dead_tuple_count   | <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>dead_tuple_len     | <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>dead_tuple_percent | 0.0
-</span></span><span style="display:flex;"><span>free_space         | <span style="color:#bd93f9">48754128</span>
-</span></span><span style="display:flex;"><span>free_percent       | 0.49
-</span></span><span style="display:flex;"><span>SELECT <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>Time: 21.117s <span style="color:#ff79c6">(</span><span style="color:#bd93f9">21</span> seconds<span style="color:#ff79c6">)</span>, executed in: 21.111s <span style="color:#ff79c6">(</span><span style="color:#bd93f9">21</span> seconds<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>postgres@rdspgsqlv1:postgres&gt;  
-</span></span></code></pre></div>
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/aws-ec2-postgresql-pgcli-install-howto.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/aws-ec2-rhel-postgresql-install.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11 …</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgresql-aozora-bunko-data-import.html&text=%E9%9D%92%E7%A9%BA%E6%96%87%E5%BA%AB%E4%BD%9C%E5%93%81%E3%81%AE%E5%BD%A2%E6%85%8B%E7%B4%A0%E8%A7%A3%E6%9E%90%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92RDS&#43;PostgreSQL%E3%81%AB%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgresql-aozora-bunko-data-import.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-ec2-postgresql-pgcli-install-howto.html">EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</a></li>
-    
-    <li><a href="/aws-aurora-rds-log-file-get.html">RDS/Auroraのログファイルをawscliから取得・確認する</a></li>
-    
-    <li><a href="/aws-aurora-rds-postgresql-replication.html">Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li>
-    
-    <li><a href="/postgresql-logical-replication-monitoring.html">PostgreSQL論理レプリケーションの遅延監視</a></li>
-    
-    <li><a href="/aurora-postgresql-query-plan-management.html">Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-  <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-  
-  <a href="https://zatoima.github.io/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#はじめに">はじめに</a></li>
-        <li><a href="#対象データ">対象データ</a>
-          <ul>
-            <li></li>
-          </ul>
-        </li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする | my opinion is my own</title><meta name=title content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする"><meta name=description content><meta name=keywords content="PostgreSQL,AWS,Aurora,RDS,"><meta property="og:title" content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/postgresql-aozora-bunko-data-import.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2020-05-17T00:00:00+00:00"><meta property="article:modified_time" content="2020-05-17T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする"><meta name=twitter:description content><meta itemprop=name content="青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする"><meta itemprop=description content><meta itemprop=datePublished content="2020-05-17T00:00:00+00:00"><meta itemprop=dateModified content="2020-05-17T00:00:00+00:00"><meta itemprop=wordCount content="153"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="PostgreSQL,AWS,Aurora,RDS,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-icon loading=lazy></div><h1>青空文庫作品の形態素解析データをRDS PostgreSQLにインポートする</h1><div class=article-meta><time class=article-date datetime=2020-05-17>2020/05/17 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a>
+<a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/rds/ class=tag-badge><img src=/images/tags/rds.svg alt=RDS class=tag-badge-icon loading=lazy>RDS</a></div></div><div class=article-content><h3 id=はじめに>はじめに</h3><p>形態素解析データを使用した分析をPostgreSQL上で実施したく、AWS上のRDS(PostgreSQL)へのロード方法をメモ。形態素解析データについてはこちらを使用させて頂きました。</p><blockquote><p>青空文庫形態素解析データ集 <a href=http://aozora-word.hahasoha.net/>http://aozora-word.hahasoha.net/</a></p></blockquote><h3 id=対象データ>対象データ</h3><p>全データが含まれているこちらのファイルをPostgreSQLにロードすることにしました。</p><blockquote><p><a href=http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz>http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz</a></p></blockquote><p>こちらには青空文庫の全文章が下記のように形態素解析済のデータが格納されています。87701673行、ファイルサイズは約6GB。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>1000_15021.html,1,1,一,名詞,数,,,,,一,イチ,イチ
+</span></span><span style=display:flex><span>1000_15021.html,2,1,「,記号,括弧開,,,,,「,「,「
+</span></span><span style=display:flex><span>1000_15021.html,2,2,むかし,名詞,副詞可能,,,,,むかし,ムカシ,ムカシ
+</span></span><span style=display:flex><span>1000_15021.html,2,3,者,名詞,接尾,一般,,,,者,シャ,シャ
+</span></span><span style=display:flex><span>1000_15021.html,2,4,の,助詞,連体化,,,,,の,ノ,ノ
+</span></span><span style=display:flex><span>1000_15021.html,2,5,お話,名詞,サ変接続,,,,,お話,オハナシ,オハナシ
+</span></span><span style=display:flex><span>1000_15021.html,2,6,は,助詞,係助詞,,,,,は,ハ,ワ
+</span></span><span style=display:flex><span>1000_15021.html,2,7,とかく,名詞,副詞可能,,,,,とかく,トカク,トカク
+</span></span><span style=display:flex><span>1000_15021.html,2,8,前置き,名詞,サ変接続,,,,,前置き,マエオキ,マエオキ
+</span></span><span style=display:flex><span>1000_15021.html,2,9,が,助詞,格助詞,一般,,,,が,ガ,ガ
+</span></span><span style=display:flex><span>1000_15021.html,2,10,長い,形容詞,自立,,,形容詞・アウオ段,基本形,長い,ナガイ,ナガイ
+</span></span><span style=display:flex><span>1000_15021.html,2,11,ので,助詞,接続助詞,,,,,ので,ノデ,ノデ
+</span></span><span style=display:flex><span>1000_15021.html,2,12,、,記号,読点,,,,,、,、,、
+</span></span><span style=display:flex><span>1000_15021.html,2,13,今,名詞,副詞可能,,,,,今,イマ,イマ
+</span></span><span style=display:flex><span>1000_15021.html,2,14,の,助詞,連体化,,,,,の,ノ,ノ
+</span></span><span style=display:flex><span>1000_15021.html,2,15,若い,形容詞,自立,,,形容詞・アウオ段,基本形,若い,ワカイ,ワカイ
+</span></span><span style=display:flex><span>1000_15021.html,2,16,方,名詞,接尾,特殊,,,,方,カタ,カタ
+</span></span><span style=display:flex><span>1000_15021.html,2,17,たち,名詞,接尾,一般,,,,たち,タチ,タチ
+</span></span><span style=display:flex><span>1000_15021.html,2,18,に,助詞,格助詞,一般,,,,に,ニ,ニ
+</span></span><span style=display:flex><span>1000_15021.html,2,19,は,助詞,係助詞,,,,,は,ハ,ワ
+</span></span><span style=display:flex><span>1000_15021.html,2,20,小,名詞,一般,,,,,小,ショウ,ショー
+</span></span><span style=display:flex><span>1000_15021.html,2,21,焦れったい,形容詞,自立,,,形容詞・アウオ段,基本形,焦れったい,ジレッタイ,ジレッタイ
+</span></span><span style=display:flex><span>1000_15021.html,2,22,かも,助詞,副助詞,,,,,かも,カモ,カモ
+</span></span><span style=display:flex><span>1000_15021.html,2,23,知れ,動詞,自立,,,一段,連用形,知れる,シレ,シレ
+</span></span></code></pre></div><h5 id=postgresql側のテーブル作成>PostgreSQL側のテーブル作成</h5><p>データ型はざっくりと。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TABLE</span> aozora_kaiseki(file <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>30</span>),num <span style=color:#8be9fd;font-style:italic>INT</span>,<span style=color:#ff79c6>row</span> <span style=color:#8be9fd;font-style:italic>INT</span>,word <span style=color:#8be9fd;font-style:italic>TEXT</span>,subtype1 <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>30</span>),subtype2 <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>30</span>),subtype3 <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>30</span>),subtype4 <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>10</span>),conjtype <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>15</span>),conjugation <span style=color:#8be9fd;font-style:italic>VARCHAR</span>(<span style=color:#bd93f9>15</span>),basic <span style=color:#8be9fd;font-style:italic>TEXT</span>,ruby <span style=color:#8be9fd;font-style:italic>TEXT</span>,pronunce <span style=color:#8be9fd;font-style:italic>TEXT</span> );
+</span></span></code></pre></div><h5 id=copyコマンドでロード>COPYコマンドでロード</h5><p>データをwgetで取得</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>wget http://aozora-word.hahasoha.net/utf8/utf8_all.csv.gz
+</span></span><span style=display:flex><span>gzip -d utf8_all.csv.gz
+</span></span></code></pre></div><p>copyコマンドでロード</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>psql -h rdspgsqlv1.xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style=color:#f1fa8c>&#34;COPY aozora_kaiseki(file,num,row,word,subtype1,subtype2,subtype3,subtype4,conjtype,conjugation,basic,ruby,pronunce) from stdin with csv DELIMITER &#39;,&#39;&#34;</span> &lt; /home/ec2-user/utf8_all.csv
+</span></span></code></pre></div><h5 id=事後確認>事後確認</h5><p>約9.35GBのテーブルサイズでした。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sh data-lang=sh><span style=display:flex><span>postgres@rdspgsqlv1:postgres&gt; <span style=color:#ff79c6>select</span> COUNT<span style=color:#ff79c6>(</span>*<span style=color:#ff79c6>)</span> from aozora_kaiseki;                                                                                                                          
+</span></span><span style=display:flex><span>+----------+
+</span></span><span style=display:flex><span>| count    |
+</span></span><span style=display:flex><span>|----------|
+</span></span><span style=display:flex><span>| <span style=color:#bd93f9>87701673</span> |
+</span></span><span style=display:flex><span>+----------+
+</span></span><span style=display:flex><span>SELECT <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>Time: 78.574s <span style=color:#ff79c6>(</span>a minute<span style=color:#ff79c6>)</span>, executed in: 78.562s <span style=color:#ff79c6>(</span>a minute<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>postgres@rdspgsqlv1:postgres&gt;  
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>postgres@rdspgsqlv1:postgres&gt; SELECT * FROM pgstattuple<span style=color:#ff79c6>(</span><span style=color:#f1fa8c>&#39;aozora_kaiseki&#39;</span><span style=color:#ff79c6>)</span>;                                                                                                                  
+</span></span><span style=display:flex><span>-<span style=color:#ff79c6>[</span> RECORD <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>]</span>-------------------------
+</span></span><span style=display:flex><span>table_len          | <span style=color:#bd93f9>10039386112</span>
+</span></span><span style=display:flex><span>tuple_count        | <span style=color:#bd93f9>87701673</span>
+</span></span><span style=display:flex><span>tuple_len          | <span style=color:#bd93f9>9306566707</span>
+</span></span><span style=display:flex><span>tuple_percent      | 92.7
+</span></span><span style=display:flex><span>dead_tuple_count   | <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>dead_tuple_len     | <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>dead_tuple_percent | 0.0
+</span></span><span style=display:flex><span>free_space         | <span style=color:#bd93f9>48754128</span>
+</span></span><span style=display:flex><span>free_percent       | 0.49
+</span></span><span style=display:flex><span>SELECT <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>Time: 21.117s <span style=color:#ff79c6>(</span><span style=color:#bd93f9>21</span> seconds<span style=color:#ff79c6>)</span>, executed in: 21.111s <span style=color:#ff79c6>(</span><span style=color:#bd93f9>21</span> seconds<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>postgres@rdspgsqlv1:postgres&gt;  
+</span></span></code></pre></div></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/aws-ec2-postgresql-pgcli-install-howto.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</span></a>
+<a href=https://zatoima.github.io/aws-ec2-rhel-postgresql-install.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>EC2上のRHEL8(Red Hat Enterprise Linux)にPostgreSQL11 …</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fpostgresql-aozora-bunko-data-import.html&text=%E9%9D%92%E7%A9%BA%E6%96%87%E5%BA%AB%E4%BD%9C%E5%93%81%E3%81%AE%E5%BD%A2%E6%85%8B%E7%B4%A0%E8%A7%A3%E6%9E%90%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92RDS+PostgreSQL%E3%81%AB%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/postgresql-aozora-bunko-data-import.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-ec2-postgresql-pgcli-install-howto.html>EC2(Amazon Linux)にpgcli(PostgreSQLの拡張CLI)をインストールする</a></li><li><a href=/aws-aurora-rds-log-file-get.html>RDS/Auroraのログファイルをawscliから取得・確認する</a></li><li><a href=/aws-aurora-rds-postgresql-replication.html>Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする</a></li><li><a href=/postgresql-logical-replication-monitoring.html>PostgreSQL論理レプリケーションの遅延監視</a></li><li><a href=/aurora-postgresql-query-plan-management.html>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a>
+<a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/rds/ class=tag-badge><img src=/images/tags/rds.svg alt=RDS class=tag-badge-icon loading=lazy>RDS</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#はじめに>はじめに</a></li><li><a href=#対象データ>対象データ</a><ul><li></li></ul></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

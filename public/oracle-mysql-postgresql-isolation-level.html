@@ -1,588 +1,114 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて | my opinion is my own</title>
-<meta name="title" content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて" />
-<meta name="description" content="" />
-<meta name="keywords" content="Oracle,MySQL,PostgreSQL," />
-
-
-<meta property="og:title" content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-11-17T00:00:00+00:00" />
-<meta property="article:modified_time" content="2019-11-17T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-11-17T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2019-11-17T00:00:00+00:00" />
-<meta itemprop="wordCount" content="511"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="Oracle,MySQL,PostgreSQL," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンにつ …</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-icon" loading="lazy"></div>
-        <h1>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2019-11-17'>
-            2019/11/17 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
-          
-          <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-          
-          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <p>RDBMS製品のACID特性のI（Isolation）に関わるメモ</p>
-<!-- raw HTML omitted -->
-<h4 id="トランザクション分離レベルとは">トランザクション分離レベルとは？</h4>
-<hr>
-<p>まずはトランザクション分離レベルの基本的な考え方について整理。</p>
-<!-- raw HTML omitted -->
-<h4 id="serializable--直列化可能-">SERIALIZABLE ( 直列化可能 )</h4>
-<p>複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。このような性質を直列化可能性（Serializability）と呼ぶ。SERIALIZABLEは最も強い分離レベルであり、最も安全にデータを操作できるが、相対的に性能は低い。ただし同じ結果とされる逐次実行の順はトランザクション処理のレベルでは保証されない。</p>
-<!-- raw HTML omitted -->
-<h4 id="repeatable-read--読み取り対象のデータを常に読み取る-">REPEATABLE READ ( 読み取り対象のデータを常に読み取る )</h4>
-<p>ひとつのトランザクションが実行中の間、読み取り対象のデータが途中で他のトランザクションによって変更される心配はない。同じトランザクション中では同じデータは何度読み取りしても毎回同じ値を読むことができる。
-ただし ファントム・リード(Phantom Read) と呼ばれる現象が発生する可能性がある。ファントム・リードでは、並行して動作する他のトランザクションが追加したり削除したデータが途中で見えてしまうため、処理の結果が変わってしまう。</p>
-<!-- raw HTML omitted -->
-<h4 id="read-committed--確定した最新データを常に読み取る-">READ COMMITTED ( 確定した最新データを常に読み取る )</h4>
-<p>他のトランザクションによる更新については、常にコミット済みのデータのみを読み取る。 MVCC はREAD COMMITTEDを実現する実装の一つである。
-ファントム・リード に加え、非再現リード(Non-Repeatable Read)と呼ばれる、同じトランザクション中でも同じデータを読み込むたびに値が変わってしまう現象が発生する可能性がある。</p>
-<!-- raw HTML omitted -->
-<h4 id="read-uncommitted--確定していないデータまで読み取る">READ UNCOMMITTED ( 確定していないデータまで読み取る)</h4>
-<p>他の処理によって行われている、書きかけのデータまで読み取る。
-PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read) と呼ばれる現象（不完全なデータや、計算途中のデータを読み取ってしまう動作）が発生する。トランザクションの並行動作によってデータを破壊する可能性は高いが、その分性能は高い。</p>
-<blockquote>
-<p>トランザクション分離レベル - Wikipedia <a href="https://ja.wikipedia.org/wiki/%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB">https://ja.wikipedia.org/wiki/トランザクション分離レベル</a></p>
-</blockquote>
-<p>上記のトランザクション分離レベルによって起こりうる Transaction Annomaly が異なる。</p>
-<!-- raw HTML omitted -->
-<h4 id="dirty-read">Dirty Read</h4>
-<hr>
-<p>トランザクションT1がデータを変更し、COMMITかROLLBACKをする前に、トランザクションT2がそのデータを読む。その後T1がROLLBACKした場合、T2はCOMMITされていない＝実在しないデータを読んだことになる。</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
-<h4 id="fuzzy-readnon-repeatable-read">Fuzzy Read(Non-Repeatable Read)</h4>
-<hr>
-<p>トランザクションT1がデータを読んだ後、トランザクションT2がそのデータを変更もしくは削除してCOMMITする。その後T1がデータを再度読もうとすると、データが変更されている、もしくは削除されていることが検知される。</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
-<h4 id="phantom-read">Phantom Read</h4>
-<hr>
-<p>トランザクションT1が、ある検索条件に基づいてデータ集合を読む。その後、トランザクションT2がその検索条件を満たすデータを作成しCOMMITする。T1が再度同じ検索条件で読み取りを行うと、最初に得られたデータ集合と異なるデータ集合が得られる。</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
-<h4 id="lost-update">Lost Update</h4>
-<hr>
-<p>トランザクションT1はデータ項目を読み取り、T2はデータ項目を以前の読み取り値に基づいて更新し、T1はデータ項目を更新して以前の読み取り値に基づいてコミットする。トランザクションT2の更新がトランザクションT1に上書きされてしまうのでT2のUpdateがLostするということでLost Updateと言う。</p>
-<!-- raw HTML omitted -->
-<p>更新したはずのデータが失われてしまう現象のことで、後勝ち処理とも言うと聞いたことがある。なので、他のAnnomaly と比べて異常という感じはしない。しっかりトランザクション管理しましょうね、という話だと思っている。</p>
-<p>具体例を記載しておく。本の在庫管理のトランザクションを想定。</p>
-<p>①現在、在庫が90冊あるとして、100冊を下回った場合、不足分を補充するように追加注文する処理があったとする。</p>
-<p>②【Tx2】Tx2で現在の90冊を取得した。</p>
-<p>③【Tx1】次にTx1で同じく現在90冊ということを取得。</p>
-<p>④【Tx1】10冊を購入処理して、在庫が100冊と更新する。</p>
-<!-- raw HTML omitted -->
-<h4 id="write-skew">Write Skew</h4>
-<hr>
-<p>T1がxとyを読み取り、次にT2がxとyを読み取りxを書き込みコミットする。 次にT1はyを書き込む。 xとyの間に制約がある場合、違反となる。 つまり、2つの並行トランザクションがそれぞれ、他方が書き込んでいるものと重複するデータセットの読み取りに基づいて書き込み内容が決まる場合(y=x+1とか)、一方が他方より先に実行された場合には発生し得ない状態を取得できる</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
-<p>具体的なケースはこちら「Black and White」や「Intersecting Data」あたりのケースを見てトランザクションの動きを見るべき。</p>
-<blockquote>
-<p>ssi - postgresql wiki  <a href="https://wiki.postgresql.org/wiki/SSI">https://wiki.postgresql.org/wiki/SSI</a></p>
-</blockquote>
-<!-- raw HTML omitted -->
-<h4 id="分離レベルと起こりうるtransaction-annomaly">分離レベルと起こりうるTransaction Annomaly</h4>
-<hr>
-<p>ISOの定義上のトランザクション分離レベルで上記のこの3つのTransaction Annomalyの発生有無は下記の通りである。しかし、DBエンジンの実装上、READ   COMMITTEDだが、Fuzzy Readは発生しないとかなっているケースがあるので注意が必要。</p>
-<!-- raw HTML omitted -->
-<blockquote>
-<p>A Critique of ANSI SQL Isolation Levels <a href="https://arxiv.org/ftp/cs/papers/0701/0701157.pdf">https://arxiv.org/ftp/cs/papers/0701/0701157.pdf</a></p>
-</blockquote>
-<!-- raw HTML omitted -->
-<h4 id="各dbエンジンとトランザクション分離レベルの対応表">各DBエンジンとトランザクション分離レベルの対応表</h4>
-<hr>
-<p>DBエンジンで選択可能な分離レベルが異なります。DBエンジンを変更する場合はトランザクション分離レベルの理解が必要です。トランザクションで発行するSQLのタイミングによって取得されるデータが異なってきます。</p>
-<!-- raw HTML omitted -->
-<table>
-<thead>
-<tr>
-<th>isolation level</th>
-<th>Oracle</th>
-<th>PostgreSQL</th>
-<th>MySQL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SERIALIZABLE</td>
-<td>○</td>
-<td>○</td>
-<td>○</td>
-</tr>
-<tr>
-<td>REPEATABLE READ</td>
-<td>×</td>
-<td>○</td>
-<td>○(※デフォルト)</td>
-</tr>
-<tr>
-<td>READ COMMITTED</td>
-<td>○(※デフォルト)</td>
-<td>○(※デフォルト)</td>
-<td>○</td>
-</tr>
-<tr>
-<td>READ UNCOMMITTED</td>
-<td>×</td>
-<td>○</td>
-<td>○</td>
-</tr>
-</tbody>
-</table>
-<!-- raw HTML omitted -->
-<blockquote>
-<p>MySQL :: MySQL 5.6 リファレンスマニュアル :: 13.3.6 SET TRANSACTION 構文 <a href="https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html">https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html</a></p>
-</blockquote>
-<blockquote>
-<p>POSTGRESQL: DOCUMENTATION: 11: 13.2. TRANSACTION ISOLATION HTTPS<a href="https://www.postgresql.org/docs/11/transaction-iso.html#MVCC-ISOLEVEL-TABLE">://WWW.POSTGRESQL.ORG/DOCS/11/TRANSACTION-ISO.HTML#MVCC-ISOLEVEL-TABLE</a></p>
-</blockquote>
-<!-- raw HTML omitted -->
-<h4 id="oracle-databaseの場合">Oracle Databaseの場合</h4>
-<hr>
-<p>Oracle Databaseでは、<strong>SERIALIZABLE</strong> と <strong>READ COMMITTED</strong> の分離レベルが用意されている。</p>
-<p>READ COMMITEDには前提として、UNDOを使用した読取り一貫性の理解が必要。MVCC(MultiVersion Concurrency Control)という技術でありOracle Databaseは、UNDOデータを使用して一貫性を実現しています。</p>
-<p>ユーザーがデータを変更すると、常にOracle DatabaseによってUNDOエントリが作成されて、UNDOセグメントに書き込まれる。UNDOセグメントには、未コミットのトランザクションや、最近コミットされたトランザクションによって変更されたデータの古い値が含まれている。このため、同じデータの異なる時点の複数のバージョンがデータベース内に存在することになる。</p>
-<!-- raw HTML omitted -->
-<h4 id="postgresqlmysqlの場合">PostgreSQL/MySQLの場合</h4>
-<hr>
-<p>すべての分離レベルの利用が可能。</p>
-<p>実装自体は各DBエンジン自体で異なり、PostgreSQLもMySQLの<code>REPEATABLE READ</code>を選択した場合においても、<code>Phantom Read</code> は発生しない実装になっている模様。</p>
-<blockquote>
-<p>13.2. トランザクションの分離 <a href="http://pgsql-jp.github.io/current/html/transaction-iso.html">http://pgsql-jp.github.io/current/html/transaction-iso.html</a></p>
-</blockquote>
-<!-- raw HTML omitted -->
-<h4 id="write-skewをserializable分離レベルで試してみる">Write SkewをSERIALIZABLE分離レベルで試してみる</h4>
-<hr>
-<blockquote>
-<p>複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。</p>
-</blockquote>
-<p>上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。</p>
-<h4 id="変更方法">変更方法</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>・SET文を使用した指定方法(セッション単位)
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> default_transaction_isolation <span style="color:#ff79c6">TO</span> <span style="color:#f1fa8c">&#39;分離レベル&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>・SET文を使用した指定方法(トランザクション単位)
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> <span style="color:#ff79c6">TRANSACTION</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> 分離レベル;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>・トランザクションの制御コマンドを使用した指定方法(トランザクション単位)
-</span></span><span style="display:flex;"><span>トランザクションの開始時に指定
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> 分離レベル;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">START</span> <span style="color:#ff79c6">TRANSACTION</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> 分離レベル;
-</span></span></code></pre></div><h4 id="事前にテーブルデータ作成">事前にテーブル/データ作成</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">drop</span> <span style="color:#ff79c6">table</span> mytab;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> mytab
-</span></span><span style="display:flex;"><span>(
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">class</span> <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">NULL</span>,
-</span></span><span style="display:flex;"><span>  value <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">NULL</span>
-</span></span><span style="display:flex;"><span>);
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> mytab <span style="color:#ff79c6">VALUES</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span>, <span style="color:#bd93f9">10</span>), (<span style="color:#bd93f9">1</span>, <span style="color:#bd93f9">20</span>), (<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">100</span>), (<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">200</span>);
-</span></span></code></pre></div><!-- raw HTML omitted -->
-<table>
-<thead>
-<tr>
-<th>Session1</th>
-<th>Session2</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td>
-<td></td>
-</tr>
-<tr>
-<td>SELECT SUM(value) FROM mytab WHERE class = 1;</td>
-<td></td>
-</tr>
-<tr>
-<td>INSERT INTO mytab VALUES(2,30);</td>
-<td></td>
-</tr>
-<tr>
-<td></td>
-<td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td>
-</tr>
-<tr>
-<td></td>
-<td>SELECT SUM(value) FROM mytab WHERE class = 2;</td>
-</tr>
-<tr>
-<td></td>
-<td>INSERT INTO mytab VALUES (1, 300);</td>
-</tr>
-<tr>
-<td></td>
-<td>commit;</td>
-</tr>
-<tr>
-<td>commit;</td>
-<td></td>
-</tr>
-<tr>
-<td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td>
-<td></td>
-</tr>
-<tr>
-<td>SELECT SUM(value) FROM mytab WHERE class = 1;</td>
-<td></td>
-</tr>
-<tr>
-<td>INSERT INTO mytab VALUES (2, 330);</td>
-<td></td>
-</tr>
-<tr>
-<td>COMMIT;</td>
-<td></td>
-</tr>
-<tr>
-<td>SELECT * FROM mytab;</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<!-- raw HTML omitted -->
-<h4 id="session1">Session1</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> mytab;
-</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">class</span> <span style="color:#ff79c6">|</span> value 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------+-------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>     <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">10</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">20</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">100</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">200</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">4</span> <span style="color:#ff79c6">rows</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> 
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">TRANSACTION</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> <span style="color:#ff79c6">SERIALIZABLE</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SUM</span>(value) <span style="color:#ff79c6">FROM</span> mytab <span style="color:#ff79c6">WHERE</span> <span style="color:#ff79c6">class</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">1</span>;
-</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">sum</span> 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>  <span style="color:#bd93f9">30</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> mytab <span style="color:#ff79c6">VALUES</span>(<span style="color:#bd93f9">2</span>,<span style="color:#bd93f9">30</span>);
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> 
-</span></span></code></pre></div><!-- raw HTML omitted -->
-<h4 id="session2">Session2</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">TRANSACTION</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> <span style="color:#ff79c6">SERIALIZABLE</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SUM</span>(value) <span style="color:#ff79c6">FROM</span> mytab <span style="color:#ff79c6">WHERE</span> <span style="color:#ff79c6">class</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">2</span>;
-</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">sum</span> 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> <span style="color:#bd93f9">300</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> mytab <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">1</span>, <span style="color:#bd93f9">300</span>);
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">commit</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">COMMIT</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> 
-</span></span></code></pre></div><!-- raw HTML omitted -->
-<h4 id="session1-1"><strong>Session1</strong></h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>セッション<span style="color:#bd93f9">2</span>で実行
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">commit</span>;
-</span></span><span style="display:flex;"><span>ERROR:  could <span style="color:#ff79c6">not</span> serialize <span style="color:#ff79c6">access</span> due <span style="color:#ff79c6">to</span> <span style="color:#ff79c6">read</span><span style="color:#ff79c6">/</span><span style="color:#ff79c6">write</span> dependencies among transactions
-</span></span><span style="display:flex;"><span>DETAIL:  Reason code: Canceled <span style="color:#ff79c6">on</span> identification <span style="color:#ff79c6">as</span> a pivot, during <span style="color:#ff79c6">commit</span> attempt.
-</span></span><span style="display:flex;"><span>HINT:  The <span style="color:#ff79c6">transaction</span> might succeed <span style="color:#ff79c6">if</span> retried.
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">TRANSACTION</span> <span style="color:#ff79c6">ISOLATION</span> <span style="color:#ff79c6">LEVEL</span> <span style="color:#ff79c6">SERIALIZABLE</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SUM</span>(value) <span style="color:#ff79c6">FROM</span> mytab <span style="color:#ff79c6">WHERE</span> <span style="color:#ff79c6">class</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">1</span>;
-</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">sum</span> 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> <span style="color:#bd93f9">330</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> mytab <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">330</span>);
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">COMMIT</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">COMMIT</span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> mytab;
-</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">class</span> <span style="color:#ff79c6">|</span> value 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------+-------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>     <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">10</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">20</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">100</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">200</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">300</span>
-</span></span><span style="display:flex;"><span>     <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">330</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">6</span> <span style="color:#ff79c6">rows</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>aurorapostdb<span style="color:#ff79c6">=&gt;</span> 
-</span></span></code></pre></div><!-- raw HTML omitted -->
-<p><strong>OracleとPostgreSQLのトランザクションの差異について</strong></p>
-<hr>
-<p>OracleとPostgreSQLは同じRead Committedだが、トランザクションによっては違う結果になることを整理してみた</p>
-<blockquote>
-<p>OracleとPostgreSQLのトランザクション差異について整理する | my opinion is my own <a href="https://zatoima.github.io/oracle-postgresql-transaction-different.html">https://zatoima.github.io/oracle-postgresql-transaction-different.html</a></p>
-</blockquote>
-<h3 id="参照先参考資料"><strong>参照先、参考資料</strong></h3>
-<hr>
-<blockquote>
-<p>データの同時実行性と整合性 <a href="https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm">https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm</a></p>
-</blockquote>
-<blockquote>
-<p>第18回 ロックについて <a href="https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html">https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html</a></p>
-</blockquote>
-<blockquote>
-<p>SSI - PostgreSQL wiki <a href="https://wiki.postgresql.org/wiki/SSI">https://wiki.postgresql.org/wiki/SSI</a></p>
-<p>postgresql isolation について - qiita <a href="https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd">https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd</a></p>
-<p>ファントムリードは起こらないのにseirializableでない、それがポスグレのrepeatable read - qiita <a href="https://qiita.com/yuba/items/89496dda291edb2e558c">https://qiita.com/yuba/items/89496dda291edb2e558c</a></p>
-</blockquote>
-
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/oracle-to-aws-sct-partition-limit.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">OracleのパーティションテーブルをAurora(PostgreSQL)へSCT変換する場合の注意 …</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/pelican-blog-implement.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">Pelican on Github Pagesで静的サイトを構築する</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2foracle-mysql-postgresql-isolation-level.html&text=%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB%28ISOLATION&#43;LEVEL%29%E3%81%A8%E5%90%84DB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%B3%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aurora-postgresql-query-plan-management.html">Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li>
-    
-    <li><a href="/oracle-install-sample-schema.html">Oracle Database 12.1.0.2にサンプルスキーマを手動インストール、手動作成する</a></li>
-    
-    <li><a href="/aws-aurora-postgres-password.html">Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</a></li>
-    
-    <li><a href="/aws-aurora-postgres-querylog.html">Aurora(PostgresSQL)のスロークエリログの出力方法</a></li>
-    
-    <li><a href="/aws-rds-postgresql-sysbench.html">RDS(PostgreSQL)にsysbenchを実行する</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
-  
-  <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-  
-  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li>
-          <ul>
-            <li><a href="#トランザクション分離レベルとは">トランザクション分離レベルとは？</a></li>
-            <li><a href="#serializable--直列化可能-">SERIALIZABLE ( 直列化可能 )</a></li>
-            <li><a href="#repeatable-read--読み取り対象のデータを常に読み取る-">REPEATABLE READ ( 読み取り対象のデータを常に読み取る )</a></li>
-            <li><a href="#read-committed--確定した最新データを常に読み取る-">READ COMMITTED ( 確定した最新データを常に読み取る )</a></li>
-            <li><a href="#read-uncommitted--確定していないデータまで読み取る">READ UNCOMMITTED ( 確定していないデータまで読み取る)</a></li>
-            <li><a href="#dirty-read">Dirty Read</a></li>
-            <li><a href="#fuzzy-readnon-repeatable-read">Fuzzy Read(Non-Repeatable Read)</a></li>
-            <li><a href="#phantom-read">Phantom Read</a></li>
-            <li><a href="#lost-update">Lost Update</a></li>
-            <li><a href="#write-skew">Write Skew</a></li>
-            <li><a href="#分離レベルと起こりうるtransaction-annomaly">分離レベルと起こりうるTransaction Annomaly</a></li>
-            <li><a href="#各dbエンジンとトランザクション分離レベルの対応表">各DBエンジンとトランザクション分離レベルの対応表</a></li>
-            <li><a href="#oracle-databaseの場合">Oracle Databaseの場合</a></li>
-            <li><a href="#postgresqlmysqlの場合">PostgreSQL/MySQLの場合</a></li>
-            <li><a href="#write-skewをserializable分離レベルで試してみる">Write SkewをSERIALIZABLE分離レベルで試してみる</a></li>
-            <li><a href="#変更方法">変更方法</a></li>
-            <li><a href="#事前にテーブルデータ作成">事前にテーブル/データ作成</a></li>
-            <li><a href="#session1">Session1</a></li>
-            <li><a href="#session2">Session2</a></li>
-            <li><a href="#session1-1"><strong>Session1</strong></a></li>
-          </ul>
-        </li>
-        <li><a href="#参照先参考資料"><strong>参照先、参考資料</strong></a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて | my opinion is my own</title><meta name=title content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて"><meta name=description content><meta name=keywords content="Oracle,MySQL,PostgreSQL,"><meta property="og:title" content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2019-11-17T00:00:00+00:00"><meta property="article:modified_time" content="2019-11-17T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて"><meta name=twitter:description content><meta itemprop=name content="トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて"><meta itemprop=description content><meta itemprop=datePublished content="2019-11-17T00:00:00+00:00"><meta itemprop=dateModified content="2019-11-17T00:00:00+00:00"><meta itemprop=wordCount content="511"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="Oracle,MySQL,PostgreSQL,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンにつ …</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/oracle.svg alt=Oracle class=tag-icon loading=lazy></div><h1>トランザクション分離レベル(ISOLATION LEVEL)と各DBエンジンについて</h1><div class=article-meta><time class=article-date datetime=2019-11-17>2019/11/17 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/oracle/ class=tag-badge><img src=/images/tags/oracle.svg alt=Oracle class=tag-badge-icon loading=lazy>Oracle</a>
+<a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></div><div class=article-content><p>RDBMS製品のACID特性のI（Isolation）に関わるメモ</p><h4 id=トランザクション分離レベルとは>トランザクション分離レベルとは？</h4><hr><p>まずはトランザクション分離レベルの基本的な考え方について整理。</p><h4 id=serializable--直列化可能->SERIALIZABLE ( 直列化可能 )</h4><p>複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。このような性質を直列化可能性（Serializability）と呼ぶ。SERIALIZABLEは最も強い分離レベルであり、最も安全にデータを操作できるが、相対的に性能は低い。ただし同じ結果とされる逐次実行の順はトランザクション処理のレベルでは保証されない。</p><h4 id=repeatable-read--読み取り対象のデータを常に読み取る->REPEATABLE READ ( 読み取り対象のデータを常に読み取る )</h4><p>ひとつのトランザクションが実行中の間、読み取り対象のデータが途中で他のトランザクションによって変更される心配はない。同じトランザクション中では同じデータは何度読み取りしても毎回同じ値を読むことができる。
+ただし ファントム・リード(Phantom Read) と呼ばれる現象が発生する可能性がある。ファントム・リードでは、並行して動作する他のトランザクションが追加したり削除したデータが途中で見えてしまうため、処理の結果が変わってしまう。</p><h4 id=read-committed--確定した最新データを常に読み取る->READ COMMITTED ( 確定した最新データを常に読み取る )</h4><p>他のトランザクションによる更新については、常にコミット済みのデータのみを読み取る。 MVCC はREAD COMMITTEDを実現する実装の一つである。
+ファントム・リード に加え、非再現リード(Non-Repeatable Read)と呼ばれる、同じトランザクション中でも同じデータを読み込むたびに値が変わってしまう現象が発生する可能性がある。</p><h4 id=read-uncommitted--確定していないデータまで読み取る>READ UNCOMMITTED ( 確定していないデータまで読み取る)</h4><p>他の処理によって行われている、書きかけのデータまで読み取る。
+PHANTOM 、 NON-REPEATABLE READ 、さらに ダーティ・リード(Dirty Read) と呼ばれる現象（不完全なデータや、計算途中のデータを読み取ってしまう動作）が発生する。トランザクションの並行動作によってデータを破壊する可能性は高いが、その分性能は高い。</p><blockquote><p>トランザクション分離レベル - Wikipedia <a href=https://ja.wikipedia.org/wiki/%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB>https://ja.wikipedia.org/wiki/トランザクション分離レベル</a></p></blockquote><p>上記のトランザクション分離レベルによって起こりうる Transaction Annomaly が異なる。</p><h4 id=dirty-read>Dirty Read</h4><hr><p>トランザクションT1がデータを変更し、COMMITかROLLBACKをする前に、トランザクションT2がそのデータを読む。その後T1がROLLBACKした場合、T2はCOMMITされていない＝実在しないデータを読んだことになる。</p><h4 id=fuzzy-readnon-repeatable-read>Fuzzy Read(Non-Repeatable Read)</h4><hr><p>トランザクションT1がデータを読んだ後、トランザクションT2がそのデータを変更もしくは削除してCOMMITする。その後T1がデータを再度読もうとすると、データが変更されている、もしくは削除されていることが検知される。</p><h4 id=phantom-read>Phantom Read</h4><hr><p>トランザクションT1が、ある検索条件に基づいてデータ集合を読む。その後、トランザクションT2がその検索条件を満たすデータを作成しCOMMITする。T1が再度同じ検索条件で読み取りを行うと、最初に得られたデータ集合と異なるデータ集合が得られる。</p><h4 id=lost-update>Lost Update</h4><hr><p>トランザクションT1はデータ項目を読み取り、T2はデータ項目を以前の読み取り値に基づいて更新し、T1はデータ項目を更新して以前の読み取り値に基づいてコミットする。トランザクションT2の更新がトランザクションT1に上書きされてしまうのでT2のUpdateがLostするということでLost Updateと言う。</p><p>更新したはずのデータが失われてしまう現象のことで、後勝ち処理とも言うと聞いたことがある。なので、他のAnnomaly と比べて異常という感じはしない。しっかりトランザクション管理しましょうね、という話だと思っている。</p><p>具体例を記載しておく。本の在庫管理のトランザクションを想定。</p><p>①現在、在庫が90冊あるとして、100冊を下回った場合、不足分を補充するように追加注文する処理があったとする。</p><p>②【Tx2】Tx2で現在の90冊を取得した。</p><p>③【Tx1】次にTx1で同じく現在90冊ということを取得。</p><p>④【Tx1】10冊を購入処理して、在庫が100冊と更新する。</p><h4 id=write-skew>Write Skew</h4><hr><p>T1がxとyを読み取り、次にT2がxとyを読み取りxを書き込みコミットする。 次にT1はyを書き込む。 xとyの間に制約がある場合、違反となる。 つまり、2つの並行トランザクションがそれぞれ、他方が書き込んでいるものと重複するデータセットの読み取りに基づいて書き込み内容が決まる場合(y=x+1とか)、一方が他方より先に実行された場合には発生し得ない状態を取得できる</p><p>具体的なケースはこちら「Black and White」や「Intersecting Data」あたりのケースを見てトランザクションの動きを見るべき。</p><blockquote><p>ssi - postgresql wiki <a href=https://wiki.postgresql.org/wiki/SSI>https://wiki.postgresql.org/wiki/SSI</a></p></blockquote><h4 id=分離レベルと起こりうるtransaction-annomaly>分離レベルと起こりうるTransaction Annomaly</h4><hr><p>ISOの定義上のトランザクション分離レベルで上記のこの3つのTransaction Annomalyの発生有無は下記の通りである。しかし、DBエンジンの実装上、READ COMMITTEDだが、Fuzzy Readは発生しないとかなっているケースがあるので注意が必要。</p><blockquote><p>A Critique of ANSI SQL Isolation Levels <a href=https://arxiv.org/ftp/cs/papers/0701/0701157.pdf>https://arxiv.org/ftp/cs/papers/0701/0701157.pdf</a></p></blockquote><h4 id=各dbエンジンとトランザクション分離レベルの対応表>各DBエンジンとトランザクション分離レベルの対応表</h4><hr><p>DBエンジンで選択可能な分離レベルが異なります。DBエンジンを変更する場合はトランザクション分離レベルの理解が必要です。トランザクションで発行するSQLのタイミングによって取得されるデータが異なってきます。</p><table><thead><tr><th>isolation level</th><th>Oracle</th><th>PostgreSQL</th><th>MySQL</th></tr></thead><tbody><tr><td>SERIALIZABLE</td><td>○</td><td>○</td><td>○</td></tr><tr><td>REPEATABLE READ</td><td>×</td><td>○</td><td>○(※デフォルト)</td></tr><tr><td>READ COMMITTED</td><td>○(※デフォルト)</td><td>○(※デフォルト)</td><td>○</td></tr><tr><td>READ UNCOMMITTED</td><td>×</td><td>○</td><td>○</td></tr></tbody></table><blockquote><p>MySQL :: MySQL 5.6 リファレンスマニュアル :: 13.3.6 SET TRANSACTION 構文 <a href=https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html>https://dev.mysql.com/doc/refman/5.6/ja/set-transaction.html</a></p></blockquote><blockquote><p>POSTGRESQL: DOCUMENTATION: 11: 13.2. TRANSACTION ISOLATION HTTPS<a href=https://www.postgresql.org/docs/11/transaction-iso.html#MVCC-ISOLEVEL-TABLE>://WWW.POSTGRESQL.ORG/DOCS/11/TRANSACTION-ISO.HTML#MVCC-ISOLEVEL-TABLE</a></p></blockquote><h4 id=oracle-databaseの場合>Oracle Databaseの場合</h4><hr><p>Oracle Databaseでは、<strong>SERIALIZABLE</strong> と <strong>READ COMMITTED</strong> の分離レベルが用意されている。</p><p>READ COMMITEDには前提として、UNDOを使用した読取り一貫性の理解が必要。MVCC(MultiVersion Concurrency Control)という技術でありOracle Databaseは、UNDOデータを使用して一貫性を実現しています。</p><p>ユーザーがデータを変更すると、常にOracle DatabaseによってUNDOエントリが作成されて、UNDOセグメントに書き込まれる。UNDOセグメントには、未コミットのトランザクションや、最近コミットされたトランザクションによって変更されたデータの古い値が含まれている。このため、同じデータの異なる時点の複数のバージョンがデータベース内に存在することになる。</p><h4 id=postgresqlmysqlの場合>PostgreSQL/MySQLの場合</h4><hr><p>すべての分離レベルの利用が可能。</p><p>実装自体は各DBエンジン自体で異なり、PostgreSQLもMySQLの<code>REPEATABLE READ</code>を選択した場合においても、<code>Phantom Read</code> は発生しない実装になっている模様。</p><blockquote><p>13.2. トランザクションの分離 <a href=http://pgsql-jp.github.io/current/html/transaction-iso.html>http://pgsql-jp.github.io/current/html/transaction-iso.html</a></p></blockquote><h4 id=write-skewをserializable分離レベルで試してみる>Write SkewをSERIALIZABLE分離レベルで試してみる</h4><hr><blockquote><p>複数の並行に動作するトランザクションそれぞれの結果が、いかなる場合でも、それらのトランザクションを時間的重なりなく逐次実行した場合と同じ結果となる。</p></blockquote><p>上記のSerializableに関して書かれたこの文章だけ何回読んでもよくわからないので、Serializableだけ実機で確認してみた。</p><h4 id=変更方法>変更方法</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>・SET文を使用した指定方法(セッション単位)
+</span></span><span style=display:flex><span><span style=color:#ff79c6>SET</span> default_transaction_isolation <span style=color:#ff79c6>TO</span> <span style=color:#f1fa8c>&#39;分離レベル&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>・SET文を使用した指定方法(トランザクション単位)
+</span></span><span style=display:flex><span><span style=color:#ff79c6>SET</span> <span style=color:#ff79c6>TRANSACTION</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> 分離レベル;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>・トランザクションの制御コマンドを使用した指定方法(トランザクション単位)
+</span></span><span style=display:flex><span>トランザクションの開始時に指定
+</span></span><span style=display:flex><span><span style=color:#ff79c6>BEGIN</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> 分離レベル;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>START</span> <span style=color:#ff79c6>TRANSACTION</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> 分離レベル;
+</span></span></code></pre></div><h4 id=事前にテーブルデータ作成>事前にテーブル/データ作成</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>drop</span> <span style=color:#ff79c6>table</span> mytab;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TABLE</span> mytab
+</span></span><span style=display:flex><span>(
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>class</span> <span style=color:#8be9fd;font-style:italic>int</span> <span style=color:#ff79c6>NOT</span> <span style=color:#ff79c6>NULL</span>,
+</span></span><span style=display:flex><span>  value <span style=color:#8be9fd;font-style:italic>int</span> <span style=color:#ff79c6>NOT</span> <span style=color:#ff79c6>NULL</span>
+</span></span><span style=display:flex><span>);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>INSERT</span> <span style=color:#ff79c6>INTO</span> mytab <span style=color:#ff79c6>VALUES</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>1</span>, <span style=color:#bd93f9>10</span>), (<span style=color:#bd93f9>1</span>, <span style=color:#bd93f9>20</span>), (<span style=color:#bd93f9>2</span>, <span style=color:#bd93f9>100</span>), (<span style=color:#bd93f9>2</span>, <span style=color:#bd93f9>200</span>);
+</span></span></code></pre></div><table><thead><tr><th>Session1</th><th>Session2</th></tr></thead><tbody><tr><td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td><td></td></tr><tr><td>SELECT SUM(value) FROM mytab WHERE class = 1;</td><td></td></tr><tr><td>INSERT INTO mytab VALUES(2,30);</td><td></td></tr><tr><td></td><td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td></tr><tr><td></td><td>SELECT SUM(value) FROM mytab WHERE class = 2;</td></tr><tr><td></td><td>INSERT INTO mytab VALUES (1, 300);</td></tr><tr><td></td><td>commit;</td></tr><tr><td>commit;</td><td></td></tr><tr><td>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</td><td></td></tr><tr><td>SELECT SUM(value) FROM mytab WHERE class = 1;</td><td></td></tr><tr><td>INSERT INTO mytab VALUES (2, 330);</td><td></td></tr><tr><td>COMMIT;</td><td></td></tr><tr><td>SELECT * FROM mytab;</td><td></td></tr></tbody></table><h4 id=session1>Session1</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>select</span> <span style=color:#ff79c6>*</span> <span style=color:#ff79c6>from</span> mytab;
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>class</span> <span style=color:#ff79c6>|</span> value 
+</span></span><span style=display:flex><span><span style=color:#6272a4>-------+-------
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>     <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>    <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>    <span style=color:#bd93f9>20</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>2</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>2</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>200</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>4</span> <span style=color:#ff79c6>rows</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> 
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>BEGIN</span> <span style=color:#ff79c6>TRANSACTION</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> <span style=color:#ff79c6>SERIALIZABLE</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>BEGIN</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>SUM</span>(value) <span style=color:#ff79c6>FROM</span> mytab <span style=color:#ff79c6>WHERE</span> <span style=color:#ff79c6>class</span> <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>sum</span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>-----
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  <span style=color:#bd93f9>30</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>INSERT</span> <span style=color:#ff79c6>INTO</span> mytab <span style=color:#ff79c6>VALUES</span>(<span style=color:#bd93f9>2</span>,<span style=color:#bd93f9>30</span>);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>INSERT</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> 
+</span></span></code></pre></div><h4 id=session2>Session2</h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>BEGIN</span> <span style=color:#ff79c6>TRANSACTION</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> <span style=color:#ff79c6>SERIALIZABLE</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>BEGIN</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>SUM</span>(value) <span style=color:#ff79c6>FROM</span> mytab <span style=color:#ff79c6>WHERE</span> <span style=color:#ff79c6>class</span> <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>2</span>;
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>sum</span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>-----
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span> <span style=color:#bd93f9>300</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>INSERT</span> <span style=color:#ff79c6>INTO</span> mytab <span style=color:#ff79c6>VALUES</span> (<span style=color:#bd93f9>1</span>, <span style=color:#bd93f9>300</span>);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>INSERT</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>commit</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>COMMIT</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> 
+</span></span></code></pre></div><h4 id=session1-1><strong>Session1</strong></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>#</span>セッション<span style=color:#bd93f9>2</span>で実行
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>commit</span>;
+</span></span><span style=display:flex><span>ERROR:  could <span style=color:#ff79c6>not</span> serialize <span style=color:#ff79c6>access</span> due <span style=color:#ff79c6>to</span> <span style=color:#ff79c6>read</span><span style=color:#ff79c6>/</span><span style=color:#ff79c6>write</span> dependencies among transactions
+</span></span><span style=display:flex><span>DETAIL:  Reason code: Canceled <span style=color:#ff79c6>on</span> identification <span style=color:#ff79c6>as</span> a pivot, during <span style=color:#ff79c6>commit</span> attempt.
+</span></span><span style=display:flex><span>HINT:  The <span style=color:#ff79c6>transaction</span> might succeed <span style=color:#ff79c6>if</span> retried.
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>BEGIN</span> <span style=color:#ff79c6>TRANSACTION</span> <span style=color:#ff79c6>ISOLATION</span> <span style=color:#ff79c6>LEVEL</span> <span style=color:#ff79c6>SERIALIZABLE</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>BEGIN</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>SUM</span>(value) <span style=color:#ff79c6>FROM</span> mytab <span style=color:#ff79c6>WHERE</span> <span style=color:#ff79c6>class</span> <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>sum</span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>-----
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span> <span style=color:#bd93f9>330</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>INSERT</span> <span style=color:#ff79c6>INTO</span> mytab <span style=color:#ff79c6>VALUES</span> (<span style=color:#bd93f9>2</span>, <span style=color:#bd93f9>330</span>);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>INSERT</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>COMMIT</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>COMMIT</span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> <span style=color:#ff79c6>SELECT</span> <span style=color:#ff79c6>*</span> <span style=color:#ff79c6>FROM</span> mytab;
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>class</span> <span style=color:#ff79c6>|</span> value 
+</span></span><span style=display:flex><span><span style=color:#6272a4>-------+-------
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>     <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>    <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>    <span style=color:#bd93f9>20</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>2</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>2</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>200</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>300</span>
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>2</span> <span style=color:#ff79c6>|</span>   <span style=color:#bd93f9>330</span>
+</span></span><span style=display:flex><span>(<span style=color:#bd93f9>6</span> <span style=color:#ff79c6>rows</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>aurorapostdb<span style=color:#ff79c6>=&gt;</span> 
+</span></span></code></pre></div><p><strong>OracleとPostgreSQLのトランザクションの差異について</strong></p><hr><p>OracleとPostgreSQLは同じRead Committedだが、トランザクションによっては違う結果になることを整理してみた</p><blockquote><p>OracleとPostgreSQLのトランザクション差異について整理する | my opinion is my own <a href=https://zatoima.github.io/oracle-postgresql-transaction-different.html>https://zatoima.github.io/oracle-postgresql-transaction-different.html</a></p></blockquote><h3 id=参照先参考資料><strong>参照先、参考資料</strong></h3><hr><blockquote><p>データの同時実行性と整合性 <a href=https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm>https://docs.oracle.com/cd/E57425_01/121/CNCPT/consist.htm</a></p></blockquote><blockquote><p>第18回 ロックについて <a href=https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html>https://www.oracle.com/technetwork/jp/database/articles/tsushima/tsm18-1610822-ja.html</a></p></blockquote><blockquote><p>SSI - PostgreSQL wiki <a href=https://wiki.postgresql.org/wiki/SSI>https://wiki.postgresql.org/wiki/SSI</a></p><p>postgresql isolation について - qiita <a href=https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd>https://qiita.com/kimullaa/items/ed12fa8f6cb993eee5cd</a></p><p>ファントムリードは起こらないのにseirializableでない、それがポスグレのrepeatable read - qiita <a href=https://qiita.com/yuba/items/89496dda291edb2e558c>https://qiita.com/yuba/items/89496dda291edb2e558c</a></p></blockquote></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/oracle-to-aws-sct-partition-limit.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>OracleのパーティションテーブルをAurora(PostgreSQL)へSCT変換する場合の注意 …</span></a>
+<a href=https://zatoima.github.io/pelican-blog-implement.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>Pelican on Github Pagesで静的サイトを構築する</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2foracle-mysql-postgresql-isolation-level.html&text=%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B6%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E5%88%86%E9%9B%A2%E3%83%AC%E3%83%99%E3%83%AB%28ISOLATION+LEVEL%29%E3%81%A8%E5%90%84DB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%B3%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/oracle-mysql-postgresql-isolation-level.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aurora-postgresql-query-plan-management.html>Aurora(PostgreSQL)でQPM(Query Plan Management)を試してみる</a></li><li><a href=/oracle-install-sample-schema.html>Oracle Database 12.1.0.2にサンプルスキーマを手動インストール、手動作成する</a></li><li><a href=/aws-aurora-postgres-password.html>Aurora(PostgreSQL)へのpsql接続時にパスワードを省略する方法</a></li><li><a href=/aws-aurora-postgres-querylog.html>Aurora(PostgresSQL)のスロークエリログの出力方法</a></li><li><a href=/aws-rds-postgresql-sysbench.html>RDS(PostgreSQL)にsysbenchを実行する</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/oracle/ class=tag-badge><img src=/images/tags/oracle.svg alt=Oracle class=tag-badge-icon loading=lazy>Oracle</a>
+<a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><ul><li><a href=#トランザクション分離レベルとは>トランザクション分離レベルとは？</a></li><li><a href=#serializable--直列化可能->SERIALIZABLE ( 直列化可能 )</a></li><li><a href=#repeatable-read--読み取り対象のデータを常に読み取る->REPEATABLE READ ( 読み取り対象のデータを常に読み取る )</a></li><li><a href=#read-committed--確定した最新データを常に読み取る->READ COMMITTED ( 確定した最新データを常に読み取る )</a></li><li><a href=#read-uncommitted--確定していないデータまで読み取る>READ UNCOMMITTED ( 確定していないデータまで読み取る)</a></li><li><a href=#dirty-read>Dirty Read</a></li><li><a href=#fuzzy-readnon-repeatable-read>Fuzzy Read(Non-Repeatable Read)</a></li><li><a href=#phantom-read>Phantom Read</a></li><li><a href=#lost-update>Lost Update</a></li><li><a href=#write-skew>Write Skew</a></li><li><a href=#分離レベルと起こりうるtransaction-annomaly>分離レベルと起こりうるTransaction Annomaly</a></li><li><a href=#各dbエンジンとトランザクション分離レベルの対応表>各DBエンジンとトランザクション分離レベルの対応表</a></li><li><a href=#oracle-databaseの場合>Oracle Databaseの場合</a></li><li><a href=#postgresqlmysqlの場合>PostgreSQL/MySQLの場合</a></li><li><a href=#write-skewをserializable分離レベルで試してみる>Write SkewをSERIALIZABLE分離レベルで試してみる</a></li><li><a href=#変更方法>変更方法</a></li><li><a href=#事前にテーブルデータ作成>事前にテーブル/データ作成</a></li><li><a href=#session1>Session1</a></li><li><a href=#session2>Session2</a></li><li><a href=#session1-1><strong>Session1</strong></a></li></ul></li><li><a href=#参照先参考資料><strong>参照先、参考資料</strong></a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

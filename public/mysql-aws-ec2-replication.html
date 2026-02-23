@@ -1,430 +1,181 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>AWS EC2上のMySQL環境でレプリケーション構成を構築する | my opinion is my own</title>
-<meta name="title" content="AWS EC2上のMySQL環境でレプリケーション構成を構築する" />
-<meta name="description" content="" />
-<meta name="keywords" content="MySQL,AWS,EC2," />
-
-
-<meta property="og:title" content="AWS EC2上のMySQL環境でレプリケーション構成を構築する" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/mysql-aws-ec2-replication.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-07-02T00:00:00+00:00" />
-<meta property="article:modified_time" content="2019-07-02T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="AWS EC2上のMySQL環境でレプリケーション構成を構築する"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="AWS EC2上のMySQL環境でレプリケーション構成を構築する">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2019-07-02T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2019-07-02T00:00:00+00:00" />
-<meta itemprop="wordCount" content="449"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="MySQL,AWS,EC2," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">AWS EC2上のMySQL環境でレプリケーション構成を構築する</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-icon" loading="lazy"></div>
-        <h1>AWS EC2上のMySQL環境でレプリケーション構成を構築する</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2019-07-02'>
-            2019/07/02 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約1分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-          <a href="https://zatoima.github.io/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="はじめに">はじめに</h3>
-<p>MySQLのレプリケーション環境をAWSのEC2を使って構築します。マスター側、及びスレーブ側どちらもEC2上に作成したMySQLになります。</p>
-<h3 id="前提事項">前提事項</h3>
-<p>・MySQLのマスター側、スレーブ側は構築済</p>
-<p>・データの中身は既にマスター側、スレーブ側にて同一</p>
-<h3 id="ec2のセキュリティリストの編集">EC2のセキュリティリストの編集</h3>
-<p>マスターとスレーブで通信をするのでインバウントを編集する必要があります。ここではプライベートIPを限定して許可しています。</p>
-<p><img src="images/image-20191121172723567.png" alt="image-20191121172723567"></p>
-<h3 id="スレーブ側のautocnfの削除">スレーブ側のauto.cnfの削除</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>cd <span style="color:#ff79c6">/</span>var<span style="color:#ff79c6">/</span>lib<span style="color:#ff79c6">/</span>mysql
-</span></span><span style="display:flex;"><span>rm <span style="color:#ff79c6">-</span>rf auto.cnf
-</span></span><span style="display:flex;"><span>systemctl <span style="color:#ff79c6">restart</span> mysqld
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>【実行結果】
-</span></span><span style="display:flex;"><span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span> pwd
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">/</span>var<span style="color:#ff79c6">/</span>lib<span style="color:#ff79c6">/</span>mysql
-</span></span><span style="display:flex;"><span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span> ls <span style="color:#ff79c6">-</span>l auto.cnf
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>rw<span style="color:#ff79c6">-</span>r<span style="color:#6272a4">----- 1 mysql mysql 56 Jun 24 13:25 auto.cnf
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span>
-</span></span><span style="display:flex;"><span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span> rm <span style="color:#ff79c6">-</span>rf auto.cnf
-</span></span><span style="display:flex;"><span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span>
-</span></span><span style="display:flex;"><span>[root<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db002 mysql]<span style="color:#ff79c6">#</span> systemctl <span style="color:#ff79c6">restart</span> mysqld
-</span></span></code></pre></div><h3 id="マスター側のmycnfの編集">マスター側のmy.cnfの編集</h3>
-<p>下記項目をmy.cnfに追加</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>バイナリログの有効化
-</span></span><span style="display:flex;"><span>log<span style="color:#ff79c6">-</span>bin
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span>サーバIDの設定
-</span></span><span style="display:flex;"><span>server_id<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span> GTID有効
-</span></span><span style="display:flex;"><span>gtid_mode<span style="color:#ff79c6">=</span><span style="color:#ff79c6">on</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span> GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
-</span></span><span style="display:flex;"><span>enforce_gtid_consistency<span style="color:#ff79c6">=</span><span style="color:#ff79c6">on</span>
-</span></span></code></pre></div><h3 id="スレーブ側のmycnfの編集">スレーブ側のmy.cnfの編集</h3>
-<p>下記項目をmy.cnfに追加</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>バイナリログの有効化 ※スレーブ側として可動する場合は必須ではない
-</span></span><span style="display:flex;"><span>log<span style="color:#ff79c6">-</span>bin
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span>サーバIDの設定
-</span></span><span style="display:flex;"><span>server_id<span style="color:#ff79c6">=</span><span style="color:#bd93f9">2</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span> GTID有効
-</span></span><span style="display:flex;"><span>gtid_mode<span style="color:#ff79c6">=</span><span style="color:#ff79c6">on</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span> GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
-</span></span><span style="display:flex;"><span>enforce_gtid_consistency<span style="color:#ff79c6">=</span><span style="color:#ff79c6">on</span>
-</span></span></code></pre></div><h3 id="マスター側にてレプリケーションスレーブ用のユーザを作成">マスター側にてレプリケーションスレーブ用のユーザを作成</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">grant</span> replication slave <span style="color:#ff79c6">on</span> <span style="color:#ff79c6">*</span>.<span style="color:#ff79c6">*</span> <span style="color:#ff79c6">to</span> <span style="color:#f1fa8c">&#39;repl&#39;</span><span style="color:#ff79c6">@</span><span style="color:#f1fa8c">&#39;10.0.0.11&#39;</span> identified <span style="color:#ff79c6">by</span> <span style="color:#f1fa8c">&#39;mysql&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">Host</span>, <span style="color:#ff79c6">User</span> <span style="color:#ff79c6">from</span> mysql.<span style="color:#ff79c6">user</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>【出力結果】
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">grant</span> replication slave <span style="color:#ff79c6">on</span> <span style="color:#ff79c6">*</span>.<span style="color:#ff79c6">*</span> <span style="color:#ff79c6">to</span> <span style="color:#f1fa8c">&#39;repl&#39;</span><span style="color:#ff79c6">@</span><span style="color:#f1fa8c">&#39;10.0.0.11&#39;</span> identified <span style="color:#ff79c6">by</span> <span style="color:#f1fa8c">&#39;mysql&#39;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">-&gt;</span> ;
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">rows</span> affected, <span style="color:#bd93f9">1</span> warning (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">Host</span>, <span style="color:#ff79c6">User</span> <span style="color:#ff79c6">from</span> mysql.<span style="color:#ff79c6">user</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-----------+---------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Host</span>      <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">User</span>          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-----------+---------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">10</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">11</span> <span style="color:#ff79c6">|</span> repl          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> localhost <span style="color:#ff79c6">|</span> mysql.<span style="color:#ff79c6">session</span> <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> localhost <span style="color:#ff79c6">|</span> mysql.sys     <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> localhost <span style="color:#ff79c6">|</span> myuser        <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> localhost <span style="color:#ff79c6">|</span> repl          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> localhost <span style="color:#ff79c6">|</span> root          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-----------+---------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span><span style="color:#bd93f9">6</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span></code></pre></div><h3 id="マスター側にてステータス確認">マスター側にてステータス確認</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">show</span> master status;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>【出力結果】
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> master status\<span style="color:#ff79c6">G</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">***************************</span> <span style="color:#bd93f9">1</span>. <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">***************************</span>
-</span></span><span style="display:flex;"><span>             File: awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000007</span>
-</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Position</span>: <span style="color:#bd93f9">485</span>
-</span></span><span style="display:flex;"><span>     Binlog_Do_DB:
-</span></span><span style="display:flex;"><span> Binlog_Ignore_DB:
-</span></span><span style="display:flex;"><span>Executed_Gtid_Set: <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">1</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">42</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span></code></pre></div><h3 id="スレーブ側にてレプリケーションスレーブの設定と開始">スレーブ側にてレプリケーションスレーブの設定と開始</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>change master <span style="color:#ff79c6">to</span> master_host <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;10.0.0.13&#39;</span>,master_user <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;repl&#39;</span>,master_password <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;mysql&#39;</span>,master_log_file <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000007&#39;</span>,master_log_pos <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">485</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">#</span>レプリケーションの開始
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">start</span> slave;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">show</span> slave status\<span style="color:#ff79c6">G</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>【出力結果】
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> change master <span style="color:#ff79c6">to</span> master_host <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;10.0.0.13&#39;</span>,master_user <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;repl&#39;</span>,master_password <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;mysql&#39;</span>,master_log_file <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;awsstg-db001-bin.000007&#39;</span>,master_log_pos <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">485</span>;
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">rows</span> affected, <span style="color:#bd93f9">2</span> warnings (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> warnings\<span style="color:#ff79c6">G</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">***************************</span> <span style="color:#bd93f9">1</span>. <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">***************************</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">Level</span>: Note
-</span></span><span style="display:flex;"><span>   Code: <span style="color:#bd93f9">1759</span>
-</span></span><span style="display:flex;"><span>Message: Sending passwords <span style="color:#ff79c6">in</span> plain <span style="color:#8be9fd;font-style:italic">text</span> <span style="color:#ff79c6">without</span> SSL<span style="color:#ff79c6">/</span>TLS <span style="color:#ff79c6">is</span> extremely insecure.
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">***************************</span> <span style="color:#bd93f9">2</span>. <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">***************************</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">Level</span>: Note
-</span></span><span style="display:flex;"><span>   Code: <span style="color:#bd93f9">1760</span>
-</span></span><span style="display:flex;"><span>Message: Storing MySQL <span style="color:#ff79c6">user</span> name <span style="color:#ff79c6">or</span> password information <span style="color:#ff79c6">in</span> the master info repository <span style="color:#ff79c6">is</span> <span style="color:#ff79c6">not</span> secure <span style="color:#ff79c6">and</span> <span style="color:#ff79c6">is</span> therefore <span style="color:#ff79c6">not</span> recommended. Please consider <span style="color:#ff79c6">using</span> the <span style="color:#ff79c6">USER</span> <span style="color:#ff79c6">and</span> PASSWORD <span style="color:#ff79c6">connection</span> <span style="color:#ff79c6">options</span> <span style="color:#ff79c6">for</span> <span style="color:#ff79c6">START</span> SLAVE; see the <span style="color:#f1fa8c">&#39;START SLAVE Syntax&#39;</span> <span style="color:#ff79c6">in</span> the MySQL Manualfor <span style="color:#ff79c6">more</span> information.
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> 
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> 
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">start</span> slave;
-</span></span><span style="display:flex;"><span>Query OK, <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">rows</span> affected (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> slave status\<span style="color:#ff79c6">G</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">***************************</span> <span style="color:#bd93f9">1</span>. <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">***************************</span>
-</span></span><span style="display:flex;"><span>               Slave_IO_State: Waiting <span style="color:#ff79c6">for</span> master <span style="color:#ff79c6">to</span> send event
-</span></span><span style="display:flex;"><span>                  Master_Host: <span style="color:#bd93f9">10</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">13</span>
-</span></span><span style="display:flex;"><span>                  Master_User: repl
-</span></span><span style="display:flex;"><span>                  Master_Port: <span style="color:#bd93f9">3306</span>
-</span></span><span style="display:flex;"><span>                Connect_Retry: <span style="color:#bd93f9">60</span>
-</span></span><span style="display:flex;"><span>              Master_Log_File: awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000007</span>
-</span></span><span style="display:flex;"><span>          Read_Master_Log_Pos: <span style="color:#bd93f9">84251854</span>
-</span></span><span style="display:flex;"><span>               Relay_Log_File: awsstg<span style="color:#ff79c6">-</span>db002<span style="color:#ff79c6">-</span>relay<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000004</span>
-</span></span><span style="display:flex;"><span>                Relay_Log_Pos: <span style="color:#bd93f9">84251325</span>
-</span></span><span style="display:flex;"><span>        Relay_Master_Log_File: awsstg<span style="color:#ff79c6">-</span>db001<span style="color:#ff79c6">-</span>bin.<span style="color:#bd93f9">000007</span>
-</span></span><span style="display:flex;"><span>             Slave_IO_Running: Yes
-</span></span><span style="display:flex;"><span>            Slave_SQL_Running: Yes
-</span></span><span style="display:flex;"><span>              Replicate_Do_DB:
-</span></span><span style="display:flex;"><span>          Replicate_Ignore_DB:
-</span></span><span style="display:flex;"><span>           Replicate_Do_Table:
-</span></span><span style="display:flex;"><span>       Replicate_Ignore_Table:
-</span></span><span style="display:flex;"><span>      Replicate_Wild_Do_Table:
-</span></span><span style="display:flex;"><span>  Replicate_Wild_Ignore_Table:
-</span></span><span style="display:flex;"><span>                   Last_Errno: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>                   Last_Error:
-</span></span><span style="display:flex;"><span>                 Skip_Counter: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>          Exec_Master_Log_Pos: <span style="color:#bd93f9">84251854</span>
-</span></span><span style="display:flex;"><span>              Relay_Log_Space: <span style="color:#bd93f9">84252123</span>
-</span></span><span style="display:flex;"><span>              Until_Condition: <span style="color:#ff79c6">None</span>
-</span></span><span style="display:flex;"><span>               Until_Log_File:
-</span></span><span style="display:flex;"><span>                Until_Log_Pos: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>           Master_SSL_Allowed: <span style="color:#ff79c6">No</span>
-</span></span><span style="display:flex;"><span>           Master_SSL_CA_File:
-</span></span><span style="display:flex;"><span>           Master_SSL_CA_Path:
-</span></span><span style="display:flex;"><span>              Master_SSL_Cert:
-</span></span><span style="display:flex;"><span>            Master_SSL_Cipher:
-</span></span><span style="display:flex;"><span>               Master_SSL_Key:
-</span></span><span style="display:flex;"><span>        Seconds_Behind_Master: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>Master_SSL_Verify_Server_Cert: <span style="color:#ff79c6">No</span>
-</span></span><span style="display:flex;"><span>                Last_IO_Errno: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>                Last_IO_Error:
-</span></span><span style="display:flex;"><span>               Last_SQL_Errno: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>               Last_SQL_Error:
-</span></span><span style="display:flex;"><span>  Replicate_Ignore_Server_Ids:
-</span></span><span style="display:flex;"><span>             Master_Server_Id: <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>                  Master_UUID: <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144
-</span></span><span style="display:flex;"><span>             Master_Info_File: <span style="color:#ff79c6">/</span>var<span style="color:#ff79c6">/</span>lib<span style="color:#ff79c6">/</span>mysql<span style="color:#ff79c6">/</span>master.info
-</span></span><span style="display:flex;"><span>                    SQL_Delay: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>          SQL_Remaining_Delay: <span style="color:#ff79c6">NULL</span>
-</span></span><span style="display:flex;"><span>      Slave_SQL_Running_State: Slave has <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">all</span> relay log; waiting <span style="color:#ff79c6">for</span> <span style="color:#ff79c6">more</span> updates
-</span></span><span style="display:flex;"><span>           Master_Retry_Count: <span style="color:#bd93f9">86400</span>
-</span></span><span style="display:flex;"><span>                  Master_Bind:
-</span></span><span style="display:flex;"><span>      Last_IO_Error_Timestamp:
-</span></span><span style="display:flex;"><span>     Last_SQL_Error_Timestamp:
-</span></span><span style="display:flex;"><span>               Master_SSL_Crl:
-</span></span><span style="display:flex;"><span>           Master_SSL_Crlpath:
-</span></span><span style="display:flex;"><span>           Retrieved_Gtid_Set: <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">43</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">68</span>
-</span></span><span style="display:flex;"><span>            Executed_Gtid_Set: <span style="color:#bd93f9">86</span>a2b2da<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9683</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span>e9<span style="color:#ff79c6">-</span><span style="color:#bd93f9">9</span>dd6<span style="color:#ff79c6">-</span><span style="color:#bd93f9">067</span>b425ce144:<span style="color:#bd93f9">1</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span>:<span style="color:#bd93f9">43</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">68</span>
-</span></span><span style="display:flex;"><span>                Auto_Position: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>         Replicate_Rewrite_DB:
-</span></span><span style="display:flex;"><span>                 Channel_Name:
-</span></span><span style="display:flex;"><span>           Master_TLS_Version:
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span></code></pre></div>
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/mysql-flush-privileges.html" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">MySQLのFLUSH PRIVILEGESが必要なケース</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/mysql-slow_query_log_file-error.html" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">MySQLでslow_query_log_fileのファイルは事前に作成する必要あり</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fmysql-aws-ec2-replication.html&text=AWS&#43;EC2%E4%B8%8A%E3%81%AEMySQL%E7%92%B0%E5%A2%83%E3%81%A7%E3%83%AC%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E6%A7%8B%E6%88%90%E3%82%92%E6%A7%8B%E7%AF%89%E3%81%99%E3%82%8B" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/mysql-aws-ec2-replication.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-ec2-hostname-change.html">EC2インスタンスのホスト名変更</a></li>
-    
-    <li><a href="/mysql-flush-privileges.html">MySQLのFLUSH PRIVILEGESが必要なケース</a></li>
-    
-    <li><a href="/mysql-file-exporttable.html">MySQLテーブル内のデータをファイル抽出する</a></li>
-    
-    <li><a href="/mysql-testtable-create.html">MySQL検証用テーブル作成（データベース作成～テストデータの準備まで）</a></li>
-    
-    <li><a href="/mysql-support-platform-period.html">MySQLのサポートプラットフォームとサポート期間</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/mysql/" class="tag-badge"><img src="/images/tags/mysql.svg" alt="MySQL" class="tag-badge-icon" loading="lazy">MySQL</a>
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-  <a href="https://zatoima.github.io/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#はじめに">はじめに</a></li>
-        <li><a href="#前提事項">前提事項</a></li>
-        <li><a href="#ec2のセキュリティリストの編集">EC2のセキュリティリストの編集</a></li>
-        <li><a href="#スレーブ側のautocnfの削除">スレーブ側のauto.cnfの削除</a></li>
-        <li><a href="#マスター側のmycnfの編集">マスター側のmy.cnfの編集</a></li>
-        <li><a href="#スレーブ側のmycnfの編集">スレーブ側のmy.cnfの編集</a></li>
-        <li><a href="#マスター側にてレプリケーションスレーブ用のユーザを作成">マスター側にてレプリケーションスレーブ用のユーザを作成</a></li>
-        <li><a href="#マスター側にてステータス確認">マスター側にてステータス確認</a></li>
-        <li><a href="#スレーブ側にてレプリケーションスレーブの設定と開始">スレーブ側にてレプリケーションスレーブの設定と開始</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>AWS EC2上のMySQL環境でレプリケーション構成を構築する | my opinion is my own</title><meta name=title content="AWS EC2上のMySQL環境でレプリケーション構成を構築する"><meta name=description content><meta name=keywords content="MySQL,AWS,EC2,"><meta property="og:title" content="AWS EC2上のMySQL環境でレプリケーション構成を構築する"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/mysql-aws-ec2-replication.html"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2019-07-02T00:00:00+00:00"><meta property="article:modified_time" content="2019-07-02T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="AWS EC2上のMySQL環境でレプリケーション構成を構築する"><meta name=twitter:description content><meta itemprop=name content="AWS EC2上のMySQL環境でレプリケーション構成を構築する"><meta itemprop=description content><meta itemprop=datePublished content="2019-07-02T00:00:00+00:00"><meta itemprop=dateModified content="2019-07-02T00:00:00+00:00"><meta itemprop=wordCount content="449"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="MySQL,AWS,EC2,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>AWS EC2上のMySQL環境でレプリケーション構成を構築する</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/mysql.svg alt=MySQL class=tag-icon loading=lazy></div><h1>AWS EC2上のMySQL環境でレプリケーション構成を構築する</h1><div class=article-meta><time class=article-date datetime=2019-07-02>2019/07/02 に公開</time>
+<span class=reading-time>📖 約1分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a>
+<a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/ec2/ class=tag-badge><img src=/images/tags/ec2.svg alt=EC2 class=tag-badge-icon loading=lazy>EC2</a></div></div><div class=article-content><h3 id=はじめに>はじめに</h3><p>MySQLのレプリケーション環境をAWSのEC2を使って構築します。マスター側、及びスレーブ側どちらもEC2上に作成したMySQLになります。</p><h3 id=前提事項>前提事項</h3><p>・MySQLのマスター側、スレーブ側は構築済</p><p>・データの中身は既にマスター側、スレーブ側にて同一</p><h3 id=ec2のセキュリティリストの編集>EC2のセキュリティリストの編集</h3><p>マスターとスレーブで通信をするのでインバウントを編集する必要があります。ここではプライベートIPを限定して許可しています。</p><p><img src=images/image-20191121172723567.png alt=image-20191121172723567></p><h3 id=スレーブ側のautocnfの削除>スレーブ側のauto.cnfの削除</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>cd <span style=color:#ff79c6>/</span>var<span style=color:#ff79c6>/</span>lib<span style=color:#ff79c6>/</span>mysql
+</span></span><span style=display:flex><span>rm <span style=color:#ff79c6>-</span>rf auto.cnf
+</span></span><span style=display:flex><span>systemctl <span style=color:#ff79c6>restart</span> mysqld
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>【実行結果】
+</span></span><span style=display:flex><span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span> pwd
+</span></span><span style=display:flex><span><span style=color:#ff79c6>/</span>var<span style=color:#ff79c6>/</span>lib<span style=color:#ff79c6>/</span>mysql
+</span></span><span style=display:flex><span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span> ls <span style=color:#ff79c6>-</span>l auto.cnf
+</span></span><span style=display:flex><span><span style=color:#ff79c6>-</span>rw<span style=color:#ff79c6>-</span>r<span style=color:#6272a4>----- 1 mysql mysql 56 Jun 24 13:25 auto.cnf
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span>
+</span></span><span style=display:flex><span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span> rm <span style=color:#ff79c6>-</span>rf auto.cnf
+</span></span><span style=display:flex><span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span>
+</span></span><span style=display:flex><span>[root<span style=color:#ff79c6>@</span>awsstg<span style=color:#ff79c6>-</span>db002 mysql]<span style=color:#ff79c6>#</span> systemctl <span style=color:#ff79c6>restart</span> mysqld
+</span></span></code></pre></div><h3 id=マスター側のmycnfの編集>マスター側のmy.cnfの編集</h3><p>下記項目をmy.cnfに追加</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>#</span>バイナリログの有効化
+</span></span><span style=display:flex><span>log<span style=color:#ff79c6>-</span>bin
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span>サーバIDの設定
+</span></span><span style=display:flex><span>server_id<span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span> GTID有効
+</span></span><span style=display:flex><span>gtid_mode<span style=color:#ff79c6>=</span><span style=color:#ff79c6>on</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span> GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
+</span></span><span style=display:flex><span>enforce_gtid_consistency<span style=color:#ff79c6>=</span><span style=color:#ff79c6>on</span>
+</span></span></code></pre></div><h3 id=スレーブ側のmycnfの編集>スレーブ側のmy.cnfの編集</h3><p>下記項目をmy.cnfに追加</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>#</span>バイナリログの有効化 ※スレーブ側として可動する場合は必須ではない
+</span></span><span style=display:flex><span>log<span style=color:#ff79c6>-</span>bin
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span>サーバIDの設定
+</span></span><span style=display:flex><span>server_id<span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span> GTID有効
+</span></span><span style=display:flex><span>gtid_mode<span style=color:#ff79c6>=</span><span style=color:#ff79c6>on</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span> GTID利用時に必須となる設定（GTIDの一貫性を担保できないSQLの実行を禁止）
+</span></span><span style=display:flex><span>enforce_gtid_consistency<span style=color:#ff79c6>=</span><span style=color:#ff79c6>on</span>
+</span></span></code></pre></div><h3 id=マスター側にてレプリケーションスレーブ用のユーザを作成>マスター側にてレプリケーションスレーブ用のユーザを作成</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>grant</span> replication slave <span style=color:#ff79c6>on</span> <span style=color:#ff79c6>*</span>.<span style=color:#ff79c6>*</span> <span style=color:#ff79c6>to</span> <span style=color:#f1fa8c>&#39;repl&#39;</span><span style=color:#ff79c6>@</span><span style=color:#f1fa8c>&#39;10.0.0.11&#39;</span> identified <span style=color:#ff79c6>by</span> <span style=color:#f1fa8c>&#39;mysql&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>select</span> <span style=color:#ff79c6>Host</span>, <span style=color:#ff79c6>User</span> <span style=color:#ff79c6>from</span> mysql.<span style=color:#ff79c6>user</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>【出力結果】
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>grant</span> replication slave <span style=color:#ff79c6>on</span> <span style=color:#ff79c6>*</span>.<span style=color:#ff79c6>*</span> <span style=color:#ff79c6>to</span> <span style=color:#f1fa8c>&#39;repl&#39;</span><span style=color:#ff79c6>@</span><span style=color:#f1fa8c>&#39;10.0.0.11&#39;</span> identified <span style=color:#ff79c6>by</span> <span style=color:#f1fa8c>&#39;mysql&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>-&gt;</span> ;
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>rows</span> affected, <span style=color:#bd93f9>1</span> warning (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>01</span> sec)
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>select</span> <span style=color:#ff79c6>Host</span>, <span style=color:#ff79c6>User</span> <span style=color:#ff79c6>from</span> mysql.<span style=color:#ff79c6>user</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-----------+---------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> <span style=color:#ff79c6>Host</span>      <span style=color:#ff79c6>|</span> <span style=color:#ff79c6>User</span>          <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-----------+---------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>|</span> <span style=color:#bd93f9>10</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>11</span> <span style=color:#ff79c6>|</span> repl          <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> localhost <span style=color:#ff79c6>|</span> mysql.<span style=color:#ff79c6>session</span> <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> localhost <span style=color:#ff79c6>|</span> mysql.sys     <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> localhost <span style=color:#ff79c6>|</span> myuser        <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> localhost <span style=color:#ff79c6>|</span> repl          <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>|</span> localhost <span style=color:#ff79c6>|</span> root          <span style=color:#ff79c6>|</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>+</span><span style=color:#6272a4>-----------+---------------+
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#bd93f9>6</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span></code></pre></div><h3 id=マスター側にてステータス確認>マスター側にてステータス確認</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#ff79c6>show</span> master status;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>【出力結果】
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> master status\<span style=color:#ff79c6>G</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>***************************</span> <span style=color:#bd93f9>1</span>. <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>***************************</span>
+</span></span><span style=display:flex><span>             File: awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000007</span>
+</span></span><span style=display:flex><span>         <span style=color:#ff79c6>Position</span>: <span style=color:#bd93f9>485</span>
+</span></span><span style=display:flex><span>     Binlog_Do_DB:
+</span></span><span style=display:flex><span> Binlog_Ignore_DB:
+</span></span><span style=display:flex><span>Executed_Gtid_Set: <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>1</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>42</span>
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span></code></pre></div><h3 id=スレーブ側にてレプリケーションスレーブの設定と開始>スレーブ側にてレプリケーションスレーブの設定と開始</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span>change master <span style=color:#ff79c6>to</span> master_host <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;10.0.0.13&#39;</span>,master_user <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;repl&#39;</span>,master_password <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;mysql&#39;</span>,master_log_file <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000007&#39;</span>,master_log_pos <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>485</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#</span>レプリケーションの開始
+</span></span><span style=display:flex><span><span style=color:#ff79c6>start</span> slave;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>show</span> slave status\<span style=color:#ff79c6>G</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>【出力結果】
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> change master <span style=color:#ff79c6>to</span> master_host <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;10.0.0.13&#39;</span>,master_user <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;repl&#39;</span>,master_password <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;mysql&#39;</span>,master_log_file <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;awsstg-db001-bin.000007&#39;</span>,master_log_pos <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>485</span>;
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>rows</span> affected, <span style=color:#bd93f9>2</span> warnings (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>01</span> sec)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> warnings\<span style=color:#ff79c6>G</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>***************************</span> <span style=color:#bd93f9>1</span>. <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>***************************</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>Level</span>: Note
+</span></span><span style=display:flex><span>   Code: <span style=color:#bd93f9>1759</span>
+</span></span><span style=display:flex><span>Message: Sending passwords <span style=color:#ff79c6>in</span> plain <span style=color:#8be9fd;font-style:italic>text</span> <span style=color:#ff79c6>without</span> SSL<span style=color:#ff79c6>/</span>TLS <span style=color:#ff79c6>is</span> extremely insecure.
+</span></span><span style=display:flex><span><span style=color:#ff79c6>***************************</span> <span style=color:#bd93f9>2</span>. <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>***************************</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>Level</span>: Note
+</span></span><span style=display:flex><span>   Code: <span style=color:#bd93f9>1760</span>
+</span></span><span style=display:flex><span>Message: Storing MySQL <span style=color:#ff79c6>user</span> name <span style=color:#ff79c6>or</span> password information <span style=color:#ff79c6>in</span> the master info repository <span style=color:#ff79c6>is</span> <span style=color:#ff79c6>not</span> secure <span style=color:#ff79c6>and</span> <span style=color:#ff79c6>is</span> therefore <span style=color:#ff79c6>not</span> recommended. Please consider <span style=color:#ff79c6>using</span> the <span style=color:#ff79c6>USER</span> <span style=color:#ff79c6>and</span> PASSWORD <span style=color:#ff79c6>connection</span> <span style=color:#ff79c6>options</span> <span style=color:#ff79c6>for</span> <span style=color:#ff79c6>START</span> SLAVE; see the <span style=color:#f1fa8c>&#39;START SLAVE Syntax&#39;</span> <span style=color:#ff79c6>in</span> the MySQL Manualfor <span style=color:#ff79c6>more</span> information.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2</span> <span style=color:#ff79c6>rows</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> 
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> 
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>start</span> slave;
+</span></span><span style=display:flex><span>Query OK, <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>rows</span> affected (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span><span style=display:flex><span>mysql<span style=color:#ff79c6>&gt;</span> <span style=color:#ff79c6>show</span> slave status\<span style=color:#ff79c6>G</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>***************************</span> <span style=color:#bd93f9>1</span>. <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>***************************</span>
+</span></span><span style=display:flex><span>               Slave_IO_State: Waiting <span style=color:#ff79c6>for</span> master <span style=color:#ff79c6>to</span> send event
+</span></span><span style=display:flex><span>                  Master_Host: <span style=color:#bd93f9>10</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>13</span>
+</span></span><span style=display:flex><span>                  Master_User: repl
+</span></span><span style=display:flex><span>                  Master_Port: <span style=color:#bd93f9>3306</span>
+</span></span><span style=display:flex><span>                Connect_Retry: <span style=color:#bd93f9>60</span>
+</span></span><span style=display:flex><span>              Master_Log_File: awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000007</span>
+</span></span><span style=display:flex><span>          Read_Master_Log_Pos: <span style=color:#bd93f9>84251854</span>
+</span></span><span style=display:flex><span>               Relay_Log_File: awsstg<span style=color:#ff79c6>-</span>db002<span style=color:#ff79c6>-</span>relay<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000004</span>
+</span></span><span style=display:flex><span>                Relay_Log_Pos: <span style=color:#bd93f9>84251325</span>
+</span></span><span style=display:flex><span>        Relay_Master_Log_File: awsstg<span style=color:#ff79c6>-</span>db001<span style=color:#ff79c6>-</span>bin.<span style=color:#bd93f9>000007</span>
+</span></span><span style=display:flex><span>             Slave_IO_Running: Yes
+</span></span><span style=display:flex><span>            Slave_SQL_Running: Yes
+</span></span><span style=display:flex><span>              Replicate_Do_DB:
+</span></span><span style=display:flex><span>          Replicate_Ignore_DB:
+</span></span><span style=display:flex><span>           Replicate_Do_Table:
+</span></span><span style=display:flex><span>       Replicate_Ignore_Table:
+</span></span><span style=display:flex><span>      Replicate_Wild_Do_Table:
+</span></span><span style=display:flex><span>  Replicate_Wild_Ignore_Table:
+</span></span><span style=display:flex><span>                   Last_Errno: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>                   Last_Error:
+</span></span><span style=display:flex><span>                 Skip_Counter: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>          Exec_Master_Log_Pos: <span style=color:#bd93f9>84251854</span>
+</span></span><span style=display:flex><span>              Relay_Log_Space: <span style=color:#bd93f9>84252123</span>
+</span></span><span style=display:flex><span>              Until_Condition: <span style=color:#ff79c6>None</span>
+</span></span><span style=display:flex><span>               Until_Log_File:
+</span></span><span style=display:flex><span>                Until_Log_Pos: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>           Master_SSL_Allowed: <span style=color:#ff79c6>No</span>
+</span></span><span style=display:flex><span>           Master_SSL_CA_File:
+</span></span><span style=display:flex><span>           Master_SSL_CA_Path:
+</span></span><span style=display:flex><span>              Master_SSL_Cert:
+</span></span><span style=display:flex><span>            Master_SSL_Cipher:
+</span></span><span style=display:flex><span>               Master_SSL_Key:
+</span></span><span style=display:flex><span>        Seconds_Behind_Master: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Master_SSL_Verify_Server_Cert: <span style=color:#ff79c6>No</span>
+</span></span><span style=display:flex><span>                Last_IO_Errno: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>                Last_IO_Error:
+</span></span><span style=display:flex><span>               Last_SQL_Errno: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>               Last_SQL_Error:
+</span></span><span style=display:flex><span>  Replicate_Ignore_Server_Ids:
+</span></span><span style=display:flex><span>             Master_Server_Id: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>                  Master_UUID: <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144
+</span></span><span style=display:flex><span>             Master_Info_File: <span style=color:#ff79c6>/</span>var<span style=color:#ff79c6>/</span>lib<span style=color:#ff79c6>/</span>mysql<span style=color:#ff79c6>/</span>master.info
+</span></span><span style=display:flex><span>                    SQL_Delay: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>          SQL_Remaining_Delay: <span style=color:#ff79c6>NULL</span>
+</span></span><span style=display:flex><span>      Slave_SQL_Running_State: Slave has <span style=color:#ff79c6>read</span> <span style=color:#ff79c6>all</span> relay log; waiting <span style=color:#ff79c6>for</span> <span style=color:#ff79c6>more</span> updates
+</span></span><span style=display:flex><span>           Master_Retry_Count: <span style=color:#bd93f9>86400</span>
+</span></span><span style=display:flex><span>                  Master_Bind:
+</span></span><span style=display:flex><span>      Last_IO_Error_Timestamp:
+</span></span><span style=display:flex><span>     Last_SQL_Error_Timestamp:
+</span></span><span style=display:flex><span>               Master_SSL_Crl:
+</span></span><span style=display:flex><span>           Master_SSL_Crlpath:
+</span></span><span style=display:flex><span>           Retrieved_Gtid_Set: <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>43</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>68</span>
+</span></span><span style=display:flex><span>            Executed_Gtid_Set: <span style=color:#bd93f9>86</span>a2b2da<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9683</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span>e9<span style=color:#ff79c6>-</span><span style=color:#bd93f9>9</span>dd6<span style=color:#ff79c6>-</span><span style=color:#bd93f9>067</span>b425ce144:<span style=color:#bd93f9>1</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>27</span>:<span style=color:#bd93f9>43</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>68</span>
+</span></span><span style=display:flex><span>                Auto_Position: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>         Replicate_Rewrite_DB:
+</span></span><span style=display:flex><span>                 Channel_Name:
+</span></span><span style=display:flex><span>           Master_TLS_Version:
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1</span> <span style=color:#ff79c6>row</span> <span style=color:#ff79c6>in</span> <span style=color:#ff79c6>set</span> (<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>00</span> sec)
+</span></span></code></pre></div></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/mysql-flush-privileges.html class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>MySQLのFLUSH PRIVILEGESが必要なケース</span></a>
+<a href=https://zatoima.github.io/mysql-slow_query_log_file-error.html class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>MySQLでslow_query_log_fileのファイルは事前に作成する必要あり</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fmysql-aws-ec2-replication.html&text=AWS&#43;EC2%E4%B8%8A%E3%81%AEMySQL%E7%92%B0%E5%A2%83%E3%81%A7%E3%83%AC%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E6%A7%8B%E6%88%90%E3%82%92%E6%A7%8B%E7%AF%89%E3%81%99%E3%82%8B" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/mysql-aws-ec2-replication.html target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-ec2-hostname-change.html>EC2インスタンスのホスト名変更</a></li><li><a href=/mysql-flush-privileges.html>MySQLのFLUSH PRIVILEGESが必要なケース</a></li><li><a href=/mysql-file-exporttable.html>MySQLテーブル内のデータをファイル抽出する</a></li><li><a href=/mysql-testtable-create.html>MySQL検証用テーブル作成（データベース作成～テストデータの準備まで）</a></li><li><a href=/mysql-support-platform-period.html>MySQLのサポートプラットフォームとサポート期間</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/mysql/ class=tag-badge><img src=/images/tags/mysql.svg alt=MySQL class=tag-badge-icon loading=lazy>MySQL</a>
+<a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/ec2/ class=tag-badge><img src=/images/tags/ec2.svg alt=EC2 class=tag-badge-icon loading=lazy>EC2</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#はじめに>はじめに</a></li><li><a href=#前提事項>前提事項</a></li><li><a href=#ec2のセキュリティリストの編集>EC2のセキュリティリストの編集</a></li><li><a href=#スレーブ側のautocnfの削除>スレーブ側のauto.cnfの削除</a></li><li><a href=#マスター側のmycnfの編集>マスター側のmy.cnfの編集</a></li><li><a href=#スレーブ側のmycnfの編集>スレーブ側のmy.cnfの編集</a></li><li><a href=#マスター側にてレプリケーションスレーブ用のユーザを作成>マスター側にてレプリケーションスレーブ用のユーザを作成</a></li><li><a href=#マスター側にてステータス確認>マスター側にてステータス確認</a></li><li><a href=#スレーブ側にてレプリケーションスレーブの設定と開始>スレーブ側にてレプリケーションスレーブの設定と開始</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>

@@ -1,648 +1,226 @@
-<!DOCTYPE html>
-<html lang="en-US">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
-<title>Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？） | my opinion is my own</title>
-<meta name="title" content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）" />
-<meta name="description" content="" />
-<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
-
-
-<meta property="og:title" content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-aurora-postgresql-audit/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2022-04-16T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-04-16T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
-
-
-
-
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）"/>
-<meta name="twitter:description" content=""/>
-
-
-
-<meta itemprop="name" content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）">
-<meta itemprop="description" content=""><meta itemprop="datePublished" content="2022-04-16T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2022-04-16T00:00:00+00:00" />
-<meta itemprop="wordCount" content="1361"><meta itemprop="image" content="https://zatoima.github.io/images/share.png"/>
-<meta itemprop="keywords" content="AWS,Aurora,PostgreSQL," />
-<meta name="referrer" content="no-referrer-when-downgrade" />
-
-  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
-  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
-
-  <script>
-    (function(){
-      var t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script><link rel="stylesheet" href="/css/zenn.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-STFZ9QMXGM');
-</script>
-</head>
-
-<body>
-  <div class="site-wrapper">
-    <header class="site-header">
-      <div class="header-inner">
-        <a href="/" class="site-logo">my opinion is my own</a>
-        <nav class="header-nav">
-<a href="/about/">About</a>
-<a href="/blog/">Blog</a>
-<a href="/index.xml">RSS</a>
-<a href="/other/">Other</a>
-<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
-</nav>
-        <div class="header-actions">
-          <button id="search-btn" class="header-icon-btn" aria-label="検索">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    
-    <div id="search-overlay" class="search-overlay">
-      <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-    </div>
-
-    
-    <div id="nav-overlay" class="nav-overlay"></div>
-
-    <main class="site-main">
-<div class="article-layout">
-  <article class="article-main">
-    
-    <nav class="breadcrumb" aria-label="パンくずリスト">
-  <a href="/">ホーム</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <a href="/blog/">Blog</a>
-  <span class="breadcrumb-sep">&gt;</span>
-  
-  <span class="breadcrumb-current">Aurora PostgreSQLのDB監査方式（Database …</span>
-</nav>
-
-    
-    <div class="article-card">
-      <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
-        <h1>Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）</h1>
-        
-        <div class="article-meta">
-          <time class="article-date" datetime='2022-04-16'>
-            2022/04/16 に公開
-          </time>
-          
-          
-          
-          <span class="reading-time">📖 約2分</span>
-        </div>
-        <div class="article-tags">
-          
-          <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-          
-          <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-          
-          <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-          
-        </div>
-        
-      </div>
-      <div class="article-content">
-        <h3 id="特徴">特徴</h3>
-<h5 id="pgaudit">pgaudit</h5>
-<ul>
-<li>
-<p>PostgreSQL の拡張機能</p>
-</li>
-<li>
-<p>PostgreSQL ログに混在して出力（Auroraの場合はCloudWatchにも出力）</p>
-</li>
-<li>
-<p>セッション監査/オブジェクト監査/DML・DDLを指定して対象の監査を絞ることが出来る</p>
-</li>
-<li>
-<p>取得される情報サンプル</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">13</span> <span style="color:#bd93f9">08</span>:<span style="color:#bd93f9">06</span>:<span style="color:#bd93f9">24</span> UTC:<span style="color:#bd93f9">10</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">123</span>(<span style="color:#bd93f9">50322</span>):audit_user1<span style="color:#ff79c6">@</span>auditdb:[<span style="color:#bd93f9">24298</span>]:LOG:  AUDIT: <span style="color:#ff79c6">SESSION</span>,<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">2</span>,DDL,<span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> <span style="color:#ff79c6">AS</span>,,,<span style="color:#f1fa8c">&#34;CREATE TABLE t1 AS
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	SELECT num                         a 
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	      ,&#39;1&#39;                         b 
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	      ,to_char(num,&#39;FM00000&#39;)      c 
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	      ,current_timestamp      d 
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	FROM   generate_series(1,10000000) num
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">	;&#34;</span>,<span style="color:#ff79c6">&lt;</span><span style="color:#ff79c6">none</span><span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">13</span> <span style="color:#bd93f9">08</span>:<span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">36</span> UTC:<span style="color:#bd93f9">10</span>.<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">123</span>(<span style="color:#bd93f9">50322</span>):audit_user1<span style="color:#ff79c6">@</span>auditdb:[<span style="color:#bd93f9">24298</span>]:LOG:  AUDIT: <span style="color:#ff79c6">SESSION</span>,<span style="color:#bd93f9">2</span>,<span style="color:#bd93f9">1</span>,<span style="color:#ff79c6">READ</span>,<span style="color:#ff79c6">SELECT</span>,<span style="color:#ff79c6">TABLE</span>,<span style="color:#ff79c6">public</span>.t1,<span style="color:#ff79c6">select</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">from</span> t1;,<span style="color:#ff79c6">&lt;</span><span style="color:#ff79c6">none</span><span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2020</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">11</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">13</span> <span style="color:#bd93f9">08</span>:<span style="color:#bd93f9">07</span>:<span style="color:#bd93f9">36</span> UTC::<span style="color:#ff79c6">@</span>:[<span style="color:#bd93f9">32064</span>]:LOG:  AUDIT: <span style="color:#ff79c6">SESSION</span>,<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">1</span>,<span style="color:#ff79c6">READ</span>,<span style="color:#ff79c6">SELECT</span>,<span style="color:#ff79c6">TABLE</span>,<span style="color:#ff79c6">public</span>.t1,<span style="color:#ff79c6">select</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">from</span> t1;,<span style="color:#ff79c6">&lt;</span><span style="color:#ff79c6">none</span><span style="color:#ff79c6">&gt;</span>
-</span></span></code></pre></div></li>
-<li>
-<p>使用上の注意としてはパフォーマンス影響がある。下記はGithubから</p>
-<blockquote>
-<ul>
-<li>
-<p>Depending on settings, it is possible for pgAudit to generate an enormous volume of logging. Be careful to determine exactly what needs to be audit logged in your environment to avoid logging too much.</p>
-<p>For example, when working in an OLAP environment it would probably not be wise to audit log inserts into a large fact table. The size of the log file will likely be many times the actual data size of the inserts because the log file is expressed as text. Since logs are generally stored with the OS this may lead to disk space being exhausted very quickly. In cases where it is not possible to limit audit logging to certain tables, be sure to assess the performance impact while testing and allocate plenty of space on the log volume. This may also be true for OLTP environments. Even if the insert volume is not as high, the performance impact of audit logging may still noticeably affect latency.</p>
-<p>訳</p>
-</li>
-<li>
-<p>設定によっては、pgAuditが膨大な量のログを生成する可能性があります。ロギングが多すぎないように、環境に監査ログを記録する必要があるものを正確に判断するように注意してください。</p>
-</li>
-<li>
-<p>たとえば、OLAP環境で作業している場合、大きなファクトテーブルへのログ挿入を監査することはおそらく賢明ではありません。ログファイルはテキストとして表現されるため、ログファイルのサイズは挿入物の実際のデータサイズの何倍にもなる可能性があります。ログは通常OSに保存されるため、ディスク容量がすぐに使い果たされる可能性があります。監査ログを特定のテーブルに制限できない場合は、テスト中にパフォーマンスへの影響を評価し、ログボリュームに十分なスペースを割り当てるようにしてください。これは、OLTP環境にも当てはまる可能性があります。挿入量がそれほど多くない場合でも、監査ログのパフォーマンスへの影響がレイテンシーに著しく影響する可能性があります。</p>
-</li>
-</ul>
-</blockquote>
-</li>
-<li>
-<p>参考リンク</p>
-</li>
-</ul>
-<blockquote>
-<p><a href="https://github.com/pgaudit/pgaudit">https://github.com/pgaudit/pgaudit</a></p>
-</blockquote>
-<h5 id="database-activity-streams">Database Activity Streams</h5>
-<ul>
-<li>
-<p>ほぼリアルタイムのデータを保存可能</p>
-</li>
-<li>
-<p>職務分離が可能</p>
-<ul>
-<li>DBAとセキュリティ担当がいたとして監査はセキュリティ担当だけが確認とかが出来る</li>
-</ul>
-</li>
-<li>
-<p>同期モードと非同期モードが存在する。どちらも一長一短あって悩ましいところ。</p>
-<ul>
-<li>
-<blockquote>
-<p><strong>非同期モード</strong> - データベースセッションでアクティビティストリーミングイベントが生成されると、セッションは直ちに通常のアクティビティに戻ります。アクティビティストリーミングイベントは、バックグラウンドで永続的なレコードになります。バックグラウンドタスクでエラーが発生した場合は、RDS イベントが送信されます。このイベントは、アクティビティストリーミングのイベントレコードが失われた可能性がある時間枠のスタートと終了を示します。</p>
-<p>非同期モードでは、アクティビティストリーミングの精度よりもデータベースのパフォーマンスが優先されます。</p>
-</blockquote>
-</li>
-<li>
-<blockquote>
-<p><strong>同期モード</strong> - データベースセッションでアクティビティストリーミングイベントが生成されると、そのイベントが永続化されるまで、セッションによってその他のアクティビティはブロックされます。何らかの理由でイベントを永続化できない場合、データベースセッションは通常のアクティビティに戻ります。ただし、アクティビティストリーミングレコードがしばらくの間失われる可能性があることを示す RDS イベントが送信されます。システムが正常な状態に戻ったら、2 番目の RDS イベントが送信されます。</p>
-<p>同期モードでは、データベースパフォーマンスよりもアクティビティストリーミングの精度が優先されます。</p>
-</blockquote>
-</li>
-</ul>
-</li>
-<li>
-<p>Kinesis ストリーミング分の追加料金が必要</p>
-</li>
-<li>
-<p>取得出来る情報はマニュアルを確認</p>
-<ul>
-<li><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Monitoring.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Monitoring.html</a></li>
-</ul>
-</li>
-<li>
-<p>Kinesis経由で3rd Partyの監視ツールやS3に出力することが出来る。S3に出力される場合、json形式なので可視化やSQLで分析するようなことが必要になってくるはず。</p>
-<ul>
-<li>Aurora - DAS - Kinesis Stream - Kinesis Firehose - Lamdbaで復号化 - S3出力 という流れにする必要がある
-<ul>
-<li><a href="https://dev.classmethod.jp/articles/aurora-postgresql-audit-with-data-activity-stream/">https://dev.classmethod.jp/articles/aurora-postgresql-audit-with-data-activity-stream/</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p>AWSだけでやる場合、分析するためのAthenaやQuickSightの考慮が別途必要。</p>
-</li>
-<li>
-<p>取得される情報サンプル</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;type&#34;</span>:<span style="color:#f1fa8c">&#34;DatabaseActivityMonitoringRecords&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;version&#34;</span>:<span style="color:#f1fa8c">&#34;1.1&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;databaseActivityEvents&#34;</span>: 
-</span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;type&#34;</span>:<span style="color:#f1fa8c">&#34;DatabaseActivityMonitoringRecord&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;clusterId&#34;</span>:<span style="color:#f1fa8c">&#34;cluster-4HNY5V4RRNPKKYB7ICFKE5JBQQ&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;instanceId&#34;</span>:<span style="color:#f1fa8c">&#34;db-FZJTMYKCXQBUUZ6VLU7NW3ITCM&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;databaseActivityEventList&#34;</span>:[
-</span></span><span style="display:flex;"><span>        {
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;startTime&#34;</span>: <span style="color:#f1fa8c">&#34;2019-05-24 00:36:54.403455+00&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;logTime&#34;</span>: <span style="color:#f1fa8c">&#34;2019-05-24 00:36:54.494235+00&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;statementId&#34;</span>: <span style="color:#bd93f9">2</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;substatementId&#34;</span>: <span style="color:#bd93f9">1</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;objectType&#34;</span>: <span style="color:#ff79c6">null</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;command&#34;</span>: <span style="color:#f1fa8c">&#34;CREATE TABLE&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;objectName&#34;</span>: <span style="color:#ff79c6">null</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;databaseName&#34;</span>: <span style="color:#f1fa8c">&#34;postgres&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;dbUserName&#34;</span>: <span style="color:#f1fa8c">&#34;rdsadmin&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;remoteHost&#34;</span>: <span style="color:#f1fa8c">&#34;172.31.3.195&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;remotePort&#34;</span>: <span style="color:#f1fa8c">&#34;34534&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;sessionId&#34;</span>: <span style="color:#f1fa8c">&#34;5ce73c6f.7e64&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;rowCount&#34;</span>: <span style="color:#ff79c6">null</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;commandText&#34;</span>: <span style="color:#f1fa8c">&#34;create table my_table (id serial primary key, name varchar(32));&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;paramList&#34;</span>: [],
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;pid&#34;</span>: <span style="color:#bd93f9">32356</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;clientApplication&#34;</span>: <span style="color:#f1fa8c">&#34;psql&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;exitCode&#34;</span>: <span style="color:#ff79c6">null</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;class&#34;</span>: <span style="color:#f1fa8c">&#34;DDL&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;serverVersion&#34;</span>: <span style="color:#f1fa8c">&#34;2.3.1&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;serverType&#34;</span>: <span style="color:#f1fa8c">&#34;PostgreSQL&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;serviceName&#34;</span>: <span style="color:#f1fa8c">&#34;Amazon Aurora PostgreSQL-Compatible edition&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;serverHost&#34;</span>: <span style="color:#f1fa8c">&#34;172.31.3.192&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;netProtocol&#34;</span>: <span style="color:#f1fa8c">&#34;TCP&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;dbProtocol&#34;</span>: <span style="color:#f1fa8c">&#34;Postgres 3.0&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;record&#34;</span>,
-</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;errorMessage&#34;</span>: <span style="color:#ff79c6">null</span>
-</span></span><span style="display:flex;"><span>        }
-</span></span><span style="display:flex;"><span>      ]
-</span></span><span style="display:flex;"><span>    },
-</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">&#34;key&#34;</span>:<span style="color:#f1fa8c">&#34;decryption-key&#34;</span>
-</span></span><span style="display:flex;"><span>} 
-</span></span></code></pre></div></li>
-<li>
-<p>参考リンク</p>
-</li>
-</ul>
-<blockquote>
-<p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html</a></p>
-</blockquote>
-<h3 id="結論">結論</h3>
-<p>要件次第だが、特になければ次の通りが良いと思った</p>
-<ul>
-<li>
-<p>pgauditを使う場合</p>
-<ul>
-<li>DASの追加費用が高く感じる、同期モード・非同期モードの仕様が受け入れられない、AWSだけでやる場合の追加設定の考慮から、オンプレPostgreSQLと同様の監査方式を採用したい、オンプレPostgreSQLで実績が多いpgauditを使いたい場合、重要テーブルだけ監査を取りたいとかであればpgaudit</li>
-</ul>
-</li>
-<li>
-<p>DAS（Database Activity Streams）</p>
-<ul>
-<li>リアルタイム性を追求したい、職務分離をしたい、及びpgauditで全テーブル情報を取得してパフォーマンスIssueが発生してDASの非同期モードで負荷を少なく取得したい、様々なメトリクスを取得したい等があった場合</li>
-</ul>
-</li>
-</ul>
-<h3 id="appendix簡易性能検証">Appendix：簡易性能検証</h3>
-<p>パフォーマンスの差異も気になるので、pgbenchを使って検証してみた。N=1の結果なのであまり参考にならないかもしれない。実際のワークロードでどうなるかを見てください、というお約束。</p>
-<p>32クライアントからpgbenchを実行して300秒実行し続けた結果を確認。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>#ベンチマークテスト
-</span></span><span style="display:flex;"><span>create database pgbench;
-</span></span><span style="display:flex;"><span>pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
-</span></span><span style="display:flex;"><span>pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
-</span></span></code></pre></div><h3 id="結果サマリ">結果サマリ</h3>
-<p>負荷が低かったのかDAS（同期モード） 有効化を除く、ほぼ劣化しなかったという結果に。オンプレPostgreSQLでpgauditを有効化にした際にはもうちょっと劣化した記憶があるけど、今回のケースではほぼ劣化してなかった</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>DB監査設定無し</th>
-<th>DAS（同期モード） 有効化</th>
-<th>DAS（非同期モード） 有効化</th>
-<th>pgaudit</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>トランザクション数</td>
-<td>548204</td>
-<td>400485</td>
-<td>533808</td>
-<td>553199</td>
-</tr>
-<tr>
-<td>平均レイテンシ</td>
-<td>17.477 ms</td>
-<td>23.922 ms</td>
-<td>17.948 ms</td>
-<td>17.319 ms</td>
-</tr>
-<tr>
-<td>tps</td>
-<td>1831.0</td>
-<td>1337.7</td>
-<td>1783.0</td>
-<td>1847.7</td>
-</tr>
-<tr>
-<td>DB監査を1とした場合の劣化率</td>
-<td>100%</td>
-<td>137%</td>
-<td>103%</td>
-<td>99%</td>
-</tr>
-</tbody>
-</table>
-<h3 id="db監査設定無し">DB監査設定無し</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
-</span></span><span style="display:flex;"><span>dropping old tables...
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>creating tables...
-</span></span><span style="display:flex;"><span>generating data (client-side)...
-</span></span><span style="display:flex;"><span>100000000 of 100000000 tuples (100%) done (elapsed 113.86 s, remaining 0.00 s)
-</span></span><span style="display:flex;"><span>vacuuming...
-</span></span><span style="display:flex;"><span>creating primary keys...
-</span></span><span style="display:flex;"><span>done in 204.96 s (drop tables 0.66 s, create tables 0.05 s, client-side generate 134.28 s, vacuum 36.71 s, primary keys 33.27 s).
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
-</span></span><span style="display:flex;"><span>pgbench (14.2, server 13.6)
-</span></span><span style="display:flex;"><span>starting vacuum...end.
-</span></span><span style="display:flex;"><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
-</span></span><span style="display:flex;"><span>scaling factor: 1000
-</span></span><span style="display:flex;"><span>query mode: simple
-</span></span><span style="display:flex;"><span>number of clients: 32
-</span></span><span style="display:flex;"><span>number of threads: 1
-</span></span><span style="display:flex;"><span>duration: 300 s
-</span></span><span style="display:flex;"><span>number of transactions actually processed: 548204
-</span></span><span style="display:flex;"><span>latency average = 17.477 ms
-</span></span><span style="display:flex;"><span>initial connection time = 613.275 ms
-</span></span><span style="display:flex;"><span>tps = 1830.980993 (without initial connection time)
-</span></span><span style="display:flex;"><span>statement latencies in milliseconds:
-</span></span><span style="display:flex;"><span>         0.000  \set aid random(1, 100000 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set bid random(1, 1 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set tid random(1, 10 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set delta random(-5000, 5000)
-</span></span><span style="display:flex;"><span>         1.895  BEGIN;
-</span></span><span style="display:flex;"><span>         2.015  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         1.939  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         1.983  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
-</span></span><span style="display:flex;"><span>         2.045  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
-</span></span><span style="display:flex;"><span>         1.916  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
-</span></span><span style="display:flex;"><span>         5.610  END;
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span></code></pre></div><p>PI</p>
-<p><img src="image-20220414133434942.png" alt="image-20220414133434942"></p>
-<p>Kinesis</p>
-<p><img src="image-20220414133528431.png" alt="image-20220414133528431"></p>
-<h3 id="das同期モード-有効化">DAS（同期モード） 有効化</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
-</span></span><span style="display:flex;"><span>dropping old tables...
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>creating tables...
-</span></span><span style="display:flex;"><span>generating data (client-side)...
-</span></span><span style="display:flex;"><span>100000000 of 100000000 tuples (100%) done (elapsed 106.98 s, remaining 0.00 s)
-</span></span><span style="display:flex;"><span>vacuuming...
-</span></span><span style="display:flex;"><span>creating primary keys...
-</span></span><span style="display:flex;"><span>done in 209.44 s (drop tables 0.65 s, create tables 0.06 s, client-side generate 136.14 s, vacuum 34.68 s, primary keys 37.90 s).
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
-</span></span><span style="display:flex;"><span>pgbench (14.2, server 13.6)
-</span></span><span style="display:flex;"><span>starting vacuum...end.
-</span></span><span style="display:flex;"><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
-</span></span><span style="display:flex;"><span>scaling factor: 1000
-</span></span><span style="display:flex;"><span>query mode: simple
-</span></span><span style="display:flex;"><span>number of clients: 32
-</span></span><span style="display:flex;"><span>number of threads: 1
-</span></span><span style="display:flex;"><span>duration: 300 s
-</span></span><span style="display:flex;"><span>number of transactions actually processed: 400485
-</span></span><span style="display:flex;"><span>latency average = 23.922 ms
-</span></span><span style="display:flex;"><span>initial connection time = 636.947 ms
-</span></span><span style="display:flex;"><span>tps = 1337.700718 (without initial connection time)
-</span></span><span style="display:flex;"><span>statement latencies in milliseconds:
-</span></span><span style="display:flex;"><span>         0.000  \set aid random(1, 100000 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set bid random(1, 1 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set tid random(1, 10 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set delta random(-5000, 5000)
-</span></span><span style="display:flex;"><span>         2.751  BEGIN;
-</span></span><span style="display:flex;"><span>         2.942  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         2.897  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         2.909  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
-</span></span><span style="display:flex;"><span>         2.991  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
-</span></span><span style="display:flex;"><span>         2.808  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
-</span></span><span style="display:flex;"><span>         6.548  END;
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span></code></pre></div><p>PI</p>
-<p>明確に他のケースでは出ていないような待機イベントが発生している</p>
-<p><img src="image-20220414131446898.png" alt="image-20220414131446898"></p>
-<p>Kinesis</p>
-<p><img src="image-20220414131604840.png" alt="image-20220414131604840"></p>
-<h3 id="das非同期モード-有効化">DAS（非同期モード） 有効化</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
-</span></span><span style="display:flex;"><span>dropping old tables...
-</span></span><span style="display:flex;"><span>creating tables...
-</span></span><span style="display:flex;"><span>generating data (client-side)...
-</span></span><span style="display:flex;"><span>100000000 of 100000000 tuples (100%) done (elapsed 107.02 s, remaining 0.00 s)
-</span></span><span style="display:flex;"><span>vacuuming...
-</span></span><span style="display:flex;"><span>creating primary keys...
-</span></span><span style="display:flex;"><span>done in 201.66 s (drop tables 0.65 s, create tables 0.04 s, client-side generate 128.15 s, vacuum 36.05 s, primary keys 36.76 s).
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
-</span></span><span style="display:flex;"><span>pgbench (14.2, server 13.6)
-</span></span><span style="display:flex;"><span>starting vacuum...end.
-</span></span><span style="display:flex;"><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
-</span></span><span style="display:flex;"><span>scaling factor: 1000
-</span></span><span style="display:flex;"><span>query mode: simple
-</span></span><span style="display:flex;"><span>number of clients: 32
-</span></span><span style="display:flex;"><span>number of threads: 1
-</span></span><span style="display:flex;"><span>duration: 300 s
-</span></span><span style="display:flex;"><span>number of transactions actually processed: 533808
-</span></span><span style="display:flex;"><span>latency average = 17.948 ms
-</span></span><span style="display:flex;"><span>initial connection time = 622.183 ms
-</span></span><span style="display:flex;"><span>tps = 1782.959790 (without initial connection time)
-</span></span><span style="display:flex;"><span>statement latencies in milliseconds:
-</span></span><span style="display:flex;"><span>         0.000  \set aid random(1, 100000 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set bid random(1, 1 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set tid random(1, 10 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set delta random(-5000, 5000)
-</span></span><span style="display:flex;"><span>         1.933  BEGIN;
-</span></span><span style="display:flex;"><span>         2.082  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         1.995  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         2.057  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
-</span></span><span style="display:flex;"><span>         2.102  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
-</span></span><span style="display:flex;"><span>         1.966  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
-</span></span><span style="display:flex;"><span>         5.746  END;
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span></code></pre></div><p>PI</p>
-<p><img src="image-20220414135425497.png" alt="image-20220414135425497"></p>
-<p>Kinesis</p>
-<p><img src="image-20220414135443691.png" alt="image-20220414135443691"></p>
-<h3 id="pgaudit-1">pgaudit</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
-</span></span><span style="display:flex;"><span>dropping old tables...
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>creating tables...
-</span></span><span style="display:flex;"><span>generating data (client-side)...
-</span></span><span style="display:flex;"><span>100000000 of 100000000 tuples (100%) done (elapsed 134.45 s, remaining 0.00 s)
-</span></span><span style="display:flex;"><span>vacuuming...
-</span></span><span style="display:flex;"><span>creating primary keys...
-</span></span><span style="display:flex;"><span>done in 233.72 s (drop tables 0.25 s, create tables 0.06 s, client-side generate 155.32 s, vacuum 35.62 s, primary keys 42.47 s).
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ 
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
-</span></span><span style="display:flex;"><span>pgbench (14.2, server 13.6)
-</span></span><span style="display:flex;"><span>starting vacuum...end.
-</span></span><span style="display:flex;"><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
-</span></span><span style="display:flex;"><span>scaling factor: 1000
-</span></span><span style="display:flex;"><span>query mode: simple
-</span></span><span style="display:flex;"><span>number of clients: 32
-</span></span><span style="display:flex;"><span>number of threads: 1
-</span></span><span style="display:flex;"><span>duration: 300 s
-</span></span><span style="display:flex;"><span>number of transactions actually processed: 553199
-</span></span><span style="display:flex;"><span>latency average = 17.319 ms
-</span></span><span style="display:flex;"><span>initial connection time = 620.244 ms
-</span></span><span style="display:flex;"><span>tps = 1847.681325 (without initial connection time)
-</span></span><span style="display:flex;"><span>statement latencies in milliseconds:
-</span></span><span style="display:flex;"><span>         0.000  \set aid random(1, 100000 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set bid random(1, 1 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set tid random(1, 10 * :scale)
-</span></span><span style="display:flex;"><span>         0.000  \set delta random(-5000, 5000)
-</span></span><span style="display:flex;"><span>         1.832  BEGIN;
-</span></span><span style="display:flex;"><span>         1.997  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         1.897  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
-</span></span><span style="display:flex;"><span>         1.950  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
-</span></span><span style="display:flex;"><span>         2.010  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
-</span></span><span style="display:flex;"><span>         1.873  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
-</span></span></code></pre></div><p><img src="image-20220414192241057.png" alt="image-20220414192241057"></p>
-<h3 id="参考">参考</h3>
-<blockquote>
-<p>Part 1: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog <a href="https://aws.amazon.com/jp/blogs/database/part-1-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/">https://aws.amazon.com/jp/blogs/database/part-1-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/</a></p>
-<p>Part 2: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog <a href="https://aws.amazon.com/jp/blogs/database/part-2-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/">https://aws.amazon.com/jp/blogs/database/part-2-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/</a></p>
-</blockquote>
-
-      </div>
-    </div>
-
-    
-    
-    <nav class="prev-next-nav">
-      
-      <a href="https://zatoima.github.io/other-cipher-suite-confirm/" class="prev-next-link prev-link">
-        <span class="prev-next-label">← 前の記事</span>
-        <span class="prev-next-title">サーバ側と通信するCipher suite (暗号スイート) の調査方法</span>
-      </a>
-      
-      
-      <a href="https://zatoima.github.io/other-hugo-wowchemy-academic-custome/" class="prev-next-link next-link">
-        <span class="prev-next-label">次の記事 →</span>
-        <span class="prev-next-title">Hugo wowchemy（旧Academic）のcustom.scssのカスタマイズ</span>
-      </a>
-      
-    </nav>
-    
-
-    
-<div class="share-buttons">
-  <span class="share-label">共有:</span>
-  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-aurora-postgresql-audit%2f&text=Aurora&#43;PostgreSQL%E3%81%AEDB%E7%9B%A3%E6%9F%BB%E6%96%B9%E5%BC%8F%EF%BC%88Database&#43;Activity&#43;Streams&#43;or&#43;pgaudit%EF%BC%9F%EF%BC%89" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-aurora-postgresql-audit/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
-</div>
-
-
-
-<div class="related-articles">
-  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
-  <ul class="related-list">
-    
-    <li><a href="/aws-aurora-rds-postgresql-pg_proctab-extention/">PostgreSQLの拡張機能 pg_proctab をAurora/RDSから触ってみる</a></li>
-    
-    <li><a href="/aws-aurora-rds-postgresql-pg-collector.html">awslabsのpg-collectorについて</a></li>
-    
-    <li><a href="/aws-aurora-failover-time-test/">Aurora PostgreSQLのフェイルオーバー時間の計測</a></li>
-    
-    <li><a href="/aws-aurora-rds-postgresql-compare-link.html">Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li>
-    
-    <li><a href="/aws-aurora-rds-postgresql-nologging-load.html">PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</a></li>
-    
-  </ul>
-</div>
-
-
-
-
-<div class="post-tags">
-  
-  <a href="https://zatoima.github.io/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
-  
-  <a href="https://zatoima.github.io/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
-  
-  <a href="https://zatoima.github.io/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
-  
-</div>
-
-
-  </article>
-
-  
-  <aside class="article-sidebar">
-    <div class="toc-container">
-      <div class="toc-title">目次</div>
-      <nav id="TableOfContents">
-  <ul>
-    <li>
-      <ul>
-        <li><a href="#特徴">特徴</a>
-          <ul>
-            <li></li>
-          </ul>
-        </li>
-        <li><a href="#結論">結論</a></li>
-        <li><a href="#appendix簡易性能検証">Appendix：簡易性能検証</a></li>
-        <li><a href="#結果サマリ">結果サマリ</a></li>
-        <li><a href="#db監査設定無し">DB監査設定無し</a></li>
-        <li><a href="#das同期モード-有効化">DAS（同期モード） 有効化</a></li>
-        <li><a href="#das非同期モード-有効化">DAS（非同期モード） 有効化</a></li>
-        <li><a href="#pgaudit-1">pgaudit</a></li>
-        <li><a href="#参考">参考</a></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-    </div>
-  </aside>
-  
-</div>
-
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-description">memo blog</div>
-        <div class="footer-links">
-          <a href="/">ホーム</a>
-          <a href="/blog/">記事一覧</a>
-          <a href="/tags/">タグ一覧</a>
-          <a href="/about/">About</a>
-        </div>
-        <div class="footer-social">
-          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          </a>
-          <a href="https://x.com/zaaboron11" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="/index.xml" aria-label="RSS">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-          </a>
-        </div>
-        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
-      </div>
-    </footer>
-  </div>
-  <script src="/js/lightbox.js" defer></script>
-  <script src="/js/toc-highlight.js" defer></script>
-  <script src="/js/code-copy.js" defer></script>
-  <script src="/js/dark-mode.js" defer></script>
-  <script src="/js/mobile-nav.js" defer></script>
-  <script src="/js/search.js" defer></script>
-</body>
-
-</html>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" href=https://zatoima.github.io/favicon.ico><title>Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？） | my opinion is my own</title><meta name=title content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）"><meta name=description content><meta name=keywords content="AWS,Aurora,PostgreSQL,"><meta property="og:title" content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）"><meta property="og:description" content><meta property="og:type" content="article"><meta property="og:url" content="https://zatoima.github.io/aws-aurora-postgresql-audit/"><meta property="og:image" content="https://zatoima.github.io/images/share.png"><meta property="article:section" content="blog"><meta property="article:published_time" content="2022-04-16T00:00:00+00:00"><meta property="article:modified_time" content="2022-04-16T00:00:00+00:00"><meta property="og:site_name" content="my opinion is my own"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://zatoima.github.io/images/share.png"><meta name=twitter:title content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）"><meta name=twitter:description content><meta itemprop=name content="Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）"><meta itemprop=description content><meta itemprop=datePublished content="2022-04-16T00:00:00+00:00"><meta itemprop=dateModified content="2022-04-16T00:00:00+00:00"><meta itemprop=wordCount content="1361"><meta itemprop=image content="https://zatoima.github.io/images/share.png"><meta itemprop=keywords content="AWS,Aurora,PostgreSQL,"><meta name=referrer content="no-referrer-when-downgrade"><link rel=alternate type=text/plain href=/llms.txt title=LLMs.txt><link rel=alternate type=text/plain href=/llms-full.txt title=LLMs-full.txt><script>(function(){var e=localStorage.getItem("theme");(e==="dark"||!e&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.documentElement.setAttribute("data-theme","dark")})()</script><link rel=stylesheet href=/css/zenn.css><script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-STFZ9QMXGM")</script></head><body><div class=site-wrapper><header class=site-header><div class=header-inner><a href=/ class=site-logo>my opinion is my own</a><nav class=header-nav><a href=/about/>About</a>
+<a href=/blog/>Blog</a>
+<a href=/index.xml>RSS</a>
+<a href=/other/>Other</a>
+<a href=/llms.txt title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a></nav><div class=header-actions><button id=search-btn class=header-icon-btn aria-label=検索><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+<button id=dark-mode-btn class=header-icon-btn aria-label=ダークモード切替>🌙</button>
+<button id=hamburger-btn class=hamburger-btn aria-label=メニュー>
+<span></span><span></span><span></span></button></div></div></header><div id=search-overlay class=search-overlay><div class=search-modal><input type=text id=search-input class=search-input placeholder="記事を検索... (Ctrl+K)" autocomplete=off><div id=search-results class=search-results></div></div></div><div id=nav-overlay class=nav-overlay></div><main class=site-main><div class=article-layout><article class=article-main><nav class=breadcrumb aria-label=パンくずリスト><a href=/>ホーム</a>
+<span class=breadcrumb-sep>></span>
+<a href=/blog/>Blog</a>
+<span class=breadcrumb-sep>></span>
+<span class=breadcrumb-current>Aurora PostgreSQLのDB監査方式（Database …</span></nav><div class=article-card><div class=article-header><div class=article-emoji><img src=/images/tags/aws.svg alt=AWS class=tag-icon loading=lazy></div><h1>Aurora PostgreSQLのDB監査方式（Database Activity Streams or pgaudit？）</h1><div class=article-meta><time class=article-date datetime=2022-04-16>2022/04/16 に公開</time>
+<span class=reading-time>📖 約2分</span></div><div class=article-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></div><div class=article-content><h3 id=特徴>特徴</h3><h5 id=pgaudit>pgaudit</h5><ul><li><p>PostgreSQL の拡張機能</p></li><li><p>PostgreSQL ログに混在して出力（Auroraの場合はCloudWatchにも出力）</p></li><li><p>セッション監査/オブジェクト監査/DML・DDLを指定して対象の監査を絞ることが出来る</p></li><li><p>取得される情報サンプル</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#bd93f9>2020</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>13</span> <span style=color:#bd93f9>08</span>:<span style=color:#bd93f9>06</span>:<span style=color:#bd93f9>24</span> UTC:<span style=color:#bd93f9>10</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>1</span>.<span style=color:#bd93f9>123</span>(<span style=color:#bd93f9>50322</span>):audit_user1<span style=color:#ff79c6>@</span>auditdb:[<span style=color:#bd93f9>24298</span>]:LOG:  AUDIT: <span style=color:#ff79c6>SESSION</span>,<span style=color:#bd93f9>1</span>,<span style=color:#bd93f9>2</span>,DDL,<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TABLE</span> <span style=color:#ff79c6>AS</span>,,,<span style=color:#f1fa8c>&#34;CREATE TABLE t1 AS
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	SELECT num                         a 
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	      ,&#39;1&#39;                         b 
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	      ,to_char(num,&#39;FM00000&#39;)      c 
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	      ,current_timestamp      d 
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	FROM   generate_series(1,10000000) num
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	;&#34;</span>,<span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>none</span><span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2020</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>13</span> <span style=color:#bd93f9>08</span>:<span style=color:#bd93f9>07</span>:<span style=color:#bd93f9>36</span> UTC:<span style=color:#bd93f9>10</span>.<span style=color:#bd93f9>0</span>.<span style=color:#bd93f9>1</span>.<span style=color:#bd93f9>123</span>(<span style=color:#bd93f9>50322</span>):audit_user1<span style=color:#ff79c6>@</span>auditdb:[<span style=color:#bd93f9>24298</span>]:LOG:  AUDIT: <span style=color:#ff79c6>SESSION</span>,<span style=color:#bd93f9>2</span>,<span style=color:#bd93f9>1</span>,<span style=color:#ff79c6>READ</span>,<span style=color:#ff79c6>SELECT</span>,<span style=color:#ff79c6>TABLE</span>,<span style=color:#ff79c6>public</span>.t1,<span style=color:#ff79c6>select</span> <span style=color:#ff79c6>count</span>(<span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>from</span> t1;,<span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>none</span><span style=color:#ff79c6>&gt;</span>
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2020</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>11</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>13</span> <span style=color:#bd93f9>08</span>:<span style=color:#bd93f9>07</span>:<span style=color:#bd93f9>36</span> UTC::<span style=color:#ff79c6>@</span>:[<span style=color:#bd93f9>32064</span>]:LOG:  AUDIT: <span style=color:#ff79c6>SESSION</span>,<span style=color:#bd93f9>1</span>,<span style=color:#bd93f9>1</span>,<span style=color:#ff79c6>READ</span>,<span style=color:#ff79c6>SELECT</span>,<span style=color:#ff79c6>TABLE</span>,<span style=color:#ff79c6>public</span>.t1,<span style=color:#ff79c6>select</span> <span style=color:#ff79c6>count</span>(<span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>from</span> t1;,<span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>none</span><span style=color:#ff79c6>&gt;</span>
+</span></span></code></pre></div></li><li><p>使用上の注意としてはパフォーマンス影響がある。下記はGithubから</p><blockquote><ul><li><p>Depending on settings, it is possible for pgAudit to generate an enormous volume of logging. Be careful to determine exactly what needs to be audit logged in your environment to avoid logging too much.</p><p>For example, when working in an OLAP environment it would probably not be wise to audit log inserts into a large fact table. The size of the log file will likely be many times the actual data size of the inserts because the log file is expressed as text. Since logs are generally stored with the OS this may lead to disk space being exhausted very quickly. In cases where it is not possible to limit audit logging to certain tables, be sure to assess the performance impact while testing and allocate plenty of space on the log volume. This may also be true for OLTP environments. Even if the insert volume is not as high, the performance impact of audit logging may still noticeably affect latency.</p><p>訳</p></li><li><p>設定によっては、pgAuditが膨大な量のログを生成する可能性があります。ロギングが多すぎないように、環境に監査ログを記録する必要があるものを正確に判断するように注意してください。</p></li><li><p>たとえば、OLAP環境で作業している場合、大きなファクトテーブルへのログ挿入を監査することはおそらく賢明ではありません。ログファイルはテキストとして表現されるため、ログファイルのサイズは挿入物の実際のデータサイズの何倍にもなる可能性があります。ログは通常OSに保存されるため、ディスク容量がすぐに使い果たされる可能性があります。監査ログを特定のテーブルに制限できない場合は、テスト中にパフォーマンスへの影響を評価し、ログボリュームに十分なスペースを割り当てるようにしてください。これは、OLTP環境にも当てはまる可能性があります。挿入量がそれほど多くない場合でも、監査ログのパフォーマンスへの影響がレイテンシーに著しく影響する可能性があります。</p></li></ul></blockquote></li><li><p>参考リンク</p></li></ul><blockquote><p><a href=https://github.com/pgaudit/pgaudit>https://github.com/pgaudit/pgaudit</a></p></blockquote><h5 id=database-activity-streams>Database Activity Streams</h5><ul><li><p>ほぼリアルタイムのデータを保存可能</p></li><li><p>職務分離が可能</p><ul><li>DBAとセキュリティ担当がいたとして監査はセキュリティ担当だけが確認とかが出来る</li></ul></li><li><p>同期モードと非同期モードが存在する。どちらも一長一短あって悩ましいところ。</p><ul><li><blockquote><p><strong>非同期モード</strong> - データベースセッションでアクティビティストリーミングイベントが生成されると、セッションは直ちに通常のアクティビティに戻ります。アクティビティストリーミングイベントは、バックグラウンドで永続的なレコードになります。バックグラウンドタスクでエラーが発生した場合は、RDS イベントが送信されます。このイベントは、アクティビティストリーミングのイベントレコードが失われた可能性がある時間枠のスタートと終了を示します。</p><p>非同期モードでは、アクティビティストリーミングの精度よりもデータベースのパフォーマンスが優先されます。</p></blockquote></li><li><blockquote><p><strong>同期モード</strong> - データベースセッションでアクティビティストリーミングイベントが生成されると、そのイベントが永続化されるまで、セッションによってその他のアクティビティはブロックされます。何らかの理由でイベントを永続化できない場合、データベースセッションは通常のアクティビティに戻ります。ただし、アクティビティストリーミングレコードがしばらくの間失われる可能性があることを示す RDS イベントが送信されます。システムが正常な状態に戻ったら、2 番目の RDS イベントが送信されます。</p><p>同期モードでは、データベースパフォーマンスよりもアクティビティストリーミングの精度が優先されます。</p></blockquote></li></ul></li><li><p>Kinesis ストリーミング分の追加料金が必要</p></li><li><p>取得出来る情報はマニュアルを確認</p><ul><li><a href=https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Monitoring.html>https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.Monitoring.html</a></li></ul></li><li><p>Kinesis経由で3rd Partyの監視ツールやS3に出力することが出来る。S3に出力される場合、json形式なので可視化やSQLで分析するようなことが必要になってくるはず。</p><ul><li>Aurora - DAS - Kinesis Stream - Kinesis Firehose - Lamdbaで復号化 - S3出力 という流れにする必要がある<ul><li><a href=https://dev.classmethod.jp/articles/aurora-postgresql-audit-with-data-activity-stream/>https://dev.classmethod.jp/articles/aurora-postgresql-audit-with-data-activity-stream/</a></li></ul></li></ul></li><li><p>AWSだけでやる場合、分析するためのAthenaやQuickSightの考慮が別途必要。</p></li><li><p>取得される情報サンプル</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>&#34;type&#34;</span>:<span style=color:#f1fa8c>&#34;DatabaseActivityMonitoringRecords&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>&#34;version&#34;</span>:<span style=color:#f1fa8c>&#34;1.1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>&#34;databaseActivityEvents&#34;</span>: 
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;type&#34;</span>:<span style=color:#f1fa8c>&#34;DatabaseActivityMonitoringRecord&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;clusterId&#34;</span>:<span style=color:#f1fa8c>&#34;cluster-4HNY5V4RRNPKKYB7ICFKE5JBQQ&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;instanceId&#34;</span>:<span style=color:#f1fa8c>&#34;db-FZJTMYKCXQBUUZ6VLU7NW3ITCM&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;databaseActivityEventList&#34;</span>:[
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;startTime&#34;</span>: <span style=color:#f1fa8c>&#34;2019-05-24 00:36:54.403455+00&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;logTime&#34;</span>: <span style=color:#f1fa8c>&#34;2019-05-24 00:36:54.494235+00&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;statementId&#34;</span>: <span style=color:#bd93f9>2</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;substatementId&#34;</span>: <span style=color:#bd93f9>1</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;objectType&#34;</span>: <span style=color:#ff79c6>null</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;command&#34;</span>: <span style=color:#f1fa8c>&#34;CREATE TABLE&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;objectName&#34;</span>: <span style=color:#ff79c6>null</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;databaseName&#34;</span>: <span style=color:#f1fa8c>&#34;postgres&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;dbUserName&#34;</span>: <span style=color:#f1fa8c>&#34;rdsadmin&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;remoteHost&#34;</span>: <span style=color:#f1fa8c>&#34;172.31.3.195&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;remotePort&#34;</span>: <span style=color:#f1fa8c>&#34;34534&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;sessionId&#34;</span>: <span style=color:#f1fa8c>&#34;5ce73c6f.7e64&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;rowCount&#34;</span>: <span style=color:#ff79c6>null</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;commandText&#34;</span>: <span style=color:#f1fa8c>&#34;create table my_table (id serial primary key, name varchar(32));&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;paramList&#34;</span>: [],
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;pid&#34;</span>: <span style=color:#bd93f9>32356</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;clientApplication&#34;</span>: <span style=color:#f1fa8c>&#34;psql&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;exitCode&#34;</span>: <span style=color:#ff79c6>null</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;class&#34;</span>: <span style=color:#f1fa8c>&#34;DDL&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;serverVersion&#34;</span>: <span style=color:#f1fa8c>&#34;2.3.1&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;serverType&#34;</span>: <span style=color:#f1fa8c>&#34;PostgreSQL&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;serviceName&#34;</span>: <span style=color:#f1fa8c>&#34;Amazon Aurora PostgreSQL-Compatible edition&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;serverHost&#34;</span>: <span style=color:#f1fa8c>&#34;172.31.3.192&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;netProtocol&#34;</span>: <span style=color:#f1fa8c>&#34;TCP&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;dbProtocol&#34;</span>: <span style=color:#f1fa8c>&#34;Postgres 3.0&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;record&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;errorMessage&#34;</span>: <span style=color:#ff79c6>null</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>      ]
+</span></span><span style=display:flex><span>    },
+</span></span><span style=display:flex><span>   <span style=color:#ff79c6>&#34;key&#34;</span>:<span style=color:#f1fa8c>&#34;decryption-key&#34;</span>
+</span></span><span style=display:flex><span>} 
+</span></span></code></pre></div></li><li><p>参考リンク</p></li></ul><blockquote><p><a href=https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html>https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html</a></p></blockquote><h3 id=結論>結論</h3><p>要件次第だが、特になければ次の通りが良いと思った</p><ul><li><p>pgauditを使う場合</p><ul><li>DASの追加費用が高く感じる、同期モード・非同期モードの仕様が受け入れられない、AWSだけでやる場合の追加設定の考慮から、オンプレPostgreSQLと同様の監査方式を採用したい、オンプレPostgreSQLで実績が多いpgauditを使いたい場合、重要テーブルだけ監査を取りたいとかであればpgaudit</li></ul></li><li><p>DAS（Database Activity Streams）</p><ul><li>リアルタイム性を追求したい、職務分離をしたい、及びpgauditで全テーブル情報を取得してパフォーマンスIssueが発生してDASの非同期モードで負荷を少なく取得したい、様々なメトリクスを取得したい等があった場合</li></ul></li></ul><h3 id=appendix簡易性能検証>Appendix：簡易性能検証</h3><p>パフォーマンスの差異も気になるので、pgbenchを使って検証してみた。N=1の結果なのであまり参考にならないかもしれない。実際のワークロードでどうなるかを見てください、というお約束。</p><p>32クライアントからpgbenchを実行して300秒実行し続けた結果を確認。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>#ベンチマークテスト
+</span></span><span style=display:flex><span>create database pgbench;
+</span></span><span style=display:flex><span>pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
+</span></span><span style=display:flex><span>pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
+</span></span></code></pre></div><h3 id=結果サマリ>結果サマリ</h3><p>負荷が低かったのかDAS（同期モード） 有効化を除く、ほぼ劣化しなかったという結果に。オンプレPostgreSQLでpgauditを有効化にした際にはもうちょっと劣化した記憶があるけど、今回のケースではほぼ劣化してなかった</p><table><thead><tr><th></th><th>DB監査設定無し</th><th>DAS（同期モード） 有効化</th><th>DAS（非同期モード） 有効化</th><th>pgaudit</th></tr></thead><tbody><tr><td>トランザクション数</td><td>548204</td><td>400485</td><td>533808</td><td>553199</td></tr><tr><td>平均レイテンシ</td><td>17.477 ms</td><td>23.922 ms</td><td>17.948 ms</td><td>17.319 ms</td></tr><tr><td>tps</td><td>1831.0</td><td>1337.7</td><td>1783.0</td><td>1847.7</td></tr><tr><td>DB監査を1とした場合の劣化率</td><td>100%</td><td>137%</td><td>103%</td><td>99%</td></tr></tbody></table><h3 id=db監査設定無し>DB監査設定無し</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
+</span></span><span style=display:flex><span>dropping old tables...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>creating tables...
+</span></span><span style=display:flex><span>generating data (client-side)...
+</span></span><span style=display:flex><span>100000000 of 100000000 tuples (100%) done (elapsed 113.86 s, remaining 0.00 s)
+</span></span><span style=display:flex><span>vacuuming...
+</span></span><span style=display:flex><span>creating primary keys...
+</span></span><span style=display:flex><span>done in 204.96 s (drop tables 0.66 s, create tables 0.05 s, client-side generate 134.28 s, vacuum 36.71 s, primary keys 33.27 s).
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
+</span></span><span style=display:flex><span>pgbench (14.2, server 13.6)
+</span></span><span style=display:flex><span>starting vacuum...end.
+</span></span><span style=display:flex><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
+</span></span><span style=display:flex><span>scaling factor: 1000
+</span></span><span style=display:flex><span>query mode: simple
+</span></span><span style=display:flex><span>number of clients: 32
+</span></span><span style=display:flex><span>number of threads: 1
+</span></span><span style=display:flex><span>duration: 300 s
+</span></span><span style=display:flex><span>number of transactions actually processed: 548204
+</span></span><span style=display:flex><span>latency average = 17.477 ms
+</span></span><span style=display:flex><span>initial connection time = 613.275 ms
+</span></span><span style=display:flex><span>tps = 1830.980993 (without initial connection time)
+</span></span><span style=display:flex><span>statement latencies in milliseconds:
+</span></span><span style=display:flex><span>         0.000  \set aid random(1, 100000 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set bid random(1, 1 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set tid random(1, 10 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set delta random(-5000, 5000)
+</span></span><span style=display:flex><span>         1.895  BEGIN;
+</span></span><span style=display:flex><span>         2.015  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
+</span></span><span style=display:flex><span>         1.939  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
+</span></span><span style=display:flex><span>         1.983  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
+</span></span><span style=display:flex><span>         2.045  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
+</span></span><span style=display:flex><span>         1.916  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
+</span></span><span style=display:flex><span>         5.610  END;
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span></code></pre></div><p>PI</p><p><img src=image-20220414133434942.png alt=image-20220414133434942></p><p>Kinesis</p><p><img src=image-20220414133528431.png alt=image-20220414133528431></p><h3 id=das同期モード-有効化>DAS（同期モード） 有効化</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
+</span></span><span style=display:flex><span>dropping old tables...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>creating tables...
+</span></span><span style=display:flex><span>generating data (client-side)...
+</span></span><span style=display:flex><span>100000000 of 100000000 tuples (100%) done (elapsed 106.98 s, remaining 0.00 s)
+</span></span><span style=display:flex><span>vacuuming...
+</span></span><span style=display:flex><span>creating primary keys...
+</span></span><span style=display:flex><span>done in 209.44 s (drop tables 0.65 s, create tables 0.06 s, client-side generate 136.14 s, vacuum 34.68 s, primary keys 37.90 s).
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
+</span></span><span style=display:flex><span>pgbench (14.2, server 13.6)
+</span></span><span style=display:flex><span>starting vacuum...end.
+</span></span><span style=display:flex><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
+</span></span><span style=display:flex><span>scaling factor: 1000
+</span></span><span style=display:flex><span>query mode: simple
+</span></span><span style=display:flex><span>number of clients: 32
+</span></span><span style=display:flex><span>number of threads: 1
+</span></span><span style=display:flex><span>duration: 300 s
+</span></span><span style=display:flex><span>number of transactions actually processed: 400485
+</span></span><span style=display:flex><span>latency average = 23.922 ms
+</span></span><span style=display:flex><span>initial connection time = 636.947 ms
+</span></span><span style=display:flex><span>tps = 1337.700718 (without initial connection time)
+</span></span><span style=display:flex><span>statement latencies in milliseconds:
+</span></span><span style=display:flex><span>         0.000  \set aid random(1, 100000 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set bid random(1, 1 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set tid random(1, 10 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set delta random(-5000, 5000)
+</span></span><span style=display:flex><span>         2.751  BEGIN;
+</span></span><span style=display:flex><span>         2.942  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
+</span></span><span style=display:flex><span>         2.897  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
+</span></span><span style=display:flex><span>         2.909  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
+</span></span><span style=display:flex><span>         2.991  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
+</span></span><span style=display:flex><span>         2.808  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
+</span></span><span style=display:flex><span>         6.548  END;
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span></code></pre></div><p>PI</p><p>明確に他のケースでは出ていないような待機イベントが発生している</p><p><img src=image-20220414131446898.png alt=image-20220414131446898></p><p>Kinesis</p><p><img src=image-20220414131604840.png alt=image-20220414131604840></p><h3 id=das非同期モード-有効化>DAS（非同期モード） 有効化</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
+</span></span><span style=display:flex><span>dropping old tables...
+</span></span><span style=display:flex><span>creating tables...
+</span></span><span style=display:flex><span>generating data (client-side)...
+</span></span><span style=display:flex><span>100000000 of 100000000 tuples (100%) done (elapsed 107.02 s, remaining 0.00 s)
+</span></span><span style=display:flex><span>vacuuming...
+</span></span><span style=display:flex><span>creating primary keys...
+</span></span><span style=display:flex><span>done in 201.66 s (drop tables 0.65 s, create tables 0.04 s, client-side generate 128.15 s, vacuum 36.05 s, primary keys 36.76 s).
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
+</span></span><span style=display:flex><span>pgbench (14.2, server 13.6)
+</span></span><span style=display:flex><span>starting vacuum...end.
+</span></span><span style=display:flex><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
+</span></span><span style=display:flex><span>scaling factor: 1000
+</span></span><span style=display:flex><span>query mode: simple
+</span></span><span style=display:flex><span>number of clients: 32
+</span></span><span style=display:flex><span>number of threads: 1
+</span></span><span style=display:flex><span>duration: 300 s
+</span></span><span style=display:flex><span>number of transactions actually processed: 533808
+</span></span><span style=display:flex><span>latency average = 17.948 ms
+</span></span><span style=display:flex><span>initial connection time = 622.183 ms
+</span></span><span style=display:flex><span>tps = 1782.959790 (without initial connection time)
+</span></span><span style=display:flex><span>statement latencies in milliseconds:
+</span></span><span style=display:flex><span>         0.000  \set aid random(1, 100000 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set bid random(1, 1 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set tid random(1, 10 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set delta random(-5000, 5000)
+</span></span><span style=display:flex><span>         1.933  BEGIN;
+</span></span><span style=display:flex><span>         2.082  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
+</span></span><span style=display:flex><span>         1.995  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
+</span></span><span style=display:flex><span>         2.057  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
+</span></span><span style=display:flex><span>         2.102  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
+</span></span><span style=display:flex><span>         1.966  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
+</span></span><span style=display:flex><span>         5.746  END;
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span></code></pre></div><p>PI</p><p><img src=image-20220414135425497.png alt=image-20220414135425497></p><p>Kinesis</p><p><img src=image-20220414135443691.png alt=image-20220414135443691></p><h3 id=pgaudit-1>pgaudit</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -i -s 1000 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench
+</span></span><span style=display:flex><span>dropping old tables...
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>creating tables...
+</span></span><span style=display:flex><span>generating data (client-side)...
+</span></span><span style=display:flex><span>100000000 of 100000000 tuples (100%) done (elapsed 134.45 s, remaining 0.00 s)
+</span></span><span style=display:flex><span>vacuuming...
+</span></span><span style=display:flex><span>creating primary keys...
+</span></span><span style=display:flex><span>done in 233.72 s (drop tables 0.25 s, create tables 0.06 s, client-side generate 155.32 s, vacuum 35.62 s, primary keys 42.47 s).
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ 
+</span></span><span style=display:flex><span>[ec2-user@bastin ~]$ pgbench -r -c 32 -T 300 -U postgres -h aurorapgsqlv1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com pgbench 
+</span></span><span style=display:flex><span>pgbench (14.2, server 13.6)
+</span></span><span style=display:flex><span>starting vacuum...end.
+</span></span><span style=display:flex><span>transaction type: &lt;builtin: TPC-B (sort of)&gt;
+</span></span><span style=display:flex><span>scaling factor: 1000
+</span></span><span style=display:flex><span>query mode: simple
+</span></span><span style=display:flex><span>number of clients: 32
+</span></span><span style=display:flex><span>number of threads: 1
+</span></span><span style=display:flex><span>duration: 300 s
+</span></span><span style=display:flex><span>number of transactions actually processed: 553199
+</span></span><span style=display:flex><span>latency average = 17.319 ms
+</span></span><span style=display:flex><span>initial connection time = 620.244 ms
+</span></span><span style=display:flex><span>tps = 1847.681325 (without initial connection time)
+</span></span><span style=display:flex><span>statement latencies in milliseconds:
+</span></span><span style=display:flex><span>         0.000  \set aid random(1, 100000 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set bid random(1, 1 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set tid random(1, 10 * :scale)
+</span></span><span style=display:flex><span>         0.000  \set delta random(-5000, 5000)
+</span></span><span style=display:flex><span>         1.832  BEGIN;
+</span></span><span style=display:flex><span>         1.997  UPDATE pgbench_accounts SET abalance = abalance + :delta WHERE aid = :aid;
+</span></span><span style=display:flex><span>         1.897  SELECT abalance FROM pgbench_accounts WHERE aid = :aid;
+</span></span><span style=display:flex><span>         1.950  UPDATE pgbench_tellers SET tbalance = tbalance + :delta WHERE tid = :tid;
+</span></span><span style=display:flex><span>         2.010  UPDATE pgbench_branches SET bbalance = bbalance + :delta WHERE bid = :bid;
+</span></span><span style=display:flex><span>         1.873  INSERT INTO pgbench_history (tid, bid, aid, delta, mtime) VALUES (:tid, :bid, :aid, :delta, CURRENT_TIMESTAMP);
+</span></span></code></pre></div><p><img src=image-20220414192241057.png alt=image-20220414192241057></p><h3 id=参考>参考</h3><blockquote><p>Part 1: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog <a href=https://aws.amazon.com/jp/blogs/database/part-1-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/>https://aws.amazon.com/jp/blogs/database/part-1-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/</a></p><p>Part 2: Audit Aurora PostgreSQL databases using Database Activity Streams and pgAudit | AWS Database Blog <a href=https://aws.amazon.com/jp/blogs/database/part-2-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/>https://aws.amazon.com/jp/blogs/database/part-2-audit-aurora-postgresql-databases-using-database-activity-streams-and-pgaudit/</a></p></blockquote></div></div><nav class=prev-next-nav><a href=https://zatoima.github.io/other-cipher-suite-confirm/ class="prev-next-link prev-link"><span class=prev-next-label>← 前の記事</span>
+<span class=prev-next-title>サーバ側と通信するCipher suite (暗号スイート) の調査方法</span></a>
+<a href=https://zatoima.github.io/other-hugo-wowchemy-academic-custome/ class="prev-next-link next-link"><span class=prev-next-label>次の記事 →</span>
+<span class=prev-next-title>Hugo wowchemy（旧Academic）のcustom.scssのカスタマイズ</span></a></nav><div class=share-buttons><span class=share-label>共有:</span>
+<a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2faws-aurora-postgresql-audit%2f&text=Aurora&#43;PostgreSQL%E3%81%AEDB%E7%9B%A3%E6%9F%BB%E6%96%B9%E5%BC%8F%EF%BC%88Database+Activity+Streams+or+pgaudit%EF%BC%9F%EF%BC%89" target=_blank rel="noopener noreferrer" class="share-btn share-twitter" aria-label=Xで共有><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=https://b.hatena.ne.jp/entry/https://zatoima.github.io/aws-aurora-postgresql-audit/ target=_blank rel="noopener noreferrer" class="share-btn share-hatena" aria-label=はてなブックマークに追加>B!</a></div><div class=related-articles><h2 class=related-articles-title>関連しているかもしれない記事</h2><ul class=related-list><li><a href=/aws-aurora-rds-postgresql-pg_proctab-extention/>PostgreSQLの拡張機能 pg_proctab をAurora/RDSから触ってみる</a></li><li><a href=/aws-aurora-rds-postgresql-pg-collector.html>awslabsのpg-collectorについて</a></li><li><a href=/aws-aurora-failover-time-test/>Aurora PostgreSQLのフェイルオーバー時間の計測</a></li><li><a href=/aws-aurora-rds-postgresql-compare-link.html>Aurora PostgreSQLとRDSの比較メモ（リンク集）</a></li><li><a href=/aws-aurora-rds-postgresql-nologging-load.html>PostgreSQLでNOLOGGINGテーブル（UNLOGGED）に大量データをロード</a></li></ul></div><div class=post-tags><a href=https://zatoima.github.io/blog/aws/ class=tag-badge><img src=/images/tags/aws.svg alt=AWS class=tag-badge-icon loading=lazy>AWS</a>
+<a href=https://zatoima.github.io/blog/aurora/ class=tag-badge><img src=/images/tags/aurora.svg alt=Aurora class=tag-badge-icon loading=lazy>Aurora</a>
+<a href=https://zatoima.github.io/blog/postgresql/ class=tag-badge><img src=/images/tags/postgresql.svg alt=PostgreSQL class=tag-badge-icon loading=lazy>PostgreSQL</a></div></article><aside class=article-sidebar><div class=toc-container><div class=toc-title>目次</div><nav id=TableOfContents><ul><li><ul><li><a href=#特徴>特徴</a><ul><li></li></ul></li><li><a href=#結論>結論</a></li><li><a href=#appendix簡易性能検証>Appendix：簡易性能検証</a></li><li><a href=#結果サマリ>結果サマリ</a></li><li><a href=#db監査設定無し>DB監査設定無し</a></li><li><a href=#das同期モード-有効化>DAS（同期モード） 有効化</a></li><li><a href=#das非同期モード-有効化>DAS（非同期モード） 有効化</a></li><li><a href=#pgaudit-1>pgaudit</a></li><li><a href=#参考>参考</a></li></ul></li></ul></nav></div></aside></div></main><footer class=site-footer><div class=footer-inner><div class=footer-description>memo blog</div><div class=footer-links><a href=/>ホーム</a>
+<a href=/blog/>記事一覧</a>
+<a href=/tags/>タグ一覧</a>
+<a href=/about/>About</a></div><div class=footer-social><a href=https://github.com/zatoima target=_blank rel="noopener noreferrer" aria-label=GitHub><svg width="18" height="18" viewBox="0 0 24 24" fill="currentcolor"><path d="M12 0C5.374.0.0 5.373.0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931.0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176.0.0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221.0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></a><a href=https://x.com/zatoima1 target=_blank rel="noopener noreferrer" aria-label="X (Twitter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href=/index.xml aria-label=RSS><svg width="16" height="16" viewBox="0 0 24 24" fill="currentcolor"><path d="M6.18 15.64a2.18 2.18.0 012.18 2.18c0 1.19-.98 2.18-2.18 2.18C5 20 4 19.01 4 17.82a2.18 2.18.0 012.18-2.18M4 4.44A15.56 15.56.0 0119.56 20h-2.83A12.73 12.73.0 004 7.27V4.44m0 5.66a9.9 9.9.0 019.9 9.9h-2.83A7.07 7.07.0 004 12.93V10.1z"/></svg></a></div><div class=footer-copyright>Copyright © 2019, zatoima.</div></div></footer></div><script src=/js/lightbox.js defer></script>
+<script src=/js/toc-highlight.js defer></script>
+<script src=/js/code-copy.js defer></script>
+<script src=/js/dark-mode.js defer></script>
+<script src=/js/mobile-nav.js defer></script>
+<script src=/js/search.js defer></script></body></html>
