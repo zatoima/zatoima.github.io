@@ -1,65 +1,80 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import * as fs from "fs";
-import * as path from "path";
-import matter from "gray-matter";
 
-// Blog content directory
-const BLOG_DIR = path.resolve(
-  import.meta.dirname,
-  "../../content/blog"
-);
+const SITE_URL = "https://zatoima.github.io";
 
 interface BlogPost {
   title: string;
   date: string;
   tags: string[];
-  categories: string[];
   url: string;
-  slug: string;
   content: string;
-  dirName: string;
 }
 
-function loadAllPosts(): BlogPost[] {
-  const entries = fs.readdirSync(BLOG_DIR, { withFileTypes: true });
+function parseLlmsFullTxt(text: string): BlogPost[] {
   const posts: BlogPost[] = [];
+  // Split by "---" separator between posts
+  const sections = text.split(/\n---\n/);
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const mdPath = path.join(BLOG_DIR, entry.name, "index.md");
-    if (!fs.existsSync(mdPath)) continue;
+  for (const section of sections) {
+    const trimmed = section.trim();
+    if (!trimmed || trimmed.startsWith("# ")) continue; // skip header
 
-    try {
-      const raw = fs.readFileSync(mdPath, "utf-8");
-      const { data, content } = matter(raw);
-      posts.push({
-        title: data.title ?? entry.name,
-        date: data.date ? String(data.date).slice(0, 10) : "",
-        tags: Array.isArray(data.tags) ? data.tags : [],
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        url: data.url ?? "",
-        slug: entry.name,
-        content,
-        dirName: entry.name,
-      });
-    } catch {
-      // skip unreadable files
-    }
+    const titleMatch = trimmed.match(/^### (.+)$/m);
+    const dateMatch = trimmed.match(/^date: (.+)$/m);
+    const urlMatch = trimmed.match(/^url: (.+)$/m);
+    const tagsMatch = trimmed.match(/^tags: (.+)$/m);
+
+    if (!titleMatch) continue;
+
+    // Extract content (everything after the metadata lines)
+    const metaEnd = trimmed.lastIndexOf(
+      tagsMatch ? tagsMatch[0] : urlMatch ? urlMatch[0] : dateMatch ? dateMatch[0] : titleMatch[0]
+    );
+    const afterMeta = trimmed.slice(metaEnd);
+    const contentStart = afterMeta.indexOf("\n");
+    const content = contentStart >= 0
+      ? afterMeta.slice(contentStart).trim()
+      : "";
+
+    posts.push({
+      title: titleMatch[1].trim(),
+      date: dateMatch ? dateMatch[1].trim().slice(0, 10) : "",
+      url: urlMatch ? urlMatch[1].trim() : "",
+      tags: tagsMatch ? tagsMatch[1].split(",").map((t) => t.trim()) : [],
+      content,
+    });
   }
 
   posts.sort((a, b) => b.date.localeCompare(a.date));
   return posts;
 }
 
-// Load posts once at startup
 let allPosts: BlogPost[] = [];
+let lastFetch = 0;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-function getPosts(): BlogPost[] {
-  if (allPosts.length === 0) {
-    allPosts = loadAllPosts();
+async function getPosts(): Promise<BlogPost[]> {
+  const now = Date.now();
+  if (allPosts.length > 0 && now - lastFetch < CACHE_TTL) {
+    return allPosts;
   }
+
+  try {
+    const res = await fetch(`${SITE_URL}/llms-full.txt`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    allPosts = parseLlmsFullTxt(text);
+    lastFetch = now;
+    console.error(`Fetched ${allPosts.length} posts from ${SITE_URL}/llms-full.txt`);
+  } catch (e) {
+    console.error("Failed to fetch posts:", e);
+    if (allPosts.length === 0) {
+      throw new Error("記事データの取得に失敗しました。サイトに接続できません。");
+    }
+  }
+
   return allPosts;
 }
 
@@ -79,8 +94,9 @@ server.tool(
     limit: z.number().optional().default(10).describe("返す最大件数 (デフォルト10)"),
   },
   async ({ query, limit }) => {
+    const posts = await getPosts();
     const q = query.toLowerCase();
-    const results = getPosts()
+    const results = posts
       .filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
@@ -94,7 +110,7 @@ server.tool(
       : results
           .map(
             (p, i) =>
-              `${i + 1}. [${p.date}] ${p.title}\n   tags: ${p.tags.join(", ")}\n   slug: ${p.dirName}`
+              `${i + 1}. [${p.date}] ${p.title}\n   tags: ${p.tags.join(", ")}\n   url: ${p.url}`
           )
           .join("\n\n");
 
@@ -110,11 +126,11 @@ server.tool(
     identifier: z.string().describe("記事のslug(ディレクトリ名)またはタイトルの一部"),
   },
   async ({ identifier }) => {
+    const posts = await getPosts();
     const id = identifier.toLowerCase();
-    const post = getPosts().find(
+    const post = posts.find(
       (p) =>
-        p.dirName.toLowerCase() === id ||
-        p.dirName.toLowerCase().includes(id) ||
+        p.url.toLowerCase().includes(id) ||
         p.title.toLowerCase().includes(id)
     );
 
@@ -126,7 +142,6 @@ server.tool(
       `# ${post.title}`,
       `date: ${post.date}`,
       `tags: ${post.tags.join(", ")}`,
-      `categories: ${post.categories.join(", ")}`,
       `url: ${post.url}`,
       `---`,
     ].join("\n");
@@ -147,7 +162,7 @@ server.tool(
     offset: z.number().optional().default(0).describe("オフセット (デフォルト0)"),
   },
   async ({ tag, category, year, limit, offset }) => {
-    let posts = getPosts();
+    let posts = await getPosts();
 
     if (tag) {
       const t = tag.toLowerCase();
@@ -155,7 +170,7 @@ server.tool(
     }
     if (category) {
       const c = category.toLowerCase();
-      posts = posts.filter((p) => p.categories.some((pc) => pc.toLowerCase() === c));
+      posts = posts.filter((p) => p.tags.some((pt) => pt.toLowerCase() === c));
     }
     if (year) {
       posts = posts.filter((p) => p.date.startsWith(year));
@@ -188,8 +203,9 @@ server.tool(
   "ブログで使用されている全タグとその記事数を取得する。",
   {},
   async () => {
+    const posts = await getPosts();
     const tagCount = new Map<string, number>();
-    for (const p of getPosts()) {
+    for (const p of posts) {
       for (const t of p.tags) {
         tagCount.set(t, (tagCount.get(t) ?? 0) + 1);
       }
@@ -205,10 +221,10 @@ server.tool(
 // Tool: get stats
 server.tool(
   "blog_stats",
-  "ブログの統計情報を取得する（記事数、年別投稿数、人気タグなど）。",
+  "ブログの統計情報を取得する(記事数、年別投稿数、人気タグなど)。",
   {},
   async () => {
-    const posts = getPosts();
+    const posts = await getPosts();
     const yearCount = new Map<string, number>();
     const tagCount = new Map<string, number>();
 
@@ -243,7 +259,8 @@ server.tool(
 
 // Resource: recent posts
 server.resource("recent-posts", "blog://recent", async (uri) => {
-  const recent = getPosts().slice(0, 10);
+  const posts = await getPosts();
+  const recent = posts.slice(0, 10);
   const text = recent
     .map((p) => `[${p.date}] ${p.title} (tags: ${p.tags.join(", ")})`)
     .join("\n");
@@ -263,7 +280,7 @@ server.resource("recent-posts", "blog://recent", async (uri) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("zatoima-blog MCP server started");
+  console.error("zatoima-blog MCP server started (remote mode)");
 }
 
 main().catch(console.error);

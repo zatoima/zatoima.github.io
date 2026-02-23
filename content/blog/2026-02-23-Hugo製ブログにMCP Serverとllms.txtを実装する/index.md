@@ -24,14 +24,33 @@ image:
 
 自分のHugoブログ（GitHub Pages）に対して、以下2つのアプローチでAI/LLM向けのインターフェースを実装した。
 
-1. **ローカルMCP Server** - Claude Codeから記事の検索・閲覧ができるMCPサーバー
+1. **MCP Server** - Claude Codeから記事の検索・閲覧ができるMCPサーバー（リポジトリのクローン不要、HTTPフェッチ方式）
 2. **llms.txt** - Webサイト上でLLM向けにコンテンツを公開する標準フォーマット
 
 ## MCP（Model Context Protocol）とは
 
 MCPはAnthropicが提唱するプロトコルで、AIモデルが外部のデータソースやツールと連携するための標準的な仕組みである。MCP Serverを作ることで、Claude CodeなどのAIツールからブログの記事検索・閲覧が可能になる。
 
-## ローカルMCP Serverの実装
+## MCP Serverの実装
+
+### データ取得方式
+
+当初はリポジトリをクローンしてローカルのMarkdownファイルを直接読む方式だったが、利用者にクローンを強いるのは不便なため、**サイトが公開している`llms-full.txt`をHTTPで取得する方式**に変更した。
+
+```text
+┌──────────────┐     HTTP GET      ┌──────────────────────┐
+│  MCP Server  │ ───────────────── │ zatoima.github.io    │
+│  (Node.js)   │  /llms-full.txt   │ (GitHub Pages)       │
+└──────────────┘                   └──────────────────────┘
+       │
+       │ stdio
+       ▼
+┌──────────────┐
+│  Claude Code │
+└──────────────┘
+```
+
+これにより、リポジトリのクローンは不要になった。MCP Serverのソースコードだけ取得してビルドすればよい。データは10分間キャッシュされ、キャッシュ期限後は自動で再取得される。
 
 ### 構成
 
@@ -45,13 +64,7 @@ mcp-server/
     └── index.js
 ```
 
-使用したライブラリは以下の通り。
-
-| パッケージ | 用途 |
-|-----------|------|
-| `@modelcontextprotocol/sdk` | MCP Server SDK |
-| `gray-matter` | Markdownのフロントマター解析 |
-| `zod` | スキーマバリデーション（SDK内蔵） |
+依存ライブラリは `@modelcontextprotocol/sdk` のみ。Node.js標準の`fetch`で`llms-full.txt`を取得し、テキストパースで記事データを抽出する。
 
 ### 提供ツール
 
@@ -67,18 +80,21 @@ MCP Serverでは5つのツールを実装した。
 
 ### 実装のポイント
 
-記事データの読み込みは、Hugoの`content/blog/`配下のMarkdownファイルを直接パースする方式を採用した。
+`llms-full.txt`は`---`で区切られた記事の連続テキストであるため、これをパースして構造化データに変換する。
 
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import matter from "gray-matter";
 
-const server = new McpServer({
-  name: "zatoima-blog",
-  version: "1.0.0",
-});
+const SITE_URL = "https://zatoima.github.io";
+
+// llms-full.txtからデータを取得・パース
+async function getPosts(): Promise<BlogPost[]> {
+  const res = await fetch(`${SITE_URL}/llms-full.txt`);
+  const text = await res.text();
+  return parseLlmsFullTxt(text); // テキストを記事データに変換
+}
 
 // ツール登録の例: 記事検索
 server.tool(
@@ -89,8 +105,9 @@ server.tool(
     limit: z.number().optional().default(10),
   },
   async ({ query, limit }) => {
+    const posts = await getPosts();
     const q = query.toLowerCase();
-    const results = getPosts()
+    const results = posts
       .filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
@@ -103,18 +120,18 @@ server.tool(
 );
 ```
 
-起動時に全記事を一括読み込みし、メモリ上に保持する。395記事程度であれば問題ない。
+### セットアップ
 
-### Claude Codeへの登録
-
-以下のコマンドでMCP Serverを登録する。
+リポジトリ全体のクローンは不要。MCP Serverのソースコードだけ取得してビルドする。
 
 ```bash
-# ビルド
+# MCP Serverのソースを取得してビルド
+git clone --depth 1 --filter=blob:none --sparse https://github.com/zatoima/zatoima.github.io.git
+cd zatoima.github.io && git sparse-checkout set mcp-server
 cd mcp-server && npm install && npx tsc
 
 # Claude Codeに登録
-claude mcp add zatoima-blog node /path/to/mcp-server/dist/index.js
+claude mcp add zatoima-blog node $(pwd)/dist/index.js
 ```
 
 登録後、Claude Codeのセッション内で以下のように使用できる。
@@ -222,12 +239,12 @@ url: {{ .Permalink }}
 
 Hugo製の静的ブログに対して、2つの異なるアプローチでAI/LLMとの連携を実装した。
 
-| 方式 | 用途 | 動作環境 |
-|------|------|---------|
-| ローカルMCP Server | Claude Codeからの記事操作 | ローカル（Node.js） |
-| llms.txt | Web上でのLLM向けコンテンツ公開 | GitHub Pages（静的ファイル） |
+| 方式 | 用途 | 動作環境 | クローン |
+| ---- | ---- | ------- | ------- |
+| MCP Server | Claude Codeからの記事操作 | ローカル（Node.js） | 不要（HTTPフェッチ） |
+| llms.txt | Web上でのLLM向けコンテンツ公開 | GitHub Pages（静的ファイル） | 不要 |
 
-ローカルMCP Serverはリアルタイムな検索・操作に優れ、llms.txtはデプロイするだけで誰でもアクセスできる手軽さがある。静的サイトでも工夫次第でAIフレンドリーな対応が可能である。
+MCP Serverは`llms-full.txt`をHTTPで取得する方式にしたことで、リポジトリのクローンが不要になった。`llms.txt`がMCP Serverのデータソースを兼ねる構成になっており、Hugoビルド時に記事データが自動更新される。静的サイトでも工夫次第でAIフレンドリーな対応が可能である。
 
 ## 参考資料
 
