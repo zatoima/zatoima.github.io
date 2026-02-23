@@ -62,7 +62,8 @@ def notify_slack(
 
     try:
         result = subprocess.run(
-            ["claude", "-p", "--allowedTools", "mcp__slack__slack_post_message", prompt],
+            ["claude", "-p", "--allowedTools", "mcp__slack__slack_post_message"],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=60,

@@ -14,79 +14,79 @@ draft: false
 
 本記事は2026-02-23時点でのLLM関連の注目論文をまとめたものです。arXiv、Semantic Scholar、Hugging Face Daily Papersから自動収集し、Claude APIで日本語要約を生成しています。
 
-## 1. VIRAASAT: Traversing Novel Paths for Indian Cultural Reasoning
+## 1. VESPO: Variational Sequence-Level Soft Policy Optimization for Stable Off-Policy LLM Training
 
-- **著者**: Harshul Raj Surana, Arijit Maji, Aryan Vats, Akash Ghosh, Sriparna Saha ほか
-- **公開日**: 2026-02-20
-- **ソース**: [arxiv](http://arxiv.org/abs/2602.18429v1)
-- **arXiv ID**: 2602.18429v1
+- **著者**: Guobin Shen, Chenxiao Zhao, Xiang Cheng, Lei Huang, Xing Yu
+- **公開日**: 2026-02-11
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.10693)
+- **arXiv ID**: 2602.10693
 
 ### 要約
 
-VIRAASATは、インド文化に関する多段階推論（マルチホップQA）データセットを半自動的に生成する新しいアプローチである。700以上の専門家が精選した文化的アーティファクトからなる知識グラフを活用し、インドの全28州・8連邦直轄領にわたる13の文化属性（歴史、祭りなど）をカバーする3,200以上のマルチホップ質問を生成した。最先端LLMの評価により、Chain-of-Thought（CoT）によるファインチューニングでは低頻度の文化的事実の統合・根拠付けに限界があることが判明した。この課題を解決するため、知識グラフ上の原子的操作を内部的にシミュレートするSymbolic Chain-of-Manipulation（SCoM）フレームワークを提案し、教師ありファインチューニングにおいて標準CoTベースラインを最大20%上回る性能を達成した。
+大規模言語モデル（LLM）の強化学習における訓練安定性の課題に取り組んだ研究である。ポリシーの陳腐化や非同期訓練、訓練エンジンと推論エンジンの不一致により行動ポリシーが現行ポリシーから乖離し、訓練崩壊を引き起こすリスクがある。本研究では、提案分布に対する変分定式化に分散削減を組み込んだVESPO（Variational sEquence-level Soft Policy Optimization）を提案し、長さ正規化を必要とせずシーケンスレベルの重要度重みに直接作用する閉形式の再形成カーネルを導出した。数学的推論ベンチマークにおける実験では、VESPOは陳腐化比率64倍および完全非同期実行下でも安定した訓練を維持し、密結合モデルとMixture-of-Expertsモデルの両方で一貫した性能向上を達成した。
 
 {{< details "原文Abstract" >}}
-Large Language Models (LLMs) have made significant progress in reasoning tasks across various domains such as mathematics and coding. However, their performance deteriorates in tasks requiring rich socio-cultural knowledge and diverse local contexts, particularly those involving Indian Culture. Existing Cultural benchmarks are (i) Manually crafted, (ii) contain single-hop questions testing factual recall, and (iii) prohibitively costly to scale, leaving this deficiency largely unmeasured. To address this, we introduce VIRAASAT, a novel, semi-automated multi-hop approach for generating cultural specific multi-hop Question-Answering dataset for Indian culture. VIRAASAT leverages a Knowledge Graph comprising more than 700 expert-curated cultural artifacts, covering 13 key attributes of Indian culture (history, festivals, etc). VIRAASAT spans all 28 states and 8 Union Territories, yielding more than 3,200 multi-hop questions that necessitate chained cultural reasoning. We evaluate current State-of-the-Art (SOTA) LLMs on VIRAASAT and identify key limitations in reasoning wherein fine-tuning on Chain-of-Thought(CoT) traces fails to ground and synthesize low-probability facts. To bridge this gap, we propose a novel framework named Symbolic Chain-of-Manipulation (SCoM). Adapting the Chain-of-Manipulation paradigm, we train the model to simulate atomic Knowledge Graph manipulations internally. SCoM teaches the model to reliably traverse the topological structure of the graph. Experiments on Supervised Fine-Tuning (SFT) demonstrate that SCoM outperforms standard CoT baselines by up to 20%. We release the VIRAASAT dataset along with our findings, laying a strong foundation towards building Culturally Aware Reasoning Models.
+Training stability remains a central challenge in reinforcement learning (RL) for large language models (LLMs). Policy staleness, asynchronous training, and mismatches between training and inference engines all cause the behavior policy to diverge from the current policy, risking training collapse. Importance sampling provides a principled correction for this distribution shift but suffers from high variance; existing remedies such as token-level clipping and sequence-level normalization lack a unified theoretical foundation. We propose Variational sEquence-level Soft Policy Optimization (VESPO). By incorporating variance reduction into a variational formulation over proposal distributions, VESPO derives a closed-form reshaping kernel that operates directly on sequence-level importance weights without length normalization. Experiments on mathematical reasoning benchmarks show that VESPO maintains stable training under staleness ratios up to 64x and fully asynchronous execution, and delivers consistent gains across both dense and Mixture-of-Experts models. Code is available at https://github.com/FloyedShen/VESPO
 {{< /details >}}
 
-## 2. SPQ: An Ensemble Technique for Large Language Model Compression
+## 2. Does Your Reasoning Model Implicitly Know When to Stop Thinking?
 
-- **著者**: Jiamin Yao, Eren Gultepe
-- **公開日**: 2026-02-20
-- **ソース**: [arxiv](http://arxiv.org/abs/2602.18420v1)
-- **arXiv ID**: 2602.18420v1
+- **著者**: Zixuan Huang, Xin Xia, Yuxi Ren, Jianbin Zheng, Xuanda Wang ほか
+- **公開日**: 2026-02-09
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.08354)
+- **arXiv ID**: 2602.08354
 
 ### 要約
 
-本研究は、大規模言語モデル（LLM）の圧縮手法として、分散保持型特異値分解（SVD）、活性化ベースの枝刈り（Pruning）、学習後線形量子化（Quantization）を組み合わせたアンサンブル技術SPQを提案する。各手法はMLPの冗長ニューロン除去、アテンション射影の低ランク分解、全線形層の8ビット量子化というそれぞれ異なる非効率性を対象とし、同一圧縮率において単独手法よりも優れたパープレキシティを達成する。LLaMA-2-7Bへの適用では、最大75%のメモリ削減を実現しつつ、WikiText-2のパープレキシティを5.47から4.91に改善し、C4・TruthfulQA・GSM8Kなどの下流タスクでも精度を維持した。GPTQやSparseGPTといった強力なベースラインと比較しても、SPQはより少ないメモリ使用量（GPTQの7.16GBに対し6.86GB）で競争力のある性能を示し、推論スループットでは最大1.9倍の高速化を達成しており、メモリ制約環境でのLLM実用展開に有効な手法である。
+大規模推論モデル（LRM）は長い思考連鎖（CoT）により複雑な推論タスクの性能を向上させてきたが、冗長な推論が計算効率を損ない、リアルタイム応用での遅延を引き起こすという課題がある。先行研究では、推論連鎖が長いほど正答率が上がるわけではなく、むしろ精度を低下させる場合があることが示されている。本研究では、LRMが思考を停止すべき適切なタイミングを暗黙的に把握しているが、現行のサンプリング手法がその能力を覆い隠していることを発見・実証した。この知見に基づき、効率的な推論能力を引き出す新たなサンプリング手法SAGE（Self-Aware Guided Efficient Reasoning）を提案し、さらにSAGEをグループベース強化学習に統合したSAGE-RLにより、複数の数学ベンチマークにおいて推論の精度と効率の両方を大幅に改善することを示した。
 
 {{< details "原文Abstract" >}}
-This study presents an ensemble technique, SPQ (SVD-Pruning-Quantization), for large language model (LLM) compression that combines variance-retained singular value decomposition (SVD), activation-based pruning, and post-training linear quantization. Each component targets a different source of inefficiency: i) pruning removes redundant neurons in MLP layers, ii) SVD reduces attention projections into compact low-rank factors, iii) and 8-bit quantization uniformly compresses all linear layers. At matched compression ratios, SPQ outperforms individual methods (SVD-only, pruning-only, or quantization-only) in perplexity, demonstrating the benefit of combining complementary techniques. Applied to LLaMA-2-7B, SPQ achieves up to 75% memory reduction while maintaining or improving perplexity (e.g., WikiText-2 5.47 to 4.91) and preserving accuracy on downstream benchmarks such as C4, TruthfulQA, and GSM8K. Compared to strong baselines like GPTQ and SparseGPT, SPQ offers competitive perplexity and accuracy while using less memory (6.86 GB vs. 7.16 GB for GPTQ). Moreover, SPQ improves inference throughput over GPTQ, achieving up to a 1.9x speedup, which further enhances its practicality for real-world deployment. The effectiveness of SPQ's robust compression through layer-aware and complementary compression techniques may provide practical deployment of LLMs in memory-constrained environments. Code is available at: https://github.com/JiaminYao/SPQ_LLM_Compression/
+Recent advancements in large reasoning models (LRMs) have greatly improved their capabilities on complex reasoning tasks through Long Chains of Thought (CoTs). However, this approach often results in substantial redundancy, impairing computational efficiency and causing significant delays in real-time applications. Recent studies show that longer reasoning chains are frequently uncorrelated with correctness and can even be detrimental to accuracy. In a further in-depth analysis of this phenomenon, we surprisingly uncover and empirically verify that LRMs implicitly know the appropriate time to stop thinking, while this capability is obscured by current sampling paradigms. Motivated by this, we introduce SAGE (Self-Aware Guided Efficient Reasoning), a novel sampling paradigm that unleashes this efficient reasoning potential. Furthermore, integrating SAGE as mixed sampling into group-based reinforcement learning (SAGE-RL) enables SAGE-RL to effectively incorporate SAGE-discovered efficient reasoning patterns into standard pass@1 inference, markedly enhancing both the reasoning accuracy and efficiency of LRMs across multiple challenging mathematical benchmarks.
 {{< /details >}}
 
-## 3. Subgroups of $U(d)$ Induce Natural RNN and Transformer Architectures
+## 3. SLA2: Sparse-Linear Attention with Learnable Routing and QAT
 
-- **著者**: Joshua Nunley
-- **公開日**: 2026-02-20
-- **ソース**: [arxiv](http://arxiv.org/abs/2602.18417v1)
-- **arXiv ID**: 2602.18417v1
+- **著者**: Jintao Zhang, Haoxu Wang, Kai Jiang, Kaiwen Zheng, Youhe Jiang ほか
+- **公開日**: 2026-02-13
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.12675)
+- **arXiv ID**: 2602.12675
 
 ### 要約
 
-本論文は、U(d)の閉部分群上に隠れ状態を持つ系列モデルの直接的な枠組みを提示する。最小限の公理的設定から出発し、部分群の選択が状態空間・接線射影・更新写像のドロップイン置換として機能する共通の骨格から、リカレント型およびTransformer型のテンプレートを導出する。O(d)に特殊化した直交状態RNNおよびTransformerモデルを、Tiny ShakespeareとPenn Treebankにおいてパラメータ数を揃えた条件で評価している。さらに、接線空間における一般的な線形混合拡張を報告しており、これは部分群の選択に依存せず適用可能であり、現行のO(d)実験において有限パラメータ予算下での性能向上を実現している。
+Sparse-Linear Attention（SLA）はスパース注意と線形注意を組み合わせて拡散モデルを高速化する手法であるが、ヒューリスティックな分割方式が最適でない点と、SLAの注意誤差にスパース・線形注意の直接分解との不一致が存在する点が課題であった。本論文で提案するSLA2は、各注意計算をスパースと線形のどちらで処理するかを動的に選択する学習可能なルーター、学習可能な比率でスパースと線形の注意分岐を組み合わせるより忠実な定式化、および量子化認識ファインチューニングによる低ビット注意設計の3つを導入する。実験の結果、SLA2は動画拡散モデルにおいて97%の注意スパース性を達成し、生成品質を維持しながら注意計算で18.6倍の高速化を実現した。
 
 {{< details "原文Abstract" >}}
-This paper presents a direct framework for sequence models with hidden states on closed subgroups of U(d). We use a minimal axiomatic setup and derive recurrent and transformer templates from a shared skeleton in which subgroup choice acts as a drop-in replacement for state space, tangent projection, and update map. We then specialize to O(d) and evaluate orthogonal-state RNN and transformer models on Tiny Shakespeare and Penn Treebank under parameter-matched settings. We also report a general linear-mixing extension in tangent space, which applies across subgroup choices and improves finite-budget performance in the current O(d) experiments.
+Sparse-Linear Attention (SLA) combines sparse and linear attention to accelerate diffusion models and has shown strong performance in video generation. However, (i) SLA relies on a heuristic split that assigns computations to the sparse or linear branch based on attention-weight magnitude, which can be suboptimal. Additionally, (ii) after formally analyzing the attention error in SLA, we identify a mismatch between SLA and a direct decomposition into sparse and linear attention. We propose SLA2, which introduces (I) a learnable router that dynamically selects whether each attention computation should use sparse or linear attention, (II) a more faithful and direct sparse-linear attention formulation that uses a learnable ratio to combine the sparse and linear attention branches, and (III) a sparse + low-bit attention design, where low-bit attention is introduced via quantization-aware fine-tuning to reduce quantization error. Experiments show that on video diffusion models, SLA2 can achieve 97% attention sparsity and deliver an 18.6x attention speedup while preserving generation quality.
 {{< /details >}}
 
-## 4. "How Do I ...?": Procedural Questions Predominate Student-LLM Chatbot Conversations
+## 4. SpargeAttention2: Trainable Sparse Attention via Hybrid Top-k+Top-p Masking and Distillation Fine-Tuning
 
-- **著者**: Alexandra Neagu, Marcus Messer, Peter Johnson, Rhodri Nelson
-- **公開日**: 2026-02-20
-- **ソース**: [arxiv](http://arxiv.org/abs/2602.18372v1)
-- **arXiv ID**: 2602.18372v1
+- **著者**: Jintao Zhang, Kai Jiang, Chendong Xiang, Weiqi Feng, Yuezhou Hu ほか
+- **公開日**: 2026-02-13
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.13515)
+- **arXiv ID**: 2602.13515
 
 ### 要約
 
-本研究は、大規模言語モデル（LLM）ベースの教育用チャットボットに対する学生の質問パターンを、形成的自主学習と総括的評価課題という2つの学習文脈から分析したものである。6,113件のメッセージを11種のLLMと3名の人間評価者により、4つの既存分類スキーマを用いて分類した結果、LLMによる評価者間信頼性は中程度から良好であり、人間評価者よりも一貫性が高いことが示された。両学習文脈において「手続き的（procedural）」質問が最も多く、特に総括的評価の準備時にその傾向が顕著であった。一方で、既存の分類スキーマは複合的なプロンプトの意味的豊かさに対応しきれず、チャットボット統合のリスクと利点の理解には限界があることも明らかになった。今後は、談話心理学における会話分析手法などを適用し、複数ターンにわたる会話の微妙なニュアンスを捉えるアプローチが推奨されている。
+拡散モデルの高速化に向けた学習可能なスパースアテンション手法SpargeAttention2を提案している。Top-kとTop-pという2つの一般的なマスキングルールそれぞれの失敗ケースを分析し、両者を組み合わせたハイブリッドマスキングにより高スパース性でもロバストなマスキングを実現する。さらに、拡散損失によるファインチューニングの限界を指摘し、蒸留に基づくファインチューニング目的関数を導入することで生成品質の維持を図る。動画拡散モデルでの実験では、アテンションスパース性95%、アテンション処理の16.2倍の高速化を達成しつつ生成品質を維持し、既存のスパースアテンション手法を一貫して上回る性能を示した。
 
 {{< details "原文Abstract" >}}
-Providing scaffolding through educational chatbots built on Large Language Models (LLM) has potential risks and benefits that remain an open area of research. When students navigate impasses, they ask for help by formulating impasse-driven questions. Within interactions with LLM chatbots, such questions shape the user prompts and drive the pedagogical effectiveness of the chatbot's response. This paper focuses on such student questions from two datasets of distinct learning contexts: formative self-study, and summative assessed coursework. We analysed 6,113 messages from both learning contexts, using 11 different LLMs and three human raters to classify student questions using four existing schemas. On the feasibility of using LLMs as raters, results showed moderate-to-good inter-rater reliability, with higher consistency than human raters. The data showed that 'procedural' questions predominated in both learning contexts, but more so when students prepare for summative assessment. These results provide a basis on which to use LLMs for classification of student questions. However, we identify clear limitations in both the ability to classify with schemas and the value of doing so: schemas are limited and thus struggle to accommodate the semantic richness of composite prompts, offering only partial understanding the wider risks and benefits of chatbot integration. In the future, we recommend an analysis approach that captures the nuanced, multi-turn nature of conversation, for example, by applying methods from conversation analysis in discursive psychology.
+Many training-free sparse attention methods are effective for accelerating diffusion models. Recently, several works suggest that making sparse attention trainable can further increase sparsity while preserving generation quality. We study three key questions: (1) when do the two common masking rules, i.e., Top-k and Top-p, fail, and how can we avoid these failures? (2) why can trainable sparse attention reach higher sparsity than training-free methods? (3) what are the limitations of fine-tuning sparse attention using the diffusion loss, and how can we address them? Based on this analysis, we propose SpargeAttention2, a trainable sparse attention method that achieves high sparsity without degrading generation quality. SpargeAttention2 includes (i) a hybrid masking rule that combines Top-k and Top-p for more robust masking at high sparsity, (ii) an efficient trainable sparse attention implementation, and (iii) a distillation-inspired fine-tuning objective to better preserve generation quality during fine-tuning using sparse attention. Experiments on video diffusion models show that SpargeAttention2 reaches 95% attention sparsity and a 16.2x attention speedup while maintaining generation quality, consistently outperforming prior sparse attention methods.
 {{< /details >}}
 
-## 5. Vichara: Appellate Judgment Prediction and Explanation for the Indian Judicial System
+## 5. Mobile-Agent-v3.5: Multi-platform Fundamental GUI Agents
 
-- **著者**: Pavithra PM Nair, Preethu Rose Anish
-- **公開日**: 2026-02-20
-- **ソース**: [arxiv](http://arxiv.org/abs/2602.18346v1)
-- **arXiv ID**: 2602.18346v1
+- **著者**: Haiyang Xu, Xi Zhang, Haowei Liu, Junyang Wang, Zhaozai Zhu ほか
+- **公開日**: 2026-02-15
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.16855)
+- **arXiv ID**: 2602.16855
 
 ### 要約
 
-Vicharaは、インドの司法制度における控訴審判決の予測と説明を行う新しいフレームワークである。本フレームワークは英語の控訴審訴訟文書を「決定ポイント」（法的争点、判断主体、結果、理由、時間的文脈を含む離散的な法的判断）に分解し、構造化された表現によって正確な予測と解釈可能な説明を実現する。説明の生成にはIRAC（Issue-Rule-Application-Conclusion）フレームワークをインドの法的推論に適応させた構造化フォーマットを採用している。GPT-4o mini、Llama-3.1-8B、Mistral-7B、Qwen2.5-7Bの4つの大規模言語モデルを用いてPredExおよびILDC_expertデータセットで評価した結果、既存の判決予測ベンチマークを上回り、GPT-4o miniが最高性能（F1: PredExで81.5、ILDC_expertで80.3）を達成した。
+GUI-Owl-1.5は、デスクトップ・モバイル・ブラウザなど複数プラットフォームに対応したネイティブGUIエージェントモデルであり、2Bから235Bまでの複数サイズでinstruct/thinkingの両バリアントを提供し、クラウド・エッジ連携とリアルタイムインタラクションを実現する。OSWorld（56.5）、AndroidWorld（71.6）、WebArena（48.4）、ScreenSpotPro（80.3）など20以上のGUIベンチマークでオープンソースモデルとして最高性能を達成した。主要な技術革新として、シミュレーション環境とクラウドサンドボックス環境を組み合わせたハイブリッドデータフライホイール、ツール/MCP利用・記憶・マルチエージェント適応を含む統一的な思考合成パイプラインによるエージェント能力の強化、そしてマルチプラットフォーム間の競合と長期タスクの低訓練効率に対処する新しい環境強化学習アルゴリズムMRPOを提案している。
 
 {{< details "原文Abstract" >}}
-In jurisdictions like India, where courts face an extensive backlog of cases, artificial intelligence offers transformative potential for legal judgment prediction. A critical subset of this backlog comprises appellate cases, which are formal decisions issued by higher courts reviewing the rulings of lower courts. To this end, we present Vichara, a novel framework tailored to the Indian judicial system that predicts and explains appellate judgments. Vichara processes English-language appellate case proceeding documents and decomposes them into decision points. Decision points are discrete legal determinations that encapsulate the legal issue, deciding authority, outcome, reasoning, and temporal context. The structured representation isolates the core determinations and their context, enabling accurate predictions and interpretable explanations. Vichara's explanations follow a structured format inspired by the IRAC (Issue-Rule-Application-Conclusion) framework and adapted for Indian legal reasoning. This enhances interpretability, allowing legal professionals to assess the soundness of predictions efficiently. We evaluate Vichara on two datasets, PredEx and the expert-annotated subset of the Indian Legal Documents Corpus (ILDC_expert), using four large language models: GPT-4o mini, Llama-3.1-8B, Mistral-7B, and Qwen2.5-7B. Vichara surpasses existing judgment prediction benchmarks on both datasets, with GPT-4o mini achieving the highest performance (F1: 81.5 on PredEx, 80.3 on ILDC_expert), followed by Llama-3.1-8B. Human evaluation of the generated explanations across Clarity, Linking, and Usefulness metrics highlights GPT-4o mini's superior interpretability.
+The paper introduces GUI-Owl-1.5, the latest native GUI agent model that features instruct/thinking variants in multiple sizes (2B/4B/8B/32B/235B) and supports a range of platforms (desktop, mobile, browser, and more) to enable cloud-edge collaboration and real-time interaction. GUI-Owl-1.5 achieves state-of-the-art results on more than 20+ GUI benchmarks on open-source models: (1) on GUI automation tasks, it obtains 56.5 on OSWorld, 71.6 on AndroidWorld, and 48.4 on WebArena; (2) on grounding tasks, it obtains 80.3 on ScreenSpotPro; (3) on tool-calling tasks, it obtains 47.6 on OSWorld-MCP, and 46.8 on MobileWorld; (4) on memory and knowledge tasks, it obtains 75.5 on GUI-Knowledge Bench. GUI-Owl-1.5 incorporates several key innovations: (1) Hybird Data Flywheel: we construct the data pipeline for UI understanding and trajectory generation based on a combination of simulated environments and cloud-based sandbox environments, in order to improve the efficiency and quality of data collection. (2) Unified Enhancement of Agent Capabilities: we use a unified thought-synthesis pipeline to enhance the model's reasoning capabilities, while placing particular emphasis on improving key agent abilities, including Tool/MCP use, memory and multi-agent adaptation; (3) Multi-platform Environment RL Scaling: We propose a new environment RL algorithm, MRPO, to address the challenges of multi-platform conflicts and the low training efficiency of long-horizon tasks. The GUI-Owl-1.5 models are open-sourced, and an online cloud-sandbox demo is available at https://github.com/X-PLUG/MobileAgent.
 {{< /details >}}
 
 ---
