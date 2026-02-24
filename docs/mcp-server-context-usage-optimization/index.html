@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.ico" />
+<title>ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した | my opinion is my own</title>
+<meta name="title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した" />
+<meta name="description" content="" />
+<meta name="keywords" content="MCP,Claude,LLM,Snowflake," />
+
+
+<meta property="og:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://zatoima.github.io/mcp-server-context-usage-optimization/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2026-02-24T00:00:00+00:00" />
+<meta property="article:modified_time" content="2026-02-24T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
+
+
+
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
+
+<meta name="twitter:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した"/>
+<meta name="twitter:description" content=""/>
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した\"",
+  "description": "\"\"",
+  "datePublished": "\"2026-02-24T00:00:00Z\"",
+  "dateModified": "\"2026-02-24T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/mcp-server-context-usage-optimization/\""
+  },
+  "wordCount":  594 ,
+  "keywords": "[\"MCP\",\"Claude\",\"LLM\",\"Snowflake\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+</head>
+
+<body>
+  <a href="#main" class="skip-link">メインコンテンツへスキップ</a>
+  <div class="reading-progress"></div>
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">🌙</button>
+          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-02-24'>
+            2026/02/24 に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約1分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/mcp/" class="tag-badge">MCP</a>
+          
+          <a href="https://zatoima.github.io/blog/claude/" class="tag-badge"><img src="/images/tags/claude.svg" alt="Claude" class="tag-badge-icon" loading="lazy">Claude</a>
+          
+          <a href="https://zatoima.github.io/blog/llm/" class="tag-badge">LLM</a>
+          
+          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="はじめに">はじめに</h2>
+<p>MCPサーバーはLLMエージェントに外部ツールを提供する仕組みだが、ツールのレスポンスはすべてLLMのコンテキストウィンドウに入る。つまりMCPツールが返すデータ量がそのままコンテキスト消費に直結する。</p>
+<p>本記事では、自作のSnowflake Docs MCPサーバーのコンテキスト使用量を実測し、問題点を特定した上で、AWS公式のドキュメントMCPサーバーの実装を参考に改善を行った。改善前後の具体的な数値比較と、ドキュメント系MCPサーバー設計のポイントをまとめる。</p>
+<h2 id="mcpツールのレスポンスとコンテキストの関係">MCPツールのレスポンスとコンテキストの関係</h2>
+<p>MCPツールの呼び出し結果は、LLMへの入力としてコンテキストウィンドウに載る。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ユーザーメッセージ] + [システムプロンプト] + [MCPツール結果] + [過去の会話] = コンテキスト消費
+</span></span></code></pre></div><p>ドキュメント取得系のMCPツールは、1回の呼び出しで数千〜数万文字を返すことがある。これを意識せずに設計すると、数回の呼び出しでコンテキストの大部分を消費し、会話の継続が困難になる。</p>
+<h3 id="サブエージェント経由の場合">サブエージェント経由の場合</h3>
+<p>Claude Codeのサブエージェント（Task tool）経由でMCPツールを使う場合、ツールの生レスポンスはサブエージェントのコンテキスト内に留まり、メインには要約のみが返る。これによりメインコンテキストの消費を大幅に削減できる。</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>メインコンテキスト消費</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>直接呼び出し</td>
+<td>ツール結果の全文</td>
+</tr>
+<tr>
+<td>サブエージェント経由</td>
+<td>要約のみ（50-90%削減）</td>
+</tr>
+</tbody>
+</table>
+<p>ただしサブエージェントは合計トークン消費量が増え、レイテンシも大きくなるため、すべてをサブエージェント経由にするのは現実的ではない。MCPサーバー側でレスポンスサイズを適切に制御することが重要である。</p>
+<h2 id="改善前のsnowflake-docs-mcpサーバーv010">改善前のSnowflake Docs MCPサーバー（v0.1.0）</h2>
+<p>改善前のサーバーは2つのツールを提供していた。</p>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>機能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>search_snowflake_docs</code></td>
+<td>キーワード検索（excerpt 200文字、最大20件）</td>
+</tr>
+<tr>
+<td><code>get_doc_content</code></td>
+<td>ページ全文取得（HTML→Markdown変換）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="実測結果">実測結果</h3>
+<p>CREATE TABLE ページ（Snowflakeで最も大きいページの一つ）を対象に計測した。</p>
+<p><strong>search_snowflake_docs:</strong></p>
+<table>
+<thead>
+<tr>
+<th>max_results</th>
+<th>レスポンス文字数</th>
+<th>推定トークン数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3件</td>
+<td>~850</td>
+<td>~250</td>
+</tr>
+<tr>
+<td>5件（デフォルト）</td>
+<td>~1,400</td>
+<td>~400</td>
+</tr>
+<tr>
+<td>10件</td>
+<td>~2,800</td>
+<td>~800</td>
+</tr>
+<tr>
+<td>20件（最大）</td>
+<td>~5,500</td>
+<td>~1,500</td>
+</tr>
+</tbody>
+</table>
+<p>検索ツールは軽量で問題なし。</p>
+<p><strong>get_doc_content:</strong></p>
+<table>
+<thead>
+<tr>
+<th>max_length</th>
+<th>レスポンス文字数</th>
+<th>推定トークン数</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2,000</td>
+<td>~2,200</td>
+<td>~600</td>
+<td></td>
+</tr>
+<tr>
+<td>4,000</td>
+<td>~4,200</td>
+<td>~1,100</td>
+<td></td>
+</tr>
+<tr>
+<td>8,000（デフォルト）</td>
+<td>~8,200</td>
+<td>~2,200</td>
+<td></td>
+</tr>
+<tr>
+<td>0（無制限）</td>
+<td><strong>102,079</strong></td>
+<td><strong>~25,000+</strong></td>
+<td>コンテキスト上限超過</td>
+</tr>
+</tbody>
+</table>
+<h3 id="発見された問題">発見された問題</h3>
+<h4 id="1-テキスト重複バグ">1. テキスト重複バグ</h4>
+<p>HTML→Markdown変換に <code>descendants</code> イテレータを使っていたため、<code>&lt;li&gt;</code> 内の <code>&lt;p&gt;</code> で同じテキストが2回出力されていた。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>- Requires a value (NOT NULL).
+</span></span><span style="display:flex;"><span>Requires a value (NOT NULL).          ← 重複
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>- Has a default value.
+</span></span><span style="display:flex;"><span>Has a default value.                  ← 重複
+</span></span></code></pre></div><p>リスト10項目が20行に膨張し、<strong>コンテンツの30-40%が無駄な重複</strong>に消費されていた。</p>
+<p>原因はBeautifulSoupの <code>descendants</code> が全ネスト要素を走査するため、<code>&lt;li&gt;</code> ハンドラと <code>&lt;p&gt;</code> ハンドラの両方が同じテキストに対して発火していたこと。</p>
+<h4 id="2-max_length0-でコンテキスト破綻">2. max_length=0 でコンテキスト破綻</h4>
+<p>CREATE TABLEページを無制限取得すると102,079文字が返り、Claude Codeのトークン上限を超えてファイルに退避された。ファイル退避されるとコンテキスト内で直接参照できなくなり、実質的に使い物にならない。</p>
+<h4 id="3-セクション指定取得ができない">3. セクション指定取得ができない</h4>
+<p>ページの先頭から <code>max_length</code> 分だけ切り取る方式のため、Usage NotesやExamplesなどページ後半にある重要情報に到達できなかった。</p>
+<h4 id="4-ページ構造の確認手段がない">4. ページ構造の確認手段がない</h4>
+<p>どんなセクションがあるかを知るためにも <code>get_doc_content</code> で全文取得する必要があった。</p>
+<h2 id="aws-documentation-mcpサーバーの実装調査">AWS Documentation MCPサーバーの実装調査</h2>
+<p>改善の参考として、AWSが公式に提供しているドキュメントMCPサーバーの実装を調査した。</p>
+<h3 id="アーキテクチャ">アーキテクチャ</h3>
+<p>AWSのサーバーは3つのツールを提供している。</p>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>機能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>read_documentation</code></td>
+<td>ページ取得（ページネーション対応）</td>
+</tr>
+<tr>
+<td><code>search_documentation</code></td>
+<td>検索（公式Search API使用）</td>
+</tr>
+<tr>
+<td><code>recommend</code></td>
+<td>関連コンテンツ推薦</td>
+</tr>
+</tbody>
+</table>
+<h3 id="参考になった設計ポイント">参考になった設計ポイント</h3>
+<p><strong>1. markdownifyライブラリの使用</strong></p>
+<p>手書きのHTMLパーサーではなく、<code>markdownify</code> ライブラリでHTML→Markdown変換を行っている。これにより重複バグのような問題は構造的に発生しない。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>content <span style="color:#ff79c6">=</span> markdownify<span style="color:#ff79c6">.</span>markdownify(
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">str</span>(main_content),
+</span></span><span style="display:flex;"><span>    heading_style<span style="color:#ff79c6">=</span>markdownify<span style="color:#ff79c6">.</span>ATX,
+</span></span><span style="display:flex;"><span>    strip<span style="color:#ff79c6">=</span>tags_to_strip,
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>2. start_indexによるページネーション</strong></p>
+<p>長文ドキュメントを一度に全文返すのではなく、<code>start_index</code> パラメータで分割読み込みする設計。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">read_documentation</span>(
+</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>,
+</span></span><span style="display:flex;"><span>    max_length: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5000</span>,     <span style="color:#6272a4"># デフォルト5000</span>
+</span></span><span style="display:flex;"><span>    start_index: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>,       <span style="color:#6272a4"># 読み込み開始位置</span>
+</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
+</span></span></code></pre></div><p>instructions には「30,000文字超のドキュメントは、必要な情報が見つかった時点で読み込みを止めること」と明記されている。</p>
+<p><strong>3. max_lengthの安全な制約</strong></p>
+<p>Pydantic Fieldで <code>gt=0, lt=1000000</code> の制約をかけ、0（無制限）を入力できないようにしている。</p>
+<h2 id="改善後のsnowflake-docs-mcpサーバーv020">改善後のSnowflake Docs MCPサーバー（v0.2.0）</h2>
+<p>上記の調査を踏まえ、以下の改善を実施した。</p>
+<h3 id="変更一覧">変更一覧</h3>
+<table>
+<thead>
+<tr>
+<th>変更</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTML→Markdown変換</td>
+<td>手書き <code>descendants</code> ループ → <code>markdownify</code> ライブラリ</td>
+</tr>
+<tr>
+<td>デフォルト max_length</td>
+<td>8000 → 5000（重複解消で情報密度向上）</td>
+</tr>
+<tr>
+<td>max_length=0</td>
+<td>無制限 → ハードキャップ(20000)まで</td>
+</tr>
+<tr>
+<td>ページネーション</td>
+<td><code>start_index</code> パラメータ追加</td>
+</tr>
+<tr>
+<td>新ツール: <code>get_doc_toc</code></td>
+<td>ページ見出し構造の軽量取得</td>
+</tr>
+<tr>
+<td>新ツール: <code>get_doc_section</code></td>
+<td>特定セクションのみ取得</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ツール構成">ツール構成</h3>
+<p>改善後は4つのツールを提供する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>search_snowflake_docs  → ドキュメント検索
+</span></span><span style="display:flex;"><span>get_doc_toc            → ページの目次取得（軽量）
+</span></span><span style="display:flex;"><span>get_doc_section        → 特定セクションの取得
+</span></span><span style="display:flex;"><span>get_doc_content        → ページ全文の取得（ページネーション対応）
+</span></span></code></pre></div><p>推奨される使い方は以下の流れ。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>1. search_snowflake_docs で検索
+</span></span><span style="display:flex;"><span>2. get_doc_toc でページ構造を確認（軽量）
+</span></span><span style="display:flex;"><span>3. get_doc_section で必要なセクションだけ取得
+</span></span><span style="display:flex;"><span>4. 全文が必要な場合のみ get_doc_content（start_index で分割読み込み）
+</span></span></code></pre></div><h3 id="主要な実装">主要な実装</h3>
+<p><strong>_clamp_max_length:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_clamp_max_length</span>(max_length: <span style="color:#8be9fd;font-style:italic">int</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">int</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> max_length <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">0</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> DEFAULT_MAX_CONTENT_LENGTH  <span style="color:#6272a4"># 5000</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> max_length <span style="color:#ff79c6">==</span> <span style="color:#bd93f9">0</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> MAX_CONTENT_LENGTH_HARD_CAP  <span style="color:#6272a4"># 20000</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> <span style="color:#8be9fd;font-style:italic">min</span>(max_length, MAX_CONTENT_LENGTH_HARD_CAP)
+</span></span></code></pre></div><table>
+<thead>
+<tr>
+<th>max_length の値</th>
+<th>挙動</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>全文取得の意図を尊重し、ハードキャップ(20,000)まで返す</td>
+</tr>
+<tr>
+<td>1〜20,000</td>
+<td>指定値そのまま</td>
+</tr>
+<tr>
+<td>20,001以上</td>
+<td>20,000にキャップ</td>
+</tr>
+<tr>
+<td>負値</td>
+<td>デフォルト(5,000)にフォールバック</td>
+</tr>
+</tbody>
+</table>
+<p><strong>get_doc_content のページネーション:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>@mcp<span style="color:#ff79c6">.</span>tool()
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">get_doc_content</span>(
+</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>,
+</span></span><span style="display:flex;"><span>    include_code_blocks: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">True</span>,
+</span></span><span style="display:flex;"><span>    max_length: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5000</span>,
+</span></span><span style="display:flex;"><span>    start_index: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>,
+</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span>:
+</span></span></code></pre></div><p>レスポンスに <code>total_length</code> と <code>next_start_index</code> を含め、続きの取得を容易にしている。</p>
+<h2 id="改善前後のコンテキスト使用量比較">改善前後のコンテキスト使用量比較</h2>
+<h3 id="テキスト品質の改善">テキスト品質の改善</h3>
+<p>同じ <code>max_length=2000</code> で取得した CREATE TABLE ページのリスト部分：</p>
+<p><strong>旧版（v0.1.0）— 20行:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>- Requires a value (NOT NULL).
+</span></span><span style="display:flex;"><span>Requires a value (NOT NULL).
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>- Has a default value.
+</span></span><span style="display:flex;"><span>Has a default value.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>- CREATE OR ALTER TABLE (creates a table if ...)
+</span></span><span style="display:flex;"><span>CREATE OR ALTER TABLE (creates a table if ...)
+</span></span></code></pre></div><p><strong>新版（v0.2.0）— 10行:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>* Requires a value (NOT NULL).
+</span></span><span style="display:flex;"><span>* Has a default value.
+</span></span><span style="display:flex;"><span>* CREATE OR ALTER TABLE (creates a table if ...)
+</span></span></code></pre></div><p>同じ文字数でも、新版は重複がないため実効的に約1.5倍の情報量を含む。</p>
+<h3 id="get_doc_content-の比較">get_doc_content の比較</h3>
+<table>
+<thead>
+<tr>
+<th>条件</th>
+<th>旧版 JSON chars</th>
+<th>新版 JSON chars</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>max_length=2000</td>
+<td>~2,200</td>
+<td>2,269</td>
+<td>新版は重複なしで情報量2倍</td>
+</tr>
+<tr>
+<td>max_length=5000（新デフォルト）</td>
+<td>—</td>
+<td>5,351</td>
+<td>新デフォルト</td>
+</tr>
+<tr>
+<td>max_length=8000（旧デフォルト）</td>
+<td>~8,200</td>
+<td>8,450</td>
+<td>旧版は30-40%が重複</td>
+</tr>
+<tr>
+<td>max_length=0</td>
+<td><strong>102,079（破綻）</strong></td>
+<td><strong>20,000以下（安全）</strong></td>
+<td>95%以上削減</td>
+</tr>
+</tbody>
+</table>
+<h3 id="新ツールのコンテキスト消費">新ツールのコンテキスト消費</h3>
+<table>
+<thead>
+<tr>
+<th>ツール</th>
+<th>JSON chars</th>
+<th>~tokens</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_doc_toc</code> (CREATE TABLE)</td>
+<td>2,114</td>
+<td>~528</td>
+<td>24見出しの目次</td>
+</tr>
+<tr>
+<td><code>get_doc_toc</code> (SHOW TABLES)</td>
+<td>454</td>
+<td>~113</td>
+<td>6見出しの目次</td>
+</tr>
+<tr>
+<td><code>get_doc_section</code> (syntax)</td>
+<td>3,883</td>
+<td>~970</td>
+<td>Syntaxセクションのみ</td>
+</tr>
+<tr>
+<td><code>get_doc_section</code> (usage-notes)</td>
+<td>5,267</td>
+<td>~1,316</td>
+<td>Usage Notesのみ</td>
+</tr>
+<tr>
+<td><code>get_doc_section</code> (required-parameters)</td>
+<td>2,585</td>
+<td>~646</td>
+<td>必須パラメータのみ</td>
+</tr>
+</tbody>
+</table>
+<p><code>get_doc_toc</code> は500トークン前後で済むため、気軽に呼び出せる。</p>
+<h3 id="典型的な使用パターンの比較">典型的な使用パターンの比較</h3>
+<table>
+<thead>
+<tr>
+<th>パターン</th>
+<th>旧版 chars</th>
+<th>新版 chars</th>
+<th>改善</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>search + get_doc_content</td>
+<td>~9,600</td>
+<td>7,378</td>
+<td>23%削減</td>
+</tr>
+<tr>
+<td>search + 2x get_doc_content</td>
+<td>~17,800</td>
+<td>12,714</td>
+<td>29%削減</td>
+</tr>
+<tr>
+<td>search + TOC + 1 section</td>
+<td>—</td>
+<td>9,408</td>
+<td>新機能</td>
+</tr>
+<tr>
+<td>search + TOC + 2 sections</td>
+<td>—</td>
+<td>13,291</td>
+<td>新機能</td>
+</tr>
+<tr>
+<td>Usage Notes だけ欲しい</td>
+<td>不可能</td>
+<td>5,267</td>
+<td>新機能</td>
+</tr>
+</tbody>
+</table>
+<p>特にページ後半のセクション（Usage Notes、Examples）だけが必要な場合、旧版では到達不可能だったが、新版では <code>get_doc_section</code> で直接取得できるようになった。</p>
+<h2 id="ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</h2>
+<p>今回の検証で得られた知見をまとめる。</p>
+<h3 id="1-レスポンスサイズにハードキャップを設ける">1. レスポンスサイズにハードキャップを設ける</h3>
+<p>無制限取得はコンテキスト破綻のリスクがある。LLMのコンテキストウィンドウは有限なので、MCPサーバー側で上限を設けるべきである。</p>
+<h3 id="2-ページネーションを提供する">2. ページネーションを提供する</h3>
+<p>長文ドキュメントを一度に返すのではなく、<code>start_index</code> + <code>max_length</code> で分割読み込みできるようにする。AWS版の設計が参考になる。</p>
+<h3 id="3-段階的な情報取得を可能にする">3. 段階的な情報取得を可能にする</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>検索 → 目次確認（軽量） → セクション取得（必要な部分だけ）
+</span></span></code></pre></div><p>この段階的アプローチにより、不要な情報をコンテキストに載せずに済む。</p>
+<h3 id="4-htmlmarkdown変換にはライブラリを使う">4. HTML→Markdown変換にはライブラリを使う</h3>
+<p>手書きのHTMLパーサーはバグの温床になる。<code>markdownify</code> のような実績あるライブラリを使えば、重複出力やネスト構造のハンドリングミスを避けられる。</p>
+<h3 id="5-instructions-にベストプラクティスを記載する">5. instructions にベストプラクティスを記載する</h3>
+<p>AWS版では FastMCP の <code>instructions</code> パラメータに「長文は分割読み込みすること」「見つかったら止めること」と明記している。LLMがツールをどう使うべきかのガイドをサーバー側から提供する設計は有効である。</p>
+<h2 id="まとめ">まとめ</h2>
+<p>ドキュメント系MCPサーバーのコンテキスト使用量を検証し、以下の改善を実施した。</p>
+<ul>
+<li><code>markdownify</code> ライブラリ導入でテキスト重複バグを解消（同じ文字数で実効情報量1.5倍）</li>
+<li><code>start_index</code> ページネーションで長文ドキュメントの分割読み込みに対応</li>
+<li><code>get_doc_toc</code>（目次取得）と <code>get_doc_section</code>（セクション取得）で段階的な情報取得を実現</li>
+<li><code>max_length</code> のハードキャップ設定でコンテキスト破綻を防止</li>
+</ul>
+<p>MCPサーバーを設計する際は、レスポンスのサイズ = LLMのコンテキスト消費であることを意識し、「必要な情報だけを、必要な分だけ返す」設計にすることが重要である。</p>
+<h2 id="参考資料">参考資料</h2>
+<div class="link-card">
+    <a href="https://github.com/awslabs/mcp/tree/main/src/aws-documentation-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">mcp/src/aws-documentation-mcp-server at main · awslabs/mcp</div><div class="link-card-description">Official MCP Servers for AWS. Contribute to awslabs/mcp development by creating an account on GitHub.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://repository-images.githubusercontent.com/952238700/4fcd85d9-3950-4896-81cd-a03df4be9892" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://github.com/zatoima/snowflake-docs-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - zatoima/snowflake-docs-mcp-server: MCP server for searching and retrieving Snowflake official documentation</div><div class="link-card-description">MCP server for searching and retrieving Snowflake official documentation - zatoima/snowflake-docs-mcp-server</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/a20dd10e022a614072cea55858019aca758d4b6f7b804cf920f9d92217536e52/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://pypi.org/project/markdownify/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Client Challenge</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=pypi.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">pypi.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-02-24-mcp-server-context-usage-optimization/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      GitHubで編集を提案
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/hugo-blog-mcp-server-llms-txt/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">Hugo製ブログにMCP Serverとllms.txtを実装する</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/snowflake-docs-mcp-server-architecture/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">Snowflakeドキュメント検索MCPサーバーを作成した</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fmcp-server-context-usage-optimization%2f&text=%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E7%B3%BBMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E3%81%AE%E3%82%B3%E3%83%B3%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E4%BD%BF%E7%94%A8%E9%87%8F%E3%82%92%E6%A4%9C%E8%A8%BC%E3%81%97%E6%94%B9%E5%96%84%E3%81%97%E3%81%9F" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/mcp-server-context-usage-optimization/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/llm-papers-pipeline-with-claude-code/">Claude CodeでLLM論文の自動収集・要約・公開パイプラインを構築した</a></li>
+    
+    <li><a href="/snowflake-docs-mcp-server-architecture/">Snowflakeドキュメント検索MCPサーバーを作成した</a></li>
+    
+    <li><a href="/llm-papers-2026-02-24/">LLM論文サーベイ（2026-02-24）</a></li>
+    
+    <li><a href="/llm-papers-2026-02-23/">LLM論文サーベイ（2026-02-23）</a></li>
+    
+    <li><a href="/snowflake-directory-table-integration/">Snowflakeのディレクトリテーブルとメタデータ自動更新</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/mcp/" class="tag-badge">MCP</a>
+  
+  <a href="https://zatoima.github.io/blog/claude/" class="tag-badge"><img src="/images/tags/claude.svg" alt="Claude" class="tag-badge-icon" loading="lazy">Claude</a>
+  
+  <a href="https://zatoima.github.io/blog/llm/" class="tag-badge">LLM</a>
+  
+  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#はじめに">はじめに</a></li>
+    <li><a href="#mcpツールのレスポンスとコンテキストの関係">MCPツールのレスポンスとコンテキストの関係</a>
+      <ul>
+        <li><a href="#サブエージェント経由の場合">サブエージェント経由の場合</a></li>
+      </ul>
+    </li>
+    <li><a href="#改善前のsnowflake-docs-mcpサーバーv010">改善前のSnowflake Docs MCPサーバー（v0.1.0）</a>
+      <ul>
+        <li><a href="#実測結果">実測結果</a></li>
+        <li><a href="#発見された問題">発見された問題</a>
+          <ul>
+            <li><a href="#1-テキスト重複バグ">1. テキスト重複バグ</a></li>
+            <li><a href="#2-max_length0-でコンテキスト破綻">2. max_length=0 でコンテキスト破綻</a></li>
+            <li><a href="#3-セクション指定取得ができない">3. セクション指定取得ができない</a></li>
+            <li><a href="#4-ページ構造の確認手段がない">4. ページ構造の確認手段がない</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#aws-documentation-mcpサーバーの実装調査">AWS Documentation MCPサーバーの実装調査</a>
+      <ul>
+        <li><a href="#アーキテクチャ">アーキテクチャ</a></li>
+        <li><a href="#参考になった設計ポイント">参考になった設計ポイント</a></li>
+      </ul>
+    </li>
+    <li><a href="#改善後のsnowflake-docs-mcpサーバーv020">改善後のSnowflake Docs MCPサーバー（v0.2.0）</a>
+      <ul>
+        <li><a href="#変更一覧">変更一覧</a></li>
+        <li><a href="#ツール構成">ツール構成</a></li>
+        <li><a href="#主要な実装">主要な実装</a></li>
+      </ul>
+    </li>
+    <li><a href="#改善前後のコンテキスト使用量比較">改善前後のコンテキスト使用量比較</a>
+      <ul>
+        <li><a href="#テキスト品質の改善">テキスト品質の改善</a></li>
+        <li><a href="#get_doc_content-の比較">get_doc_content の比較</a></li>
+        <li><a href="#新ツールのコンテキスト消費">新ツールのコンテキスト消費</a></li>
+        <li><a href="#典型的な使用パターンの比較">典型的な使用パターンの比較</a></li>
+      </ul>
+    </li>
+    <li><a href="#ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</a>
+      <ul>
+        <li><a href="#1-レスポンスサイズにハードキャップを設ける">1. レスポンスサイズにハードキャップを設ける</a></li>
+        <li><a href="#2-ページネーションを提供する">2. ページネーションを提供する</a></li>
+        <li><a href="#3-段階的な情報取得を可能にする">3. 段階的な情報取得を可能にする</a></li>
+        <li><a href="#4-htmlmarkdown変換にはライブラリを使う">4. HTML→Markdown変換にはライブラリを使う</a></li>
+        <li><a href="#5-instructions-にベストプラクティスを記載する">5. instructions にベストプラクティスを記載する</a></li>
+      </ul>
+    </li>
+    <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#参考資料">参考資料</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+</body>
+
+</html>
