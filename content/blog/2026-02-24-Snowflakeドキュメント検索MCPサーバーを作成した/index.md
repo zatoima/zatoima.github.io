@@ -108,6 +108,8 @@ Snowflakeドキュメント検索MCPサーバーは、docs.snowflake.comのNext.
 
 ## 参考資料
 
-- https://github.com/zatoima/snowflake-docs-mcp-server
-- https://modelcontextprotocol.io/
-- https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props
+{{< linkcard "https://github.com/zatoima/snowflake-docs-mcp-server" >}}
+
+{{< linkcard "https://modelcontextprotocol.io/" >}}
+
+{{< linkcard "https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props" >}}

@@ -264,6 +264,8 @@ MCP Serverは`llms-full.txt`をHTTPで取得する方式にしたことで、リ
 
 ## 参考資料
 
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [llms.txt proposal](https://llmstxt.org/)
-- [Hugo Custom Output Formats](https://gohugo.io/templates/output-formats/)
+{{< linkcard "https://modelcontextprotocol.io/" >}}
+
+{{< linkcard "https://llmstxt.org/" >}}
+
+{{< linkcard "https://gohugo.io/templates/output-formats/" >}}
