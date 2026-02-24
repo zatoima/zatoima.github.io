@@ -17,6 +17,9 @@ echo "========================================"
 # Ensure PATH includes hugo, git, and claude
 export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.claude/local:${PATH}"
 
+# Slack channel ID for notifications
+export SLACK_CHANNEL_ID="C07H1E3SF3Q"
+
 # Use venv python directly instead of activate (more reliable in launchd)
 cd "${SCRIPT_DIR}"
 ./venv/bin/python3 pipeline.py --verbose

@@ -8,7 +8,7 @@ from fetchers import Paper
 
 logger = logging.getLogger(__name__)
 
-SLACK_CHANNEL_ID = "C07H1E3SF3Q"  # #notify
+SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "")
 
 
 def _get_claude_env() -> dict:
