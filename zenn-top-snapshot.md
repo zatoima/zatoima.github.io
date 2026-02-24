@@ -1,0 +1,2876 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "Zenn | エンジニアのための情報共有コミュニティ" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Zenn | エンジニアのための情報共有コミュニティ" [ref=e7]
+        - generic [ref=e12]:
+          - button "テーマを切り替える" [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+          - link "検索" [ref=e16] [cursor=pointer]:
+            - /url: /search
+            - img [ref=e17]
+          - button "Log in" [ref=e19] [cursor=pointer]
+    - article [ref=e20]:
+      - generic [ref=e23]:
+        - generic [ref=e25]: 👩‍💻
+        - heading "ZennのMarkdown記法一覧" [level=1] [ref=e26]
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - time [ref=e30]: 2020/09/06
+            - text: に公開
+          - tooltip "更新日" [ref=e32]:
+            - img [ref=e33]
+            - generic [ref=e36]: 2026/01/19
+            - text: 更新日
+          - link "79件" [ref=e37] [cursor=pointer]:
+            - /url: "#discuss"
+            - img [ref=e38]
+            - generic [ref=e40]: 79件
+      - generic [ref=e43]:
+        - text: X(Twitter)にポスト Facebookに投稿 はてなブックマークに登録
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - generic [ref=e47]:
+              - generic [ref=e48]:
+                - link "Zenn" [ref=e49] [cursor=pointer]:
+                  - /url: /topics/zenn
+                  - img [ref=e51]
+                  - generic [ref=e52]: Zenn
+                - link "idea" [ref=e53] [cursor=pointer]:
+                  - /url: /tech-or-idea
+                  - img [ref=e55]
+                  - generic [ref=e56]: idea
+              - generic [ref=e57]:
+                - paragraph [ref=e58]: このページでは Zenn のmarkdown記法を一覧で紹介します。
+                - heading "見出し" [level=2] [ref=e59]
+                - generic [ref=e61]:
+                  - code [ref=e63]:
+                    - generic [ref=e64]: "# 見出し1"
+                    - generic [ref=e65]: "## 見出し2"
+                    - generic [ref=e66]: "### 見出し3"
+                    - generic [ref=e67]: "#### 見出し4"
+                  - button "クリップボードにコピー" [ref=e68] [cursor=pointer]:
+                    - img [ref=e69]
+                  - button "右端で折り返す" [ref=e70] [cursor=pointer]:
+                    - img [ref=e71]
+                - complementary [ref=e72]:
+                  - generic [ref=e73]: "!"
+                  - paragraph [ref=e75]:
+                    - text: アクセシビリティの観点から
+                    - code [ref=e76]: 見出し2
+                    - text: から始めることをおすすめします
+                - heading "リスト" [level=2] [ref=e77]
+                - generic [ref=e79]:
+                  - code [ref=e81]:
+                    - generic [ref=e82]: "- Hello!"
+                    - generic [ref=e83]: "- Hola!"
+                    - generic [ref=e84]: "- Bonjour!"
+                    - generic [ref=e85]: "* Hi!"
+                  - button "クリップボードにコピー" [ref=e86] [cursor=pointer]:
+                    - img [ref=e87]
+                  - button "右端で折り返す" [ref=e88] [cursor=pointer]:
+                    - img [ref=e89]
+                - list [ref=e90]:
+                  - listitem [ref=e91]: Hello!
+                  - listitem [ref=e92]:
+                    - text: Hola!
+                    - list [ref=e93]:
+                      - listitem [ref=e94]: Bonjour!
+                    - list [ref=e95]:
+                      - listitem [ref=e96]: Hi!
+                - paragraph [ref=e97]:
+                  - text: リストのアイテムには
+                  - code [ref=e98]: "*"
+                  - text: もしくは
+                  - code [ref=e99]: "-"
+                  - text: を使います。
+                - heading "番号付きリスト" [level=3] [ref=e100]
+                - generic [ref=e102]:
+                  - code [ref=e104]:
+                    - generic [ref=e105]: 1. First
+                    - generic [ref=e106]: 2. Second
+                  - button "クリップボードにコピー" [ref=e107] [cursor=pointer]:
+                    - img [ref=e108]
+                  - button "右端で折り返す" [ref=e109] [cursor=pointer]:
+                    - img [ref=e110]
+                - list [ref=e111]:
+                  - listitem [ref=e112]: First
+                  - listitem [ref=e113]: Second
+                - heading "テキストリンク" [level=2] [ref=e114]
+                - generic [ref=e116]:
+                  - code [ref=e118]:
+                    - generic [ref=e119]: "[アンカーテキスト](リンクのURL)"
+                  - button "クリップボードにコピー" [ref=e120] [cursor=pointer]:
+                    - img [ref=e121]
+                  - button "右端で折り返す" [ref=e122] [cursor=pointer]:
+                    - img [ref=e123]
+                - paragraph [ref=e124]:
+                  - link "アンカーテキスト" [ref=e125] [cursor=pointer]:
+                    - /url: https://zenn.dev
+                - paragraph [ref=e126]:
+                  - text: Markdownエディタでは、テキストを範囲選択した状態でURLをペーストすることで選択範囲がリンクになります。（
+                  - link "参照" [ref=e127] [cursor=pointer]:
+                    - /url: https://info.zenn.dev/2024-02-08-editor-update
+                  - text: ）
+                - heading "画像" [level=2] [ref=e128]
+                - generic [ref=e130]:
+                  - code [ref=e132]:
+                    - generic [ref=e133]: "![](https://画像のURL)"
+                  - button "クリップボードにコピー" [ref=e134] [cursor=pointer]:
+                    - img [ref=e135]
+                  - button "右端で折り返す" [ref=e136] [cursor=pointer]:
+                    - img [ref=e137]
+                - paragraph [ref=e3528]
+                - heading "画像の横幅を指定する" [level=3] [ref=e138]
+                - paragraph [ref=e139]:
+                  - text: 画像の表示が大きすぎる場合は、URL の後に半角スペースを空けて
+                  - code [ref=e140]: =○○x
+                  - text: と記述すると、画像の幅を px 単位で指定できます。
+                - generic [ref=e142]:
+                  - code [ref=e144]:
+                    - generic [ref=e145]: "![](https://画像のURL =250x)"
+                  - button "クリップボードにコピー" [ref=e146] [cursor=pointer]:
+                    - img [ref=e147]
+                  - button "右端で折り返す" [ref=e148] [cursor=pointer]:
+                    - img [ref=e149]
+                - paragraph [ref=e3529]
+                - heading "Altテキストを指定する" [level=3] [ref=e150]
+                - generic [ref=e152]:
+                  - code [ref=e154]:
+                    - generic [ref=e155]: "![Altテキスト](https://画像のURL)"
+                  - button "クリップボードにコピー" [ref=e156] [cursor=pointer]:
+                    - img [ref=e157]
+                  - button "右端で折り返す" [ref=e158] [cursor=pointer]:
+                    - img [ref=e159]
+                - paragraph [ref=e3530]:
+                  - img "Altテキスト" [ref=e3531]
+                - heading "キャプションをつける" [level=3] [ref=e160]
+                - paragraph [ref=e161]:
+                  - text: 画像のすぐ下の行に
+                  - code [ref=e162]: "*"
+                  - text: で挟んだテキストを配置すると、キャプションのような見た目で表示されます。
+                - generic [ref=e164]:
+                  - code [ref=e166]:
+                    - generic [ref=e167]: "![](https://画像のURL)"
+                    - generic [ref=e168]: "*キャプション*"
+                  - button "クリップボードにコピー" [ref=e169] [cursor=pointer]:
+                    - img [ref=e170]
+                  - button "右端で折り返す" [ref=e171] [cursor=pointer]:
+                    - img [ref=e172]
+                - paragraph [ref=e173]:
+                  - emphasis [ref=e174]: キャプション
+                - heading "画像にリンクを貼る" [level=3] [ref=e175]
+                - paragraph [ref=e176]: 以下のようにすることで画像に対してリンクを貼ることもできます。
+                - generic [ref=e178]:
+                  - code [ref=e180]:
+                    - generic [ref=e181]: "[![](画像のURL)](リンクのURL)"
+                  - button "クリップボードにコピー" [ref=e182] [cursor=pointer]:
+                    - img [ref=e183]
+                  - button "右端で折り返す" [ref=e184] [cursor=pointer]:
+                    - img [ref=e185]
+                - heading "テーブル" [level=2] [ref=e186]
+                - generic [ref=e188]:
+                  - code [ref=e190]:
+                    - generic [ref=e191]: "| Head | Head | Head |"
+                    - generic [ref=e192]: "| ---- | ---- | ---- |"
+                    - generic [ref=e193]: "| Text | Text | Text |"
+                    - generic [ref=e194]: "| Text | Text | Text |"
+                  - button "クリップボードにコピー" [ref=e195] [cursor=pointer]:
+                    - img [ref=e196]
+                  - button "右端で折り返す" [ref=e197] [cursor=pointer]:
+                    - img [ref=e198]
+                - table [ref=e199]:
+                  - rowgroup [ref=e200]:
+                    - row "Head Head Head" [ref=e201]:
+                      - columnheader "Head" [ref=e202]
+                      - columnheader "Head" [ref=e203]
+                      - columnheader "Head" [ref=e204]
+                  - rowgroup [ref=e205]:
+                    - row "Text Text Text" [ref=e206]:
+                      - cell "Text" [ref=e207]
+                      - cell "Text" [ref=e208]
+                      - cell "Text" [ref=e209]
+                    - row "Text Text Text" [ref=e210]:
+                      - cell "Text" [ref=e211]
+                      - cell "Text" [ref=e212]
+                      - cell "Text" [ref=e213]
+                - heading "コードブロック" [level=2] [ref=e214]
+                - paragraph [ref=e215]: "コードは「```」で挟むことでブロックとして挿入できます。以下のように言語を指定するとコードへ装飾（シンタックスハイライト）が適用されます。"
+                - blockquote [ref=e216]:
+                  - paragraph [ref=e217]: "```js"
+                  - paragraph [ref=e218]: "```"
+                - generic [ref=e220]:
+                  - code [ref=e222]:
+                    - generic [ref=e223]: "const great = () => {"
+                    - generic [ref=e224]: console.log("Awesome");
+                    - generic [ref=e225]: "};"
+                  - button "クリップボードにコピー" [ref=e226] [cursor=pointer]:
+                    - img [ref=e227]
+                  - button "右端で折り返す" [ref=e228] [cursor=pointer]:
+                    - img [ref=e229]
+                - paragraph [ref=e230]:
+                  - text: シンタックスハイライトには Shiki を使用しています。
+                  - link "📄 対応言語の一覧 →" [ref=e231] [cursor=pointer]:
+                    - /url: https://shiki.style/languages
+                - heading "ファイル名を表示する" [level=3] [ref=e232]
+                - paragraph [ref=e233]:
+                  - code [ref=e234]: 言語:ファイル名
+                  - text: と
+                  - code [ref=e235]: ":"
+                  - text: 区切りで記載することで、ファイル名がコードブロックの上部に表示されるようになります。
+                - blockquote [ref=e236]:
+                  - paragraph [ref=e237]: "```js:ファイル名"
+                  - paragraph [ref=e238]: "```"
+                - generic [ref=e239]:
+                  - generic [ref=e241]: fooBar.js
+                  - generic [ref=e242]:
+                    - code [ref=e244]:
+                      - generic [ref=e245]: "const great = () => {"
+                      - generic [ref=e246]: console.log("Awesome")
+                      - generic [ref=e247]: "}"
+                    - button "クリップボードにコピー" [ref=e248] [cursor=pointer]:
+                      - img [ref=e249]
+                    - button "右端で折り返す" [ref=e250] [cursor=pointer]:
+                      - img [ref=e251]
+                - heading "diff のシンタックスハイライト" [level=3] [ref=e252]
+                - paragraph [ref=e253]:
+                  - code [ref=e254]: diff
+                  - text: と言語のハイライトを同時に適用するには、以下のように
+                  - code [ref=e255]: diff
+                  - text: と
+                  - code [ref=e256]: 言語名
+                  - text: を半角スペース区切りで指定します。
+                - blockquote [ref=e257]:
+                  - paragraph [ref=e258]: "```diff js"
+                  - paragraph [ref=e259]: "```"
+                - generic [ref=e261]:
+                  - code [ref=e263]:
+                    - generic [ref=e264]: "@@ -4,6 +4,5 @@"
+                    - generic [ref=e265]:
+                      - text: +
+                      - text: const foo = bar.baz([1, 2, 3]) + 1;
+                    - generic [ref=e266]:
+                      - text: "-"
+                      - text: let foo = bar.baz([1, 2, 3]);
+                  - button "クリップボードにコピー" [ref=e267] [cursor=pointer]:
+                    - img [ref=e268]
+                  - button "右端で折り返す" [ref=e269] [cursor=pointer]:
+                    - img [ref=e270]
+                - paragraph [ref=e271]:
+                  - text: なお、
+                  - code [ref=e272]: diff
+                  - text: の使用時には、先頭に
+                  - code [ref=e273]: +
+                  - text: 、
+                  - code [ref=e274]: "-"
+                  - text: 、
+                  - code [ref=e275]: ">"
+                  - text: 、
+                  - code [ref=e276]: <
+                  - text: 、
+                  - code [ref=e277]: 半角スペース
+                  - text: のいずれが入っていない行はハイライトされません。
+                - paragraph [ref=e278]: 同時にファイル名を指定することも可能です。
+                - blockquote [ref=e279]:
+                  - paragraph [ref=e280]: "```diff js:ファイル名"
+                  - paragraph [ref=e281]: "```"
+                - generic [ref=e282]:
+                  - generic [ref=e284]: fooBar.js
+                  - generic [ref=e285]:
+                    - code [ref=e287]:
+                      - generic [ref=e288]: "@@ -4,6 +4,5 @@"
+                      - generic [ref=e289]:
+                        - text: +
+                        - text: const foo = bar.baz([1, 2, 3]) + 1;
+                      - generic [ref=e290]:
+                        - text: "-"
+                        - text: let foo = bar.baz([1, 2, 3]);
+                    - button "クリップボードにコピー" [ref=e291] [cursor=pointer]:
+                      - img [ref=e292]
+                    - button "右端で折り返す" [ref=e293] [cursor=pointer]:
+                      - img [ref=e294]
+                - heading "数式" [level=2] [ref=e295]
+                - paragraph [ref=e296]:
+                  - text: Zenn では
+                  - strong [ref=e297]: KaTeX
+                  - text: による数式表示に対応しています。
+                  - text: KaTeXのバージョンは常に最新バージョンを使用します。
+                - paragraph [ref=e298]:
+                  - link "📄 KaTeXがサポートする記法の一覧 →" [ref=e299] [cursor=pointer]:
+                    - /url: https://katex.org/docs/support_table.html
+                - heading "数式のブロックを挿入する" [level=3] [ref=e300]
+                - paragraph [ref=e301]:
+                  - code [ref=e302]: $$
+                  - text: で記述を挟むことで、数式のブロックが挿入されます。たとえば
+                - generic [ref=e304]:
+                  - code [ref=e306]:
+                    - generic [ref=e307]: $$
+                    - generic [ref=e308]: "e^{i\\theta} = \\cos\\theta + i\\sin\\theta"
+                    - generic [ref=e309]: $$
+                  - button "クリップボードにコピー" [ref=e310] [cursor=pointer]:
+                    - img [ref=e311]
+                  - button "右端で折り返す" [ref=e312] [cursor=pointer]:
+                    - img [ref=e313]
+                - paragraph [ref=e314]: は以下のように表示されます。
+                - generic [ref=e319]:
+                  - math [ref=e321]:
+                    - generic [ref=e323]:
+                      - generic [ref=e324]:
+                        - generic [ref=e325]: e
+                        - generic [ref=e326]:
+                          - generic [ref=e327]: i
+                          - generic [ref=e328]: θ
+                      - generic [ref=e329]: =
+                      - generic [ref=e330]: cos
+                      - generic: ⁡
+                      - generic [ref=e331]: θ
+                      - generic [ref=e332]: +
+                      - generic [ref=e333]: i
+                      - generic [ref=e334]: sin
+                      - generic: ⁡
+                      - generic [ref=e335]: θ
+                  - generic [ref=e336]:
+                    - generic [ref=e337]:
+                      - generic [ref=e338]:
+                        - text: e
+                        - generic [ref=e344]: iθ
+                      - text: =
+                    - generic [ref=e345]: cos θ +
+                    - generic [ref=e346]: i sin θ
+                - complementary [ref=e347]:
+                  - generic [ref=e348]: "!"
+                  - paragraph [ref=e350]:
+                    - code [ref=e351]: $$
+                    - text: の前後は空の行でないと正しく埋め込まれないことがあります。
+                - heading "インラインで数式を挿入する" [level=3] [ref=e352]
+                - paragraph [ref=e353]:
+                  - code [ref=e354]: $a\ne0$
+                  - text: というように
+                  - code [ref=e355]: $
+                  - text: ひとつで挟むことで、インラインで数式を含めることができます。たとえば
+                  - generic [ref=e357]:
+                    - math [ref=e359]:
+                      - generic [ref=e361]:
+                        - generic [ref=e362]: a
+                        - generic [ref=e363]: ≠
+                        - generic [ref=e364]: "0"
+                    - generic [ref=e365]:
+                      - generic [ref=e366]:
+                        - text: a
+                        - generic [ref=e367]:
+                          - generic [ref=e369]: 
+                          - text: =
+                      - generic [ref=e370]: "0"
+                  - text: のようなイメージです。
+                - heading "引用" [level=2] [ref=e371]
+                - generic [ref=e373]:
+                  - code [ref=e375]:
+                    - generic [ref=e376]: "> 引用文"
+                    - generic [ref=e377]: "> 引用文"
+                  - button "クリップボードにコピー" [ref=e378] [cursor=pointer]:
+                    - img [ref=e379]
+                  - button "右端で折り返す" [ref=e380] [cursor=pointer]:
+                    - img [ref=e381]
+                - blockquote [ref=e382]:
+                  - paragraph [ref=e383]:
+                    - text: 引用文
+                    - text: 引用文
+                - heading "脚注" [level=2] [ref=e384]
+                - paragraph [ref=e385]: 脚注を指定するとページ下部にその内容が表示されます。
+                - generic [ref=e387]:
+                  - code [ref=e389]:
+                    - generic [ref=e390]: 脚注の例[^1]です。インライン^[脚注の内容その2]で書くこともできます。
+                    - generic [ref=e391]: "[^1]: 脚注の内容その1"
+                  - button "クリップボードにコピー" [ref=e392] [cursor=pointer]:
+                    - img [ref=e393]
+                  - button "右端で折り返す" [ref=e394] [cursor=pointer]:
+                    - img [ref=e395]
+                - paragraph [ref=e396]:
+                  - text: 脚注の例
+                  - superscript [ref=e397]:
+                    - link "[1]" [ref=e398] [cursor=pointer]:
+                      - /url: "#fn-eafa-1"
+                  - text: です。インライン
+                  - superscript [ref=e399]:
+                    - link "[2]" [ref=e400] [cursor=pointer]:
+                      - /url: "#fn-eafa-2"
+                  - text: で書くこともできます。
+                - heading "区切り線" [level=2] [ref=e401]
+                - generic [ref=e403]:
+                  - code [ref=e405]:
+                    - generic [ref=e406]: "-----"
+                  - button "クリップボードにコピー" [ref=e407] [cursor=pointer]:
+                    - img [ref=e408]
+                  - button "右端で折り返す" [ref=e409] [cursor=pointer]:
+                    - img [ref=e410]
+                - separator [ref=e411]
+                - heading "インラインスタイル" [level=2] [ref=e412]
+                - generic [ref=e414]:
+                  - code [ref=e416]:
+                    - generic [ref=e417]: "*イタリック*"
+                    - generic [ref=e418]: "**太字**"
+                    - generic [ref=e419]: ~~打ち消し線~~
+                    - generic [ref=e420]: "インラインで`code`を挿入する"
+                  - button "クリップボードにコピー" [ref=e421] [cursor=pointer]:
+                    - img [ref=e422]
+                  - button "右端で折り返す" [ref=e423] [cursor=pointer]:
+                    - img [ref=e424]
+                - paragraph [ref=e425]:
+                  - emphasis [ref=e426]: イタリック
+                  - strong [ref=e427]: 太字
+                  - text: 打ち消し線
+                  - text: インラインで
+                  - code [ref=e428]: code
+                  - text: を挿入する
+                - heading "インラインのコメント" [level=3] [ref=e429]
+                - paragraph [ref=e430]: 自分用のメモをしたいときは HTML のコメント記法を使用できます。
+                - generic [ref=e432]:
+                  - code [ref=e434]:
+                    - generic [ref=e435]: "<!-- TODO: ◯◯について追記する -->"
+                  - button "クリップボードにコピー" [ref=e436] [cursor=pointer]:
+                    - img [ref=e437]
+                  - button "右端で折り返す" [ref=e438] [cursor=pointer]:
+                    - img [ref=e439]
+                - paragraph
+                - paragraph [ref=e440]: この形式で書いたコメントは公開されたページ上では表示されません。ただし、複数行のコメントには対応していないのでご注意ください。
+                - heading "Zenn 独自の記法" [level=2] [ref=e441]
+                - heading "メッセージ" [level=3] [ref=e442]
+                - generic [ref=e444]:
+                  - code [ref=e446]:
+                    - generic [ref=e447]: :::message
+                    - generic [ref=e448]: メッセージをここに
+                    - generic [ref=e449]: ":::"
+                  - button "クリップボードにコピー" [ref=e450] [cursor=pointer]:
+                    - img [ref=e451]
+                  - button "右端で折り返す" [ref=e452] [cursor=pointer]:
+                    - img [ref=e453]
+                - complementary [ref=e454]:
+                  - generic [ref=e455]: "!"
+                  - paragraph [ref=e457]: メッセージをここに
+                - generic [ref=e459]:
+                  - code [ref=e461]:
+                    - generic [ref=e462]: :::message alert
+                    - generic [ref=e463]: 警告メッセージをここに
+                    - generic [ref=e464]: ":::"
+                  - button "クリップボードにコピー" [ref=e465] [cursor=pointer]:
+                    - img [ref=e466]
+                  - button "右端で折り返す" [ref=e467] [cursor=pointer]:
+                    - img [ref=e468]
+                - complementary [ref=e469]:
+                  - generic [ref=e470]: "!"
+                  - paragraph [ref=e472]: 警告メッセージをここに
+                - heading "アコーディオン（トグル）" [level=3] [ref=e473]
+                - generic [ref=e475]:
+                  - code [ref=e477]:
+                    - generic [ref=e478]: :::details タイトル
+                    - generic [ref=e479]: 表示したい内容
+                    - generic [ref=e480]: ":::"
+                  - button "クリップボードにコピー" [ref=e481] [cursor=pointer]:
+                    - img [ref=e482]
+                  - button "右端で折り返す" [ref=e483] [cursor=pointer]:
+                    - img [ref=e484]
+                - group [ref=e485]:
+                  - generic "タイトル" [ref=e486] [cursor=pointer]
+                - heading "要素をネストさせるには" [level=4] [ref=e487]
+                - paragraph [ref=e488]:
+                  - text: 外側の要素の開始/終了に
+                  - code [ref=e489]: ":"
+                  - text: を追加します。
+                - generic [ref=e491]:
+                  - code [ref=e493]:
+                    - generic [ref=e494]: ::::details タイトル
+                    - generic [ref=e495]: :::message
+                    - generic [ref=e496]: ネストされた要素
+                    - generic [ref=e497]: ":::"
+                    - generic [ref=e498]: "::::"
+                  - button "クリップボードにコピー" [ref=e499] [cursor=pointer]:
+                    - img [ref=e500]
+                  - button "右端で折り返す" [ref=e501] [cursor=pointer]:
+                    - img [ref=e502]
+                - group [ref=e503]:
+                  - generic "タイトル" [ref=e504] [cursor=pointer]
+                - heading "コンテンツの埋め込み" [level=2] [ref=e505]
+                - heading "リンクカード" [level=3] [ref=e506]
+                - generic [ref=e508]:
+                  - code [ref=e510]:
+                    - generic [ref=e511]: "# URLだけの行"
+                    - generic [ref=e512]: https://zenn.dev/zenn/articles/markdown-guide
+                  - button "クリップボードにコピー" [ref=e513] [cursor=pointer]:
+                    - img [ref=e514]
+                  - button "右端で折り返す" [ref=e515] [cursor=pointer]:
+                    - img [ref=e516]
+                - paragraph [ref=e517]: URL だけが貼り付けられた行があると、その部分がカードとして表示されます。
+                - paragraph [ref=e518]:
+                  - iframe [ref=e520]:
+                    - generic [active] [ref=f1e1]:
+                      - link "ZennのMarkdown記法一覧 Zenn公式さんによる記事 zenn.dev favicon image zenn.dev zenn.dev thumbnail image" [ref=f1e5] [cursor=pointer]:
+                        - /url: https://zenn.dev/zenn/articles/markdown-guide
+                        - generic [ref=f1e6]:
+                          - heading "ZennのMarkdown記法一覧" [level=1] [ref=f1e7]
+                          - generic [ref=f1e8]: Zenn公式さんによる記事
+                          - generic [ref=f1e9]:
+                            - img "zenn.dev favicon image" [ref=f1e10]
+                            - text: zenn.dev
+                        - img "zenn.dev thumbnail image" [ref=f1e12]
+                      - alert [ref=f1e13]
+                - paragraph [ref=e521]:
+                  - text: また
+                  - code [ref=e522]: "@[card](URL)"
+                  - text: という書き方でカード型のリンクを貼ることもできます。
+                - group [ref=e523]:
+                  - generic "アンダースコア _ を含むURLが正しく認識されない場合" [ref=e524] [cursor=pointer]
+                - heading "X（Twitter）のポスト（ツイート）" [level=3] [ref=e525]
+                - generic [ref=e527]:
+                  - code [ref=e529]:
+                    - generic [ref=e530]: "# ポストのURLだけの行（前後に改行が必要です）"
+                    - generic [ref=e531]: https://twitter.com/jack/status/20
+                    - generic [ref=e532]: "# x.comドメインの場合"
+                    - generic [ref=e533]: https://x.com/jack/status/20
+                  - button "クリップボードにコピー" [ref=e534] [cursor=pointer]:
+                    - img [ref=e535]
+                  - button "右端で折り返す" [ref=e536] [cursor=pointer]:
+                    - img [ref=e537]
+                - paragraph [ref=e538]:
+                  - text: 以前は
+                  - code [ref=e539]: "@[tweet](ポストのURL)"
+                  - text: の記法を採用していましたが、現在はポストのURLを貼り付けるだけで埋め込みが表示されます。
+                - group [ref=e540]:
+                  - generic "アンダースコア _ を含む URL が正しく認識されない場合" [ref=e541] [cursor=pointer]
+                - heading "リプライ元のポストを非表示にする" [level=4] [ref=e542]
+                - paragraph [ref=e543]:
+                  - text: リプライを埋め込んだ場合、デフォルトでリプライ元のポスト含まれて表示されます。
+                  - code [ref=e544]: ポストのURL?conversation=none
+                  - text: のようにクエリパラメータに
+                  - code [ref=e545]: conversation=none
+                  - text: を指定すると、リプライ元のポストが含まれなくなります。
+                - heading "YouTube" [level=3] [ref=e546]
+                - generic [ref=e548]:
+                  - code [ref=e550]:
+                    - generic [ref=e551]: "# YouTubeのURLだけの行（前後に改行が必要です）"
+                    - generic [ref=e552]: https://www.youtube.com/watch?v=WRVsOCh907o
+                  - button "クリップボードにコピー" [ref=e553] [cursor=pointer]:
+                    - img [ref=e554]
+                  - button "右端で折り返す" [ref=e555] [cursor=pointer]:
+                    - img [ref=e556]
+                - paragraph [ref=e557]:
+                  - text: 以前は
+                  - code [ref=e558]: "@[youtube](YouTubeの動画ID)"
+                  - text: という記法を採用していましたが、現在は動画URLを貼り付けるだけで動画を埋め込むことができます。
+                - heading "GitHub" [level=3] [ref=e559]
+                - paragraph [ref=e560]: GitHub上のファイルへのURLまたはパーマリンクだけの行を作成すると、その部分にGitHubの埋め込みが表示されます。
+                - generic [ref=e562]:
+                  - code [ref=e564]:
+                    - generic [ref=e565]: "# GitHubのファイルURLまたはパーマリンクだけの行（前後に改行が必要です）"
+                    - generic [ref=e566]: https://github.com/octocat/Hello-World/blob/master/README
+                  - button "クリップボードにコピー" [ref=e567] [cursor=pointer]:
+                    - img [ref=e568]
+                  - button "右端で折り返す" [ref=e569] [cursor=pointer]:
+                    - img [ref=e570]
+                - paragraph [ref=e571]: 上記のリンクは、以下のように表示されます。
+                - paragraph [ref=e572]:
+                  - iframe [ref=e574]:
+                    - generic [active] [ref=f2e1]:
+                      - generic [ref=f2e4]:
+                        - banner [ref=f2e5]:
+                          - img [ref=f2e7]
+                          - generic [ref=f2e9]:
+                            - link "octocat/Hello-World/README" [ref=f2e11] [cursor=pointer]:
+                              - /url: https://github.com/octocat/Hello-World/blob/master/README
+                            - paragraph [ref=f2e12]: Lines 1 to 1 in master
+                        - generic [ref=f2e13]:
+                          - generic:
+                            - generic: "1"
+                          - code [ref=f2e14]:
+                            - generic [ref=f2e15]: Hello World!
+                      - alert [ref=f2e16]
+                - heading "行の指定" [level=4] [ref=e575]
+                - paragraph [ref=e576]:
+                  - text: GitHubと同じように、リンクの末尾に
+                  - code [ref=e577]: "#L00-L00"
+                  - text: のような形で表示するファイルの開始行と終了行を指定することができます。
+                - generic [ref=e579]:
+                  - code [ref=e581]:
+                    - generic [ref=e582]: "# コードの開始行と終了行を指定"
+                    - generic [ref=e583]: https://github.com/octocat/Spoon-Knife/blob/main/README.md#L1-L3
+                  - button "クリップボードにコピー" [ref=e584] [cursor=pointer]:
+                    - img [ref=e585]
+                  - button "右端で折り返す" [ref=e586] [cursor=pointer]:
+                    - img [ref=e587]
+                - paragraph [ref=e588]: 上記のリンクは以下のように表示されます。
+                - paragraph [ref=e589]:
+                  - iframe [ref=e591]:
+                    - generic [active] [ref=f3e1]:
+                      - generic [ref=f3e7]:
+                        - banner [ref=f3e8]:
+                          - img [ref=f3e10]
+                          - generic [ref=f3e12]:
+                            - link "octocat/Spoon-Knife/README.md" [ref=f3e14] [cursor=pointer]:
+                              - /url: https://github.com/octocat/Spoon-Knife/blob/main/README.md#L1-L3
+                            - paragraph [ref=f3e15]: Lines 1 to 3 in main
+                        - generic [ref=f3e16]:
+                          - generic:
+                            - generic: "1"
+                            - generic: "2"
+                            - generic: "3"
+                          - code [ref=f3e17]:
+                            - generic [ref=f3e18]: "### Well hello there!"
+                            - generic [ref=f3e19]: This repository is meant to provide an example for *forking* a repository on GitHub.
+                      - alert [ref=f3e6]
+                - paragraph [ref=e592]: また、開始行のみ指定することもできます。
+                - generic [ref=e594]:
+                  - code [ref=e596]:
+                    - generic [ref=e597]: "# コードの開始行のみ指定"
+                    - generic [ref=e598]: https://github.com/octocat/Spoon-Knife/blob/main/README.md#L3
+                  - button "クリップボードにコピー" [ref=e599] [cursor=pointer]:
+                    - img [ref=e600]
+                  - button "右端で折り返す" [ref=e601] [cursor=pointer]:
+                    - img [ref=e602]
+                - paragraph [ref=e603]: 上記のリンクは、以下のように開始行のみ埋め込まれて表示されます。
+                - paragraph [ref=e604]:
+                  - iframe [ref=e606]:
+                    
+                - heading "テキストファイル以外は埋め込めません" [level=4] [ref=e607]
+                - paragraph [ref=e608]:
+                  - text: 埋め込めるファイルは、ソースコードなどのテキストファイルのみとなっています。
+                  - text: もし画像などのファイルを指定した場合は、以下のような表示になります。
+                - paragraph [ref=e609]:
+                  - iframe [ref=e611]:
+                    
+                - heading "GitHub Gist" [level=3] [ref=e612]
+                - generic [ref=e614]:
+                  - code [ref=e616]:
+                    - generic [ref=e617]: "@[gist](GistのページURL)"
+                  - button "クリップボードにコピー" [ref=e618] [cursor=pointer]:
+                    - img [ref=e619]
+                  - button "右端で折り返す" [ref=e620] [cursor=pointer]:
+                    - img [ref=e621]
+                - paragraph [ref=e622]: GistのページURLを指定します。
+                - paragraph [ref=e623]:
+                  - text: 特定のファイルだけ埋め込みたい場合は
+                  - code [ref=e624]: "@[gist](https://gist.github.com/foo/bar?file=example.json)"
+                  - text: のようにクエリ文字列で
+                  - code [ref=e625]: "?file=ファイル名"
+                  - text: という形で指定します。
+                - heading "CodePen" [level=3] [ref=e626]
+                - generic [ref=e628]:
+                  - code [ref=e630]:
+                    - generic [ref=e631]: "@[codepen](ページのURL)"
+                  - button "クリップボードにコピー" [ref=e632] [cursor=pointer]:
+                    - img [ref=e633]
+                  - button "右端で折り返す" [ref=e634] [cursor=pointer]:
+                    - img [ref=e635]
+                - paragraph [ref=e636]:
+                  - text: デフォルトの表示タブは
+                  - code [ref=e637]: ページのURL?default-tab=html,css
+                  - text: のようにクエリを指定することで変更できます。
+                - heading "SlideShare" [level=3] [ref=e638]
+                - generic [ref=e640]:
+                  - code [ref=e642]:
+                    - generic [ref=e643]: "@[slideshare](スライドのkey)"
+                  - button "クリップボードにコピー" [ref=e644] [cursor=pointer]:
+                    - img [ref=e645]
+                  - button "右端で折り返す" [ref=e646] [cursor=pointer]:
+                    - img [ref=e647]
+                - paragraph [ref=e648]:
+                  - text: SlideShare の埋め込み iframe に含まれる
+                  - code [ref=e649]: ...embed_code/key/○○...
+                  - text: の
+                  - code [ref=e650]: ◯◯
+                  - text: の部分を入力します。
+                - heading "SpeakerDeck" [level=3] [ref=e651]
+                - generic [ref=e653]:
+                  - code [ref=e655]:
+                    - generic [ref=e656]: "@[speakerdeck](スライドのID)"
+                    - generic [ref=e657]: "例:"
+                    - generic [ref=e658]: "@[speakerdeck](4f926da9cb4cd0001f00a1ff)"
+                    - generic [ref=e659]: "@[speakerdeck](4f926da9cb4cd0001f00a1ff?slide=24)"
+                  - button "クリップボードにコピー" [ref=e660] [cursor=pointer]:
+                    - img [ref=e661]
+                  - button "右端で折り返す" [ref=e662] [cursor=pointer]:
+                    - img [ref=e663]
+                - paragraph [ref=e664]:
+                  - text: SpeakerDeck で取得した埋め込みコードに含まれる
+                  - code [ref=e665]: data-id
+                  - text: の値を入力します。スライド番号も指定できます。
+                - heading "Docswell" [level=3] [ref=e666]
+                - generic [ref=e668]:
+                  - code [ref=e670]:
+                    - generic [ref=e671]: "@[docswell](スライドのURL)"
+                    - generic [ref=e672]: "# もしくは"
+                    - generic [ref=e673]: "@[docswell](埋め込み用のURL)"
+                    - generic [ref=e674]: "例:"
+                    - generic [ref=e675]: "@[docswell](https://www.docswell.com/s/ku-suke/LK7J5V-hello-docswell)"
+                    - generic [ref=e676]: "@[docswell](https://www.docswell.com/s/ku-suke/LK7J5V-hello-docswell#p13)"
+                    - generic [ref=e677]: "@[docswell](https://www.docswell.com/s/ku-suke/LK7J5V-hello-docswell/13)"
+                    - generic [ref=e678]: "@[docswell](https://www.docswell.com/slide/LK7J5V/embed)"
+                  - button "クリップボードにコピー" [ref=e679] [cursor=pointer]:
+                    - img [ref=e680]
+                  - button "右端で折り返す" [ref=e681] [cursor=pointer]:
+                    - img [ref=e682]
+                - paragraph [ref=e683]:
+                  - text: スライドのURL（
+                  - code [ref=e684]: "https://www.docswell.com/s/{UserId}/{SlideId}-xxx-xxx"
+                  - text: ）、もしくは埋め込み用のURL(
+                  - code [ref=e685]: "https://www.docswell.com/slide/{SlideId}/embed"
+                  - text: )を入力します。スライド番号も指定できます。
+                - heading "JSFiddle" [level=3] [ref=e686]
+                - generic [ref=e688]:
+                  - code [ref=e690]:
+                    - generic [ref=e691]: "@[jsfiddle](ページのURL)"
+                  - button "クリップボードにコピー" [ref=e692] [cursor=pointer]:
+                    - img [ref=e693]
+                  - button "右端で折り返す" [ref=e694] [cursor=pointer]:
+                    - img [ref=e695]
+                - paragraph [ref=e696]:
+                  - link "埋め込みオプション" [ref=e697] [cursor=pointer]:
+                    - /url: https://docs.jsfiddle.net/embedding-fiddles
+                  - text: を指定する場合、iframe用の埋め込みURL（
+                  - code [ref=e698]: "ページのURL + /embedded/{Tabs}/{Visual}/"
+                  - text: ）を入力します。
+                - heading "CodeSandbox" [level=3] [ref=e699]
+                - generic [ref=e701]:
+                  - code [ref=e703]:
+                    - generic [ref=e704]: "@[codesandbox](embed用のURL)"
+                  - button "クリップボードにコピー" [ref=e705] [cursor=pointer]:
+                    - img [ref=e706]
+                  - button "右端で折り返す" [ref=e707] [cursor=pointer]:
+                    - img [ref=e708]
+                - paragraph [ref=e709]:
+                  - text: CodeSandbox では、各ページから埋め込み用の
+                  - code [ref=e710]: <iframe>
+                  - text: を取得できます。この
+                  - code [ref=e711]: <iframe>
+                  - text: に含まれる
+                  - code [ref=e712]: src
+                  - text: の URL を括弧の中に入力します。
+                - heading "StackBlitz" [level=3] [ref=e713]
+                - generic [ref=e715]:
+                  - code [ref=e717]:
+                    - generic [ref=e718]: "@[stackblitz](embed用のURL)"
+                  - button "クリップボードにコピー" [ref=e719] [cursor=pointer]:
+                    - img [ref=e720]
+                  - button "右端で折り返す" [ref=e721] [cursor=pointer]:
+                    - img [ref=e722]
+                - paragraph [ref=e723]: StackBlitz では、各ページから「Embed URL」を取得できます。取得した URL をそのまま括弧の中に入力します。
+                - heading "Figma" [level=3] [ref=e724]
+                - generic [ref=e726]:
+                  - code [ref=e728]:
+                    - generic [ref=e729]: "@[figma](ファイルまたはプロトタイプのURL)"
+                  - button "クリップボードにコピー" [ref=e730] [cursor=pointer]:
+                    - img [ref=e731]
+                  - button "右端で折り返す" [ref=e732] [cursor=pointer]:
+                    - img [ref=e733]
+                - paragraph [ref=e734]: Figma では、ファイルまたはプロトタイプのページで共有リンクを取得できます。取得したURLをそのまま括弧の中に入力します。
+                - heading "オンラインエディターではモーダルから挿入可能" [level=3] [ref=e735]
+                - paragraph [ref=e736]: オンラインのエディターでは「+」ボタンを押すことで、外部コンテンツ埋め込み用のモーダルを表示できます。
+                - paragraph
+                - heading "その他の埋め込み可能なコンテンツ" [level=3] [ref=e737]
+                - paragraph [ref=e738]: オンラインエディターの埋め込みの選択肢としては表示されませんが、以下の埋め込み記法もサポートしています。
+                - heading "blueprintUE" [level=4] [ref=e739]
+                - generic [ref=e741]:
+                  - code [ref=e743]:
+                    - generic [ref=e744]: "@[blueprintue](ページのURL)"
+                    - generic [ref=e745]: 例：
+                    - generic [ref=e746]: "@[blueprintue](https://blueprintue.com/render/0ovgynk-/)"
+                  - button "クリップボードにコピー" [ref=e747] [cursor=pointer]:
+                    - img [ref=e748]
+                  - button "右端で折り返す" [ref=e749] [cursor=pointer]:
+                    - img [ref=e750]
+                - paragraph [ref=e751]:
+                  - link "blueprintUE" [ref=e752] [cursor=pointer]:
+                    - /url: https://blueprintue.com/
+                  - text: を埋め込むには、公開されているページのURLをそのまま括弧の中に入力します。
+                - heading "ダイアグラム" [level=2] [ref=e753]
+                - paragraph [ref=e754]:
+                  - link "mermaid.js" [ref=e755] [cursor=pointer]:
+                    - /url: https://mermaid-js.github.io/mermaid/#/
+                  - text: によるダイアグラム表示に対応しています。コードブロックの言語名を
+                  - code [ref=e756]: mermaid
+                  - text: とすることで自動的にレンダリングされます。
+                - generic [ref=e758]:
+                  - code [ref=e760]:
+                    - generic [ref=e761]: "```mermaid"
+                    - generic [ref=e762]: graph TB
+                    - generic [ref=e763]: A[Hard edge] -->|Link text| B(Round edge)
+                    - generic [ref=e764]: "B --> C{Decision}"
+                    - generic [ref=e765]: C -->|One| D[Result one]
+                    - generic [ref=e766]: C -->|Two| E[Result two]
+                    - generic [ref=e767]: "```"
+                  - button "クリップボードにコピー" [ref=e768] [cursor=pointer]:
+                    - img [ref=e769]
+                  - button "右端で折り返す" [ref=e770] [cursor=pointer]:
+                    - img [ref=e771]
+                - paragraph [ref=e772]: は以下のように表示されます。
+                - iframe [ref=e774]:
+                  - generic [active] [ref=f6e1]:
+                    - document [ref=f6e5]:
+                      - generic [ref=f6e7]:
+                        - generic [ref=f6e12]:
+                          - generic [ref=f6e18]: Link text
+                          - generic [ref=f6e24]: One
+                          - generic [ref=f6e30]: Two
+                        - generic [ref=f6e31]:
+                          - generic [ref=f6e37]: Hard edge
+                          - generic [ref=f6e43]: Round edge
+                          - generic [ref=f6e49]: Decision
+                          - generic [ref=f6e55]: Result one
+                          - generic [ref=f6e61]: Result two
+                    - alert [ref=f6e62]
+                - paragraph [ref=e775]:
+                  - text: 他にもシーケンス図やクラス図が表示できます。文法は mermaid.js に従っていますので、どのように書けばよいかは
+                  - link "公式サイトの文法" [ref=e776] [cursor=pointer]:
+                    - /url: https://mermaid-js.github.io/mermaid/#/flowchart
+                  - text: を参照してください。
+                - complementary [ref=e777]:
+                  - generic [ref=e778]: "!"
+                  - paragraph [ref=e780]: mermaid.js側で破壊的変更が行われた場合、表示が変更されたり、適切に表示されなくなる可能性があります。
+                - heading "制限事項" [level=3] [ref=e781]
+                - paragraph [ref=e782]: Zenn で mermaid.js 対応を行うにあたり、いくつか制限事項を設定させていただいています。制限事項は今後も様子を見て追加・廃止・値の変更など行う可能性があります。
+                - heading "クリックイベントの無効化" [level=4] [ref=e783]
+                - paragraph [ref=e784]:
+                  - link "Interaction機能" [ref=e785] [cursor=pointer]:
+                    - /url: https://mermaid-js.github.io/mermaid/#/classDiagram?id=interaction
+                  - text: として図の要素にクリックイベントなどが設定できますが、セキュリティの観点でZennでは無効にさせていただきます。
+                - heading "ブロックあたりの文字数制限 - 2000文字以内" [level=4] [ref=e786]
+                - paragraph [ref=e787]:
+                  - text: ブロックあたりの文字数を
+                  - strong [ref=e788]: "2000"
+                  - text: 文字に制限させていただいています。これを超えた場合、ダイアグラムが表示される代わりにエラーメッセージが表示されます。
+                - heading "ブロックあたりのChain数制限 - 10以下" [level=4] [ref=e789]
+                - paragraph [ref=e790]:
+                  - text: フローチャートにおいて、ノードをひとまとまりで表現する記述として
+                  - code [ref=e791]: "&"
+                  - text: が利用できます。以下のようなイメージです。
+                - generic [ref=e793]:
+                  - code [ref=e795]:
+                    - generic [ref=e796]: "```mermaid"
+                    - generic [ref=e797]: graph LR
+                    - generic [ref=e798]: a --> b & c--> d
+                    - generic [ref=e799]: "```"
+                  - button "クリップボードにコピー" [ref=e800] [cursor=pointer]:
+                    - img [ref=e801]
+                  - button "右端で折り返す" [ref=e802] [cursor=pointer]:
+                    - img [ref=e803]
+                - paragraph [ref=e804]: は以下のように表示されます。
+                - iframe [ref=e806]:
+                  - generic [active] [ref=f7e1]:
+                    - document [ref=f7e5]:
+                      - generic [ref=f7e13]:
+                        - generic [ref=f7e19]: a
+                        - generic [ref=f7e25]: b
+                        - generic [ref=f7e31]: c
+                        - generic [ref=f7e37]: d
+                    - alert [ref=f7e38]
+                - paragraph [ref=e807]:
+                  - text: 便利ですが、数が多くなるとノードの接続が多くなり、ブラウザ側での描画に負荷が生じる可能性があるため、
+                  - code [ref=e808]: "&"
+                  - text: の数を
+                  - strong [ref=e809]: "10"
+                  - text: に制限させていただきます。こちらも超えた場合はダイアグラムの代わりにエラーメッセージが表示されます。
+                - heading "入力補完" [level=2] [ref=e810]
+                - paragraph [ref=e811]: 以下はMarkdown記法ではありませんが、Markdownエディタで利用できる入力補完機能についても紹介します。
+                - heading "絵文字（Emoji）" [level=3] [ref=e812]
+                - paragraph [ref=e813]:
+                  - code [ref=e814]: ":"
+                  - text: に続いて任意の1文字を入力すると、絵文字の候補が表示されます。
+                - separator [ref=e815]
+                - generic [ref=e816]:
+                  - text: 脚注
+                  - list [ref=e817]:
+                    - listitem [ref=e818]:
+                      - paragraph [ref=e819]:
+                        - text: 脚注の内容その 1
+                        - link "↩︎" [ref=e820] [cursor=pointer]:
+                          - /url: "#fnref-eafa-1"
+                    - listitem [ref=e821]:
+                      - paragraph [ref=e822]:
+                        - text: 脚注の内容その 2
+                        - link "↩︎" [ref=e823] [cursor=pointer]:
+                          - /url: "#fnref-eafa-2"
+              - generic [ref=e824]:
+                - generic [ref=e825]:
+                  - button "いいね" [ref=e826] [cursor=pointer]:
+                    - img [ref=e827]
+                  - generic [ref=e841]: "2106"
+                - generic [ref=e842]:
+                  - button "ブックマーク" [ref=e843] [cursor=pointer]:
+                    - img [ref=e844]
+                  - generic [ref=e846]: "246"
+                - generic [ref=e847]:
+                  - button "その他の操作" [ref=e849] [cursor=pointer]:
+                    - img [ref=e850]
+                  - generic [ref=e852]:
+                    - tooltip "X(Twitter)にポスト" [ref=e853] [cursor=pointer]:
+                      - img [ref=e854]
+                      - text: X(Twitter)にポスト
+                    - tooltip "Facebookに投稿" [ref=e857] [cursor=pointer]:
+                      - img [ref=e858]
+                      - text: Facebookに投稿
+                    - tooltip "はてなブックマークに登録" [ref=e861] [cursor=pointer]:
+                      - img [ref=e862]
+                      - text: はてなブックマークに登録
+              - complementary [ref=e865]:
+                - generic [ref=e866]:
+                  - link "Zenn公式" [ref=e867] [cursor=pointer]:
+                    - /url: /zenn
+                    - img "Zenn公式" [ref=e868]
+                  - link "Zenn公式" [ref=e870] [cursor=pointer]:
+                    - /url: /zenn
+                  - generic [ref=e871]:
+                    - paragraph [ref=e872]: Zennの使い方や開発状況を発信する公式アカウントです。
+                    - generic [ref=e873]:
+                      - button "フォロー" [ref=e875] [cursor=pointer]
+                      - tooltip "@zenn-dev" [ref=e876] [cursor=pointer]:
+                        - img "GitHub" [ref=e877]
+                        - text: "@zenn-dev"
+                      - tooltip "@zenn_dev" [ref=e879] [cursor=pointer]:
+                        - img "X(Twitter)" [ref=e880]
+                        - text: "@zenn_dev"
+            - generic [ref=e884]:
+              - generic [ref=e885]:
+                - heading "Discussion" [level=3] [ref=e887]
+                - generic [ref=e888]:
+                  - article [ref=e890]:
+                    - generic [ref=e891]:
+                      - generic [ref=e892]: Hidden comment
+                      - button "開く" [ref=e893] [cursor=pointer]:
+                        - img [ref=e894]
+                  - article [ref=e897]:
+                    - generic [ref=e898]:
+                      - generic [ref=e899]: Hidden comment
+                      - button "開く" [ref=e900] [cursor=pointer]:
+                        - img [ref=e901]
+                  - article [ref=e904]:
+                    - generic [ref=e905]:
+                      - link "Shuhei Kadowaki" [ref=e906] [cursor=pointer]:
+                        - /url: /aviatesk
+                        - img "Shuhei Kadowaki" [ref=e907]
+                      - link "Shuhei Kadowaki" [ref=e908] [cursor=pointer]:
+                        - /url: /aviatesk
+                      - link "2020年9月27日 15時45分" [ref=e909] [cursor=pointer]:
+                        - /url: "#comment-0256a717697d5d479b92"
+                        - tooltip "2020年9月27日 15時45分" [ref=e910]: 2020/09/27に更新 2020年9月27日 15時45分
+                      - button "メニューを開く" [ref=e912] [cursor=pointer]:
+                        - img [ref=e913]
+                    - generic [ref=e915]:
+                      - generic [ref=e916]:
+                        - paragraph [ref=e917]:
+                          - text: こんにちは。
+                          - text: 独自記法のメッセージについてですが、default(黄色)と"alert"(赤)以外に、"info"(青)、"tips"(緑)を追加するのはどうでしょうか？
+                          - text: 現状の選択肢だけだとどうしても警告色っぽいイメージになってしまうので、単純な追加情報などに適した色合いがあるといいなと思いました。
+                        - paragraph [ref=e918]:
+                          - text: "参考になるかわかりませんが、以下のページの\"admonition\" sectionのようなイメージです:"
+                          - iframe [ref=e920]:
+                            - generic [active] [ref=f8e1]:
+                              - link "Showcase · Documenter.jl Documentation for Documenter.jl. juliadocs.github.io favicon image juliadocs.github.io juliadocs.github.io thumbnail image" [ref=f8e5] [cursor=pointer]:
+                                - /url: https://juliadocs.github.io/Documenter.jl/dev/showcase/
+                                - generic [ref=f8e6]:
+                                  - heading "Showcase · Documenter.jl" [level=1] [ref=f8e7]
+                                  - generic [ref=f8e8]: Documentation for Documenter.jl.
+                                  - generic [ref=f8e9]:
+                                    - img "juliadocs.github.io favicon image" [ref=f8e10]
+                                    - text: juliadocs.github.io
+                                - img "juliadocs.github.io thumbnail image" [ref=f8e12]
+                              - alert [ref=f8e13]
+                      - generic [ref=e921]:
+                        - generic [ref=e922]:
+                          - button "いいね" [ref=e923] [cursor=pointer]:
+                            - img [ref=e924]
+                          - generic [ref=e938]: "129"
+                        - button "コメント 4" [ref=e939] [cursor=pointer]:
+                          - img "コメント" [ref=e940]
+                          - generic [ref=e942]: "4"
+                    - generic [ref=e943]:
+                      - article [ref=e944]:
+                        - generic [ref=e945]:
+                          - link "ラジオ" [ref=e946] [cursor=pointer]:
+                            - /url: /kunimitaiyoh
+                            - img "ラジオ" [ref=e947]
+                          - link "ラジオ" [ref=e948] [cursor=pointer]:
+                            - /url: /kunimitaiyoh
+                          - link "2021年1月13日 8時51分" [ref=e949] [cursor=pointer]:
+                            - /url: "#comment-a0e50140513a77"
+                            - tooltip "2021年1月13日 8時51分" [ref=e950]: 2021/01/13 2021年1月13日 8時51分
+                          - button "メニューを開く" [ref=e952] [cursor=pointer]:
+                            - img [ref=e953]
+                        - generic [ref=e955]:
+                          - paragraph [ref=e957]: "+1"
+                          - generic [ref=e959]:
+                            - button "いいね" [ref=e960] [cursor=pointer]:
+                              - img [ref=e961]
+                            - generic [ref=e975]: "9"
+                      - article [ref=e976]:
+                        - generic [ref=e977]:
+                          - link "Hideaki Noshiro" [ref=e978] [cursor=pointer]:
+                            - /url: /noshiro_piko
+                            - img "Hideaki Noshiro" [ref=e979]
+                          - link "Hideaki Noshiro" [ref=e980] [cursor=pointer]:
+                            - /url: /noshiro_piko
+                          - link "2025年1月1日 5時42分" [ref=e981] [cursor=pointer]:
+                            - /url: "#comment-b39b0c8ce65603"
+                            - tooltip "2025年1月1日 5時42分" [ref=e982]: 2025/01/01 2025年1月1日 5時42分
+                          - button "メニューを開く" [ref=e984] [cursor=pointer]:
+                            - img [ref=e985]
+                        - generic [ref=e987]:
+                          - paragraph [ref=e989]: "+1"
+                          - button "いいね" [ref=e992] [cursor=pointer]:
+                            - img [ref=e993]
+                      - article [ref=e1007]:
+                        - generic [ref=e1008]:
+                          - link "mtmtpst" [ref=e1009] [cursor=pointer]:
+                            - /url: /mtmtpst
+                            - img "mtmtpst" [ref=e1010]
+                          - link "mtmtpst" [ref=e1011] [cursor=pointer]:
+                            - /url: /mtmtpst
+                          - link "2025年9月29日 2時49分" [ref=e1012] [cursor=pointer]:
+                            - /url: "#comment-1156e5e5260c5f"
+                            - tooltip "2025年9月29日 2時49分" [ref=e1013]: 5ヶ月前 2025年9月29日 2時49分
+                          - button "メニューを開く" [ref=e1015] [cursor=pointer]:
+                            - img [ref=e1016]
+                        - generic [ref=e1018]:
+                          - paragraph [ref=e1020]: "+1"
+                          - generic [ref=e1022]:
+                            - button "いいね" [ref=e1023] [cursor=pointer]:
+                              - img [ref=e1024]
+                            - generic [ref=e1038]: "1"
+                      - article [ref=e1039]:
+                        - generic [ref=e1040]:
+                          - link "Jxck" [ref=e1041] [cursor=pointer]:
+                            - /url: /jxck
+                            - img "Jxck" [ref=e1042]
+                          - link "Jxck" [ref=e1043] [cursor=pointer]:
+                            - /url: /jxck
+                          - link "2026年2月5日 13時24分" [ref=e1044] [cursor=pointer]:
+                            - /url: "#comment-dede4f826c0107"
+                            - tooltip "2026年2月5日 13時24分" [ref=e1045]: 18日前 2026年2月5日 13時24分
+                          - button "メニューを開く" [ref=e1047] [cursor=pointer]:
+                            - img [ref=e1048]
+                        - generic [ref=e1050]:
+                          - paragraph [ref=e1052]: "+1"
+                          - generic [ref=e1054]:
+                            - button "いいね" [ref=e1055] [cursor=pointer]:
+                              - img [ref=e1056]
+                            - generic [ref=e1070]: "1"
+                    - button "返信を追加" [ref=e1072] [cursor=pointer]
+                  - article [ref=e1074]:
+                    - generic [ref=e1075]:
+                      - generic [ref=e1076]: Hidden comment
+                      - button "開く" [ref=e1077] [cursor=pointer]:
+                        - img [ref=e1078]
+                  - article [ref=e1081]:
+                    - generic [ref=e1082]:
+                      - link "srz_zumix" [ref=e1083] [cursor=pointer]:
+                        - /url: /srz_zumix
+                        - img "srz_zumix" [ref=e1084]
+                      - link "srz_zumix" [ref=e1085] [cursor=pointer]:
+                        - /url: /srz_zumix
+                      - link "2020年9月28日 18時53分" [ref=e1086] [cursor=pointer]:
+                        - /url: "#comment-0dc6222595c828f7bd70"
+                        - tooltip "2020年9月28日 18時53分" [ref=e1087]: 2020/09/28に更新 2020年9月28日 18時53分
+                      - button "メニューを開く" [ref=e1089] [cursor=pointer]:
+                        - img [ref=e1090]
+                    - generic [ref=e1092]:
+                      - generic [ref=e1093]:
+                        - paragraph [ref=e1094]:
+                          - text: コードブロックの言語指定ですが対応している言語のリストはありますでしょうか？
+                          - text: また C++ の場合、 cpp でハイライトされるのですが違和感があります。
+                        - list [ref=e1095]:
+                          - listitem [ref=e1096]: "#include が # と include で別の色にハイライト"
+                          - listitem [ref=e1097]: override, final がハイライトされない
+                      - generic [ref=e1098]:
+                        - button "いいね" [ref=e1100] [cursor=pointer]:
+                          - img [ref=e1101]
+                        - button "コメント 3" [ref=e1115] [cursor=pointer]:
+                          - img "コメント" [ref=e1116]
+                          - generic [ref=e1118]: "3"
+                    - generic [ref=e1119]:
+                      - article [ref=e1120]:
+                        - generic [ref=e1121]:
+                          - link "Zenn公式" [ref=e1122] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1123]
+                          - link "Zenn公式" [ref=e1124] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年9月28日 17時7分" [ref=e1125] [cursor=pointer]:
+                            - /url: "#comment-009e0949e7deb7e56590"
+                            - tooltip "2020年9月28日 17時7分" [ref=e1126]: 2020/09/28 2020年9月28日 17時7分
+                          - button "メニューを開く" [ref=e1128] [cursor=pointer]:
+                            - img [ref=e1129]
+                        - generic [ref=e1131]:
+                          - paragraph [ref=e1133]:
+                            - text: Zennではシンタックスハイライトに
+                            - link "prism.js" [ref=e1134] [cursor=pointer]:
+                              - /url: https://github.com/PrismJS/prism
+                            - text: を使っており、基本的に「Zennの対応言語 = prism.jsが対応している言語」という形になります。
+                          - generic [ref=e1136]:
+                            - button "いいね" [ref=e1137] [cursor=pointer]:
+                              - img [ref=e1138]
+                            - generic [ref=e1152]: "4"
+                      - article [ref=e1153]:
+                        - generic [ref=e1154]:
+                          - link "srz_zumix" [ref=e1155] [cursor=pointer]:
+                            - /url: /srz_zumix
+                            - img "srz_zumix" [ref=e1156]
+                          - link "srz_zumix" [ref=e1157] [cursor=pointer]:
+                            - /url: /srz_zumix
+                          - link "2020年9月28日 18時54分" [ref=e1158] [cursor=pointer]:
+                            - /url: "#comment-b6daa1eccd6ed34fc935"
+                            - tooltip "2020年9月28日 18時54分" [ref=e1159]: 2020/09/28 2020年9月28日 18時54分
+                          - button "メニューを開く" [ref=e1161] [cursor=pointer]:
+                            - img [ref=e1162]
+                        - generic [ref=e1164]:
+                          - paragraph [ref=e1166]: ありがとうございます。承知しました。
+                          - generic [ref=e1168]:
+                            - button "いいね" [ref=e1169] [cursor=pointer]:
+                              - img [ref=e1170]
+                            - generic [ref=e1184]: "1"
+                      - article [ref=e1185]:
+                        - generic [ref=e1186]:
+                          - link "kbutti" [ref=e1187] [cursor=pointer]:
+                            - /url: /kbutti
+                            - img "kbutti" [ref=e1188]
+                          - link "kbutti" [ref=e1189] [cursor=pointer]:
+                            - /url: /kbutti
+                          - link "2020年10月21日 22時38分" [ref=e1190] [cursor=pointer]:
+                            - /url: "#comment-84bc9778b5f91278b30c"
+                            - tooltip "2020年10月21日 22時38分" [ref=e1191]: 2020/10/21 2020年10月21日 22時38分
+                          - button "メニューを開く" [ref=e1193] [cursor=pointer]:
+                            - img [ref=e1194]
+                        - generic [ref=e1196]:
+                          - paragraph [ref=e1198]:
+                            - text: つまり、これらに対応しているということですね。
+                            - iframe [ref=e1200]:
+                              - generic [active] [ref=f9e1]:
+                                - link "Prism prismjs.com favicon image prismjs.com prismjs.com thumbnail image" [ref=f9e5] [cursor=pointer]:
+                                  - /url: https://prismjs.com/#supported-languages
+                                  - generic [ref=f9e6]:
+                                    - heading "Prism" [level=1] [ref=f9e7]
+                                    - generic [ref=f9e8]:
+                                      - img "prismjs.com favicon image" [ref=f9e9]
+                                      - text: prismjs.com
+                                  - img "prismjs.com thumbnail image" [ref=f9e11]
+                                - alert [ref=f9e12]
+                          - generic [ref=e1202]:
+                            - button "いいね" [ref=e1203] [cursor=pointer]:
+                              - img [ref=e1204]
+                            - generic [ref=e1218]: "6"
+                    - button "返信を追加" [ref=e1220] [cursor=pointer]
+                  - article [ref=e1222]:
+                    - generic [ref=e1223]:
+                      - link "現代武士" [ref=e1224] [cursor=pointer]:
+                        - /url: /gendaibushi
+                        - img "現代武士" [ref=e1225]
+                      - link "現代武士" [ref=e1226] [cursor=pointer]:
+                        - /url: /gendaibushi
+                      - link "2020年10月5日 23時40分" [ref=e1227] [cursor=pointer]:
+                        - /url: "#comment-6bb09ae9458cacd9100c"
+                        - tooltip "2020年10月5日 23時40分" [ref=e1228]: 2020/10/05 2020年10月5日 23時40分
+                      - button "メニューを開く" [ref=e1230] [cursor=pointer]:
+                        - img [ref=e1231]
+                    - generic [ref=e1233]:
+                      - paragraph [ref=e1235]: plantumlに対応してほしい。
+                      - generic [ref=e1236]:
+                        - generic [ref=e1237]:
+                          - button "いいね" [ref=e1238] [cursor=pointer]:
+                            - img [ref=e1239]
+                          - generic [ref=e1253]: "20"
+                        - button "コメント 返信" [ref=e1254] [cursor=pointer]:
+                          - img "コメント" [ref=e1255]
+                          - generic [ref=e1257]: 返信
+                    - button "返信を追加" [ref=e1259] [cursor=pointer]
+                  - article [ref=e1261]:
+                    - generic [ref=e1262]:
+                      - link "藤原 惟" [ref=e1263] [cursor=pointer]:
+                        - /url: /sky_y
+                        - img "藤原 惟" [ref=e1264]
+                      - link "藤原 惟" [ref=e1265] [cursor=pointer]:
+                        - /url: /sky_y
+                      - link "2020年10月9日 23時34分" [ref=e1266] [cursor=pointer]:
+                        - /url: "#comment-465f4412d94c77d03107"
+                        - tooltip "2020年10月9日 23時34分" [ref=e1267]: 2020/10/09 2020年10月9日 23時34分
+                      - button "メニューを開く" [ref=e1269] [cursor=pointer]:
+                        - img [ref=e1270]
+                    - generic [ref=e1272]:
+                      - generic [ref=e1273]:
+                        - paragraph [ref=e1274]: はじめまして。見出しですが、推奨の見出しレベルはありますか？
+                        - paragraph [ref=e1275]: たとえば、はてなブログのMarkdown記法だと
+                        - list [ref=e1276]:
+                          - listitem [ref=e1277]:
+                            - code [ref=e1278]: <h1>
+                            - text: ": Webサイト自体のタイトル"
+                          - listitem [ref=e1279]:
+                            - code [ref=e1280]: <h2>
+                            - text: ": 記事のタイトル（大見出し）"
+                          - listitem [ref=e1281]:
+                            - code [ref=e1282]: <h3>
+                            - text: ": 記事内で使える小見出し"
+                        - paragraph [ref=e1283]:
+                          - text: という使い分けを前提としたテーマが多いです。
+                          - text: （ただしはてなが厳密に決めた訳ではなく、CSSの意図としてそうなっている場合が多いようです）
+                      - generic [ref=e1284]:
+                        - generic [ref=e1285]:
+                          - button "いいね" [ref=e1286] [cursor=pointer]:
+                            - img [ref=e1287]
+                          - generic [ref=e1301]: "2"
+                        - button "コメント 3" [ref=e1302] [cursor=pointer]:
+                          - img "コメント" [ref=e1303]
+                          - generic [ref=e1305]: "3"
+                    - generic [ref=e1306]:
+                      - article [ref=e1307]:
+                        - generic [ref=e1308]:
+                          - link "Zenn公式" [ref=e1309] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1310]
+                          - link "Zenn公式" [ref=e1311] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年10月10日 11時5分" [ref=e1312] [cursor=pointer]:
+                            - /url: "#comment-1e627e14982dfb642d42"
+                            - tooltip "2020年10月10日 11時5分" [ref=e1313]: 2020/10/10 2020年10月10日 11時5分
+                          - button "メニューを開く" [ref=e1315] [cursor=pointer]:
+                            - img [ref=e1316]
+                        - generic [ref=e1318]:
+                          - paragraph [ref=e1320]: とくに推奨はなく、h1から始めてもh2から始めてもOKです！
+                          - generic [ref=e1322]:
+                            - button "いいね" [ref=e1323] [cursor=pointer]:
+                              - img [ref=e1324]
+                            - generic [ref=e1338]: "1"
+                      - article [ref=e1339]:
+                        - generic [ref=e1340]:
+                          - link "藤原 惟" [ref=e1341] [cursor=pointer]:
+                            - /url: /sky_y
+                            - img "藤原 惟" [ref=e1342]
+                          - link "藤原 惟" [ref=e1343] [cursor=pointer]:
+                            - /url: /sky_y
+                          - link "2020年10月10日 12時37分" [ref=e1344] [cursor=pointer]:
+                            - /url: "#comment-3070320f7caee853ff3b"
+                            - tooltip "2020年10月10日 12時37分" [ref=e1345]: 2020/10/10 2020年10月10日 12時37分
+                          - button "メニューを開く" [ref=e1347] [cursor=pointer]:
+                            - img [ref=e1348]
+                        - generic [ref=e1350]:
+                          - paragraph [ref=e1352]: ありがとうございます！
+                          - generic [ref=e1354]:
+                            - button "いいね" [ref=e1355] [cursor=pointer]:
+                              - img [ref=e1356]
+                            - generic [ref=e1370]: "2"
+                      - article [ref=e1371]:
+                        - generic [ref=e1372]:
+                          - link "Ohkubo KOHEI" [ref=e1373] [cursor=pointer]:
+                            - /url: /kuboon
+                            - img "Ohkubo KOHEI" [ref=e1374]
+                          - link "Ohkubo KOHEI" [ref=e1375] [cursor=pointer]:
+                            - /url: /kuboon
+                          - link "2025年11月21日 14時31分" [ref=e1376] [cursor=pointer]:
+                            - /url: "#comment-ca892673d1155f"
+                            - tooltip "2025年11月21日 14時31分" [ref=e1377]: 3ヶ月前に更新 2025年11月21日 14時31分
+                          - button "メニューを開く" [ref=e1379] [cursor=pointer]:
+                            - img [ref=e1380]
+                        - generic [ref=e1382]:
+                          - generic [ref=e1383]:
+                            - blockquote [ref=e1384]:
+                              - paragraph [ref=e1385]: アクセシビリティの観点から見出し2から始めることをおすすめします
+                            - paragraph [ref=e1386]:
+                              - text: この一文は比較的最近追加されたものでしょうか？
+                              - text: 「AIレビュー」に指摘されて気づきましたが。
+                            - paragraph [ref=e1387]: そもそもタイトルは<header>に入ってて文脈が切り離されているので本文でh1 使っても何ら問題ない気もしますがどうなのでしょうか？
+                          - generic [ref=e1389]:
+                            - button "いいね" [ref=e1390] [cursor=pointer]:
+                              - img [ref=e1391]
+                            - generic [ref=e1405]: "1"
+                    - button "返信を追加" [ref=e1407] [cursor=pointer]
+                  - article [ref=e1409]:
+                    - generic [ref=e1410]:
+                      - link "Yukio Obuchi" [ref=e1411] [cursor=pointer]:
+                        - /url: /buchio
+                        - img "Yukio Obuchi" [ref=e1412]
+                      - link "Yukio Obuchi" [ref=e1413] [cursor=pointer]:
+                        - /url: /buchio
+                      - link "2020年10月10日 7時6分" [ref=e1414] [cursor=pointer]:
+                        - /url: "#comment-1bdd5c4559015674040b"
+                        - tooltip "2020年10月10日 7時6分" [ref=e1415]: 2020/10/10 2020年10月10日 7時6分
+                      - button "メニューを開く" [ref=e1417] [cursor=pointer]:
+                        - img [ref=e1418]
+                    - generic [ref=e1420]:
+                      - paragraph [ref=e1422]: コードブロックに内容をコピーするボタンが付けられると嬉しいです。
+                      - generic [ref=e1423]:
+                        - generic [ref=e1424]:
+                          - button "いいね" [ref=e1425] [cursor=pointer]:
+                            - img [ref=e1426]
+                          - generic [ref=e1440]: "1"
+                        - button "コメント 1" [ref=e1441] [cursor=pointer]:
+                          - img "コメント" [ref=e1442]
+                          - generic [ref=e1444]: "1"
+                    - article [ref=e1446]:
+                      - generic [ref=e1447]:
+                        - link "Zenn公式" [ref=e1448] [cursor=pointer]:
+                          - /url: /zenn
+                          - img "Zenn公式" [ref=e1449]
+                        - link "Zenn公式" [ref=e1450] [cursor=pointer]:
+                          - /url: /zenn
+                        - link "2020年10月10日 11時8分" [ref=e1451] [cursor=pointer]:
+                          - /url: "#comment-6e887354d81d27b13ba9"
+                          - tooltip "2020年10月10日 11時8分" [ref=e1452]: 2020/10/10に更新 2020年10月10日 11時8分
+                        - button "メニューを開く" [ref=e1454] [cursor=pointer]:
+                          - img [ref=e1455]
+                      - generic [ref=e1457]:
+                        - paragraph [ref=e1459]:
+                          - text: 該当のissueが作成されています。
+                          - iframe [ref=e1461]:
+                            
+                          - text: 今後の検討・対応状況はこちらで更新していきます。
+                        - generic [ref=e1463]:
+                          - button "いいね" [ref=e1464] [cursor=pointer]:
+                            - img [ref=e1465]
+                          - generic [ref=e1479]: "5"
+                    - button "返信を追加" [ref=e1481] [cursor=pointer]
+                  - article [ref=e1483]:
+                    - generic [ref=e1484]:
+                      - generic [ref=e1485]: Hidden comment
+                      - button "開く" [ref=e1486] [cursor=pointer]:
+                        - img [ref=e1487]
+                  - article [ref=e1490]:
+                    - generic [ref=e1491]:
+                      - link "pik" [ref=e1492] [cursor=pointer]:
+                        - /url: /pik
+                        - img "pik" [ref=e1493]
+                      - link "pik" [ref=e1494] [cursor=pointer]:
+                        - /url: /pik
+                      - link "2020年10月29日 14時37分" [ref=e1495] [cursor=pointer]:
+                        - /url: "#comment-5c9050ee9b527e0173a3"
+                        - tooltip "2020年10月29日 14時37分" [ref=e1496]: 2020/10/29 2020年10月29日 14時37分
+                      - button "メニューを開く" [ref=e1498] [cursor=pointer]:
+                        - img [ref=e1499]
+                    - generic [ref=e1501]:
+                      - paragraph [ref=e1503]:
+                        - text: はじめまして。
+                        - text: こちらで本を書こうと思っておりいくつか書いてみたのですが改行で改行されませんでした。
+                        - text: 何か改行コード（空白２つなど）が必要でしょうか？
+                      - generic [ref=e1504]:
+                        - button "いいね" [ref=e1506] [cursor=pointer]:
+                          - img [ref=e1507]
+                        - button "コメント 4" [ref=e1521] [cursor=pointer]:
+                          - img "コメント" [ref=e1522]
+                          - generic [ref=e1524]: "4"
+                    - generic [ref=e1525]:
+                      - article [ref=e1526]:
+                        - generic [ref=e1527]:
+                          - link "Zenn公式" [ref=e1528] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1529]
+                          - link "Zenn公式" [ref=e1530] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年10月29日 15時52分" [ref=e1531] [cursor=pointer]:
+                            - /url: "#comment-90ab9948c21fe85bad52"
+                            - tooltip "2020年10月29日 15時52分" [ref=e1532]: 2020/10/29に更新 2020年10月29日 15時52分
+                          - button "メニューを開く" [ref=e1534] [cursor=pointer]:
+                            - img [ref=e1535]
+                        - generic [ref=e1537]:
+                          - generic [ref=e1538]:
+                            - paragraph [ref=e1539]:
+                              - text: いえ、Enterで改行できます。
+                              - text: マークダウンで以下のように書くと、プレビューや実際の本文でも2行で表示されます。
+                            - generic [ref=e1541]:
+                              - code [ref=e1543]:
+                                - generic [ref=e1544]: First Line
+                                - generic [ref=e1545]: Second Line
+                              - button "クリップボードにコピー" [ref=e1546] [cursor=pointer]:
+                                - img [ref=e1547]
+                              - button "右端で折り返す" [ref=e1548] [cursor=pointer]:
+                                - img [ref=e1549]
+                            - paragraph [ref=e1550]:
+                              - text: マークダウン→HTMLの変換にはmarkdown-itを使っており、
+                              - link "こちらのデモサイト" [ref=e1551] [cursor=pointer]:
+                                - /url: https://markdown-it.github.io/
+                              - text: で「breaks」にチェックを入れたときと同じ挙動で改行されると思います。
+                          - button "いいね" [ref=e1554] [cursor=pointer]:
+                            - img [ref=e1555]
+                      - article [ref=e1569]:
+                        - generic [ref=e1570]:
+                          - link "pik" [ref=e1571] [cursor=pointer]:
+                            - /url: /pik
+                            - img "pik" [ref=e1572]
+                          - link "pik" [ref=e1573] [cursor=pointer]:
+                            - /url: /pik
+                          - link "2020年10月29日 16時43分" [ref=e1574] [cursor=pointer]:
+                            - /url: "#comment-ee3be7e05e1de22d757e"
+                            - tooltip "2020年10月29日 16時43分" [ref=e1575]: 2020/10/29 2020年10月29日 16時43分
+                          - button "メニューを開く" [ref=e1577] [cursor=pointer]:
+                            - img [ref=e1578]
+                        - generic [ref=e1580]:
+                          - paragraph [ref=e1582]:
+                            - text: それが改行されていないのです…
+                            - text: ここにその画像を載せようと思ったんですが、ここには画像は載せられないのですね
+                          - button "いいね" [ref=e1585] [cursor=pointer]:
+                            - img [ref=e1586]
+                      - article [ref=e1600]:
+                        - generic [ref=e1601]:
+                          - link "pik" [ref=e1602] [cursor=pointer]:
+                            - /url: /pik
+                            - img "pik" [ref=e1603]
+                          - link "pik" [ref=e1604] [cursor=pointer]:
+                            - /url: /pik
+                          - link "2020年10月29日 17時7分" [ref=e1605] [cursor=pointer]:
+                            - /url: "#comment-8532f1e3a73b3a88c923"
+                            - tooltip "2020年10月29日 17時7分" [ref=e1606]: 2020/10/29 2020年10月29日 17時7分
+                          - button "メニューを開く" [ref=e1608] [cursor=pointer]:
+                            - img [ref=e1609]
+                        - generic [ref=e1611]:
+                          - paragraph [ref=e1613]: ちなみに markdown-it で [breaks] にチェックを入れた場合、正しく改行されました。
+                          - button "いいね" [ref=e1616] [cursor=pointer]:
+                            - img [ref=e1617]
+                      - article [ref=e1631]:
+                        - generic [ref=e1632]:
+                          - link "Zenn公式" [ref=e1633] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1634]
+                          - link "Zenn公式" [ref=e1635] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年10月29日 18時7分" [ref=e1636] [cursor=pointer]:
+                            - /url: "#comment-c119262e4ef06151a5ee"
+                            - tooltip "2020年10月29日 18時7分" [ref=e1637]: 2020/10/29に更新 2020年10月29日 18時7分
+                          - button "メニューを開く" [ref=e1639] [cursor=pointer]:
+                            - img [ref=e1640]
+                        - generic [ref=e1642]:
+                          - paragraph [ref=e1644]:
+                            - text: なるほど
+                            - text: Issueを作成しましたので、お手数ですがこちらに回答いただけますか？
+                            - iframe [ref=e1646]:
+                              
+                          - button "いいね" [ref=e1649] [cursor=pointer]:
+                            - img [ref=e1650]
+                    - button "返信を追加" [ref=e1665] [cursor=pointer]
+                  - article [ref=e1667]:
+                    - generic [ref=e1668]:
+                      - link "Nobuo Yamashita" [ref=e1669] [cursor=pointer]:
+                        - /url: /nobsun
+                        - img "Nobuo Yamashita" [ref=e1670]
+                      - link "Nobuo Yamashita" [ref=e1671] [cursor=pointer]:
+                        - /url: /nobsun
+                      - link "2020年11月11日 0時25分" [ref=e1672] [cursor=pointer]:
+                        - /url: "#comment-2a0b8afd3fb942f1f56b"
+                        - tooltip "2020年11月11日 0時25分" [ref=e1673]: 2020/11/11 2020年11月11日 0時25分
+                      - button "メニューを開く" [ref=e1675] [cursor=pointer]:
+                        - img [ref=e1676]
+                    - generic [ref=e1678]:
+                      - paragraph [ref=e1680]: 改行に関して、markdown-itのデモサイトのようにbreaksのon、offを制御できるといいのになぁと思います。文書をgithubで管理していると、diffが行単位なので、テキストとしては一文一行で書きたくて、レンダリングとしては、空行で段落区切りで、段落の最後が改行されるという挙動になっているほうがありがたいです。
+                      - generic [ref=e1681]:
+                        - generic [ref=e1682]:
+                          - button "いいね" [ref=e1683] [cursor=pointer]:
+                            - img [ref=e1684]
+                          - generic [ref=e1698]: "21"
+                        - button "コメント 5" [ref=e1699] [cursor=pointer]:
+                          - img "コメント" [ref=e1700]
+                          - generic [ref=e1702]: "5"
+                    - generic [ref=e1703]:
+                      - article [ref=e1704]:
+                        - generic [ref=e1705]:
+                          - link "重城良国" [ref=e1706] [cursor=pointer]:
+                            - /url: /yoshikuni_jujo
+                            - img "重城良国" [ref=e1707]
+                          - link "重城良国" [ref=e1708] [cursor=pointer]:
+                            - /url: /yoshikuni_jujo
+                          - link "2021年2月5日 11時44分" [ref=e1709] [cursor=pointer]:
+                            - /url: "#comment-c68765db52887a"
+                            - tooltip "2021年2月5日 11時44分" [ref=e1710]: 2021/02/05 2021年2月5日 11時44分
+                          - button "メニューを開く" [ref=e1712] [cursor=pointer]:
+                            - img [ref=e1713]
+                        - generic [ref=e1715]:
+                          - paragraph [ref=e1717]: "+1"
+                          - generic [ref=e1719]:
+                            - button "いいね" [ref=e1720] [cursor=pointer]:
+                              - img [ref=e1721]
+                            - generic [ref=e1735]: "4"
+                      - article [ref=e1736]:
+                        - generic [ref=e1737]:
+                          - link "voluntas" [ref=e1738] [cursor=pointer]:
+                            - /url: /voluntas
+                            - img "voluntas" [ref=e1739]
+                          - link "voluntas" [ref=e1740] [cursor=pointer]:
+                            - /url: /voluntas
+                          - link "2024年11月22日 16時50分" [ref=e1741] [cursor=pointer]:
+                            - /url: "#comment-7d9272b0b3231b"
+                            - tooltip "2024年11月22日 16時50分" [ref=e1742]: 2024/11/22 2024年11月22日 16時50分
+                          - button "メニューを開く" [ref=e1744] [cursor=pointer]:
+                            - img [ref=e1745]
+                        - generic [ref=e1747]:
+                          - paragraph [ref=e1749]: "+1"
+                          - button "いいね" [ref=e1752] [cursor=pointer]:
+                            - img [ref=e1753]
+                      - article [ref=e1767]:
+                        - generic [ref=e1768]:
+                          - link "keiichiro shikano" [ref=e1769] [cursor=pointer]:
+                            - /url: /k16
+                            - img "keiichiro shikano" [ref=e1770]
+                          - link "keiichiro shikano" [ref=e1771] [cursor=pointer]:
+                            - /url: /k16
+                          - link "2024年11月22日 17時15分" [ref=e1772] [cursor=pointer]:
+                            - /url: "#comment-d5d40c103b5f00"
+                            - tooltip "2024年11月22日 17時15分" [ref=e1773]: 2024/11/22 2024年11月22日 17時15分
+                          - button "メニューを開く" [ref=e1775] [cursor=pointer]:
+                            - img [ref=e1776]
+                        - generic [ref=e1778]:
+                          - paragraph [ref=e1780]: "+1"
+                          - button "いいね" [ref=e1783] [cursor=pointer]:
+                            - img [ref=e1784]
+                      - article [ref=e1798]:
+                        - generic [ref=e1799]:
+                          - link "bells17" [ref=e1800] [cursor=pointer]:
+                            - /url: /bells17
+                            - img "bells17" [ref=e1801]
+                          - link "bells17" [ref=e1802] [cursor=pointer]:
+                            - /url: /bells17
+                          - link "2024年11月22日 17時34分" [ref=e1803] [cursor=pointer]:
+                            - /url: "#comment-f85f9bbf7ee818"
+                            - tooltip "2024年11月22日 17時34分" [ref=e1804]: 2024/11/22 2024年11月22日 17時34分
+                          - button "メニューを開く" [ref=e1806] [cursor=pointer]:
+                            - img [ref=e1807]
+                        - generic [ref=e1809]:
+                          - paragraph [ref=e1811]: "+1"
+                          - button "いいね" [ref=e1814] [cursor=pointer]:
+                            - img [ref=e1815]
+                      - article [ref=e1829]:
+                        - generic [ref=e1830]:
+                          - link "nekoruri | めもおきば" [ref=e1831] [cursor=pointer]:
+                            - /url: /nekoruri
+                            - img "nekoruri | めもおきば" [ref=e1832]
+                          - link "nekoruri | めもおきば" [ref=e1833] [cursor=pointer]:
+                            - /url: /nekoruri
+                          - link "2025年5月15日 2時58分" [ref=e1834] [cursor=pointer]:
+                            - /url: "#comment-f0e1b7ab5e7aec"
+                            - tooltip "2025年5月15日 2時58分" [ref=e1835]: 2025/05/15 2025年5月15日 2時58分
+                          - button "メニューを開く" [ref=e1837] [cursor=pointer]:
+                            - img [ref=e1838]
+                        - generic [ref=e1840]:
+                          - paragraph [ref=e1842]: "+1"
+                          - button "いいね" [ref=e1845] [cursor=pointer]:
+                            - img [ref=e1846]
+                    - button "返信を追加" [ref=e1861] [cursor=pointer]
+                  - article [ref=e1863]:
+                    - generic [ref=e1864]:
+                      - generic [ref=e1865]: Hidden comment
+                      - button "開く" [ref=e1866] [cursor=pointer]:
+                        - img [ref=e1867]
+                  - article [ref=e1870]:
+                    - generic [ref=e1871]:
+                      - link "とが" [ref=e1872] [cursor=pointer]:
+                        - /url: /toga
+                        - img "とが" [ref=e1873]
+                      - link "とが" [ref=e1874] [cursor=pointer]:
+                        - /url: /toga
+                      - link "2020年12月16日 17時27分" [ref=e1875] [cursor=pointer]:
+                        - /url: "#comment-ec16ee361f20f4"
+                        - tooltip "2020年12月16日 17時27分" [ref=e1876]: 2020/12/16 2020年12月16日 17時27分
+                      - button "メニューを開く" [ref=e1878] [cursor=pointer]:
+                        - img [ref=e1879]
+                    - generic [ref=e1881]:
+                      - generic [ref=e1882]:
+                        - paragraph [ref=e1883]:
+                          - text: 表の中で改行することはできるでしょうか？
+                          - text: が改行文字にならないようです．
+                        - table [ref=e1884]:
+                          - rowgroup [ref=e1885]:
+                            - row "あ い う" [ref=e1886]:
+                              - columnheader "あ" [ref=e1887]
+                              - columnheader "い" [ref=e1888]
+                              - columnheader "う" [ref=e1889]
+                          - rowgroup [ref=e1890]:
+                            - row "中身 を 改行 したい です" [ref=e1891]:
+                              - cell "中身" [ref=e1892]
+                              - cell "を" [ref=e1893]
+                              - cell "改行 したい です" [ref=e1894]:
+                                - text: 改行
+                                - text: したい
+                                - text: です
+                      - generic [ref=e1895]:
+                        - generic [ref=e1896]:
+                          - button "いいね" [ref=e1897] [cursor=pointer]:
+                            - img [ref=e1898]
+                          - generic [ref=e1912]: "1"
+                        - button "コメント 3" [ref=e1913] [cursor=pointer]:
+                          - img "コメント" [ref=e1914]
+                          - generic [ref=e1916]: "3"
+                    - generic [ref=e1917]:
+                      - article [ref=e1918]:
+                        - generic [ref=e1919]:
+                          - link "Zenn公式" [ref=e1920] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1921]
+                          - link "Zenn公式" [ref=e1922] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年12月16日 18時52分" [ref=e1923] [cursor=pointer]:
+                            - /url: "#comment-dc63c83bd9fe40"
+                            - tooltip "2020年12月16日 18時52分" [ref=e1924]: 2020/12/16 2020年12月16日 18時52分
+                          - button "メニューを開く" [ref=e1926] [cursor=pointer]:
+                            - img [ref=e1927]
+                        - generic [ref=e1929]:
+                          - paragraph [ref=e1931]:
+                            - text: 現時点では対応していませんが、対応は検討中です（
+                            - link "該当のIssue" [ref=e1932] [cursor=pointer]:
+                              - /url: https://github.com/zenn-dev/zenn-roadmap/issues/104
+                            - text: ）。
+                          - button "いいね" [ref=e1935] [cursor=pointer]:
+                            - img [ref=e1936]
+                      - article [ref=e1950]:
+                        - generic [ref=e1951]:
+                          - link "とが" [ref=e1952] [cursor=pointer]:
+                            - /url: /toga
+                            - img "とが" [ref=e1953]
+                          - link "とが" [ref=e1954] [cursor=pointer]:
+                            - /url: /toga
+                          - link "2020年12月16日 19時10分" [ref=e1955] [cursor=pointer]:
+                            - /url: "#comment-67ddf3e268048b"
+                            - tooltip "2020年12月16日 19時10分" [ref=e1956]: 2020/12/16 2020年12月16日 19時10分
+                          - button "メニューを開く" [ref=e1958] [cursor=pointer]:
+                            - img [ref=e1959]
+                        - generic [ref=e1961]:
+                          - paragraph [ref=e1963]: ありがとうございます！
+                          - button "いいね" [ref=e1966] [cursor=pointer]:
+                            - img [ref=e1967]
+                      - article [ref=e1981]:
+                        - generic [ref=e1982]:
+                          - link "Zenn公式" [ref=e1983] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e1984]
+                          - link "Zenn公式" [ref=e1985] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年12月28日 22時8分" [ref=e1986] [cursor=pointer]:
+                            - /url: "#comment-223f464effffb1"
+                            - tooltip "2020年12月28日 22時8分" [ref=e1987]: 2020/12/28に更新 2020年12月28日 22時8分
+                          - button "メニューを開く" [ref=e1989] [cursor=pointer]:
+                            - img [ref=e1990]
+                        - generic [ref=e1992]:
+                          - paragraph [ref=e1994]:
+                            - text: 遅くなってしまいましたが
+                            - code [ref=e1995]: <br>
+                            - text: タグが使えるようになりました。CLIでも反映させるためには
+                            - code [ref=e1996]: npm install zenn-cli@latest
+                            - text: で更新をお願いします。
+                          - generic [ref=e1998]:
+                            - button "いいね" [ref=e1999] [cursor=pointer]:
+                              - img [ref=e2000]
+                            - generic [ref=e2014]: "8"
+                    - button "返信を追加" [ref=e2016] [cursor=pointer]
+                  - article [ref=e2018]:
+                    - generic [ref=e2019]:
+                      - generic [ref=e2020]: Hidden comment
+                      - button "開く" [ref=e2021] [cursor=pointer]:
+                        - img [ref=e2022]
+                  - article [ref=e2025]:
+                    - generic [ref=e2026]:
+                      - link "masalib" [ref=e2027] [cursor=pointer]:
+                        - /url: /masalib
+                        - img "masalib" [ref=e2028]
+                      - link "masalib" [ref=e2029] [cursor=pointer]:
+                        - /url: /masalib
+                      - link "2020年12月20日 23時38分" [ref=e2030] [cursor=pointer]:
+                        - /url: "#comment-5db54f480894b3"
+                        - tooltip "2020年12月20日 23時38分" [ref=e2031]: 2020/12/20 2020年12月20日 23時38分
+                      - button "メニューを開く" [ref=e2033] [cursor=pointer]:
+                        - img [ref=e2034]
+                    - generic [ref=e2036]:
+                      - generic [ref=e2037]:
+                        - paragraph [ref=e2038]: Markdownで折りたたみはできないのでしょうか？
+                        - paragraph [ref=e2039]:
+                          - iframe [ref=e2041]:
+                            
+                      - generic [ref=e2042]:
+                        - button "いいね" [ref=e2044] [cursor=pointer]:
+                          - img [ref=e2045]
+                        - button "コメント 2" [ref=e2059] [cursor=pointer]:
+                          - img "コメント" [ref=e2060]
+                          - generic [ref=e2062]: "2"
+                    - generic [ref=e2063]:
+                      - article [ref=e2064]:
+                        - generic [ref=e2065]:
+                          - link "Zenn公式" [ref=e2066] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e2067]
+                          - link "Zenn公式" [ref=e2068] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2020年12月21日 10時41分" [ref=e2069] [cursor=pointer]:
+                            - /url: "#comment-17e2bdfc87e25a"
+                            - tooltip "2020年12月21日 10時41分" [ref=e2070]: 2020/12/21 2020年12月21日 10時41分
+                          - button "メニューを開く" [ref=e2072] [cursor=pointer]:
+                            - img [ref=e2073]
+                        - generic [ref=e2075]:
+                          - paragraph [ref=e2077]:
+                            - link "#Zenn独自の記法" [ref=e2078] [cursor=pointer]:
+                              - /url: "#zenn%E7%8B%AC%E8%87%AA%E3%81%AE%E8%A8%98%E6%B3%95"
+                            - text: の中にあるアコーディオンが該当すると思います。
+                          - generic [ref=e2080]:
+                            - button "いいね" [ref=e2081] [cursor=pointer]:
+                              - img [ref=e2082]
+                            - generic [ref=e2096]: "1"
+                      - article [ref=e2097]:
+                        - generic [ref=e2098]:
+                          - link "masalib" [ref=e2099] [cursor=pointer]:
+                            - /url: /masalib
+                            - img "masalib" [ref=e2100]
+                          - link "masalib" [ref=e2101] [cursor=pointer]:
+                            - /url: /masalib
+                          - link "2020年12月21日 16時9分" [ref=e2102] [cursor=pointer]:
+                            - /url: "#comment-e9fc54f98c7f4d"
+                            - tooltip "2020年12月21日 16時9分" [ref=e2103]: 2020/12/21 2020年12月21日 16時9分
+                          - button "メニューを開く" [ref=e2105] [cursor=pointer]:
+                            - img [ref=e2106]
+                        - generic [ref=e2108]:
+                          - paragraph [ref=e2110]: ありがとうございます
+                          - generic [ref=e2112]:
+                            - button "いいね" [ref=e2113] [cursor=pointer]:
+                              - img [ref=e2114]
+                            - generic [ref=e2128]: "1"
+                    - button "返信を追加" [ref=e2130] [cursor=pointer]
+                  - article [ref=e2132]:
+                    - generic [ref=e2133]:
+                      - generic [ref=e2134]: Hidden comment
+                      - button "開く" [ref=e2135] [cursor=pointer]:
+                        - img [ref=e2136]
+                  - article [ref=e2139]:
+                    - generic [ref=e2140]:
+                      - link "とが" [ref=e2141] [cursor=pointer]:
+                        - /url: /toga
+                        - img "とが" [ref=e2142]
+                      - link "とが" [ref=e2143] [cursor=pointer]:
+                        - /url: /toga
+                      - link "2021年1月6日 16時36分" [ref=e2144] [cursor=pointer]:
+                        - /url: "#comment-0989390aed09fa"
+                        - tooltip "2021年1月6日 16時36分" [ref=e2145]: 2021/01/06 2021年1月6日 16時36分
+                      - button "メニューを開く" [ref=e2147] [cursor=pointer]:
+                        - img [ref=e2148]
+                    - generic [ref=e2150]:
+                      - paragraph [ref=e2152]: バッククォート 3 つでコードブロックを書くとき，「prism.jp による syntax highlight を適用することなく（=プレーンテキストのままで）」「ファイル名を表示する」ことは可能でしょうか？
+                      - generic [ref=e2153]:
+                        - generic [ref=e2154]:
+                          - button "いいね" [ref=e2155] [cursor=pointer]:
+                            - img [ref=e2156]
+                          - generic [ref=e2170]: "1"
+                        - button "コメント 3" [ref=e2171] [cursor=pointer]:
+                          - img "コメント" [ref=e2172]
+                          - generic [ref=e2174]: "3"
+                    - generic [ref=e2175]:
+                      - article [ref=e2176]:
+                        - generic [ref=e2177]:
+                          - link "Zenn公式" [ref=e2178] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e2179]
+                          - link "Zenn公式" [ref=e2180] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2021年1月6日 23時14分" [ref=e2181] [cursor=pointer]:
+                            - /url: "#comment-60dc85dd42985b"
+                            - tooltip "2021年1月6日 23時14分" [ref=e2182]: 2021/01/06に更新 2021年1月6日 23時14分
+                          - button "メニューを開く" [ref=e2184] [cursor=pointer]:
+                            - img [ref=e2185]
+                        - generic [ref=e2187]:
+                          - generic [ref=e2188]:
+                            - paragraph [ref=e2189]: 現状正式には対応はしていないです。CLIでのエラーメッセージが気にならないのであれば
+                            - blockquote [ref=e2190]:
+                              - paragraph [ref=e2191]: "```-:text"
+                            - paragraph [ref=e2192]: のようにすればファイル名だけを表示できます。
+                          - generic [ref=e2194]:
+                            - button "いいね" [ref=e2195] [cursor=pointer]:
+                              - img [ref=e2196]
+                            - generic [ref=e2210]: "1"
+                      - article [ref=e2211]:
+                        - generic [ref=e2212]:
+                          - link "とが" [ref=e2213] [cursor=pointer]:
+                            - /url: /toga
+                            - img "とが" [ref=e2214]
+                          - link "とが" [ref=e2215] [cursor=pointer]:
+                            - /url: /toga
+                          - link "2021年1月7日 9時27分" [ref=e2216] [cursor=pointer]:
+                            - /url: "#comment-b84fbfd360ce7d"
+                            - tooltip "2021年1月7日 9時27分" [ref=e2217]: 2021/01/07 2021年1月7日 9時27分
+                          - button "メニューを開く" [ref=e2219] [cursor=pointer]:
+                            - img [ref=e2220]
+                        - generic [ref=e2222]:
+                          - paragraph [ref=e2224]: ありがとうございます．確かに Language does not exist と言われますが，そのままでいこうと思います
+                          - generic [ref=e2226]:
+                            - button "いいね" [ref=e2227] [cursor=pointer]:
+                              - img [ref=e2228]
+                            - generic [ref=e2242]: "1"
+                      - article [ref=e2243]:
+                        - generic [ref=e2244]:
+                          - link "とが" [ref=e2245] [cursor=pointer]:
+                            - /url: /toga
+                            - img "とが" [ref=e2246]
+                          - link "とが" [ref=e2247] [cursor=pointer]:
+                            - /url: /toga
+                          - link "2021年12月25日 23時37分" [ref=e2248] [cursor=pointer]:
+                            - /url: "#comment-3329dce4b5157e"
+                            - tooltip "2021年12月25日 23時37分" [ref=e2249]: 2021/12/25 2021年12月25日 23時37分
+                          - button "メニューを開く" [ref=e2251] [cursor=pointer]:
+                            - img [ref=e2252]
+                        - generic [ref=e2254]:
+                          - generic [ref=e2255]:
+                            - paragraph [ref=e2256]: そういえばこれですが，今は
+                            - blockquote [ref=e2257]:
+                              - paragraph [ref=e2258]: "```:text"
+                            - paragraph [ref=e2259]: と書けるようになったんですね！対応ありがとうございます！
+                          - button "いいね" [ref=e2262] [cursor=pointer]:
+                            - img [ref=e2263]
+                    - button "返信を追加" [ref=e2278] [cursor=pointer]
+                  - article [ref=e2280]:
+                    - generic [ref=e2281]:
+                      - link "とが" [ref=e2282] [cursor=pointer]:
+                        - /url: /toga
+                        - img "とが" [ref=e2283]
+                      - link "とが" [ref=e2284] [cursor=pointer]:
+                        - /url: /toga
+                      - link "2021年1月6日 16時47分" [ref=e2285] [cursor=pointer]:
+                        - /url: "#comment-050686927a4fe6"
+                        - tooltip "2021年1月6日 16時47分" [ref=e2286]: 2021/01/06 2021年1月6日 16時47分
+                      - button "メニューを開く" [ref=e2288] [cursor=pointer]:
+                        - img [ref=e2289]
+                    - generic [ref=e2291]:
+                      - paragraph [ref=e2293]:
+                        - text: インラインコードの先頭あるいは末尾に空白文字を入れることは可能でしょうか？（
+                        - code [ref=e2294]: "` abc`"
+                        - text: と書いたときに
+                        - code [ref=e2295]: abc
+                        - text: の前の空白が消えることを防ぎたいです）
+                        - text: もしよく知られた markdown の書き方だったら申し訳ありません．
+                      - generic [ref=e2296]:
+                        - generic [ref=e2297]:
+                          - button "いいね" [ref=e2298] [cursor=pointer]:
+                            - img [ref=e2299]
+                          - generic [ref=e2313]: "2"
+                        - button "コメント 3" [ref=e2314] [cursor=pointer]:
+                          - img "コメント" [ref=e2315]
+                          - generic [ref=e2317]: "3"
+                    - generic [ref=e2318]:
+                      - article [ref=e2319]:
+                        - generic [ref=e2320]:
+                          - link "Zenn公式" [ref=e2321] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e2322]
+                          - link "Zenn公式" [ref=e2323] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2021年1月6日 23時23分" [ref=e2324] [cursor=pointer]:
+                            - /url: "#comment-2d3f326c4187e3"
+                            - tooltip "2021年1月6日 23時23分" [ref=e2325]: 2021/01/06 2021年1月6日 23時23分
+                          - button "メニューを開く" [ref=e2327] [cursor=pointer]:
+                            - img [ref=e2328]
+                        - generic [ref=e2330]:
+                          - generic [ref=e2331]:
+                            - paragraph [ref=e2332]:
+                              - text: 半角スペースが消えてしまうのは仕様になります。正確にはCSSの
+                              - code [ref=e2333]: white-space
+                              - text: プロパティがデフォルトの値だとこのようになります。
+                            - paragraph [ref=e2334]:
+                              - text: GitHubやdev.toなどITエンジニアがよく使いそうなサイトを一通りチェックしてみたのですが、どのサイトも
+                              - code [ref=e2335]: white-space
+                              - text: の値を変更していなかったため、特別な仕様はなるべく避けたいという理由から今のところZennでも対応予定はないです。先頭・末尾の半角スペースがそのまま反映されることを好まない方もいると思うので…。申し訳ないです。
+                          - generic [ref=e2337]:
+                            - button "いいね" [ref=e2338] [cursor=pointer]:
+                              - img [ref=e2339]
+                            - generic [ref=e2353]: "2"
+                      - article [ref=e2354]:
+                        - generic [ref=e2355]:
+                          - link "とが" [ref=e2356] [cursor=pointer]:
+                            - /url: /toga
+                            - img "とが" [ref=e2357]
+                          - link "とが" [ref=e2358] [cursor=pointer]:
+                            - /url: /toga
+                          - link "2021年1月7日 9時29分" [ref=e2359] [cursor=pointer]:
+                            - /url: "#comment-1ac8e0e9f8f5bb"
+                            - tooltip "2021年1月7日 9時29分" [ref=e2360]: 2021/01/07 2021年1月7日 9時29分
+                          - button "メニューを開く" [ref=e2362] [cursor=pointer]:
+                            - img [ref=e2363]
+                        - generic [ref=e2365]:
+                          - paragraph [ref=e2367]: なるほど…．了解しました．丁寧な説明ありがとうございます．
+                          - generic [ref=e2369]:
+                            - button "いいね" [ref=e2370] [cursor=pointer]:
+                              - img [ref=e2371]
+                            - generic [ref=e2385]: "2"
+                      - article [ref=e2386]:
+                        - generic [ref=e2387]:
+                          - link "とが" [ref=e2388] [cursor=pointer]:
+                            - /url: /toga
+                            - img "とが" [ref=e2389]
+                          - link "とが" [ref=e2390] [cursor=pointer]:
+                            - /url: /toga
+                          - link "2021年2月22日 14時47分" [ref=e2391] [cursor=pointer]:
+                            - /url: "#comment-6841592c7e6dfb"
+                            - tooltip "2021年2月22日 14時47分" [ref=e2392]: 2021/02/22 2021年2月22日 14時47分
+                          - button "メニューを開く" [ref=e2394] [cursor=pointer]:
+                            - img [ref=e2395]
+                        - generic [ref=e2397]:
+                          - paragraph [ref=e2399]:
+                            - text: これですが， 普通のスペースの代わりに U+2000 を使うというのを思いついたのでこの場に残しておきたいと思います．
+                            - code [ref=e2400]: "` abc`"
+                            - text: (普通のスペース) →
+                            - code [ref=e2401]: abc
+                            - code [ref=e2402]: "` abc`"
+                            - text: (U+2000) →
+                            - code [ref=e2403]: abc
+                          - generic [ref=e2405]:
+                            - button "いいね" [ref=e2406] [cursor=pointer]:
+                              - img [ref=e2407]
+                            - generic [ref=e2421]: "12"
+                    - button "返信を追加" [ref=e2423] [cursor=pointer]
+                  - article [ref=e2425]:
+                    - generic [ref=e2426]:
+                      - link "knk" [ref=e2427] [cursor=pointer]:
+                        - /url: /knk_kei
+                        - img "knk" [ref=e2428]
+                      - link "knk" [ref=e2429] [cursor=pointer]:
+                        - /url: /knk_kei
+                      - link "2021年1月9日 14時59分" [ref=e2430] [cursor=pointer]:
+                        - /url: "#comment-34bfaede8cff6f"
+                        - tooltip "2021年1月9日 14時59分" [ref=e2431]: 2021/01/09 2021年1月9日 14時59分
+                      - button "メニューを開く" [ref=e2433] [cursor=pointer]:
+                        - img [ref=e2434]
+                    - generic [ref=e2436]:
+                      - paragraph [ref=e2438]:
+                        - text: シェア用のURLを取得する方法はありますか？
+                        - text: いつも 設定 > スクラップ管理 > articles > 該当記事 とクリックしてリンクを取得しているので共有ボタンみたいなのでURLを取得できると嬉しいです。
+                      - generic [ref=e2439]:
+                        - button "いいね" [ref=e2441] [cursor=pointer]:
+                          - img [ref=e2442]
+                        - button "コメント 返信" [ref=e2456] [cursor=pointer]:
+                          - img "コメント" [ref=e2457]
+                          - generic [ref=e2459]: 返信
+                    - button "返信を追加" [ref=e2461] [cursor=pointer]
+                  - article [ref=e2463]:
+                    - generic [ref=e2464]:
+                      - link "こひな(ゆでだこの方🐙)" [ref=e2465] [cursor=pointer]:
+                        - /url: /37cohina
+                        - img "こひな(ゆでだこの方🐙)" [ref=e2466]
+                      - link "こひな(ゆでだこの方🐙)" [ref=e2467] [cursor=pointer]:
+                        - /url: /37cohina
+                      - link "2021年1月19日 22時38分" [ref=e2468] [cursor=pointer]:
+                        - /url: "#comment-865630ad7e1dc4"
+                        - tooltip "2021年1月19日 22時38分" [ref=e2469]: 2021/01/19 2021年1月19日 22時38分
+                      - button "メニューを開く" [ref=e2471] [cursor=pointer]:
+                        - img [ref=e2472]
+                    - generic [ref=e2474]:
+                      - paragraph [ref=e2476]:
+                        - text: HTMLタグの埋め込みには対応していないのでしょうか？上付き文字
+                        - code [ref=e2477]: <sup>
+                        - text: を使いたいのですが。
+                      - generic [ref=e2478]:
+                        - generic [ref=e2479]:
+                          - button "いいね" [ref=e2480] [cursor=pointer]:
+                            - img [ref=e2481]
+                          - generic [ref=e2495]: "1"
+                        - button "コメント 2" [ref=e2496] [cursor=pointer]:
+                          - img "コメント" [ref=e2497]
+                          - generic [ref=e2499]: "2"
+                    - generic [ref=e2500]:
+                      - article [ref=e2501]:
+                        - generic [ref=e2502]:
+                          - link "Zenn公式" [ref=e2503] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e2504]
+                          - link "Zenn公式" [ref=e2505] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2021年1月20日 13時36分" [ref=e2506] [cursor=pointer]:
+                            - /url: "#comment-9f57f7d29c7b7e"
+                            - tooltip "2021年1月20日 13時36分" [ref=e2507]: 2021/01/20 2021年1月20日 13時36分
+                          - button "メニューを開く" [ref=e2509] [cursor=pointer]:
+                            - img [ref=e2510]
+                        - generic [ref=e2512]:
+                          - generic [ref=e2513]:
+                            - paragraph [ref=e2514]:
+                              - text: 現時点では
+                              - code [ref=e2515]: <br>
+                              - text: 以外のHTMLタグの埋め込みには対応していないです（いろいろと事情があり…）。
+                              - code [ref=e2516]: sup
+                              - text: や
+                              - code [ref=e2517]: sub
+                              - text: の対応についての
+                              - link "Issueを作りました" [ref=e2518] [cursor=pointer]:
+                                - /url: https://github.com/zenn-dev/zenn-editor/issues/105
+                              - text: 。しばらくお待ちいただければと思います。
+                            - paragraph [ref=e2519]:
+                              - text: なお、数式であれば
+                              - code [ref=e2520]: $a^4$
+                              - text: （
+                              - generic [ref=e2522]:
+                                - math [ref=e2524]:
+                                  - generic [ref=e2527]:
+                                    - generic [ref=e2528]: a
+                                    - generic [ref=e2529]: "4"
+                                - generic [ref=e2532]:
+                                  - text: a
+                                  - generic [ref=e2537]: "4"
+                              - text: ）や
+                              - code [ref=e2538]: $a_1$
+                              - text: （
+                              - generic [ref=e2540]:
+                                - math [ref=e2542]:
+                                  - generic [ref=e2545]:
+                                    - generic [ref=e2546]: a
+                                    - generic [ref=e2547]: "1"
+                                - generic [ref=e2550]:
+                                  - text: a
+                                  - generic [ref=e2555]: "1"
+                              - text: ）という形で記載ができます。
+                          - generic [ref=e2560]:
+                            - button "いいね" [ref=e2561] [cursor=pointer]:
+                              - img [ref=e2562]
+                            - generic [ref=e2576]: "1"
+                      - article [ref=e2577]:
+                        - generic [ref=e2578]:
+                          - link "こひな(ゆでだこの方🐙)" [ref=e2579] [cursor=pointer]:
+                            - /url: /37cohina
+                            - img "こひな(ゆでだこの方🐙)" [ref=e2580]
+                          - link "こひな(ゆでだこの方🐙)" [ref=e2581] [cursor=pointer]:
+                            - /url: /37cohina
+                          - link "2021年1月21日 20時41分" [ref=e2582] [cursor=pointer]:
+                            - /url: "#comment-0fd5e7d8c6b47a"
+                            - tooltip "2021年1月21日 20時41分" [ref=e2583]: 2021/01/21 2021年1月21日 20時41分
+                          - button "メニューを開く" [ref=e2585] [cursor=pointer]:
+                            - img [ref=e2586]
+                        - generic [ref=e2588]:
+                          - paragraph [ref=e2590]:
+                            - text: 編集画面だとハイライトされるので、対応してないのか、HTMLの書き方が悪いのか、Markdown初心者の私には判断つかなかったので助かりました。
+                            - text: ありがとうございます！
+                          - generic [ref=e2592]:
+                            - button "いいね" [ref=e2593] [cursor=pointer]:
+                              - img [ref=e2594]
+                            - generic [ref=e2608]: "1"
+                    - button "返信を追加" [ref=e2610] [cursor=pointer]
+                  - article [ref=e2612]:
+                    - generic [ref=e2613]:
+                      - link "Zenn公式" [ref=e2614] [cursor=pointer]:
+                        - /url: /zenn
+                        - img "Zenn公式" [ref=e2615]
+                      - link "Zenn公式" [ref=e2616] [cursor=pointer]:
+                        - /url: /zenn
+                      - link "2024年10月1日 9時23分" [ref=e2617] [cursor=pointer]:
+                        - /url: "#comment-02a1edaf986c82"
+                        - tooltip "2024年10月1日 9時23分" [ref=e2618]: 2024/10/01に更新 2024年10月1日 9時23分
+                      - button "メニューを開く" [ref=e2620] [cursor=pointer]:
+                        - img [ref=e2621]
+                    - generic [ref=e2623]:
+                      - generic [ref=e2624]:
+                        - paragraph [ref=e2625]: コメントが増えてきたため、マークダウンに関する質問や要望などは今後下記のリンク先からお願いします。
+                        - paragraph [ref=e2626]:
+                          - iframe [ref=e2628]:
+                            
+                      - generic [ref=e2629]:
+                        - generic [ref=e2630]:
+                          - button "いいね" [ref=e2631] [cursor=pointer]:
+                            - img [ref=e2632]
+                          - generic [ref=e2646]: "5"
+                        - button "コメント 1" [ref=e2647] [cursor=pointer]:
+                          - img "コメント" [ref=e2648]
+                          - generic [ref=e2650]: "1"
+                    - article [ref=e2652]:
+                      - generic [ref=e2653]:
+                        - link "Zenn公式" [ref=e2654] [cursor=pointer]:
+                          - /url: /zenn
+                          - img "Zenn公式" [ref=e2655]
+                        - link "Zenn公式" [ref=e2656] [cursor=pointer]:
+                          - /url: /zenn
+                        - link "2024年10月1日 9時23分" [ref=e2657] [cursor=pointer]:
+                          - /url: "#comment-633456223b5ccf"
+                          - tooltip "2024年10月1日 9時23分" [ref=e2658]: 2024/10/01 2024年10月1日 9時23分
+                        - button "メニューを開く" [ref=e2660] [cursor=pointer]:
+                          - img [ref=e2661]
+                      - generic [ref=e2663]:
+                        - paragraph [ref=e2665]: URLを修正しました。ご指摘ありがとうございます。
+                        - button "いいね" [ref=e2668] [cursor=pointer]:
+                          - img [ref=e2669]
+                    - button "返信を追加" [ref=e2684] [cursor=pointer]
+                  - article [ref=e2686]:
+                    - generic [ref=e2687]:
+                      - link "daichi takezawa" [ref=e2688] [cursor=pointer]:
+                        - /url: /daichi_gamedev
+                        - img "daichi takezawa" [ref=e2689]
+                      - link "daichi takezawa" [ref=e2690] [cursor=pointer]:
+                        - /url: /daichi_gamedev
+                      - link "2021年10月1日 16時57分" [ref=e2691] [cursor=pointer]:
+                        - /url: "#comment-702da18c22dbc4"
+                        - tooltip "2021年10月1日 16時57分" [ref=e2692]: 2021/10/01に更新 2021年10月1日 16時57分
+                      - button "メニューを開く" [ref=e2694] [cursor=pointer]:
+                        - img [ref=e2695]
+                    - generic [ref=e2697]:
+                      - generic [ref=e2698]:
+                        - paragraph [ref=e2699]: MarkDownで非表示にする方法です。ここにも一応貼らさせてもらいます🙇‍♂️
+                        - paragraph [ref=e2700]: <!-- 非表示コメントをここに書きます。このxxxを全部消すと非表示になります -xxx->
+                        - paragraph [ref=e2701]: ただし改行すると無効になってしまいます。改行された複数行を非表示する方法を探しまくったのですが、今の所無い？ようです。なので複数行の場合は改行せずに使うしかありません。
+                      - generic [ref=e2702]:
+                        - generic [ref=e2703]:
+                          - button "いいね" [ref=e2704] [cursor=pointer]:
+                            - img [ref=e2705]
+                          - generic [ref=e2719]: "3"
+                        - button "コメント 返信" [ref=e2720] [cursor=pointer]:
+                          - img "コメント" [ref=e2721]
+                          - generic [ref=e2723]: 返信
+                    - button "返信を追加" [ref=e2725] [cursor=pointer]
+                  - article [ref=e2727]:
+                    - generic [ref=e2728]:
+                      - link "ともキング" [ref=e2729] [cursor=pointer]:
+                        - /url: /2478
+                        - img "ともキング" [ref=e2730]
+                      - link "ともキング" [ref=e2731] [cursor=pointer]:
+                        - /url: /2478
+                      - link "2023年6月8日 17時43分" [ref=e2732] [cursor=pointer]:
+                        - /url: "#comment-e0ec84fedd4471"
+                        - tooltip "2023年6月8日 17時43分" [ref=e2733]: 2023/06/08 2023年6月8日 17時43分
+                      - button "メニューを開く" [ref=e2735] [cursor=pointer]:
+                        - img [ref=e2736]
+                    - generic [ref=e2738]:
+                      - paragraph [ref=e2740]:
+                        - text: とても丁寧に書かれていて分かりやすかったです！
+                        - text: とっても助かりました。ありがとうございました😊
+                      - generic [ref=e2741]:
+                        - generic [ref=e2742]:
+                          - button "いいね" [ref=e2743] [cursor=pointer]:
+                            - img [ref=e2744]
+                          - generic [ref=e2758]: "1"
+                        - button "コメント 返信" [ref=e2759] [cursor=pointer]:
+                          - img "コメント" [ref=e2760]
+                          - generic [ref=e2762]: 返信
+                    - button "返信を追加" [ref=e2764] [cursor=pointer]
+                  - article [ref=e2766]:
+                    - generic [ref=e2767]:
+                      - link "ととぴろnote" [ref=e2768] [cursor=pointer]:
+                        - /url: /totopironote
+                        - img "ととぴろnote" [ref=e2769]
+                      - link "ととぴろnote" [ref=e2770] [cursor=pointer]:
+                        - /url: /totopironote
+                      - link "2023年10月30日 23時46分" [ref=e2771] [cursor=pointer]:
+                        - /url: "#comment-3aeebfcc7da945"
+                        - tooltip "2023年10月30日 23時46分" [ref=e2772]: 2023/10/30 2023年10月30日 23時46分
+                      - button "メニューを開く" [ref=e2774] [cursor=pointer]:
+                        - img [ref=e2775]
+                    - generic [ref=e2777]:
+                      - paragraph [ref=e2779]: 記法について質問です。私は数学の記事を書いているのですが、定理などを枠で囲む方法はございますか？Notionだとcalloutにあたるやつです。
+                      - generic [ref=e2780]:
+                        - generic [ref=e2781]:
+                          - button "いいね" [ref=e2782] [cursor=pointer]:
+                            - img [ref=e2783]
+                          - generic [ref=e2797]: "2"
+                        - button "コメント 2" [ref=e2798] [cursor=pointer]:
+                          - img "コメント" [ref=e2799]
+                          - generic [ref=e2801]: "2"
+                    - generic [ref=e2802]:
+                      - article [ref=e2803]:
+                        - generic [ref=e2804]:
+                          - link "bisque" [ref=e2805] [cursor=pointer]:
+                            - /url: /bisque
+                            - img "bisque" [ref=e2806]
+                          - link "bisque" [ref=e2807] [cursor=pointer]:
+                            - /url: /bisque
+                          - link "2023年10月31日 9時34分" [ref=e2808] [cursor=pointer]:
+                            - /url: "#comment-bb964e51a20e40"
+                            - tooltip "2023年10月31日 9時34分" [ref=e2809]: 2023/10/31に更新 2023年10月31日 9時34分
+                          - button "メニューを開く" [ref=e2811] [cursor=pointer]:
+                            - img [ref=e2812]
+                        - generic [ref=e2814]:
+                          - generic [ref=e2815]:
+                            - paragraph [ref=e2816]:
+                              - text: Markdownで表現できることとしては、基本的にはこのページで紹介されているものが全てになります。
+                              - text: 少し調べたところ、KaTeXだと
+                              - code [ref=e2817]: boxed
+                              - text: を使うと枠を付けられるようですが、いかがでしょうか？
+                              - iframe [ref=e2819]:
+                                - generic [active] [ref=f14e1]:
+                                  - link "https://katex.org/docs/supported.html#annotation katex.org favicon image katex.org" [ref=f14e5] [cursor=pointer]:
+                                    - /url: https://katex.org/docs/supported.html#annotation
+                                    - generic [ref=f14e6]:
+                                      - heading "https://katex.org/docs/supported.html#annotation" [level=1] [ref=f14e7]
+                                      - generic [ref=f14e8]:
+                                        - img "katex.org favicon image" [ref=f14e9]
+                                        - text: katex.org
+                                  - alert [ref=f14e10]
+                            - generic [ref=e2821]:
+                              - code [ref=e2823]:
+                                - generic [ref=e2824]: $$
+                                - generic [ref=e2825]: "\\boxed{\\pi=\\frac c d}"
+                                - generic [ref=e2826]: $$
+                              - button "クリップボードにコピー" [ref=e2827] [cursor=pointer]:
+                                - img [ref=e2828]
+                              - button "右端で折り返す" [ref=e2829] [cursor=pointer]:
+                                - img [ref=e2830]
+                            - generic [ref=e2835]:
+                              - math [ref=e2837]:
+                                - generic [ref=e2844]:
+                                  - generic [ref=e2845]: π
+                                  - generic [ref=e2846]: =
+                                  - generic [ref=e2847]:
+                                    - generic [ref=e2848]: c
+                                    - generic [ref=e2849]: d
+                              - generic [ref=e2858]:
+                                - text: π =
+                                - generic [ref=e2863]:
+                                  - generic [ref=e2864]: d
+                                  - generic [ref=e2866]: c
+                          - generic [ref=e2875]:
+                            - button "いいね" [ref=e2876] [cursor=pointer]:
+                              - img [ref=e2877]
+                            - generic [ref=e2891]: "2"
+                      - article [ref=e2892]:
+                        - generic [ref=e2893]:
+                          - link "ととぴろnote" [ref=e2894] [cursor=pointer]:
+                            - /url: /totopironote
+                            - img "ととぴろnote" [ref=e2895]
+                          - link "ととぴろnote" [ref=e2896] [cursor=pointer]:
+                            - /url: /totopironote
+                          - link "2023年10月31日 9時50分" [ref=e2897] [cursor=pointer]:
+                            - /url: "#comment-c4301616c9f01c"
+                            - tooltip "2023年10月31日 9時50分" [ref=e2898]: 2023/10/31 2023年10月31日 9時50分
+                          - button "メニューを開く" [ref=e2900] [cursor=pointer]:
+                            - img [ref=e2901]
+                        - generic [ref=e2903]:
+                          - paragraph [ref=e2905]: ありがとうございます。試してみます。いつかNotionみたいに楽に書けたらなーって思います。
+                          - button "いいね" [ref=e2908] [cursor=pointer]:
+                            - img [ref=e2909]
+                    - button "返信を追加" [ref=e2924] [cursor=pointer]
+                  - article [ref=e2926]:
+                    - generic [ref=e2927]:
+                      - link "Ken Okabe" [ref=e2928] [cursor=pointer]:
+                        - /url: /ken_okabe
+                        - img "Ken Okabe" [ref=e2929]
+                      - link "Ken Okabe" [ref=e2930] [cursor=pointer]:
+                        - /url: /ken_okabe
+                      - link "2023年11月5日 3時47分" [ref=e2931] [cursor=pointer]:
+                        - /url: "#comment-eb6a99f1e066f5"
+                        - tooltip "2023年11月5日 3時47分" [ref=e2932]: 2023/11/05に更新 2023年11月5日 3時47分
+                      - button "メニューを開く" [ref=e2934] [cursor=pointer]:
+                        - img [ref=e2935]
+                    - generic [ref=e2937]:
+                      - generic [ref=e2938]:
+                        - paragraph [ref=e2939]: "#Zenn独自の記法 という方言はBadPracticeでしかない。"
+                        - paragraph [ref=e2940]: Markdownは標準的な仕様がないために、これまでこのような好き勝手がまかりとおり、それぞれの実装者がセキュリティに優れていると信じ、各自勝手な文法を乱立させたために混乱が進み、その結果、CommonMarkのようなもので標準化しようという動きもある。
+                        - paragraph [ref=e2941]: ここの他のコメントも全て、独自方言による混乱でしかないし、GitHubのMarkdown（GFM）で、単に標準的なHTMLのIMGタグで書けていたものが、Zennでは、
+                        - generic [ref=e2943]:
+                          - code [ref=e2945]:
+                            - generic [ref=e2946]: "![altテキスト](https://画像のURL =250x)"
+                          - button "クリップボードにコピー" [ref=e2947] [cursor=pointer]:
+                            - img [ref=e2948]
+                          - button "右端で折り返す" [ref=e2949] [cursor=pointer]:
+                            - img [ref=e2950]
+                        - paragraph [ref=e2951]: という適当な思いつきであるとしか思えない独自記法にされて、これに適応するためにすべてのMarkdownを書き直すのにどれだけ（無駄な）手間暇がかかるか想像してみてほしい。
+                      - generic [ref=e2952]:
+                        - generic [ref=e2953]:
+                          - button "いいね" [ref=e2954] [cursor=pointer]:
+                            - img [ref=e2955]
+                          - generic [ref=e2969]: "5"
+                        - button "コメント 1" [ref=e2970] [cursor=pointer]:
+                          - img "コメント" [ref=e2971]
+                          - generic [ref=e2973]: "1"
+                    - article [ref=e2975]:
+                      - generic [ref=e2976]:
+                        - link "aaaa1597" [ref=e2977] [cursor=pointer]:
+                          - /url: /rg687076
+                          - img "aaaa1597" [ref=e2978]
+                        - link "aaaa1597" [ref=e2979] [cursor=pointer]:
+                          - /url: /rg687076
+                        - link "2025年8月23日 11時29分" [ref=e2980] [cursor=pointer]:
+                          - /url: "#comment-a39dfaafe1b178"
+                          - tooltip "2025年8月23日 11時29分" [ref=e2981]: 2025/08/23に更新 2025年8月23日 11時29分
+                        - button "メニューを開く" [ref=e2983] [cursor=pointer]:
+                          - img [ref=e2984]
+                      - generic [ref=e2986]:
+                        - paragraph [ref=e2988]: 今まさにそのめんどくささに直面してます。
+                        - button "いいね" [ref=e2991] [cursor=pointer]:
+                          - img [ref=e2992]
+                    - button "返信を追加" [ref=e3007] [cursor=pointer]
+                  - article [ref=e3009]:
+                    - generic [ref=e3010]:
+                      - link "koji0705" [ref=e3011] [cursor=pointer]:
+                        - /url: /kouji0705
+                        - img "koji0705" [ref=e3012]
+                      - link "koji0705" [ref=e3013] [cursor=pointer]:
+                        - /url: /kouji0705
+                      - link "2024年2月12日 18時26分" [ref=e3014] [cursor=pointer]:
+                        - /url: "#comment-6799e5d3c8e859"
+                        - tooltip "2024年2月12日 18時26分" [ref=e3015]: 2024/02/12 2024年2月12日 18時26分
+                      - button "メニューを開く" [ref=e3017] [cursor=pointer]:
+                        - img [ref=e3018]
+                    - generic [ref=e3020]:
+                      - paragraph [ref=e3022]:
+                        - text: MarkdownとPreviewは同時に見る方法はないのでしょうか？？
+                        - text: ブラウザで執筆する場合、同時に見える方が書きやすく。
+                      - generic [ref=e3023]:
+                        - generic [ref=e3024]:
+                          - button "いいね" [ref=e3025] [cursor=pointer]:
+                            - img [ref=e3026]
+                          - generic [ref=e3040]: "1"
+                        - button "コメント 1" [ref=e3041] [cursor=pointer]:
+                          - img "コメント" [ref=e3042]
+                          - generic [ref=e3044]: "1"
+                    - article [ref=e3046]:
+                      - generic [ref=e3047]:
+                        - link "Zenn公式" [ref=e3048] [cursor=pointer]:
+                          - /url: /zenn
+                          - img "Zenn公式" [ref=e3049]
+                        - link "Zenn公式" [ref=e3050] [cursor=pointer]:
+                          - /url: /zenn
+                        - link "2024年2月13日 11時2分" [ref=e3051] [cursor=pointer]:
+                          - /url: "#comment-938dd420d1cb79"
+                          - tooltip "2024年2月13日 11時2分" [ref=e3052]: 2024/02/13 2024年2月13日 11時2分
+                        - button "メニューを開く" [ref=e3054] [cursor=pointer]:
+                          - img [ref=e3055]
+                      - generic [ref=e3057]:
+                        - generic [ref=e3058]:
+                          - paragraph [ref=e3059]:
+                            - text: ブラウザのエディターでリアルタイムプレビューはできません。コンテンツをGitHubで管理していただく形になってしまいますが、
+                            - code [ref=e3060]: github.dev
+                            - text: でブラウザから編集することも可能です。ご検討いただけますと幸いです。
+                          - paragraph [ref=e3061]:
+                            - iframe [ref=e3063]:
+                              - generic [active] [ref=f15e1]:
+                                - link "ZennのVSCode Web拡張(β版)をリリースしました | What's New in Zenn Zenn のコンテンツを github.dev でプレビューできる VSCode Web拡張をリリースしました 🎉 info.zenn.dev favicon image info.zenn.dev info.zenn.dev thumbnail image" [ref=f15e5] [cursor=pointer]:
+                                  - /url: https://info.zenn.dev/release-vscode-extension
+                                  - generic [ref=f15e6]:
+                                    - heading "ZennのVSCode Web拡張(β版)をリリースしました | What's New in Zenn" [level=1] [ref=f15e7]
+                                    - generic [ref=f15e8]: Zenn のコンテンツを github.dev でプレビューできる VSCode Web拡張をリリースしました 🎉
+                                    - generic [ref=f15e9]:
+                                      - img "info.zenn.dev favicon image" [ref=f15e10]
+                                      - text: info.zenn.dev
+                                  - img "info.zenn.dev thumbnail image" [ref=f15e12]
+                                - alert [ref=f15e13]
+                        - generic [ref=e3065]:
+                          - button "いいね" [ref=e3066] [cursor=pointer]:
+                            - img [ref=e3067]
+                          - generic [ref=e3081]: "1"
+                    - button "返信を追加" [ref=e3083] [cursor=pointer]
+                  - article [ref=e3085]:
+                    - generic [ref=e3086]:
+                      - generic [ref=e3087]: Hidden comment
+                      - button "開く" [ref=e3088] [cursor=pointer]:
+                        - img [ref=e3089]
+                  - article [ref=e3092]:
+                    - generic [ref=e3093]:
+                      - link "TomoDictionary" [ref=e3094] [cursor=pointer]:
+                        - /url: /tomotechblog
+                        - img "TomoDictionary" [ref=e3095]
+                      - link "TomoDictionary" [ref=e3096] [cursor=pointer]:
+                        - /url: /tomotechblog
+                      - link "2024年10月10日 17時3分" [ref=e3097] [cursor=pointer]:
+                        - /url: "#comment-d8cf514e92a2e6"
+                        - tooltip "2024年10月10日 17時3分" [ref=e3098]: 2024/10/10に更新 2024年10月10日 17時3分
+                      - button "メニューを開く" [ref=e3100] [cursor=pointer]:
+                        - img [ref=e3101]
+                    - generic [ref=e3103]:
+                      - paragraph [ref=e3105]:
+                        - text: 画像に影をつけるのはcssで記述でしょうか？？
+                        - text: "![] (/images/画像) に直接styleを組み込む事は可能でしょうか？"
+                        - text: 以下のurlの画像の影です。
+                        - text: 2. ローカルのテキストエディター + CLI
+                        - iframe [ref=e3107]:
+                          - generic [active] [ref=f16e1]:
+                            - link "Zennの2種類の執筆方法について Zenn公式さんによる記事 zenn.dev favicon image zenn.dev zenn.dev thumbnail image" [ref=f16e5] [cursor=pointer]:
+                              - /url: https://zenn.dev/zenn/articles/editor-guide
+                              - generic [ref=f16e6]:
+                                - heading "Zennの2種類の執筆方法について" [level=1] [ref=f16e7]
+                                - generic [ref=f16e8]: Zenn公式さんによる記事
+                                - generic [ref=f16e9]:
+                                  - img "zenn.dev favicon image" [ref=f16e10]
+                                  - text: zenn.dev
+                              - img "zenn.dev thumbnail image" [ref=f16e12]
+                            - alert [ref=f16e13]
+                      - generic [ref=e3108]:
+                        - button "いいね" [ref=e3110] [cursor=pointer]:
+                          - img [ref=e3111]
+                        - button "コメント 2" [ref=e3125] [cursor=pointer]:
+                          - img "コメント" [ref=e3126]
+                          - generic [ref=e3128]: "2"
+                    - generic [ref=e3129]:
+                      - article [ref=e3130]:
+                        - generic [ref=e3131]:
+                          - link "Zenn公式" [ref=e3132] [cursor=pointer]:
+                            - /url: /zenn
+                            - img "Zenn公式" [ref=e3133]
+                          - link "Zenn公式" [ref=e3134] [cursor=pointer]:
+                            - /url: /zenn
+                          - link "2024年10月11日 9時36分" [ref=e3135] [cursor=pointer]:
+                            - /url: "#comment-968b3d44225a16"
+                            - tooltip "2024年10月11日 9時36分" [ref=e3136]: 2024/10/11 2024年10月11日 9時36分
+                          - button "メニューを開く" [ref=e3138] [cursor=pointer]:
+                            - img [ref=e3139]
+                        - generic [ref=e3141]:
+                          - generic [ref=e3142]:
+                            - paragraph [ref=e3143]: いいえ、画像に影をつける機能はありません。
+                            - paragraph [ref=e3144]:
+                              - text: ご質問の画像につきましては、スクリーンショットに影をつける加工をした画像となっております。
+                              - link "https://storage.googleapis.com/zenn-user-upload/n0tufad6ruthuy0j2hxhffg87hpz" [ref=e3145] [cursor=pointer]:
+                                - /url: https://storage.googleapis.com/zenn-user-upload/n0tufad6ruthuy0j2hxhffg87hpz
+                          - generic [ref=e3147]:
+                            - button "いいね" [ref=e3148] [cursor=pointer]:
+                              - img [ref=e3149]
+                            - generic [ref=e3163]: "1"
+                      - article [ref=e3164]:
+                        - generic [ref=e3165]:
+                          - link "TomoDictionary" [ref=e3166] [cursor=pointer]:
+                            - /url: /tomotechblog
+                            - img "TomoDictionary" [ref=e3167]
+                          - link "TomoDictionary" [ref=e3168] [cursor=pointer]:
+                            - /url: /tomotechblog
+                          - link "2024年10月15日 11時37分" [ref=e3169] [cursor=pointer]:
+                            - /url: "#comment-3a457526561b71"
+                            - tooltip "2024年10月15日 11時37分" [ref=e3170]: 2024/10/15 2024年10月15日 11時37分
+                          - button "メニューを開く" [ref=e3172] [cursor=pointer]:
+                            - img [ref=e3173]
+                        - generic [ref=e3175]:
+                          - paragraph [ref=e3177]: ありがとうございます。
+                          - button "いいね" [ref=e3180] [cursor=pointer]:
+                            - img [ref=e3181]
+                    - button "返信を追加" [ref=e3196] [cursor=pointer]
+                  - article [ref=e3198]:
+                    - generic [ref=e3199]:
+                      - link "yuhr" [ref=e3200] [cursor=pointer]:
+                        - /url: /yuhr
+                        - img "yuhr" [ref=e3201]
+                      - link "yuhr" [ref=e3202] [cursor=pointer]:
+                        - /url: /yuhr
+                      - link "2024年12月28日 4時15分" [ref=e3203] [cursor=pointer]:
+                        - /url: "#comment-5ef0574eda981d"
+                        - tooltip "2024年12月28日 4時15分" [ref=e3204]: 2024/12/28 2024年12月28日 4時15分
+                      - button "メニューを開く" [ref=e3206] [cursor=pointer]:
+                        - img [ref=e3207]
+                    - generic [ref=e3209]:
+                      - paragraph [ref=e3211]:
+                        - text: コードブロックのファイル名として
+                        - code [ref=e3212]: ":"
+                        - text: を含む文字列を使いたい場合はどのようにすればよいでしょうか？
+                      - generic [ref=e3213]:
+                        - button "いいね" [ref=e3215] [cursor=pointer]:
+                          - img [ref=e3216]
+                        - button "コメント 1" [ref=e3230] [cursor=pointer]:
+                          - img "コメント" [ref=e3231]
+                          - generic [ref=e3233]: "1"
+                    - article [ref=e3235]:
+                      - generic [ref=e3236]:
+                        - link "Zenn公式" [ref=e3237] [cursor=pointer]:
+                          - /url: /zenn
+                          - img "Zenn公式" [ref=e3238]
+                        - link "Zenn公式" [ref=e3239] [cursor=pointer]:
+                          - /url: /zenn
+                        - link "2025年1月7日 11時5分" [ref=e3240] [cursor=pointer]:
+                          - /url: "#comment-798e7e7224dbc7"
+                          - tooltip "2025年1月7日 11時5分" [ref=e3241]: 2025/01/07 2025年1月7日 11時5分
+                        - button "メニューを開く" [ref=e3243] [cursor=pointer]:
+                          - img [ref=e3244]
+                      - generic [ref=e3246]:
+                        - paragraph [ref=e3248]:
+                          - text: 区切り文字に
+                          - code [ref=e3249]: ":"
+                          - text: を指定しているため、現状ファイル名には入れられません。機能改善としてこちらで管理させてください。
+                          - iframe [ref=e3251]:
+                            - generic [active] [ref=f17e1]:
+                              - 'link "コードフェンスのファイル名で コロンを入れられるように · Issue #517 · zenn-dev/zenn-editor 区切り文字に指定しており、とくにエスケープもしていないため、コロンを含むファイル名が表現できない。 https://github.com/zenn-dev/zenn-editor/blob/main/ github.com favicon image github.com github.com thumbnail image" [ref=f17e5] [cursor=pointer]':
+                                - /url: https://github.com/zenn-dev/zenn-editor/issues/517
+                                - generic [ref=f17e6]:
+                                  - 'heading "コードフェンスのファイル名で コロンを入れられるように · Issue #517 · zenn-dev/zenn-editor" [level=1] [ref=f17e7]'
+                                  - generic [ref=f17e8]: 区切り文字に指定しており、とくにエスケープもしていないため、コロンを含むファイル名が表現できない。 https://github.com/zenn-dev/zenn-editor/blob/main/
+                                  - generic [ref=f17e9]:
+                                    - img "github.com favicon image" [ref=f17e10]
+                                    - text: github.com
+                                - img "github.com thumbnail image" [ref=f17e12]
+                              - alert [ref=f17e13]
+                        - generic [ref=e3253]:
+                          - button "いいね" [ref=e3254] [cursor=pointer]:
+                            - img [ref=e3255]
+                          - generic [ref=e3269]: "1"
+                    - button "返信を追加" [ref=e3271] [cursor=pointer]
+                  - article [ref=e3273]:
+                    - generic [ref=e3274]:
+                      - generic [ref=e3275]: Hidden comment
+                      - button "開く" [ref=e3276] [cursor=pointer]:
+                        - img [ref=e3277]
+                  - article [ref=e3280]:
+                    - generic [ref=e3281]:
+                      - generic [ref=e3282]: Hidden comment
+                      - button "開く" [ref=e3283] [cursor=pointer]:
+                        - img [ref=e3284]
+                  - article [ref=e3287]:
+                    - generic [ref=e3288]:
+                      - generic [ref=e3289]: Hidden comment
+                      - button "開く" [ref=e3290] [cursor=pointer]:
+                        - img [ref=e3291]
+              - generic [ref=e3294]:
+                - text: ログインするとコメントできます
+                - button "Login" [ref=e3296] [cursor=pointer]
+          - complementary [ref=e3297]:
+            - generic [ref=e3298]:
+              - generic [ref=e3300]:
+                - generic [ref=e3301]:
+                  - link "Zenn公式" [ref=e3302] [cursor=pointer]:
+                    - /url: /zenn
+                    - img "Zenn公式" [ref=e3303]
+                  - generic [ref=e3304]:
+                    - link "Zenn公式" [ref=e3305] [cursor=pointer]:
+                      - /url: /zenn
+                    - generic [ref=e3306]:
+                      - button "フォロー" [ref=e3307] [cursor=pointer]
+                      - tooltip "@zenn-dev" [ref=e3308] [cursor=pointer]:
+                        - img "GitHub" [ref=e3309]
+                        - text: "@zenn-dev"
+                      - tooltip "@zenn_dev" [ref=e3311] [cursor=pointer]:
+                        - img "X(Twitter)" [ref=e3312]
+                        - text: "@zenn_dev"
+                - paragraph [ref=e3316]: Zennの使い方や開発状況を発信する公式アカウントです。
+              - generic [ref=e3319]:
+                - generic [ref=e3320]:
+                  - generic [ref=e3321]: 目次
+                  - list [ref=e3323]:
+                    - listitem [ref=e3324]:
+                      - link "見出し" [ref=e3325] [cursor=pointer]:
+                        - /url: "#%E8%A6%8B%E5%87%BA%E3%81%97"
+                    - listitem [ref=e3326]:
+                      - link "リスト" [ref=e3327] [cursor=pointer]:
+                        - /url: "#%E3%83%AA%E3%82%B9%E3%83%88"
+                      - list [ref=e3328]:
+                        - listitem [ref=e3329]:
+                          - link "番号付きリスト" [ref=e3330] [cursor=pointer]:
+                            - /url: "#%E7%95%AA%E5%8F%B7%E4%BB%98%E3%81%8D%E3%83%AA%E3%82%B9%E3%83%88"
+                    - listitem [ref=e3331]:
+                      - link "テキストリンク" [ref=e3332] [cursor=pointer]:
+                        - /url: "#%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%83%AA%E3%83%B3%E3%82%AF"
+                    - listitem [ref=e3333]:
+                      - link "画像" [ref=e3334] [cursor=pointer]:
+                        - /url: "#%E7%94%BB%E5%83%8F"
+                      - list [ref=e3335]:
+                        - listitem [ref=e3336]:
+                          - link "画像の横幅を指定する" [ref=e3337] [cursor=pointer]:
+                            - /url: "#%E7%94%BB%E5%83%8F%E3%81%AE%E6%A8%AA%E5%B9%85%E3%82%92%E6%8C%87%E5%AE%9A%E3%81%99%E3%82%8B"
+                        - listitem [ref=e3338]:
+                          - link "Altテキストを指定する" [ref=e3339] [cursor=pointer]:
+                            - /url: "#alt%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%82%92%E6%8C%87%E5%AE%9A%E3%81%99%E3%82%8B"
+                        - listitem [ref=e3340]:
+                          - link "キャプションをつける" [ref=e3341] [cursor=pointer]:
+                            - /url: "#%E3%82%AD%E3%83%A3%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%82%92%E3%81%A4%E3%81%91%E3%82%8B"
+                        - listitem [ref=e3342]:
+                          - link "画像にリンクを貼る" [ref=e3343] [cursor=pointer]:
+                            - /url: "#%E7%94%BB%E5%83%8F%E3%81%AB%E3%83%AA%E3%83%B3%E3%82%AF%E3%82%92%E8%B2%BC%E3%82%8B"
+                    - listitem [ref=e3344]:
+                      - link "テーブル" [ref=e3345] [cursor=pointer]:
+                        - /url: "#%E3%83%86%E3%83%BC%E3%83%96%E3%83%AB"
+                    - listitem [ref=e3346]:
+                      - link "コードブロック" [ref=e3347] [cursor=pointer]:
+                        - /url: "#%E3%82%B3%E3%83%BC%E3%83%89%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF"
+                      - list [ref=e3348]:
+                        - listitem [ref=e3349]:
+                          - link "ファイル名を表示する" [ref=e3350] [cursor=pointer]:
+                            - /url: "#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D%E3%82%92%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B"
+                        - listitem [ref=e3351]:
+                          - link "diff のシンタックスハイライト" [ref=e3352] [cursor=pointer]:
+                            - /url: "#diff-%E3%81%AE%E3%82%B7%E3%83%B3%E3%82%BF%E3%83%83%E3%82%AF%E3%82%B9%E3%83%8F%E3%82%A4%E3%83%A9%E3%82%A4%E3%83%88"
+                    - listitem [ref=e3353]:
+                      - link "数式" [ref=e3354] [cursor=pointer]:
+                        - /url: "#%E6%95%B0%E5%BC%8F"
+                      - list [ref=e3355]:
+                        - listitem [ref=e3356]:
+                          - link "数式のブロックを挿入する" [ref=e3357] [cursor=pointer]:
+                            - /url: "#%E6%95%B0%E5%BC%8F%E3%81%AE%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF%E3%82%92%E6%8C%BF%E5%85%A5%E3%81%99%E3%82%8B"
+                        - listitem [ref=e3358]:
+                          - link "インラインで数式を挿入する" [ref=e3359] [cursor=pointer]:
+                            - /url: "#%E3%82%A4%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%81%A7%E6%95%B0%E5%BC%8F%E3%82%92%E6%8C%BF%E5%85%A5%E3%81%99%E3%82%8B"
+                    - listitem [ref=e3360]:
+                      - link "引用" [ref=e3361] [cursor=pointer]:
+                        - /url: "#%E5%BC%95%E7%94%A8"
+                    - listitem [ref=e3362]:
+                      - link "脚注" [ref=e3363] [cursor=pointer]:
+                        - /url: "#%E8%84%9A%E6%B3%A8"
+                    - listitem [ref=e3364]:
+                      - link "区切り線" [ref=e3365] [cursor=pointer]:
+                        - /url: "#%E5%8C%BA%E5%88%87%E3%82%8A%E7%B7%9A"
+                    - listitem [ref=e3366]:
+                      - link "インラインスタイル" [ref=e3367] [cursor=pointer]:
+                        - /url: "#%E3%82%A4%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%82%A4%E3%83%AB"
+                      - list [ref=e3368]:
+                        - listitem [ref=e3369]:
+                          - link "インラインのコメント" [ref=e3370] [cursor=pointer]:
+                            - /url: "#%E3%82%A4%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%81%AE%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88"
+                    - listitem [ref=e3371]:
+                      - link "Zenn 独自の記法" [ref=e3372] [cursor=pointer]:
+                        - /url: "#zenn-%E7%8B%AC%E8%87%AA%E3%81%AE%E8%A8%98%E6%B3%95"
+                      - list [ref=e3373]:
+                        - listitem [ref=e3374]:
+                          - link "メッセージ" [ref=e3375] [cursor=pointer]:
+                            - /url: "#%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8"
+                        - listitem [ref=e3376]:
+                          - link "アコーディオン（トグル）" [ref=e3377] [cursor=pointer]:
+                            - /url: "#%E3%82%A2%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%83%B3%EF%BC%88%E3%83%88%E3%82%B0%E3%83%AB%EF%BC%89"
+                    - listitem [ref=e3378]:
+                      - link "コンテンツの埋め込み" [ref=e3379] [cursor=pointer]:
+                        - /url: "#%E3%82%B3%E3%83%B3%E3%83%86%E3%83%B3%E3%83%84%E3%81%AE%E5%9F%8B%E3%82%81%E8%BE%BC%E3%81%BF"
+                      - list [ref=e3380]:
+                        - listitem [ref=e3381]:
+                          - link "リンクカード" [ref=e3382] [cursor=pointer]:
+                            - /url: "#%E3%83%AA%E3%83%B3%E3%82%AF%E3%82%AB%E3%83%BC%E3%83%89"
+                        - listitem [ref=e3383]:
+                          - link "X（Twitter）のポスト（ツイート）" [ref=e3384] [cursor=pointer]:
+                            - /url: "#x%EF%BC%88twitter%EF%BC%89%E3%81%AE%E3%83%9D%E3%82%B9%E3%83%88%EF%BC%88%E3%83%84%E3%82%A4%E3%83%BC%E3%83%88%EF%BC%89"
+                        - listitem [ref=e3385]:
+                          - link "YouTube" [ref=e3386] [cursor=pointer]:
+                            - /url: "#youtube"
+                        - listitem [ref=e3387]:
+                          - link "GitHub" [ref=e3388] [cursor=pointer]:
+                            - /url: "#github"
+                        - listitem [ref=e3389]:
+                          - link "GitHub Gist" [ref=e3390] [cursor=pointer]:
+                            - /url: "#github-gist"
+                        - listitem [ref=e3391]:
+                          - link "CodePen" [ref=e3392] [cursor=pointer]:
+                            - /url: "#codepen"
+                        - listitem [ref=e3393]:
+                          - link "SlideShare" [ref=e3394] [cursor=pointer]:
+                            - /url: "#slideshare"
+                        - listitem [ref=e3395]:
+                          - link "SpeakerDeck" [ref=e3396] [cursor=pointer]:
+                            - /url: "#speakerdeck"
+                        - listitem [ref=e3397]:
+                          - link "Docswell" [ref=e3398] [cursor=pointer]:
+                            - /url: "#docswell"
+                        - listitem [ref=e3399]:
+                          - link "JSFiddle" [ref=e3400] [cursor=pointer]:
+                            - /url: "#jsfiddle"
+                        - listitem [ref=e3401]:
+                          - link "CodeSandbox" [ref=e3402] [cursor=pointer]:
+                            - /url: "#codesandbox"
+                        - listitem [ref=e3403]:
+                          - link "StackBlitz" [ref=e3404] [cursor=pointer]:
+                            - /url: "#stackblitz"
+                        - listitem [ref=e3405]:
+                          - link "Figma" [ref=e3406] [cursor=pointer]:
+                            - /url: "#figma"
+                        - listitem [ref=e3407]:
+                          - link "オンラインエディターではモーダルから挿入可能" [ref=e3408] [cursor=pointer]:
+                            - /url: "#%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%82%A8%E3%83%87%E3%82%A3%E3%82%BF%E3%83%BC%E3%81%A7%E3%81%AF%E3%83%A2%E3%83%BC%E3%83%80%E3%83%AB%E3%81%8B%E3%82%89%E6%8C%BF%E5%85%A5%E5%8F%AF%E8%83%BD"
+                        - listitem [ref=e3409]:
+                          - link "その他の埋め込み可能なコンテンツ" [ref=e3410] [cursor=pointer]:
+                            - /url: "#%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE%E5%9F%8B%E3%82%81%E8%BE%BC%E3%81%BF%E5%8F%AF%E8%83%BD%E3%81%AA%E3%82%B3%E3%83%B3%E3%83%86%E3%83%B3%E3%83%84"
+                    - listitem [ref=e3411]:
+                      - link "ダイアグラム" [ref=e3412] [cursor=pointer]:
+                        - /url: "#%E3%83%80%E3%82%A4%E3%82%A2%E3%82%B0%E3%83%A9%E3%83%A0"
+                      - list [ref=e3413]:
+                        - listitem [ref=e3414]:
+                          - link "制限事項" [ref=e3415] [cursor=pointer]:
+                            - /url: "#%E5%88%B6%E9%99%90%E4%BA%8B%E9%A0%85"
+                    - listitem [ref=e3416]:
+                      - link "入力補完" [ref=e3417] [cursor=pointer]:
+                        - /url: "#%E5%85%A5%E5%8A%9B%E8%A3%9C%E5%AE%8C"
+                      - list [ref=e3418]:
+                        - listitem [ref=e3419]:
+                          - link "絵文字（Emoji）" [ref=e3420] [cursor=pointer]:
+                            - /url: "#%E7%B5%B5%E6%96%87%E5%AD%97%EF%BC%88emoji%EF%BC%89"
+                - generic [ref=e3421]:
+                  - paragraph [ref=e3422]: Zennからのお知らせ
+                  - article [ref=e3425]:
+                    - link "Zenncafe#6日比谷 - AIコーディングの現在地 Zenncafe#6日比谷 AIコーディングのいま" [ref=e3426] [cursor=pointer]:
+                      - /url: https://zenn.connpass.com/event/383681/
+                      - generic [ref=e3427]:
+                        - img "Zenncafe#6日比谷 - AIコーディングの現在地" [ref=e3428]
+                        - paragraph [ref=e3429]: Zenncafe#6日比谷 AIコーディングのいま
+      - generic [ref=e3535]:
+        - generic [ref=e3536]: Read next
+        - generic [ref=e3538]:
+          - article [ref=e3540]:
+            - link "📝" [ref=e3541] [cursor=pointer]:
+              - /url: /seyz/articles/20260221-0047-platform-comparison
+              - generic [ref=e3542]: 📝
+            - generic [ref=e3543]:
+              - link "技術記事どこに書く？ 8つのプラットフォームを本気で検討してみた" [ref=e3544] [cursor=pointer]:
+                - /url: /seyz/articles/20260221-0047-platform-comparison
+                - heading "技術記事どこに書く？ 8つのプラットフォームを本気で検討してみた" [level=2] [ref=e3545]
+              - generic [ref=e3546]:
+                - link "せいず" [ref=e3548] [cursor=pointer]:
+                  - /url: /seyz
+                  - img "せいず" [ref=e3549]
+                - generic [ref=e3550]:
+                  - link "せいず" [ref=e3552] [cursor=pointer]:
+                    - /url: /seyz
+                  - time [ref=e3554]: 8時間前
+          - article [ref=e3556]:
+            - link "🛠️" [ref=e3557] [cursor=pointer]:
+              - /url: /mk18/articles/01kj1f4p00-claude-code-skills-workflow
+              - generic [ref=e3558]: 🛠️
+            - generic [ref=e3559]:
+              - link "Claude Code のスキルシステムで開発ワークフローを自動化した話" [ref=e3560] [cursor=pointer]:
+                - /url: /mk18/articles/01kj1f4p00-claude-code-skills-workflow
+                - heading "Claude Code のスキルシステムで開発ワークフローを自動化した話" [level=2] [ref=e3561]
+              - generic [ref=e3562]:
+                - link "mk18" [ref=e3564] [cursor=pointer]:
+                  - /url: /mk18
+                  - img "mk18" [ref=e3565]
+                - generic [ref=e3566]:
+                  - link "mk18" [ref=e3568] [cursor=pointer]:
+                    - /url: /mk18
+                  - time [ref=e3570]: 2日前
+          - article [ref=e3572]:
+            - link "📝" [ref=e3573] [cursor=pointer]:
+              - /url: /seyz/articles/platform-comparison
+              - generic [ref=e3574]: 📝
+            - generic [ref=e3575]:
+              - link "技術記事どこに書く？ 8つのプラットフォームを本気で検討してみた" [ref=e3576] [cursor=pointer]:
+                - /url: /seyz/articles/platform-comparison
+                - heading "技術記事どこに書く？ 8つのプラットフォームを本気で検討してみた" [level=2] [ref=e3577]
+              - generic [ref=e3578]:
+                - link "せいず" [ref=e3580] [cursor=pointer]:
+                  - /url: /seyz
+                  - img "せいず" [ref=e3581]
+                - generic [ref=e3582]:
+                  - link "せいず" [ref=e3584] [cursor=pointer]:
+                    - /url: /seyz
+                  - generic [ref=e3585]:
+                    - time [ref=e3586]: 3日前
+                    - generic [ref=e3587]:
+                      - img "いいねされた数" [ref=e3588]
+                      - text: "4"
+          - article [ref=e3591]:
+            - link "⚡️" [ref=e3592] [cursor=pointer]:
+              - /url: /team_zenn/articles/devin-joined-to-zenn-team
+              - generic [ref=e3593]: ⚡️
+            - generic [ref=e3594]:
+              - link "ZennチームにもDevinがジョインしました。そしてAIコーディング時代におけるエンジニアの役割について" [ref=e3595] [cursor=pointer]:
+                - /url: /team_zenn/articles/devin-joined-to-zenn-team
+                - heading "ZennチームにもDevinがジョインしました。そしてAIコーディング時代におけるエンジニアの役割について" [level=2] [ref=e3596]
+              - generic [ref=e3597]:
+                - generic [ref=e3599]:
+                  - link "Zenn Tech Blog" [ref=e3600] [cursor=pointer]:
+                    - /url: /p/team_zenn
+                    - img "Zenn Tech Blog" [ref=e3601]
+                  - link "dyoshikawa" [ref=e3602] [cursor=pointer]:
+                    - /url: /dyoshikawa
+                    - img "dyoshikawa" [ref=e3603]
+                - generic [ref=e3604]:
+                  - generic [ref=e3605]:
+                    - link "dyoshikawa" [ref=e3606] [cursor=pointer]:
+                      - /url: /dyoshikawa
+                    - generic [ref=e3607]: in
+                    - link "Zenn Tech Blog" [ref=e3608] [cursor=pointer]:
+                      - /url: /p/team_zenn
+                      - generic [ref=e3609]: Zenn Tech Blog
+                      - img [ref=e3610]
+                  - generic [ref=e3612]:
+                    - time [ref=e3613]: 2025/03/11
+                    - generic [ref=e3614]:
+                      - img "いいねされた数" [ref=e3615]
+                      - text: "329"
+          - article [ref=e3618]:
+            - link "✏️" [ref=e3619] [cursor=pointer]:
+              - /url: /pytokyo/articles/9af8586dacdebf60ce15
+              - generic [ref=e3620]: ✏️
+            - generic [ref=e3621]:
+              - link "新しい技術を学習しながらNotionでメモをとり、Zennで効率よく記事化するフロー" [ref=e3622] [cursor=pointer]:
+                - /url: /pytokyo/articles/9af8586dacdebf60ce15
+                - heading "新しい技術を学習しながらNotionでメモをとり、Zennで効率よく記事化するフロー" [level=2] [ref=e3623]
+              - generic [ref=e3624]:
+                - generic [ref=e3626]:
+                  - link "PY" [ref=e3627] [cursor=pointer]:
+                    - /url: /p/pytokyo
+                    - img "PY" [ref=e3628]
+                  - link "Keita Mori（ふぉれ）" [ref=e3629] [cursor=pointer]:
+                    - /url: /d_forest
+                    - img "Keita Mori（ふぉれ）" [ref=e3630]
+                - generic [ref=e3631]:
+                  - generic [ref=e3632]:
+                    - link "Keita Mori（ふぉれ）" [ref=e3633] [cursor=pointer]:
+                      - /url: /d_forest
+                    - generic [ref=e3634]: in
+                    - link "PY" [ref=e3635] [cursor=pointer]:
+                      - /url: /p/pytokyo
+                      - generic [ref=e3636]: PY
+                  - generic [ref=e3637]:
+                    - time [ref=e3638]: 2020/10/28
+                    - generic [ref=e3639]:
+                      - img "いいねされた数" [ref=e3640]
+                      - text: "450"
+          - article [ref=e3643]:
+            - link "🎙️" [ref=e3644] [cursor=pointer]:
+              - /url: /asap/articles/a72e67db1d90ae
+              - generic [ref=e3645]: 🎙️
+            - generic [ref=e3646]:
+              - link "第二回zenncafeにお呼ばれされたので、お話ししてきました【生成記事に対して思うこと】" [ref=e3647] [cursor=pointer]:
+                - /url: /asap/articles/a72e67db1d90ae
+                - heading "第二回zenncafeにお呼ばれされたので、お話ししてきました【生成記事に対して思うこと】" [level=2] [ref=e3648]
+              - generic [ref=e3649]:
+                - link "asap" [ref=e3651] [cursor=pointer]:
+                  - /url: /asap
+                  - img "asap" [ref=e3652]
+                - generic [ref=e3653]:
+                  - link "asap" [ref=e3655] [cursor=pointer]:
+                    - /url: /asap
+                  - generic [ref=e3656]:
+                    - time [ref=e3657]: 2025/05/13
+                    - generic [ref=e3658]:
+                      - img "いいねされた数" [ref=e3659]
+                      - text: "98"
+      - generic [ref=e3430]:
+        - generic [ref=e3432]:
+          - button "いいね" [ref=e3433] [cursor=pointer]:
+            - img [ref=e3434]
+          - generic [ref=e3448]: "2106"
+        - generic [ref=e3450]:
+          - button "ブックマーク" [ref=e3451] [cursor=pointer]:
+            - img [ref=e3452]
+          - generic [ref=e3454]: "246"
+        - button [ref=e3456] [cursor=pointer]:
+          - img [ref=e3457]
+    - contentinfo [ref=e3459]:
+      - generic [ref=e3460]:
+        - generic [ref=e3461]:
+          - generic [ref=e3462]:
+            - link "Zenn | エンジニアのための情報共有コミュニティ" [ref=e3463] [cursor=pointer]:
+              - /url: /
+              - img "Zenn | エンジニアのための情報共有コミュニティ" [ref=e3464]
+            - paragraph [ref=e3468]: エンジニアのための 情報共有コミュニティ
+          - generic [ref=e3469]:
+            - navigation [ref=e3470]:
+              - heading "About" [level=4] [ref=e3471]
+              - list [ref=e3472]:
+                - listitem [ref=e3473]:
+                  - link "Zennについて" [ref=e3475] [cursor=pointer]:
+                    - /url: /about
+                - listitem [ref=e3476]:
+                  - link "運営会社" [ref=e3477] [cursor=pointer]:
+                    - /url: https://classmethod.jp
+                - listitem [ref=e3478]:
+                  - link "お知らせ・リリース" [ref=e3479] [cursor=pointer]:
+                    - /url: https://info.zenn.dev
+                - listitem [ref=e3480]:
+                  - link "イベント" [ref=e3482] [cursor=pointer]:
+                    - /url: /events
+            - navigation [ref=e3483]:
+              - heading "Guides" [level=4] [ref=e3484]
+              - list [ref=e3485]:
+                - listitem [ref=e3486]:
+                  - link "使い方" [ref=e3488] [cursor=pointer]:
+                    - /url: /manual
+                - listitem [ref=e3489]:
+                  - generic [ref=e3490]:
+                    - link "法人向けメニュー" [ref=e3491] [cursor=pointer]:
+                      - /url: /biz-lp
+                    - generic [ref=e3492]: New
+                - listitem [ref=e3493]:
+                  - link "Publication / Pro" [ref=e3495] [cursor=pointer]:
+                    - /url: /publications
+                - listitem [ref=e3496]:
+                  - link "よくある質問" [ref=e3498] [cursor=pointer]:
+                    - /url: /faq
+            - navigation [ref=e3499]:
+              - heading "Links" [level=4] [ref=e3500]
+              - list [ref=e3501]:
+                - listitem [ref=e3502]:
+                  - link "X(Twitter)" [ref=e3503] [cursor=pointer]:
+                    - /url: https://twitter.com/zenn_dev
+                - listitem [ref=e3504]:
+                  - link "GitHub" [ref=e3505] [cursor=pointer]:
+                    - /url: https://github.com/zenn-dev
+                - listitem [ref=e3506]:
+                  - link "メディアキット" [ref=e3508] [cursor=pointer]:
+                    - /url: /mediakit
+            - navigation [ref=e3509]:
+              - heading "Legal" [level=4] [ref=e3510]
+              - list [ref=e3511]:
+                - listitem [ref=e3512]:
+                  - link "利用規約" [ref=e3514] [cursor=pointer]:
+                    - /url: /terms
+                - listitem [ref=e3515]:
+                  - link "プライバシーポリシー" [ref=e3517] [cursor=pointer]:
+                    - /url: /privacy
+                - listitem [ref=e3518]:
+                  - link "特商法表記" [ref=e3520] [cursor=pointer]:
+                    - /url: /terms/transaction-law
+        - link [ref=e3523] [cursor=pointer]:
+          - /url: https://classmethod.jp/
+          - img [ref=e3524]
+  - alert [ref=e3527]

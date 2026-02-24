@@ -1,0 +1,85 @@
+{{- $url := .Get 0 | default (.Get "url") -}}
+{{- $title := .Get "title" | default "" -}}
+{{- $description := .Get "description" | default "" -}}
+{{- $image := .Get "image" | default "" -}}
+
+{{- if $url -}}
+  {{- $domain := replaceRE `^https?://([^/]+).*` "$1" $url -}}
+  {{- $favicon := printf "https://www.google.com/s2/favicons?sz=32&domain=%s" $domain -}}
+
+  {{- if not $title -}}
+    {{- with resources.GetRemote $url -}}
+      {{- with .Err -}}
+        {{- warnf "linkcard: failed to fetch %s" $url -}}
+      {{- else -}}
+        {{- $body := .Content -}}
+
+        {{/* og:title */}}
+        {{- range findRE `<meta[^>]*property="og:title"[^>]*>` $body 1 -}}
+          {{- $title = replaceRE `.*content="([^"]*)".*` "$1" . -}}
+        {{- end -}}
+
+        {{/* og:description */}}
+        {{- if not $description -}}
+          {{- range findRE `<meta[^>]*property="og:description"[^>]*>` $body 1 -}}
+            {{- $description = replaceRE `.*content="([^"]*)".*` "$1" . -}}
+          {{- end -}}
+        {{- end -}}
+
+        {{/* og:image */}}
+        {{- if not $image -}}
+          {{- range findRE `<meta[^>]*property="og:image"[^>]*>` $body 1 -}}
+            {{- $image = replaceRE `.*content="([^"]*)".*` "$1" . -}}
+          {{- end -}}
+        {{- end -}}
+
+        {{/* fallback: <title> tag */}}
+        {{- if not $title -}}
+          {{- range findRE `<title[^>]*>[^<]+</title>` $body 1 -}}
+            {{- $title = replaceRE `<title[^>]*>([^<]+)</title>` "$1" . -}}
+          {{- end -}}
+        {{- end -}}
+
+        {{/* fallback: meta name="description" */}}
+        {{- if not $description -}}
+          {{- range findRE `<meta[^>]*name="description"[^>]*>` $body 1 -}}
+            {{- $description = replaceRE `.*content="([^"]*)".*` "$1" . -}}
+          {{- end -}}
+        {{- end -}}
+
+        {{/* resolve relative og:image */}}
+        {{- if and $image (hasPrefix $image "/") -}}
+          {{- $baseURL := replaceRE `^(https?://[^/]+).*` "$1" $url -}}
+          {{- $image = printf "%s%s" $baseURL $image -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{/* final fallback for title */}}
+  {{- if not $title -}}
+    {{- $title = $url -}}
+  {{- end -}}
+
+  <div class="link-card">
+    <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">{{ $title }}</div>
+          {{- if $description -}}
+            <div class="link-card-description">{{ $description }}</div>
+          {{- end -}}
+          <div class="link-card-meta">
+            <img class="link-card-favicon" src="{{ $favicon }}" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">{{ $domain }}</span>
+          </div>
+        </div>
+        {{- if $image -}}
+          <div class="link-card-image">
+            <img src="{{ $image }}" alt="" loading="lazy">
+          </div>
+        {{- end -}}
+      </div>
+    </a>
+  </div>
+{{- end -}}
