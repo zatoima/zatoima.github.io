@@ -347,6 +347,12 @@ def _retry_request(func, *args, **kwargs):
 | `--dry-run` | 処理対象の論文を表示するのみ |
 | `--max-papers N` | 取得する論文数を指定 |
 
+## ソースコード
+
+本パイプラインのソースコードはGitHubで公開している。
+
+<https://github.com/zatoima/llm-papers-pipeline>
+
 ## まとめ
 
 本パイプラインの特徴を整理する。
