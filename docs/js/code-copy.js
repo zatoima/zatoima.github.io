@@ -23,15 +23,15 @@
       }
     }
 
-    // Wrap toggle button
+    // Wrap toggle button (default is wrapped; click to toggle to scroll)
     var wrapBtn = document.createElement('button');
-    wrapBtn.className = 'code-wrap-btn';
+    wrapBtn.className = 'code-wrap-btn active';
     wrapBtn.textContent = 'Wrap';
     wrapBtn.setAttribute('aria-label', 'Toggle word wrap');
     wrapper.appendChild(wrapBtn);
 
     wrapBtn.addEventListener('click', function () {
-      block.classList.toggle('wrapped');
+      block.classList.toggle('nowrap');
       wrapBtn.classList.toggle('active');
     });
 
