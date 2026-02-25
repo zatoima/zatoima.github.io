@@ -28,7 +28,7 @@ MCPサーバーはLLMエージェントに外部ツールを提供する仕組�
 
 MCPツールの呼び出し結果は、LLMへの入力としてコンテキストウィンドウに載る。
 
-```
+```text
 [ユーザーメッセージ]
 + [システムプロンプト]
 + [MCPツール結果]
@@ -88,7 +88,7 @@ CREATE TABLE ページ（Snowflakeで最も大きいページの一つ）を対�
 
 HTML→Markdown変換に `descendants` イテレータを使っていたため、`<li>` 内の `<p>` で同じテキストが2回出力されていた。
 
-```
+```text
 - Requires a value (NOT NULL).
 Requires a value (NOT NULL).          ← 重複
 
@@ -177,7 +177,7 @@ Pydantic Fieldで `gt=0, lt=1000000` の制約をかけ、0（無制限）を入
 
 改善後は4つのツールを提供する。
 
-```
+```text
 search_snowflake_docs  → ドキュメント検索
 get_doc_toc            → ページの目次取得（軽量）
 get_doc_section        → 特定セクションの取得
@@ -186,7 +186,7 @@ get_doc_content        → ページ全文の取得（ページネーション�
 
 推奨される使い方は以下の流れ。
 
-```
+```text
 1. search_snowflake_docs で検索
 2. get_doc_toc でページ構造を確認（軽量）
 3. get_doc_section で必要なセクションだけ取得
@@ -234,7 +234,8 @@ async def get_doc_content(
 同じ `max_length=2000` で取得した CREATE TABLE ページのリスト部分：
 
 **旧版（v0.1.0）— 20行:**
-```
+
+```text
 - Requires a value (NOT NULL).
 Requires a value (NOT NULL).
 
@@ -246,7 +247,8 @@ CREATE OR ALTER TABLE (creates a table if ...)
 ```
 
 **新版（v0.2.0）— 10行:**
-```
+
+```text
 * Requires a value (NOT NULL).
 * Has a default value.
 * CREATE OR ALTER TABLE (creates a table if ...)
@@ -306,7 +308,7 @@ v0.3.0ではコンテキスト消費をさらに削減するため、以下の4�
 
 v0.3.0では5つのツールを提供する。
 
-```
+```text
 search_snowflake_docs  → ドキュメント検索（include_headings=Trueで目次も同時取得可能）
 search_in_doc          → ページ内キーワード検索（関連セクション自動選択）
 get_doc_toc            → ページの目次取得（軽量）
@@ -355,7 +357,7 @@ async def search_snowflake_docs(
 
 `include_headings=True` を指定すると、各検索結果に `headings` フィールドが追加される。これにより `get_doc_toc` の呼び出しを省略でき、3ステップから2ステップに削減できる。
 
-```
+```text
 改善前: search → get_doc_toc → get_doc_section  (3回)
 改善後: search(include_headings=True) → get_doc_section  (2回)
 ```
@@ -439,7 +441,7 @@ Claude Codeに包括的テストを実行させ、コンテキスト使用量を
 
 `markdownify` によるHTML→Markdown変換後に、LLMにとって不要なアーティファクトが多数残留していた。
 
-```
+```text
 ## Usage notes[¶](#usage-notes "Link to this heading")     ← pilcrowリンク（~40 chars/見出し）
 Copy                                                        ← コピーボタンの残骸
 [COPY INTO <table>](copy-into-table)                        ← 辿れない相対リンク
@@ -663,7 +665,7 @@ Dynamic Tablesのような小規模ガイドページでは削減率が16.3%と�
 
 ### 3. 段階的な情報取得を可能にする
 
-```
+```text
 検索 → 目次確認（軽量） → セクション取得（必要な部分だけ）
 ```
 
