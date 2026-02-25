@@ -51,7 +51,7 @@
     "@type": "WebPage",
     "@id": "\"https://zatoima.github.io/mcp-server-context-usage-optimization/\""
   },
-  "wordCount":  10557 ,
+  "wordCount":  12156 ,
   "keywords": "[\"MCP\",\"Claude\",\"LLM\",\"Snowflake\"]"
 }
 </script>
@@ -146,7 +146,7 @@
           
           
           
-          <span class="reading-time">📖 約21分</span>
+          <span class="reading-time">📖 約24分</span>
         </div>
         <div class="article-tags">
           
@@ -167,11 +167,7 @@
 <p>本記事では、自作のSnowflake Docs MCPサーバーのコンテキスト使用量を実測し、問題点を特定した上で、AWS公式のドキュメントMCPサーバーの実装を参考に改善を行った。改善前後の具体的な数値比較と、ドキュメント系MCPサーバー設計のポイントをまとめる。</p>
 <h2 id="mcpツールのレスポンスとコンテキストの関係">MCPツールのレスポンスとコンテキストの関係</h2>
 <p>MCPツールの呼び出し結果は、LLMへの入力としてコンテキストウィンドウに載る。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[ユーザーメッセージ]
-</span></span><span style="display:flex;"><span>+ [システムプロンプト]
-</span></span><span style="display:flex;"><span>+ [MCPツール結果]
-</span></span><span style="display:flex;"><span>+ [過去の会話]
-</span></span><span style="display:flex;"><span>= コンテキスト消費
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[ユーザーメッセージ] + [システムプロンプト] + [MCPツール結果] + [過去の会話] = コンテキスト消費
 </span></span></code></pre></div><p>ドキュメント取得系のMCPツールは、1回の呼び出しで数千〜数万文字を返すことがある。これを意識せずに設計すると、数回の呼び出しでコンテキストの大部分を消費し、会話の継続が困難になる。</p>
 <h3 id="サブエージェント経由の場合">サブエージェント経由の場合</h3>
 <p>Claude Codeのサブエージェント（Task tool）経由でMCPツールを使う場合、ツールの生レスポンスはサブエージェントのコンテキスト内に留まり、メインには要約のみが返る。これによりメインコンテキストの消費を大幅に削減できる。</p>
@@ -1190,6 +1186,127 @@
 </tr>
 </tbody>
 </table>
+<h2 id="実際の検索シナリオでのコンテキスト消費検証v040">実際の検索シナリオでのコンテキスト消費検証（v0.4.0）</h2>
+<p>v0.4.0の改善を踏まえ、実際のSnowflake関連の検索シナリオでツールごとのコンテキスト消費を検証した。キーワード検索（「マイクロパーティション」）と文章形式の検索（「ウェアハウスのスケールアップの基準は？」）の2パターンで実施した。</p>
+<h3 id="search_snowflake_docs-include_headings-の影響">search_snowflake_docs: include_headings の影響</h3>
+<p>同じ検索（5件取得）でも <code>include_headings</code> のON/OFFでコンテキスト消費が大きく変わる。</p>
+<table>
+<thead>
+<tr>
+<th>パターン</th>
+<th>推定文字数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>キーワード（headings=false）</td>
+<td>~500文字</td>
+</tr>
+<tr>
+<td>キーワード（headings=true）</td>
+<td>~3,500文字</td>
+</tr>
+<tr>
+<td>文章形式（headings=false）</td>
+<td>~500文字</td>
+</tr>
+<tr>
+<td>文章形式（headings=true）</td>
+<td>~5,000文字</td>
+</tr>
+</tbody>
+</table>
+<p><code>include_headings=true</code> にすると約 <strong>7〜10倍</strong> のコンテキストを消費する。ただし <code>get_doc_toc</code> の呼び出しを省略できるため、2ステップを1ステップに短縮できる。見出しの多いページ（ウェアハウス関連ページ等）ほど膨張が大きい。</p>
+<h3 id="全ツール横断比較マイクロパーティションページ">全ツール横断比較（マイクロパーティションページ）</h3>
+<p>「マイクロパーティションとデータクラスタリング」ページ（total_length: 4,835文字）を対象に、全5ツールのコンテキスト消費を比較した。</p>
+<table>
+<thead>
+<tr>
+<th>順位</th>
+<th>ツール</th>
+<th>消費量</th>
+<th>ユースケース</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>get_doc_toc</code></td>
+<td>~600文字</td>
+<td>ページ構造の確認のみ</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>get_doc_section</code>（1セクション）</td>
+<td>~528文字</td>
+<td>特定セクションの詳細取得</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>search_snowflake_docs</code>（headings=false）</td>
+<td>~500文字/5件</td>
+<td>ドキュメント発見（概要のみ）</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>search_in_doc</code>（3セクション）</td>
+<td>~2,400文字</td>
+<td>ページ内の関連情報を自動抽出</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>search_snowflake_docs</code>（headings=true）</td>
+<td>~3,500文字/5件</td>
+<td>ドキュメント発見+構造把握を一括</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>get_doc_content</code>（全文）</td>
+<td>~4,835文字</td>
+<td>ページ全体の読み込み</td>
+</tr>
+</tbody>
+</table>
+<p>小〜中規模ページでは <code>get_doc_content</code> の全文取得でも5,000文字以内に収まるため、段階的取得のメリットは相対的に小さい。CREATE TABLEのような大規模ページ（44,503文字〜）こそ、<code>search_in_doc</code> や <code>get_doc_section</code> による部分取得が効果を発揮する。</p>
+<h3 id="search_in_doc-のページ間比較">search_in_doc のページ間比較</h3>
+<p><code>search_in_doc</code> のコンテキスト消費はページとクエリの関連度によって大きく変動する。</p>
+<table>
+<thead>
+<tr>
+<th>対象ページ</th>
+<th>クエリ</th>
+<th>マッチセクション数</th>
+<th>total_content_chars</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>マイクロパーティション</td>
+<td>「マイクロパーティション 利点」</td>
+<td>3件</td>
+<td>~2,400文字</td>
+</tr>
+<tr>
+<td>ウェアハウス考慮事項</td>
+<td>「スケールアップ スケールアウト 基準」</td>
+<td>2件</td>
+<td>~4,900文字</td>
+</tr>
+<tr>
+<td>ウェアハウスサイズ拡大</td>
+<td>「スケールアップ サイズ変更 基準」</td>
+<td>1件</td>
+<td>~460文字</td>
+</tr>
+</tbody>
+</table>
+<p>スコアリングで関連セクションを自動選択するため、必要な情報だけ効率的に取得できる。「ウェアハウス考慮事項」ページでは「スケールアップとスケールアウト」セクションが高スコア（24点）で正確にマッチし、スケールアップの判断基準やマルチクラスターウェアハウスとの使い分けに関する情報を返していた。</p>
+<h3 id="推奨ワークフロー">推奨ワークフロー</h3>
+<p>検証結果を踏まえた、コンテキスト効率の良いワークフローは以下の通り。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1. search_snowflake_docs(include_headings=True) で検索+目次を1回で取得
+</span></span><span style="display:flex;"><span>2. search_in_doc で関連セクションだけ自動抽出（TOC確認→セクション選択を省略）
+</span></span><span style="display:flex;"><span>3. コード例が必要な場合のみ include_code_blocks=True を指定
+</span></span></code></pre></div><p>これにより従来の <code>search</code> → <code>get_doc_toc</code> → <code>get_doc_section</code> の3ステップを最大1〜2ステップに短縮でき、ツール呼び出し回数とコンテキスト消費の両方を最適化できる。</p>
 <h2 id="ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</h2>
 <p>今回の検証で得られた知見をまとめる。</p>
 <h3 id="1-レスポンスサイズにハードキャップを設ける">1. レスポンスサイズにハードキャップを設ける</h3>
@@ -1239,6 +1356,13 @@
 <li>境界切断の導入（段落→行→文→単語の優先度で自然な位置で切断）</li>
 <li>buildIdキャッシュ・共有HTTPクライアント・並列headings取得によるパフォーマンス改善</li>
 <li>156テスト（ユニット59件 + 統合96件 + サマリー1件）全合格</li>
+</ul>
+<p><strong>実際の検索シナリオでの検証:</strong></p>
+<ul>
+<li>「マイクロパーティション」「ウェアハウスのスケールアップ」等の実際のSnowflakeトピックで全5ツールのコンテキスト消費を横断比較</li>
+<li><code>include_headings=true</code> は headings=false の <strong>7〜10倍</strong> のコンテキストを消費（見出しの多いページほど膨張）</li>
+<li><code>search_in_doc</code> のスコアリングが実際の検索シナリオでも正確に機能（スケールアップ関連セクションを高スコアで正確にマッチ）</li>
+<li>小〜中規模ページでは <code>get_doc_content</code> 全文でも5,000文字以内に収まるため、段階的取得は大規模ページで効果大</li>
 </ul>
 <p>MCPサーバーを設計する際は、レスポンスのサイズ = LLMのコンテキスト消費であることを意識し、「必要な情報だけを、必要な分だけ、ノイズなく返す」設計にすることが重要である。</p>
 <h2 id="参考資料">参考資料</h2>
@@ -1433,6 +1557,14 @@
         <li><a href="#計測結果">計測結果</a></li>
         <li><a href="#複数ページでのコンテキスト節約v030比">複数ページでのコンテキスト節約（v0.3.0比）</a></li>
         <li><a href="#テスト結果">テスト結果</a></li>
+      </ul>
+    </li>
+    <li><a href="#実際の検索シナリオでのコンテキスト消費検証v040">実際の検索シナリオでのコンテキスト消費検証（v0.4.0）</a>
+      <ul>
+        <li><a href="#search_snowflake_docs-include_headings-の影響">search_snowflake_docs: include_headings の影響</a></li>
+        <li><a href="#全ツール横断比較マイクロパーティションページ">全ツール横断比較（マイクロパーティションページ）</a></li>
+        <li><a href="#search_in_doc-のページ間比較">search_in_doc のページ間比較</a></li>
+        <li><a href="#推奨ワークフロー">推奨ワークフロー</a></li>
       </ul>
     </li>
     <li><a href="#ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</a>
