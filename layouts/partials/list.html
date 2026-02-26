@@ -1,9 +1,21 @@
+{{ $allPages := where .Site.Pages "Section" "blog" }}
+
+{{/* 最新記事: 「論文」タグを持たない記事から最新N件 */}}
+{{ $regularPages := slice }}
+{{ range $allPages }}
+  {{ $hasPaper := false }}
+  {{ range (.GetTerms "tags") }}
+    {{ if eq .LinkTitle "論文" }}{{ $hasPaper = true }}{{ end }}
+  {{ end }}
+  {{ if and (not $hasPaper) (ne .Title "blog") (ne .Title "Blogs") }}
+    {{ $regularPages = $regularPages | append . }}
+  {{ end }}
+{{ end }}
+{{ $recentPages := $regularPages | first .Site.Params.latestPostNum }}
+
 <h2 class="section-title">📚 最新記事</h2>
-<ul class="card-list">
-  {{ $pages := where .Site.Pages "Section" "blog" }}
-  {{ $recentPages := $pages | first .Site.Params.latestPostNum }}
+<ul class="card-list card-list--grid">
   {{ range $recentPages }}
-  {{ if and (ne .Title "blog") (ne .Title "Blogs") }}
   <li class="card-item">
     <a href="{{ .Permalink }}" class="card-link">
       <span class="card-emoji">{{ partial "tag-icon.html" . }}</span>
@@ -31,8 +43,54 @@
     </a>
   </li>
   {{ end }}
-  {{ end }}
 </ul>
-<div style="text-align: center; margin-top: 1.5rem;">
+<div style="text-align: center; margin-top: 0.5rem; margin-bottom: 0.5rem;">
   <a href="/blog/" class="view-all-link">すべての記事一覧へ</a>
 </div>
+
+{{/* LLM論文サーベイ: 「論文」タグを持つ記事から最新N件 */}}
+{{ $paperPages := slice }}
+{{ range $allPages }}
+  {{ $hasPaper := false }}
+  {{ range (.GetTerms "tags") }}
+    {{ if eq .LinkTitle "論文" }}{{ $hasPaper = true }}{{ end }}
+  {{ end }}
+  {{ if and $hasPaper (ne .Title "blog") (ne .Title "Blogs") }}
+    {{ $paperPages = $paperPages | append . }}
+  {{ end }}
+{{ end }}
+{{ $llmPages := $paperPages | first .Site.Params.llmSurveyNum }}
+
+{{ if gt (len $llmPages) 0 }}
+<h2 class="section-title">📄 LLM論文サーベイ</h2>
+<ul class="card-list">
+  {{ range $llmPages }}
+  <li class="card-item">
+    <a href="{{ .Permalink }}" class="card-link">
+      <span class="card-emoji">{{ partial "tag-icon.html" . }}</span>
+      <div class="card-body">
+        <span class="card-title">{{ .Title }}</span>
+        <div class="card-bottom">
+          <span class="card-date">
+            <time datetime='{{ .Date.Format "2006-01-02" }}'>
+              {{ .Date.Format "2006/01/02" }}
+            </time>
+          </span>
+          {{ $wordCount := .WordCount }}
+          {{ $readingTime := div $wordCount 500 }}
+          {{ if lt $readingTime 1 }}{{ $readingTime = 1 }}{{ end }}
+          <span class="card-reading-time">📖 約{{ $readingTime }}分</span>
+          {{ with (.GetTerms "tags") }}
+          <span class="card-tags">
+            {{ range (first 3 .) }}
+            <span class="card-tag-badge">{{ partial "tag-badge-icon.html" .LinkTitle }}{{ .LinkTitle }}</span>
+            {{ end }}
+          </span>
+          {{ end }}
+        </div>
+      </div>
+    </a>
+  </li>
+  {{ end }}
+</ul>
+{{ end }}
