@@ -39,7 +39,7 @@
     if (pref === 'system') {
       btn.innerHTML = iconMonitor;
     } else {
-      btn.innerHTML = resolved === 'dark' ? iconSun : iconMoon;
+      btn.innerHTML = resolved === 'dark' ? iconMoon : iconSun;
     }
 
     // Update active state in dropdown
