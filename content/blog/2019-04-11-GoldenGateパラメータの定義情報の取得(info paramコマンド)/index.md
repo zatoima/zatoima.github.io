@@ -7,7 +7,7 @@ summary: " "
 tags: ["Oracle","GoldenGate"]
 categories: ["Oracle","GoldenGate"]
 url: goldengate-info-param.html
-date: 2019-xx-xx
+date: 2019-04-11
 featured: false
 draft: false
 

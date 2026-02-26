@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -11,21 +11,28 @@
 <meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
 
 
-<meta property="og:title" content="Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-aurora-rds-postgresql-replication.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-12-25T00:00:00+00:00" />
-<meta property="article:modified_time" content="2019-12-25T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
+<meta property="og:url" content="https://zatoima.github.io/aws-aurora-rds-postgresql-replication.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする">
+  <meta property="og:description" content="memo blog。GitHub Pagesとして構成されています。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-12-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-12-25T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
 
 
 
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする"/>
-<meta name="twitter:description" content=""/>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Aurora(PostgreSQL)とRDS(PostgreSQL)の環境で論理レプリケーションする">
+  <meta name="twitter:description" content="memo blog。GitHub Pagesとして構成されています。">
 
 
 
@@ -193,12 +200,12 @@
 <h4 id="環境準備">環境準備</h4>
 <hr>
 <p>レプリケーションを行うデータベースを作成</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">DATABASE</span> repdb <span style="color:#ff79c6">WITH</span> <span style="color:#ff79c6">OWNER</span> postgres;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">DATABASE</span> repdb <span style="color:#ff79c6">WITH</span> <span style="color:#ff79c6">OWNER</span> postgres;
 </span></span></code></pre></div><p>レプリケーションを行うテーブルを用意する。PostgreSQL10時点の論理レプリケーションはDDLレプリケーションを行わないので、Publisher、及びSubscriber側で実施する必要がある。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>\<span style="color:#ff79c6">c</span> repdb
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>\<span style="color:#ff79c6">c</span> repdb
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> LogicalReplicationTest (a <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">PRIMARY</span> <span style="color:#ff79c6">KEY</span>);
 </span></span></code></pre></div><p>Publisher側だけにデータを投入。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> LogicalReplicationTest <span style="color:#ff79c6">VALUES</span> (generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">10000</span>));
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> LogicalReplicationTest <span style="color:#ff79c6">VALUES</span> (generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">10000</span>));
 </span></span></code></pre></div><p>Publisher側で&quot;CREATE PUBLICATION&quot;を実行。&ldquo;FOR ALL TABLES&quot;を指定してここではデータベース全体を行う方式を選択した。</p>
 <blockquote>
 <p><a href="https://www.postgresql.jp/document/10/html/sql-createpublication.html">https://www.postgresql.jp/document/10/html/sql-createpublication.html</a></p>
@@ -206,38 +213,38 @@
 FOR ALL TABLES
 そのパブリケーションでは、将来作成されるテーブルも含め、そのデータベース内の全テーブルについての変更を複製するものとして印をつけます。</p>
 </blockquote>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>repdbに接続
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>repdbに接続
 </span></span><span style="display:flex;"><span>\<span style="color:#ff79c6">c</span> repdb
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> PUBLICATION alltables <span style="color:#ff79c6">FOR</span> <span style="color:#ff79c6">ALL</span> TABLES;
 </span></span></code></pre></div><p>Subscriber側で&quot;CREATE SUBSCRIPTION&quot;を実行。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>repdbに接続
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>repdbに接続
 </span></span><span style="display:flex;"><span>\<span style="color:#ff79c6">c</span> repdb
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> SUBSCRIPTION auroratopostgresql <span style="color:#ff79c6">CONNECTION</span> <span style="color:#f1fa8c">&#39;host=aurorapostgresqlv1.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com port=5432 dbname=repdb user=postgres password=postgres&#39;</span> PUBLICATION alltables;
 </span></span></code></pre></div><p>ログを確認すると、レプリケーションが始まっていることが確認できる。(初期同期の模様。)</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">12</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">14</span> <span style="color:#bd93f9">09</span>:<span style="color:#bd93f9">25</span>:<span style="color:#bd93f9">49</span> UTC::<span style="color:#ff79c6">@</span>:[<span style="color:#bd93f9">16112</span>]:LOG:  logical replication <span style="color:#ff79c6">table</span> synchronization worker <span style="color:#ff79c6">for</span> subscription <span style="color:#f1fa8c">&#34;auroratopostgresql&#34;</span>, <span style="color:#ff79c6">table</span> <span style="color:#f1fa8c">&#34;logicalreplicationtest&#34;</span> has started
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">12</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">14</span> <span style="color:#bd93f9">09</span>:<span style="color:#bd93f9">25</span>:<span style="color:#bd93f9">49</span> UTC::<span style="color:#ff79c6">@</span>:[<span style="color:#bd93f9">16112</span>]:LOG:  logical replication <span style="color:#ff79c6">table</span> synchronization worker <span style="color:#ff79c6">for</span> subscription <span style="color:#f1fa8c">&#34;auroratopostgresql&#34;</span>, <span style="color:#ff79c6">table</span> <span style="color:#f1fa8c">&#34;logicalreplicationtest&#34;</span> has started
 </span></span><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">12</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">14</span> <span style="color:#bd93f9">09</span>:<span style="color:#bd93f9">25</span>:<span style="color:#bd93f9">49</span> UTC::<span style="color:#ff79c6">@</span>:[<span style="color:#bd93f9">16112</span>]:LOG:  logical replication <span style="color:#ff79c6">table</span> synchronization worker <span style="color:#ff79c6">for</span> subscription <span style="color:#f1fa8c">&#34;auroratopostgresql&#34;</span>, <span style="color:#ff79c6">table</span> <span style="color:#f1fa8c">&#34;logicalreplicationtest&#34;</span> has finished
 </span></span></code></pre></div><p>pg_subscription_relを確認することでどのテーブルが論理レプリケーション対象となっているか確認可能。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> pg_subscription_rel;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> pg_subscription_rel;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> pg_subscription_rel;
 </span></span><span style="display:flex;"><span> srsubid <span style="color:#ff79c6">|</span> srrelid <span style="color:#ff79c6">|</span> srsubstate <span style="color:#ff79c6">|</span> srsublsn 
 </span></span><span style="display:flex;"><span><span style="color:#6272a4">---------+---------+------------+----------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>   <span style="color:#bd93f9">16425</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">16417</span> <span style="color:#ff79c6">|</span> d          <span style="color:#ff79c6">|</span> 
+</span></span></span><span style="display:flex;"><span>   <span style="color:#bd93f9">16425</span> <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">16417</span> <span style="color:#ff79c6">|</span> d          <span style="color:#ff79c6">|</span> 
 </span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> relname <span style="color:#ff79c6">from</span> pg_class <span style="color:#ff79c6">where</span> oid<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16417</span>;
 </span></span><span style="display:flex;"><span>        relname         
 </span></span><span style="display:flex;"><span><span style="color:#6272a4">------------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span> logicalreplicationtest
+</span></span></span><span style="display:flex;"><span> logicalreplicationtest
 </span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> 
 </span></span></code></pre></div><p>レプリケーション設定はpg_replication_slotsビューから確認可能。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> pg_replication_slots;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> pg_replication_slots;
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">1</span> ]<span style="color:#6272a4">-------+-------------------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>slot_name           <span style="color:#ff79c6">|</span> auroratopostgresql
+</span></span></span><span style="display:flex;"><span>slot_name           <span style="color:#ff79c6">|</span> auroratopostgresql
 </span></span><span style="display:flex;"><span>plugin              <span style="color:#ff79c6">|</span> pgoutput
 </span></span><span style="display:flex;"><span>slot_type           <span style="color:#ff79c6">|</span> logical
 </span></span><span style="display:flex;"><span>datoid              <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">24590</span>
@@ -250,9 +257,9 @@ FOR ALL TABLES
 </span></span><span style="display:flex;"><span>restart_lsn         <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">4</span>F8C710
 </span></span><span style="display:flex;"><span>confirmed_flush_lsn <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">4</span>F8CAE8
 </span></span></code></pre></div><p>Publisher側のpg_publicationからは作成した定義情報が確認できる。データベース内のすべてのテーブルをレプリケーション対象としたので「puballtables」が「True」になっている。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> pg_publication;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>repdb<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> pg_publication;
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">1</span> ]<span style="color:#ff79c6">+</span><span style="color:#6272a4">----------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>pubname      <span style="color:#ff79c6">|</span> alltables
+</span></span></span><span style="display:flex;"><span>pubname      <span style="color:#ff79c6">|</span> alltables
 </span></span><span style="display:flex;"><span>pubowner     <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">16393</span>
 </span></span><span style="display:flex;"><span>puballtables <span style="color:#ff79c6">|</span> t
 </span></span><span style="display:flex;"><span>pubinsert    <span style="color:#ff79c6">|</span> t

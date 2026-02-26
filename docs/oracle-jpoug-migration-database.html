@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -11,21 +11,26 @@
 <meta name="keywords" content="Oracle,Migration," />
 
 
-<meta property="og:title" content="いまいちどOracle Databaseのデータ移行方法について考えてみる" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/oracle-jpoug-migration-database.html" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2019-12-11T00:00:00+00:00" />
-<meta property="article:modified_time" content="2019-12-11T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
+<meta property="og:url" content="https://zatoima.github.io/oracle-jpoug-migration-database.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="いまいちどOracle Databaseのデータ移行方法について考えてみる">
+  <meta property="og:description" content="memo blog。GitHub Pagesとして構成されています。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-12-11T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-12-11T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="Migration">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
 
 
 
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="いまいちどOracle Databaseのデータ移行方法について考えてみる"/>
-<meta name="twitter:description" content=""/>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="いまいちどOracle Databaseのデータ移行方法について考えてみる">
+  <meta name="twitter:description" content="memo blog。GitHub Pagesとして構成されています。">
 
 
 
@@ -226,16 +231,16 @@
 <h4 id="手順"><strong>手順</strong></h4>
 <h5 id="1ブロックチェンジトラッキングの有効化"><strong>1.ブロック・チェンジ・トラッキングの有効化</strong></h5>
 <p>今回は増分バックアップを使用するのでブロック・チェンジ・トラッキング・ファイル（変更追跡ファイル）を有効化します。これによりバックアップ取得を高速化出来ます。増分バックアップの際には、このファイルを元にデータ変更が行われたブロックだけをダイレクトに読み込むことが出来るため、バックアップ所要時間を短縮できます。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">DATABASE</span> ENABLE BLOCK CHANGE TRACKING;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">DATABASE</span> ENABLE BLOCK CHANGE TRACKING;
 </span></span></code></pre></div><h5 id="2level0のバックアップの取得"><strong>2.level0のバックアップの取得</strong></h5>
 <p>ソース側のSCNを確認する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>CURRENT_SCN
 </span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>    <span style="color:#bd93f9">3450645</span>
+</span></span></span><span style="display:flex;"><span>    <span style="color:#bd93f9">3450645</span>
 </span></span></code></pre></div><p>level 0 のバックアップを取得します。今回はTTSという表領域を移行対象とします。[必要に応じてトランスポートする表領域セットが自己完結型であることを確認](https  :  //docs.oracle.com/cd/E57425_01/121/ARPLS/d_tts.htm)する必要があります。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>rman target /
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>rman target /
 </span></span><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental level <span style="color:#bd93f9">0</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span> tablespace tts;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>backupが開始されました<span style="color:#ff79c6">(</span>開始時間 :  19-12-11<span style="color:#ff79c6">)</span>
@@ -251,7 +256,7 @@
 </span></span><span style="display:flex;"><span>backupが完了しました<span style="color:#ff79c6">(</span>完了時間 :  19-12-11<span style="color:#ff79c6">)</span>
 </span></span></code></pre></div><h5 id="3ターゲット側でlevel0のバックアップからリストアする"><strong>3.ターゲット側でLevel0のバックアップからリストアする</strong></h5>
 <p>ターゲット側でrestoreする</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore all foreign datafiles to new from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore all foreign datafiles to new from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ rman target /
 </span></span><span style="display:flex;"><span>
@@ -277,16 +282,16 @@
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  リストアが完了しました。経過時間 :  <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">02</span>
 </span></span><span style="display:flex;"><span>restoreを19-12-11で終了しました
 </span></span></code></pre></div><p>DB_CREATE_FILE_DESTが設定されていないとエラーになります。「RMAN-05088 :  DB_CREATE_FILE_DESTが設定されていません」</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SYSTEM</span> <span style="color:#ff79c6">SET</span> DB_CREATE_FILE_DEST <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/db19c&#39;</span> <span style="color:#ff79c6">SCOPE</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">both</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SYSTEM</span> <span style="color:#ff79c6">SET</span> DB_CREATE_FILE_DEST <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/db19c&#39;</span> <span style="color:#ff79c6">SCOPE</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">both</span>;
 </span></span></code></pre></div><h5 id="4増分バックアップの取得"><strong>4.増分バックアップの取得</strong></h5>
 <p>再度ソース側のSCNを確認する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>CURRENT_SCN
 </span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------
-</span></span></span><span style="display:flex;"><span><span style="color:#6272a4"></span>    <span style="color:#bd93f9">3450702</span>
+</span></span></span><span style="display:flex;"><span>    <span style="color:#bd93f9">3450702</span>
 </span></span></code></pre></div><p>次はlevel 1 の増分バックアップを取得します。ここで指定するSCNは一番最初に取得したSCNを指定します。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental from scn <span style="color:#bd93f9">3450645</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental from scn <span style="color:#bd93f9">3450645</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>RMAN&gt; backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental from scn <span style="color:#bd93f9">3450645</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts;
 </span></span><span style="display:flex;"><span>
@@ -301,7 +306,7 @@
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  バックアップ・セットが完了しました。経過時間 :  <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">01</span>
 </span></span><span style="display:flex;"><span>backupが完了しました<span style="color:#ff79c6">(</span>完了時間 :  19-12-11<span style="color:#ff79c6">)</span>
 </span></span></code></pre></div><p>ちなみに移行元側で更新がない場合はエラー（skip）になります。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>RMAN-06755 :  警告 :  データファイル14 :  増分起動SCNが新しすぎます。かわりにチェックポイントSCN 3304366を使用しています
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>RMAN-06755 :  警告 :  データファイル14 :  増分起動SCNが新しすぎます。かわりにチェックポイントSCN 3304366を使用しています
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  フル・データファイル・バックアップ・セットを開始しています
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  バックアップ・セットにデータファイルを指定しています
 </span></span><span style="display:flex;"><span>入力データファイル・ファイル番号<span style="color:#ff79c6">=</span><span style="color:#bd93f9">00014</span> <span style="color:#8be9fd;font-style:italic">名前</span><span style="color:#ff79c6">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
@@ -310,7 +315,7 @@
 </span></span><span style="display:flex;"><span>backupが完了しました<span style="color:#ff79c6">(</span>完了時間 :  19-12-11<span style="color:#ff79c6">)</span>
 </span></span></code></pre></div><h5 id="5増分バックアップの適用"><strong>5.増分バックアップの適用</strong></h5>
 <p>増分バックアップをデータファイルに適用します。ここで指定するデータファイルは上記のrestoreコマンドを実行した時に出力されるデータファイルです。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>RMAN&gt; recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span>;
 </span></span><span style="display:flex;"><span>
@@ -328,9 +333,9 @@
 </span></span></code></pre></div><p>移行日が来るまで任意のタイミングで&quot;増分バックアップを作成&quot;と&quot;増分バックアップの適用&quot;フェーズを繰り返します。</p>
 <h5 id="6最終分の増分バックアップの適用及びメタデータの取得"><strong>6.最終分の増分バックアップの適用、及びメタデータの取得</strong></h5>
 <p>移行日当日の作業となります。このタイミングから移行元データベースはダウンタイムが発生します。移行対象のTTSを読み取り専用にします。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">only</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">only</span>;
 </span></span></code></pre></div><p>表領域が現在読み取り専用になっている最後の増分バックアップを作成する。データファイルを移行先データベースでトランスポータブルするためにメタデータを取得します。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport incremental from scn <span style="color:#bd93f9">3450702</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport incremental from scn <span style="color:#bd93f9">3450702</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>RMAN&gt; backup <span style="color:#ff79c6">for</span> transport incremental from scn <span style="color:#bd93f9">3450702</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
 </span></span><span style="display:flex;"><span>
@@ -373,7 +378,7 @@
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  バックアップ・セットが完了しました。経過時間 :  <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">01</span>
 </span></span><span style="display:flex;"><span>backupが完了しました<span style="color:#ff79c6">(</span>完了時間 :  19-12-11<span style="color:#ff79c6">)</span>
 </span></span></code></pre></div><p>データファイルに最後の適用を行います。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>RMAN&gt; recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span>;
 </span></span><span style="display:flex;"><span>
@@ -389,7 +394,7 @@
 </span></span><span style="display:flex;"><span>チャネルORA_DISK_1 :  リストアが完了しました。経過時間 :  <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">01</span>
 </span></span><span style="display:flex;"><span>restoreを19-12-11で終了しました
 </span></span></code></pre></div><p>最終的なバックアップセットからメタデータエクスポートダンプを取得する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore dump file datapump destination <span style="color:#f1fa8c">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore dump file datapump destination <span style="color:#f1fa8c">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>RMAN&gt; restore dump file datapump destination <span style="color:#f1fa8c">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
 </span></span><span style="display:flex;"><span>
@@ -406,7 +411,7 @@
 </span></span><span style="display:flex;"><span>restoreを19-12-11で終了しました
 </span></span></code></pre></div><p><strong>7.トランスポータブル実行！</strong></p>
 <p>このメタデータを移行先にインポートすることによって、これまでせっせとrecover（適用）してきたデータファイルを移行先でようやく使えるようになります。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
 </span></span><span style="display:flex;"><span>
@@ -424,7 +429,7 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>ジョブ<span style="color:#f1fa8c">&#34;SYSTEM&#34;</span>.<span style="color:#f1fa8c">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span>は致命的なエラーのため水 12月 <span style="color:#bd93f9">11</span> <span style="color:#bd93f9">14</span> : <span style="color:#bd93f9">07</span> : <span style="color:#bd93f9">22</span> <span style="color:#bd93f9">2019</span> elapsed <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : 02で停止しました
 </span></span></code></pre></div><p>ユーザを作成します。この時点でTTS表領域は存在しないため、デフォルト表領域は指定しません。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; create user tts identified by <span style="color:#f1fa8c">&#34;oracle&#34;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; create user tts identified by <span style="color:#f1fa8c">&#34;oracle&#34;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>ユーザーが作成されました。
 </span></span><span style="display:flex;"><span>
@@ -432,7 +437,7 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>権限付与が成功しました。
 </span></span></code></pre></div><p>ワンモアチャレンジ。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>Import :  Release 19.0.0.0.0 - Production on 水 12月 <span style="color:#bd93f9">11</span> <span style="color:#bd93f9">14</span> : <span style="color:#bd93f9">08</span> : <span style="color:#bd93f9">56</span> <span style="color:#bd93f9">2019</span>
 </span></span><span style="display:flex;"><span>Version 19.3.0.0.0
@@ -451,7 +456,7 @@
 </span></span><span style="display:flex;"><span>オブジェクト型TRANSPORTABLE_EXPORT/POST_INSTANCE/PLUGTS_BLKの処理中です
 </span></span><span style="display:flex;"><span>ジョブ<span style="color:#f1fa8c">&#34;SYSTEM&#34;</span>.<span style="color:#f1fa8c">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span>が水 12月 <span style="color:#bd93f9">11</span> <span style="color:#bd93f9">14</span> : <span style="color:#bd93f9">09</span> : <span style="color:#bd93f9">09</span> <span style="color:#bd93f9">2019</span> elapsed <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">00</span> : <span style="color:#bd93f9">00</span> : 13で正常に完了しました
 </span></span></code></pre></div><p>TTS表領域が作成されています。ttsユーザのデフォルト表領域も変更しておきます。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; <span style="color:#ff79c6">select</span> TABLESPACE_NAME from dba_tablespaces;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; <span style="color:#ff79c6">select</span> TABLESPACE_NAME from dba_tablespaces;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>TABLESPACE_NAME
 </span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------
@@ -468,7 +473,7 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>ユーザーが変更されました。
 </span></span></code></pre></div><p>移行先で表領域を書き込み可能に変更して終わりです。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">write</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">write</span>;
 </span></span></code></pre></div><h4 id="所感"><strong>所感</strong></h4>
 <p>上記の通り、他移行方法と比べて大きな特徴があります。GoldenGateの代わりになるとは言い切れませんが、＋αのコストを掛けずに移行したい、ダウンタイムを減らしたい、バージョンアップをしたい、という場合にはこの方法も使えるのではないでしょうか。</p>
 <h4 id="4oracle-zero-downtime-migrationについて"><strong>4.Oracle Zero Downtime Migrationについて</strong></h4>
@@ -504,10 +509,10 @@
 <p>サポートしているバージョンは11.2.0.4 ～ 19cが対象です。</p>
 <blockquote>
 <p>Oracle ZDM supports the following Oracle Database versions :</p>
-<p>• 11.2.0.4 
-• 12.1.0.2 
-• 12.2.0.1 
-• 18c 
+<p>• 11.2.0.4
+• 12.1.0.2
+• 12.2.0.1
+• 18c
 • 19c</p>
 </blockquote>
 <p>Data Guardをベースとしたソリューションのために、Oracle Zero Downtime Migrationでは同じバージョンのデータベースのみMigrationが可能です。</p>
@@ -520,118 +525,118 @@
 </blockquote>
 <p>詳細ステップはこちら。ZDMCLI コマンドを使用することで自動実行が出来ます。</p>
 <table>
-<thead>
-<tr>
-<th style="text-align:left"><strong>フェーズ名</strong></th>
-<th style="text-align:left"><strong>説明</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">ZDM_GET_SRC_INFO</td>
-<td style="text-align:left">ソースデータベースに関する情報を取得する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_GET_TGT_INFO</td>
-<td style="text-align:left">ターゲットデータベースに関する情報を取得する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_SETUP_SRC</td>
-<td style="text-align:left">移行元サーバーでゼロダウンタイム移行ヘルパーモジュールをセットアップする</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_SETUP_TGT</td>
-<td style="text-align:left">ターゲットサーバーでゼロダウンタイム移行ヘルパーモジュールをセットアップする</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_PREUSERACTIONS</td>
-<td style="text-align:left">移行前のユーザーアクションがあれば、ソースで実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_PREUSERACTIONS_TGT</td>
-<td style="text-align:left">ターゲットで移行の事前ユーザーアクション（存在する場合）を実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_OBC_INST_SRC</td>
-<td style="text-align:left">ソースにOracle Database Cloud Backup Moduleをインストールします</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_OBC_INST_TGT</td>
-<td style="text-align:left">ターゲットにOracle Database Cloud Backup Moduleをインストールします</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_GEN_RMAN_PASSWD</td>
-<td style="text-align:left">RMANバックアップを暗号化するためのランダムパスワードを生成する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_BACKUP_FULL_SRC</td>
-<td style="text-align:left">ソースデータベースの完全バックアップを実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_BACKUP_INCREMENTAL_SRC</td>
-<td style="text-align:left">ソースデータベースの増分バックアップを実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_VALIDATE_SRC</td>
-<td style="text-align:left">ソースで検証を実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_VALIDATE_TGT</td>
-<td style="text-align:left">ターゲットで検証を実行します</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_DISCOVER_SRC</td>
-<td style="text-align:left">Data Guardを設定するためにソースでデータベース検出を実行します</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_COPYFILES</td>
-<td style="text-align:left">OracleパスワードファイルとTDEウォレットをソースからターゲットにコピーします</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_OSS_STANDBY_SETUP_TDE_TGT</td>
-<td style="text-align:left">TDEウォレットファイルをソースからターゲットキーストアの場所にコピーします</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_PREPARE_TGT</td>
-<td style="text-align:left">Data Guardスタンバイ作成のターゲットを準備する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_CLONE_TGT</td>
-<td style="text-align:left">クラウドバックアップからData Guardスタンバイを作成する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_FINALIZE_TGT</td>
-<td style="text-align:left">ターゲットのData Guardスタンバイ準備を完了します</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_CONFIGURE_DG_SRC</td>
-<td style="text-align:left">クラウドスタンバイをソースに登録する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_SWITCHOVER_SRC</td>
-<td style="text-align:left">ソースでスイッチオーバーアクションを開始する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_SWITCHOVER_TGT</td>
-<td style="text-align:left">ターゲットでスイッチオーバーアクションを完了する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_POSTUSERACTIONS</td>
-<td style="text-align:left">ソースで移行後のユーザーアクションを実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_POSTUSERACTIONS_TGT</td>
-<td style="text-align:left">ターゲットで移行後のユーザーアクションを実行する</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_CLEANUP_SRC</td>
-<td style="text-align:left">ソースでクリーンアップを実行します</td>
-</tr>
-<tr>
-<td style="text-align:left">ZDM_CLEANUP_TGT</td>
-<td style="text-align:left">ターゲットでクリーンアップを実行します</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th style="text-align: left"><strong>フェーズ名</strong></th>
+          <th style="text-align: left"><strong>説明</strong></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left">ZDM_GET_SRC_INFO</td>
+          <td style="text-align: left">ソースデータベースに関する情報を取得する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_GET_TGT_INFO</td>
+          <td style="text-align: left">ターゲットデータベースに関する情報を取得する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_SETUP_SRC</td>
+          <td style="text-align: left">移行元サーバーでゼロダウンタイム移行ヘルパーモジュールをセットアップする</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_SETUP_TGT</td>
+          <td style="text-align: left">ターゲットサーバーでゼロダウンタイム移行ヘルパーモジュールをセットアップする</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_PREUSERACTIONS</td>
+          <td style="text-align: left">移行前のユーザーアクションがあれば、ソースで実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_PREUSERACTIONS_TGT</td>
+          <td style="text-align: left">ターゲットで移行の事前ユーザーアクション（存在する場合）を実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_OBC_INST_SRC</td>
+          <td style="text-align: left">ソースにOracle Database Cloud Backup Moduleをインストールします</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_OBC_INST_TGT</td>
+          <td style="text-align: left">ターゲットにOracle Database Cloud Backup Moduleをインストールします</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_GEN_RMAN_PASSWD</td>
+          <td style="text-align: left">RMANバックアップを暗号化するためのランダムパスワードを生成する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_BACKUP_FULL_SRC</td>
+          <td style="text-align: left">ソースデータベースの完全バックアップを実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_BACKUP_INCREMENTAL_SRC</td>
+          <td style="text-align: left">ソースデータベースの増分バックアップを実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_VALIDATE_SRC</td>
+          <td style="text-align: left">ソースで検証を実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_VALIDATE_TGT</td>
+          <td style="text-align: left">ターゲットで検証を実行します</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_DISCOVER_SRC</td>
+          <td style="text-align: left">Data Guardを設定するためにソースでデータベース検出を実行します</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_COPYFILES</td>
+          <td style="text-align: left">OracleパスワードファイルとTDEウォレットをソースからターゲットにコピーします</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_OSS_STANDBY_SETUP_TDE_TGT</td>
+          <td style="text-align: left">TDEウォレットファイルをソースからターゲットキーストアの場所にコピーします</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_PREPARE_TGT</td>
+          <td style="text-align: left">Data Guardスタンバイ作成のターゲットを準備する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_CLONE_TGT</td>
+          <td style="text-align: left">クラウドバックアップからData Guardスタンバイを作成する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_FINALIZE_TGT</td>
+          <td style="text-align: left">ターゲットのData Guardスタンバイ準備を完了します</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_CONFIGURE_DG_SRC</td>
+          <td style="text-align: left">クラウドスタンバイをソースに登録する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_SWITCHOVER_SRC</td>
+          <td style="text-align: left">ソースでスイッチオーバーアクションを開始する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_SWITCHOVER_TGT</td>
+          <td style="text-align: left">ターゲットでスイッチオーバーアクションを完了する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_POSTUSERACTIONS</td>
+          <td style="text-align: left">ソースで移行後のユーザーアクションを実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_POSTUSERACTIONS_TGT</td>
+          <td style="text-align: left">ターゲットで移行後のユーザーアクションを実行する</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_CLEANUP_SRC</td>
+          <td style="text-align: left">ソースでクリーンアップを実行します</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ZDM_CLEANUP_TGT</td>
+          <td style="text-align: left">ターゲットでクリーンアップを実行します</td>
+      </tr>
+  </tbody>
 </table>
 <h5 id="所感-1"><strong>所感</strong></h5>
 <p>当初、Zero Downtime Migrationという言葉からはOracle GoldenGateが思い浮かびましたが、実際にはData Guardの機能で行うようです。同じバージョンでしか使えないので&quot;バージョンアップを伴う&quot;Cloud移行には使えないのがネックかと思いました。単純にクラウド移行を行うためだけのツールという理解に至りました。Data Guardのモード（同期/非同期）や非同期の場合、適用ラグがあった場合の動作が気になります。また、マニュアルを見る限り移行元データベース側の事前準備としてData Guardの設定変更に関する記載が無かったように思いました。DGはForce Logging必須ではなかった？実際に最後まで動かせていないので詳細までは記載出来なかったのが心残りです。</p>

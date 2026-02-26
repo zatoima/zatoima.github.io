@@ -106,6 +106,12 @@ https://docs.snowflake.com/_next/data/{buildId}/en/search.json?q=Dynamic+Tables
 
 Snowflakeドキュメント検索MCPサーバーは、docs.snowflake.comのNext.js内部エンドポイントを利用して検索・取得を行っている。公式APIに依存しないためAPIキーが不要だが、サイト構造の変更には弱いというトレードオフがある。
 
+## 関連記事
+
+{{< linkcard url="https://zatoima.github.io/mcp-server-context-usage-optimization/" title="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した" description="本記事で作成したMCPサーバーのコンテキスト使用量を実測し、改善した過程と結果" >}}
+
+{{< linkcard url="https://zatoima.github.io/snowflake-mcp-documentation-server-benchmark/" title="Snowflake MCPドキュメントサーバー2種のベンチマーク比較" description="本MCPサーバーとCortex Agent + CKEベースのMCPサーバーを20クエリ・5評価軸で比較" >}}
+
 ## 参考資料
 
 {{< linkcard "https://github.com/zatoima/snowflake-docs-mcp-server" >}}

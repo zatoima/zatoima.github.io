@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -11,21 +11,28 @@
 <meta name="keywords" content="MCP,Claude,LLM,Snowflake," />
 
 
-<meta property="og:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/mcp-server-context-usage-optimization/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2026-02-25T00:00:00+00:00" />
-<meta property="article:modified_time" content="2026-02-25T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
+<meta property="og:url" content="https://zatoima.github.io/mcp-server-context-usage-optimization/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した">
+  <meta property="og:description" content="memo blog。GitHub Pagesとして構成されています。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-02-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-02-25T00:00:00+00:00">
+    <meta property="article:tag" content="MCP">
+    <meta property="article:tag" content="Claude">
+    <meta property="article:tag" content="LLM">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
 
 
 
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した"/>
-<meta name="twitter:description" content=""/>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した">
+  <meta name="twitter:description" content="memo blog。GitHub Pagesとして構成されています。">
 
 
 
@@ -51,7 +58,7 @@
     "@type": "WebPage",
     "@id": "\"https://zatoima.github.io/mcp-server-context-usage-optimization/\""
   },
-  "wordCount":  12156 ,
+  "wordCount":  5337 ,
   "keywords": "[\"MCP\",\"Claude\",\"LLM\",\"Snowflake\"]"
 }
 </script>
@@ -146,7 +153,7 @@
           
           
           
-          <span class="reading-time">📖 約24分</span>
+          <span class="reading-time">📖 約10分</span>
         </div>
         <div class="article-tags">
           
@@ -164,1207 +171,511 @@
       <div class="article-content">
         <h2 id="はじめに">はじめに</h2>
 <p>MCPサーバーはLLMエージェントに外部ツールを提供する仕組みだが、ツールのレスポンスはすべてLLMのコンテキストウィンドウに入る。つまりMCPツールが返すデータ量がそのままコンテキスト消費に直結する。</p>
-<p>本記事では、自作のSnowflake Docs MCPサーバーのコンテキスト使用量を実測し、問題点を特定した上で、AWS公式のドキュメントMCPサーバーの実装を参考に改善を行った。改善前後の具体的な数値比較と、ドキュメント系MCPサーバー設計のポイントをまとめる。</p>
+<p>本記事では、自作のSnowflake Docs MCPサーバーのコンテキスト使用量を実測し、問題点を特定した上で改善を行った過程と結果をまとめる。</p>
+<div class="link-card">
+    <a href="https://github.com/zatoima/snowflake-docs-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - zatoima/snowflake-docs-mcp-server: MCP server for searching and retrieving Snowflake official documentation</div><div class="link-card-description">MCP server for searching and retrieving Snowflake official documentation - zatoima/snowflake-docs-mcp-server</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/58ea2e91475f7d892b636a3bd79d8a5042ddd5faadedc8135ccb03b87a641a34/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
 <h2 id="mcpツールのレスポンスとコンテキストの関係">MCPツールのレスポンスとコンテキストの関係</h2>
 <p>MCPツールの呼び出し結果は、LLMへの入力としてコンテキストウィンドウに載る。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[ユーザーメッセージ] + [システムプロンプト] + [MCPツール結果] + [過去の会話] = コンテキスト消費
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[ユーザーメッセージ] + [システムプロンプト] + [MCPツール結果] + [過去の会話] = コンテキスト消費
 </span></span></code></pre></div><p>ドキュメント取得系のMCPツールは、1回の呼び出しで数千〜数万文字を返すことがある。これを意識せずに設計すると、数回の呼び出しでコンテキストの大部分を消費し、会話の継続が困難になる。</p>
 <h3 id="サブエージェント経由の場合">サブエージェント経由の場合</h3>
 <p>Claude Codeのサブエージェント（Task tool）経由でMCPツールを使う場合、ツールの生レスポンスはサブエージェントのコンテキスト内に留まり、メインには要約のみが返る。これによりメインコンテキストの消費を大幅に削減できる。</p>
 <table>
-<thead>
-<tr>
-<th>方式</th>
-<th>メインコンテキスト消費</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>直接呼び出し</td>
-<td>ツール結果の全文</td>
-</tr>
-<tr>
-<td>サブエージェント経由</td>
-<td>要約のみ（50-90%削減）</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>方式</th>
+          <th>メインコンテキスト消費</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>直接呼び出し</td>
+          <td>ツール結果の全文</td>
+      </tr>
+      <tr>
+          <td>サブエージェント経由</td>
+          <td>要約のみ（50-90%削減）</td>
+      </tr>
+  </tbody>
 </table>
 <p>ただしサブエージェントは合計トークン消費量が増え、レイテンシも大きくなるため、すべてをサブエージェント経由にするのは現実的ではない。MCPサーバー側でレスポンスサイズを適切に制御することが重要である。</p>
-<h2 id="改善前のsnowflake-docs-mcpサーバーv010">改善前のSnowflake Docs MCPサーバー（v0.1.0）</h2>
+<h2 id="改善前の状態">改善前の状態</h2>
 <p>改善前のサーバーは2つのツールを提供していた。</p>
 <table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>機能</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>search_snowflake_docs</code></td>
-<td>キーワード検索（excerpt 200文字、最大20件）</td>
-</tr>
-<tr>
-<td><code>get_doc_content</code></td>
-<td>ページ全文取得（HTML→Markdown変換）</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>ツール</th>
+          <th>機能</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>search_snowflake_docs</code></td>
+          <td>キーワード検索（excerpt 200文字、最大20件）</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_content</code></td>
+          <td>ページ全文取得（HTML→Markdown変換）</td>
+      </tr>
+  </tbody>
 </table>
 <h3 id="実測結果">実測結果</h3>
 <p>CREATE TABLE ページ（Snowflakeで最も大きいページの一つ）を対象に計測した。</p>
 <p><strong>search_snowflake_docs:</strong></p>
 <table>
-<thead>
-<tr>
-<th>max_results</th>
-<th>レスポンス文字数</th>
-<th>推定トークン数</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>3件</td>
-<td>~850</td>
-<td>~250</td>
-</tr>
-<tr>
-<td>5件（デフォルト）</td>
-<td>~1,400</td>
-<td>~400</td>
-</tr>
-<tr>
-<td>10件</td>
-<td>~2,800</td>
-<td>~800</td>
-</tr>
-<tr>
-<td>20件（最大）</td>
-<td>~5,500</td>
-<td>~1,500</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>max_results</th>
+          <th>レスポンス文字数</th>
+          <th>推定トークン数</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>3件</td>
+          <td>~850</td>
+          <td>~250</td>
+      </tr>
+      <tr>
+          <td>5件（デフォルト）</td>
+          <td>~1,400</td>
+          <td>~400</td>
+      </tr>
+      <tr>
+          <td>10件</td>
+          <td>~2,800</td>
+          <td>~800</td>
+      </tr>
+      <tr>
+          <td>20件（最大）</td>
+          <td>~5,500</td>
+          <td>~1,500</td>
+      </tr>
+  </tbody>
 </table>
 <p>検索ツールは軽量で問題なし。</p>
 <p><strong>get_doc_content:</strong></p>
 <table>
-<thead>
-<tr>
-<th>max_length</th>
-<th>レスポンス文字数</th>
-<th>推定トークン数</th>
-<th>備考</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>2,000</td>
-<td>~2,200</td>
-<td>~600</td>
-<td></td>
-</tr>
-<tr>
-<td>4,000</td>
-<td>~4,200</td>
-<td>~1,100</td>
-<td></td>
-</tr>
-<tr>
-<td>8,000（デフォルト）</td>
-<td>~8,200</td>
-<td>~2,200</td>
-<td></td>
-</tr>
-<tr>
-<td>0（無制限）</td>
-<td><strong>102,079</strong></td>
-<td><strong>~25,000+</strong></td>
-<td>コンテキスト上限超過</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>max_length</th>
+          <th>レスポンス文字数</th>
+          <th>推定トークン数</th>
+          <th>備考</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2,000</td>
+          <td>~2,200</td>
+          <td>~600</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>4,000</td>
+          <td>~4,200</td>
+          <td>~1,100</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>8,000（デフォルト）</td>
+          <td>~8,200</td>
+          <td>~2,200</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>0（無制限）</td>
+          <td><strong>102,079</strong></td>
+          <td><strong>~25,000+</strong></td>
+          <td>コンテキスト上限超過</td>
+      </tr>
+  </tbody>
 </table>
 <h3 id="発見された問題">発見された問題</h3>
-<h4 id="1-テキスト重複バグ">1. テキスト重複バグ</h4>
+<p><strong>1. テキスト重複バグ</strong></p>
 <p>HTML→Markdown変換に <code>descendants</code> イテレータを使っていたため、<code>&lt;li&gt;</code> 内の <code>&lt;p&gt;</code> で同じテキストが2回出力されていた。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>- Requires a value (NOT NULL).
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>- Requires a value (NOT NULL).
 </span></span><span style="display:flex;"><span>Requires a value (NOT NULL).          ← 重複
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>- Has a default value.
 </span></span><span style="display:flex;"><span>Has a default value.                  ← 重複
 </span></span></code></pre></div><p>リスト10項目が20行に膨張し、<strong>コンテンツの30-40%が無駄な重複</strong>に消費されていた。</p>
-<p>原因はBeautifulSoupの <code>descendants</code> が全ネスト要素を走査するため、<code>&lt;li&gt;</code> ハンドラと <code>&lt;p&gt;</code> ハンドラの両方が同じテキストに対して発火していたこと。</p>
-<h4 id="2-max_length0-でコンテキスト破綻">2. max_length=0 でコンテキスト破綻</h4>
+<p><strong>2. max_length=0 でコンテキスト破綻</strong></p>
 <p>CREATE TABLEページを無制限取得すると102,079文字が返り、Claude Codeのトークン上限を超えてファイルに退避された。ファイル退避されるとコンテキスト内で直接参照できなくなり、実質的に使い物にならない。</p>
-<h4 id="3-セクション指定取得ができない">3. セクション指定取得ができない</h4>
+<p><strong>3. セクション指定取得ができない</strong></p>
 <p>ページの先頭から <code>max_length</code> 分だけ切り取る方式のため、Usage NotesやExamplesなどページ後半にある重要情報に到達できなかった。</p>
-<h4 id="4-ページ構造の確認手段がない">4. ページ構造の確認手段がない</h4>
+<p><strong>4. ページ構造の確認手段がない</strong></p>
 <p>どんなセクションがあるかを知るためにも <code>get_doc_content</code> で全文取得する必要があった。</p>
-<h2 id="aws-documentation-mcpサーバーの実装調査">AWS Documentation MCPサーバーの実装調査</h2>
-<p>改善の参考として、AWSが公式に提供しているドキュメントMCPサーバーの実装を調査した。</p>
-<h3 id="アーキテクチャ">アーキテクチャ</h3>
-<p>AWSのサーバーは3つのツールを提供している。</p>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>機能</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>read_documentation</code></td>
-<td>ページ取得（ページネーション対応）</td>
-</tr>
-<tr>
-<td><code>search_documentation</code></td>
-<td>検索（公式Search API使用）</td>
-</tr>
-<tr>
-<td><code>recommend</code></td>
-<td>関連コンテンツ推薦</td>
-</tr>
-</tbody>
-</table>
-<h3 id="参考になった設計ポイント">参考になった設計ポイント</h3>
-<p><strong>1. markdownifyライブラリの使用</strong></p>
-<p>手書きのHTMLパーサーではなく、<code>markdownify</code> ライブラリでHTML→Markdown変換を行っている。これにより重複バグのような問題は構造的に発生しない。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>content <span style="color:#ff79c6">=</span> markdownify<span style="color:#ff79c6">.</span>markdownify(
-</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">str</span>(main_content),
-</span></span><span style="display:flex;"><span>    heading_style<span style="color:#ff79c6">=</span>markdownify<span style="color:#ff79c6">.</span>ATX,
-</span></span><span style="display:flex;"><span>    strip<span style="color:#ff79c6">=</span>tags_to_strip,
-</span></span><span style="display:flex;"><span>)
-</span></span></code></pre></div><p><strong>2. start_indexによるページネーション</strong></p>
-<p>長文ドキュメントを一度に全文返すのではなく、<code>start_index</code> パラメータで分割読み込みする設計。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">read_documentation</span>(
-</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>,
-</span></span><span style="display:flex;"><span>    max_length: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5000</span>,     <span style="color:#6272a4"># デフォルト5000</span>
-</span></span><span style="display:flex;"><span>    start_index: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>,       <span style="color:#6272a4"># 読み込み開始位置</span>
-</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
-</span></span></code></pre></div><p>instructions には「30,000文字超のドキュメントは、必要な情報が見つかった時点で読み込みを止めること」と明記されている。</p>
-<p><strong>3. max_lengthの安全な制約</strong></p>
-<p>Pydantic Fieldで <code>gt=0, lt=1000000</code> の制約をかけ、0（無制限）を入力できないようにしている。</p>
-<h2 id="改善後のsnowflake-docs-mcpサーバーv020">改善後のSnowflake Docs MCPサーバー（v0.2.0）</h2>
-<p>上記の調査を踏まえ、以下の改善を実施した。</p>
-<h3 id="変更一覧">変更一覧</h3>
-<table>
-<thead>
-<tr>
-<th>変更</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>HTML→Markdown変換</td>
-<td>手書き <code>descendants</code> ループ → <code>markdownify</code> ライブラリ</td>
-</tr>
-<tr>
-<td>デフォルト max_length</td>
-<td>8000 → 5000（重複解消で情報密度向上）</td>
-</tr>
-<tr>
-<td>max_length=0</td>
-<td>無制限 → ハードキャップ(20000)まで</td>
-</tr>
-<tr>
-<td>ページネーション</td>
-<td><code>start_index</code> パラメータ追加</td>
-</tr>
-<tr>
-<td>新ツール: <code>get_doc_toc</code></td>
-<td>ページ見出し構造の軽量取得</td>
-</tr>
-<tr>
-<td>新ツール: <code>get_doc_section</code></td>
-<td>特定セクションのみ取得</td>
-</tr>
-</tbody>
-</table>
-<h3 id="ツール構成">ツール構成</h3>
-<p>改善後は4つのツールを提供する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>search_snowflake_docs  → ドキュメント検索
-</span></span><span style="display:flex;"><span>get_doc_toc            → ページの目次取得（軽量）
-</span></span><span style="display:flex;"><span>get_doc_section        → 特定セクションの取得
-</span></span><span style="display:flex;"><span>get_doc_content        → ページ全文の取得（ページネーション対応）
-</span></span></code></pre></div><p>推奨される使い方は以下の流れ。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1. search_snowflake_docs で検索
-</span></span><span style="display:flex;"><span>2. get_doc_toc でページ構造を確認（軽量）
-</span></span><span style="display:flex;"><span>3. get_doc_section で必要なセクションだけ取得
-</span></span><span style="display:flex;"><span>4. 全文が必要な場合のみ get_doc_content（start_index で分割読み込み）
-</span></span></code></pre></div><h3 id="主要な実装">主要な実装</h3>
-<p><strong>_clamp_max_length:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_clamp_max_length</span>(max_length: <span style="color:#8be9fd;font-style:italic">int</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">int</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> max_length <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">0</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> DEFAULT_MAX_CONTENT_LENGTH  <span style="color:#6272a4"># 5000</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> max_length <span style="color:#ff79c6">==</span> <span style="color:#bd93f9">0</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> MAX_CONTENT_LENGTH_HARD_CAP  <span style="color:#6272a4"># 20000</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> <span style="color:#8be9fd;font-style:italic">min</span>(max_length, MAX_CONTENT_LENGTH_HARD_CAP)
-</span></span></code></pre></div><table>
-<thead>
-<tr>
-<th>max_length の値</th>
-<th>挙動</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>全文取得の意図を尊重し、ハードキャップ(20,000)まで返す</td>
-</tr>
-<tr>
-<td>1〜20,000</td>
-<td>指定値そのまま</td>
-</tr>
-<tr>
-<td>20,001以上</td>
-<td>20,000にキャップ</td>
-</tr>
-<tr>
-<td>負値</td>
-<td>デフォルト(5,000)にフォールバック</td>
-</tr>
-</tbody>
-</table>
-<p><strong>get_doc_content のページネーション:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>@mcp<span style="color:#ff79c6">.</span>tool()
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">get_doc_content</span>(
-</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>,
-</span></span><span style="display:flex;"><span>    include_code_blocks: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">True</span>,
-</span></span><span style="display:flex;"><span>    max_length: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5000</span>,
-</span></span><span style="display:flex;"><span>    start_index: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>,
-</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span>:
-</span></span></code></pre></div><p>レスポンスに <code>total_length</code> と <code>next_start_index</code> を含め、続きの取得を容易にしている。</p>
-<h2 id="改善前後のコンテキスト使用量比較">改善前後のコンテキスト使用量比較</h2>
-<h3 id="テキスト品質の改善">テキスト品質の改善</h3>
-<p>同じ <code>max_length=2000</code> で取得した CREATE TABLE ページのリスト部分：</p>
-<p><strong>旧版（v0.1.0）— 20行:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>- Requires a value (NOT NULL).
-</span></span><span style="display:flex;"><span>Requires a value (NOT NULL).
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>- Has a default value.
-</span></span><span style="display:flex;"><span>Has a default value.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>- CREATE OR ALTER TABLE (creates a table if ...)
-</span></span><span style="display:flex;"><span>CREATE OR ALTER TABLE (creates a table if ...)
-</span></span></code></pre></div><p><strong>新版（v0.2.0）— 10行:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>* Requires a value (NOT NULL).
-</span></span><span style="display:flex;"><span>* Has a default value.
-</span></span><span style="display:flex;"><span>* CREATE OR ALTER TABLE (creates a table if ...)
-</span></span></code></pre></div><p>同じ文字数でも、新版は重複がないため実効的に約1.5倍の情報量を含む。</p>
-<h3 id="get_doc_content-の比較">get_doc_content の比較</h3>
-<table>
-<thead>
-<tr>
-<th>条件</th>
-<th>旧版 JSON chars</th>
-<th>新版 JSON chars</th>
-<th>備考</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>max_length=2000</td>
-<td>~2,200</td>
-<td>2,269</td>
-<td>新版は重複なしで情報量2倍</td>
-</tr>
-<tr>
-<td>max_length=5000（新デフォルト）</td>
-<td>—</td>
-<td>5,351</td>
-<td>新デフォルト</td>
-</tr>
-<tr>
-<td>max_length=8000（旧デフォルト）</td>
-<td>~8,200</td>
-<td>8,450</td>
-<td>旧版は30-40%が重複</td>
-</tr>
-<tr>
-<td>max_length=0</td>
-<td><strong>102,079（破綻）</strong></td>
-<td><strong>20,000以下（安全）</strong></td>
-<td>95%以上削減</td>
-</tr>
-</tbody>
-</table>
-<h3 id="新ツールのコンテキスト消費">新ツールのコンテキスト消費</h3>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>JSON chars</th>
-<th>~tokens</th>
-<th>用途</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>get_doc_toc</code> (CREATE TABLE)</td>
-<td>2,114</td>
-<td>~528</td>
-<td>24見出しの目次</td>
-</tr>
-<tr>
-<td><code>get_doc_toc</code> (SHOW TABLES)</td>
-<td>454</td>
-<td>~113</td>
-<td>6見出しの目次</td>
-</tr>
-<tr>
-<td><code>get_doc_section</code> (syntax)</td>
-<td>3,883</td>
-<td>~970</td>
-<td>Syntaxセクションのみ</td>
-</tr>
-<tr>
-<td><code>get_doc_section</code> (usage-notes)</td>
-<td>5,267</td>
-<td>~1,316</td>
-<td>Usage Notesのみ</td>
-</tr>
-<tr>
-<td><code>get_doc_section</code> (required-parameters)</td>
-<td>2,585</td>
-<td>~646</td>
-<td>必須パラメータのみ</td>
-</tr>
-</tbody>
-</table>
-<p><code>get_doc_toc</code> は500トークン前後で済むため、気軽に呼び出せる。</p>
-<h3 id="典型的な使用パターンの比較">典型的な使用パターンの比較</h3>
-<table>
-<thead>
-<tr>
-<th>パターン</th>
-<th>旧版 chars</th>
-<th>新版 chars</th>
-<th>改善</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>search + get_doc_content</td>
-<td>~9,600</td>
-<td>7,378</td>
-<td>23%削減</td>
-</tr>
-<tr>
-<td>search + 2x get_doc_content</td>
-<td>~17,800</td>
-<td>12,714</td>
-<td>29%削減</td>
-</tr>
-<tr>
-<td>search + TOC + 1 section</td>
-<td>—</td>
-<td>9,408</td>
-<td>新機能</td>
-</tr>
-<tr>
-<td>search + TOC + 2 sections</td>
-<td>—</td>
-<td>13,291</td>
-<td>新機能</td>
-</tr>
-<tr>
-<td>Usage Notes だけ欲しい</td>
-<td>不可能</td>
-<td>5,267</td>
-<td>新機能</td>
-</tr>
-</tbody>
-</table>
-<p>特にページ後半のセクション（Usage Notes、Examples）だけが必要な場合、旧版では到達不可能だったが、新版では <code>get_doc_section</code> で直接取得できるようになった。</p>
-<h2 id="さらなる最適化v030">さらなる最適化（v0.3.0）</h2>
-<p>v0.2.0で段階的な情報取得が可能になったが、実際にClaude Codeで使っていると、典型的な使用パターン（<code>search</code> → <code>get_doc_toc</code> → <code>get_doc_section</code>）で3回のツール呼び出しが必要であり、ツール呼び出し回数の多さとHTTPフェッチの重複が気になった。</p>
-<p>v0.3.0ではコンテキスト消費をさらに削減するため、以下の4つの改善を実施した。</p>
-<h3 id="変更一覧-1">変更一覧</h3>
-<table>
-<thead>
-<tr>
-<th>変更</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>レスポンスキャッシュ</td>
-<td><code>_fetch_and_parse_page</code> にTTL付きインメモリキャッシュ（5分）を追加</td>
-</tr>
-<tr>
-<td>検索結果にheadings付与</td>
-<td><code>search_snowflake_docs</code> に <code>include_headings</code> パラメータを追加</td>
-</tr>
-<tr>
-<td>コードブロックのデフォルトOFF</td>
-<td><code>include_code_blocks</code> のデフォルトを <code>True</code> → <code>False</code> に変更</td>
-</tr>
-<tr>
-<td>新ツール: <code>search_in_doc</code></td>
-<td>ページ内キーワード検索で関連セクションを自動選択</td>
-</tr>
-</tbody>
-</table>
-<h3 id="ツール構成-1">ツール構成</h3>
-<p>v0.3.0では5つのツールを提供する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>search_snowflake_docs  → ドキュメント検索（include_headings=Trueで目次も同時取得可能）
+<p><strong>5. Markdown出力のノイズ</strong></p>
+<p>HTML→Markdown変換後に、LLMにとって不要なアーティファクトが多数残留していた。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>## Usage notes[¶](#usage-notes &#34;Link to this heading&#34;)     ← pilcrowリンク（~40 chars/見出し）
+</span></span><span style="display:flex;"><span>Copy                                                        ← コピーボタンの残骸
+</span></span><span style="display:flex;"><span>[COPY INTO &lt;table&gt;](copy-into-table)                        ← 辿れない相対リンク
+</span></span></code></pre></div><p>CREATE TABLEページ（24見出し）だけでpilcrowリンクに約960文字が消費されていた。</p>
+<h2 id="改善の過程">改善の過程</h2>
+<h3 id="aws公式mcpサーバーの調査">AWS公式MCPサーバーの調査</h3>
+<p>改善の参考として、AWSが公式に提供しているドキュメントMCPサーバーの実装を調査した。参考になった設計ポイントは以下の通り。</p>
+<ul>
+<li><strong>markdownifyライブラリの使用</strong>: 手書きのHTMLパーサーではなく <code>markdownify</code> ライブラリでHTML→Markdown変換を行っており、重複バグのような問題は構造的に発生しない</li>
+<li><strong>start_indexによるページネーション</strong>: 長文ドキュメントを <code>start_index</code> パラメータで分割読み込みする設計</li>
+<li><strong>max_lengthの安全な制約</strong>: Pydantic Fieldで <code>gt=0, lt=1000000</code> の制約をかけ、0（無制限）を入力できないようにしている</li>
+<li><strong>instructionsへのベストプラクティス記載</strong>: 「30,000文字超のドキュメントは、必要な情報が見つかった時点で読み込みを止めること」と明記</li>
+</ul>
+<h3 id="取り組み1-htmlmarkdown変換の品質改善">取り組み1: HTML→Markdown変換の品質改善</h3>
+<p>手書きの <code>descendants</code> ループを <code>markdownify</code> ライブラリに置き換えた。これによりテキスト重複バグが解消され、同じ文字数でも実効的に約1.5倍の情報量を含むようになった。</p>
+<p>さらに、Markdown変換後のノイズ除去を実装した。</p>
+<ul>
+<li>pilcrowリンク（<code>[¶](...)</code>）の除去</li>
+<li>コピーボタンの残骸（<code>Copy</code>）の除去</li>
+<li>リンクURLの除去（テキストのみ保持）</li>
+<li>画像・SVGタグの除去</li>
+<li>フィードバック・評価・アンケート・フォーム要素の除去</li>
+</ul>
+<p>ポイントは除去の段階を分けている点。ボタンや画像はHTML段階で <code>decompose()</code> し、pilcrowやCopyの残骸はMarkdown変換後にテキストレベルで除去する。<code>&lt;a&gt;</code> タグは <code>unwrap()</code> でタグだけ除去しテキストは保持する。</p>
+<h3 id="取り組み2-段階的な情報取得の導入">取り組み2: 段階的な情報取得の導入</h3>
+<p>2つだったツールを5つに増やし、段階的な情報取得を可能にした。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>search_snowflake_docs  → ドキュメント検索（include_headings=Trueで目次も同時取得可能）
 </span></span><span style="display:flex;"><span>search_in_doc          → ページ内キーワード検索（関連セクション自動選択）
 </span></span><span style="display:flex;"><span>get_doc_toc            → ページの目次取得（軽量）
 </span></span><span style="display:flex;"><span>get_doc_section        → 特定セクションの取得
 </span></span><span style="display:flex;"><span>get_doc_content        → ページ全文の取得（ページネーション対応）
-</span></span></code></pre></div><h3 id="改善1-レスポンスキャッシュ">改善1: レスポンスキャッシュ</h3>
-<p>同一URLへの重複HTTPフェッチを排除するため、パース済みHTMLのインメモリキャッシュを導入した。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_CACHE_TTL <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">300</span>  <span style="color:#6272a4"># 5分</span>
-</span></span><span style="display:flex;"><span>_page_cache: <span style="color:#8be9fd;font-style:italic">dict</span>[<span style="color:#8be9fd;font-style:italic">str</span>, <span style="color:#8be9fd;font-style:italic">tuple</span>[<span style="color:#8be9fd;font-style:italic">float</span>, <span style="color:#8be9fd;font-style:italic">str</span>, Tag]] <span style="color:#ff79c6">=</span> {}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_fetch_and_parse_page</span>(url: <span style="color:#8be9fd;font-style:italic">str</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span> <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">tuple</span>[<span style="color:#8be9fd;font-style:italic">str</span>, Tag]:
-</span></span><span style="display:flex;"><span>    now <span style="color:#ff79c6">=</span> time<span style="color:#ff79c6">.</span>monotonic()
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> url <span style="color:#ff79c6">in</span> _page_cache:
-</span></span><span style="display:flex;"><span>        cached_at, cached_title, cached_content <span style="color:#ff79c6">=</span> _page_cache[url]
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> now <span style="color:#ff79c6">-</span> cached_at <span style="color:#ff79c6">&lt;</span> _CACHE_TTL:
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">return</span> (cached_title, copy<span style="color:#ff79c6">.</span>copy(cached_content))
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">else</span>:
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">del</span> _page_cache[url]
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># ... HTTPフェッチ・パース処理 ...</span>
-</span></span><span style="display:flex;"><span>    _page_cache[url] <span style="color:#ff79c6">=</span> (now, title, main_content)
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> (title, copy<span style="color:#ff79c6">.</span>copy(main_content))
-</span></span></code></pre></div><p>BeautifulSoupの <code>Tag</code> オブジェクトは <code>decompose()</code> で破壊的に変更されるため、キャッシュから返す際は <code>copy.copy()</code> でコピーを返す点がポイントである。</p>
-<p>これにより <code>search</code> → <code>get_doc_toc</code> → <code>get_doc_section</code> の流れで同じページを3回フェッチしていた問題が解消され、初回のみHTTPアクセスし、以降はキャッシュから返すようになった。</p>
-<h3 id="改善2-検索結果にheadings付与">改善2: 検索結果にheadings付与</h3>
-<p><code>search_snowflake_docs</code> に <code>include_headings</code> パラメータを追加し、検索と同時にページの見出し構造を取得できるようにした。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>@mcp<span style="color:#ff79c6">.</span>tool()
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">search_snowflake_docs</span>(
-</span></span><span style="display:flex;"><span>    query: <span style="color:#8be9fd;font-style:italic">str</span>,
-</span></span><span style="display:flex;"><span>    max_results: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5</span>,
-</span></span><span style="display:flex;"><span>    language: <span style="color:#8be9fd;font-style:italic">str</span> <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34;en&#34;</span>,
-</span></span><span style="display:flex;"><span>    include_headings: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">False</span>,  <span style="color:#6272a4"># 追加</span>
-</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span>:
-</span></span></code></pre></div><p><code>include_headings=True</code> を指定すると、各検索結果に <code>headings</code> フィールドが追加される。これにより <code>get_doc_toc</code> の呼び出しを省略でき、3ステップから2ステップに削減できる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>改善前: search → get_doc_toc → get_doc_section  (3回)
-</span></span><span style="display:flex;"><span>改善後: search(include_headings=True) → get_doc_section  (2回)
-</span></span></code></pre></div><p>heading抽出ロジックは <code>_extract_headings()</code> として共通関数化し、<code>get_doc_toc</code> からも利用するようにした。</p>
-<h3 id="改善3-コードブロックのデフォルトoff">改善3: コードブロックのデフォルトOFF</h3>
+</span></span></code></pre></div><p>推奨される使い方の流れ。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1. search_snowflake_docs(include_headings=True) で検索+目次を1回で取得
+</span></span><span style="display:flex;"><span>2. search_in_doc で関連セクションだけ自動抽出
+</span></span><span style="display:flex;"><span>3. コード例が必要な場合のみ include_code_blocks=True を指定
+</span></span></code></pre></div><h3 id="取り組み3-レスポンスサイズの制御">取り組み3: レスポンスサイズの制御</h3>
+<p><code>max_length</code> のハードキャップを設け、コンテキスト破綻を防止した。</p>
+<table>
+  <thead>
+      <tr>
+          <th>max_length の値</th>
+          <th>挙動</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>全文取得の意図を尊重し、ハードキャップ(20,000)まで返す</td>
+      </tr>
+      <tr>
+          <td>1〜20,000</td>
+          <td>指定値そのまま</td>
+      </tr>
+      <tr>
+          <td>20,001以上</td>
+          <td>20,000にキャップ</td>
+      </tr>
+      <tr>
+          <td>負値</td>
+          <td>デフォルト(5,000)にフォールバック</td>
+      </tr>
+  </tbody>
+</table>
+<p>加えて <code>start_index</code> パラメータによるページネーション、自然な位置での境界切断（段落→行→文→単語の優先度）を導入した。</p>
+<h3 id="取り組み4-コードブロックのデフォルトoff">取り組み4: コードブロックのデフォルトOFF</h3>
 <p>構文リファレンスページではコードブロックがコンテキストの大半を占める。CREATE TABLEページで計測した結果、コードブロックを除去すると <strong>37.7%のコンテキスト削減</strong> が得られた。</p>
 <table>
-<thead>
-<tr>
-<th>モード</th>
-<th>サイズ</th>
-<th>削減率</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>コードブロックON</td>
-<td>52,694 chars</td>
-<td>-</td>
-</tr>
-<tr>
-<td>コードブロックOFF</td>
-<td>32,851 chars</td>
-<td>37.7%</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>モード</th>
+          <th>サイズ</th>
+          <th>削減率</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>コードブロックON</td>
+          <td>52,694 chars</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>コードブロックOFF</td>
+          <td>32,851 chars</td>
+          <td>37.7%</td>
+      </tr>
+  </tbody>
 </table>
-<p><code>get_doc_content</code>、<code>get_doc_section</code>、<code>search_in_doc</code> の <code>include_code_blocks</code> パラメータのデフォルト値を <code>True</code> → <code>False</code> に変更した。構文やコード例が必要な場合のみ <code>include_code_blocks=True</code> を明示的に指定する運用とした。</p>
-<p>実装上の注意点として、<code>markdownify</code> の <code>strip</code> パラメータでは <code>pre</code> / <code>code</code> タグの書式を除去するだけでテキスト内容は残ってしまう。HTML段階で <code>decompose()</code> して要素ごと除去する必要がある。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_convert_to_markdown</span>(tag: Tag, include_code_blocks: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">True</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> <span style="color:#ff79c6">not</span> include_code_blocks:
-</span></span><span style="display:flex;"><span>        tag <span style="color:#ff79c6">=</span> copy<span style="color:#ff79c6">.</span>copy(tag)
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">for</span> code_tag <span style="color:#ff79c6">in</span> tag<span style="color:#ff79c6">.</span>find_all([<span style="color:#f1fa8c">&#34;pre&#34;</span>, <span style="color:#f1fa8c">&#34;code&#34;</span>]):
-</span></span><span style="display:flex;"><span>            code_tag<span style="color:#ff79c6">.</span>decompose()
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># ...</span>
-</span></span></code></pre></div><h3 id="改善4-search_in_docページ内キーワード検索">改善4: search_in_doc（ページ内キーワード検索）</h3>
-<p>新ツール <code>search_in_doc</code> を追加した。URLとキーワードを渡すと、ページ内の全セクションをスコアリングし、関連度の高いセクションだけを返す。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>@mcp<span style="color:#ff79c6">.</span>tool()
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">search_in_doc</span>(
-</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>,
-</span></span><span style="display:flex;"><span>    query: <span style="color:#8be9fd;font-style:italic">str</span>,
-</span></span><span style="display:flex;"><span>    max_sections: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">3</span>,
-</span></span><span style="display:flex;"><span>    include_code_blocks: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">False</span>,
-</span></span><span style="display:flex;"><span>    max_length: <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">5000</span>,
-</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span>:
-</span></span></code></pre></div><p>スコアリングロジックは以下の通り。</p>
+<p><code>include_code_blocks</code> パラメータのデフォルト値を <code>False</code> に変更し、構文やコード例が必要な場合のみ明示的に指定する運用にした。</p>
+<h3 id="取り組み5-ツール呼び出し回数の削減">取り組み5: ツール呼び出し回数の削減</h3>
+<p><code>search_snowflake_docs</code> に <code>include_headings</code> パラメータを追加し、検索と同時にページの見出し構造を取得できるようにした。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>改善前: search → get_doc_toc → get_doc_section  (3回)
+</span></span><span style="display:flex;"><span>改善後: search(include_headings=True) → get_doc_section  (2回)
+</span></span></code></pre></div><p>ただし見出しの多いページ（120件以上の見出しを持つDB2移行ガイド等）でレスポンスが膨張する問題があったため、1結果あたり30見出し上限のキャップを設けた。超過時はh1-h3のみに絞り込む。</p>
+<h3 id="取り組み6-ページ内キーワード検索">取り組み6: ページ内キーワード検索</h3>
+<p><code>search_in_doc</code> ツールを追加した。URLとキーワードを渡すと、ページ内の全セクションをスコアリングし、関連度の高いセクションだけを返す。これにより目次確認→セクション選択の判断をMCPサーバー側で行えるようになった。</p>
+<p>スコアリング精度の問題として、親セクションの <code>get_text()</code> が子セクションのテキストを全て含むため常に親のスコアが高くなる問題があった。子セクションのテキストを親スコアから除外し、ネスト重複排除を行うことで解決した。</p>
+<h3 id="取り組み7-キャッシュとパフォーマンス改善">取り組み7: キャッシュとパフォーマンス改善</h3>
 <ul>
-<li>クエリを空白で分割しキーワードリスト化</li>
-<li>各セクションについて:
-<ul>
-<li>見出しにキーワードが含まれる → +10点</li>
-<li>本文にキーワードが含まれる → 出現回数に応じて+1点ずつ</li>
+<li>同一URLへの重複HTTPフェッチを排除するTTL付きインメモリキャッシュ（5分、LRU 50エントリ上限）</li>
+<li>buildIdキャッシュ（1時間TTL）</li>
+<li>共有HTTPクライアントによるコネクションプーリング</li>
+<li><code>asyncio.gather</code> による並列headings取得</li>
 </ul>
-</li>
-<li>大文字小文字は区別しない</li>
-<li>スコア上位N件のセクション内容を合計 <code>max_length</code> 以内で返す</li>
-</ul>
-<p>これにより <code>get_doc_toc</code> で目次を確認してセクションを選ぶ判断をMCPサーバー側で行い、1回の呼び出しで関連セクションだけを返せるようになった。</p>
-<h2 id="v020--v030-のコンテキスト消費比較">v0.2.0 → v0.3.0 のコンテキスト消費比較</h2>
-<p>CREATE TABLEページで、典型的な使用フローごとのコンテキスト消費を比較した。</p>
-<h3 id="フロー別比較">フロー別比較</h3>
+<h2 id="改善結果">改善結果</h2>
+<h3 id="get_doc_content-全文取得の比較">get_doc_content 全文取得の比較</h3>
+<p>CREATE TABLEページを <code>get_doc_content(include_code_blocks=False)</code> で全文取得した比較。</p>
 <table>
-<thead>
-<tr>
-<th>フロー</th>
-<th>ツール回数</th>
-<th>HTTP回数</th>
-<th>コンテキスト</th>
-<th>削減率</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>v0.2.0: search → toc → section(code=ON)</td>
-<td>3回</td>
-<td>3回</td>
-<td>7,407 chars</td>
-<td>-</td>
-</tr>
-<tr>
-<td>v0.3.0 A: search(1件,headings) → section(code=OFF)</td>
-<td>2回</td>
-<td>1回+cache</td>
-<td>3,115 chars</td>
-<td><strong>57.9%</strong></td>
-</tr>
-<tr>
-<td>v0.3.0 B: search → search_in_doc</td>
-<td>2回</td>
-<td>1回+cache</td>
-<td>7,133 chars</td>
-<td>3.7%</td>
-</tr>
-<tr>
-<td>v0.3.0 C: search_in_doc のみ (URL既知)</td>
-<td>1回</td>
-<td>1回</td>
-<td>5,408 chars</td>
-<td><strong>27.0%</strong></td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>条件</th>
+          <th>改善前</th>
+          <th>改善後</th>
+          <th>備考</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>max_length=2000</td>
+          <td>~2,200 chars（30-40%が重複）</td>
+          <td>2,269 chars（重複なし）</td>
+          <td>同文字数で情報量約1.5倍</td>
+      </tr>
+      <tr>
+          <td>max_length=5000</td>
+          <td>—</td>
+          <td>5,351 chars</td>
+          <td>改善後のデフォルト</td>
+      </tr>
+      <tr>
+          <td>max_length=8000</td>
+          <td>~8,200 chars（30-40%が重複）</td>
+          <td>8,450 chars（重複なし）</td>
+          <td>改善前のデフォルト</td>
+      </tr>
+      <tr>
+          <td>max_length=0</td>
+          <td><strong>102,079 chars（破綻）</strong></td>
+          <td><strong>20,000以下（安全）</strong></td>
+          <td>95%以上削減</td>
+      </tr>
+  </tbody>
 </table>
-<p>最も効率的なのはフローA（<code>search(max_results=1, include_headings=True)</code> → <code>get_doc_section(code=OFF)</code>）で、約58%のコンテキスト削減を達成した。</p>
-<p><code>include_headings=True</code> で検索件数が多い場合（5件以上）は、全件のTOCを取得するためかえってレスポンスが膨張する点に注意が必要である。<code>max_results=1</code> と組み合わせるのが効果的。</p>
-<h2 id="さらなる最適化v040-コンテキスト品質の改善">さらなる最適化（v0.4.0）— コンテキスト品質の改善</h2>
-<p>v0.3.0までは「返すデータ量をどう制御するか」が焦点だったが、v0.4.0では「返すデータの品質をどう高めるか」にフォーカスした。同じ文字数でもLLMにとって有用な情報の割合を上げることで、実効的なコンテキスト効率を改善する。</p>
-<p>Claude Codeに包括的テストを実行させ、コンテキスト使用量を計測・分析した結果、以下の問題を特定した。</p>
-<h3 id="発見された問題-1">発見された問題</h3>
-<h4 id="1-markdownの出力ノイズ">1. Markdownの出力ノイズ</h4>
-<p><code>markdownify</code> によるHTML→Markdown変換後に、LLMにとって不要なアーティファクトが多数残留していた。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>## Usage notes[¶](#usage-notes &#34;Link to this heading&#34;)     ← pilcrowリンク（~40 chars/見出し）
-</span></span><span style="display:flex;"><span>Copy                                                        ← コピーボタンの残骸
-</span></span><span style="display:flex;"><span>[COPY INTO &lt;table&gt;](copy-into-table)                        ← 辿れない相対リンク
-</span></span></code></pre></div><p>CREATE TABLEページ（24見出し）だけでpilcrowリンクに約960文字が消費されていた。</p>
-<h4 id="2-include_headingstrue-のコンテキスト爆発">2. include_headings=True のコンテキスト爆発</h4>
-<p><code>search_snowflake_docs(query=&quot;CREATE TABLE&quot;, max_results=5, include_headings=True)</code> を実行すると、SnowConvertの移行ガイドページ（DB2、Sybase、BigQuery、PostgreSQL）が各100件以上の見出しを持っており、レスポンス全体が26,443文字以上に膨張していた。</p>
-<h4 id="3-search_in_doc-のスコアリング精度">3. search_in_doc のスコアリング精度</h4>
-<p><code>search_in_doc(url, &quot;CTAS examples&quot;)</code> で「CTAS examples」セクションを探すと、親の「create-table」セクションが最高スコアになっていた。親セクションの <code>get_text()</code> が子セクションのテキストを全て含むため、常に親のスコアが高くなる構造的な問題があった。</p>
-<h4 id="4-文字列の途中切断">4. 文字列の途中切断</h4>
-<p><code>max_length</code> での切断が文字位置ベースのため、単語やMarkdownの構造の途中で切れることがあった。</p>
-<h3 id="変更一覧-2">変更一覧</h3>
+<h3 id="複数ページでの全文取得比較">複数ページでの全文取得比較</h3>
+<p>CREATE TABLE以外のページでも同様の効果があるかを検証した。</p>
 <table>
-<thead>
-<tr>
-<th>変更</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Markdown出力クリーンアップ</td>
-<td>pilcrowリンク除去、Copyボタン残骸除去、リンクURL除去（テキストのみ保持）、画像・SVG除去</td>
-</tr>
-<tr>
-<td>HTMLノイズ除去</td>
-<td>フィードバック・評価・アンケート・ページネーション・フォーム要素をパース段階で除去</td>
-</tr>
-<tr>
-<td>見出し数キャップ</td>
-<td><code>include_headings=True</code> 時、1結果あたり30見出し上限（超過時はh1-h3のみ）</td>
-</tr>
-<tr>
-<td>スコアリング改善</td>
-<td>子セクションのテキストを親スコアから除外 + ネスト重複排除</td>
-</tr>
-<tr>
-<td>境界切断</td>
-<td>段落→行→文→単語の優先度で自然な位置で切断</td>
-</tr>
-<tr>
-<td>キャッシュLRU</td>
-<td>50エントリ上限で最古エントリを削除</td>
-</tr>
-<tr>
-<td>buildIdキャッシュ</td>
-<td>1時間TTLでbuildIdを保持、stale時は自動リトライ</td>
-</tr>
-<tr>
-<td>共有HTTPクライアント</td>
-<td>コネクションプーリングによりTCPハンドシェイクを削減</td>
-</tr>
-<tr>
-<td>並列headings取得</td>
-<td><code>asyncio.gather</code> でinclude_headings時のページフェッチを並列化</td>
-</tr>
-<tr>
-<td>レスポンスメタデータ</td>
-<td><code>get_doc_section</code> に <code>content_length</code>、<code>search_in_doc</code> に <code>total_content_chars</code> 追加</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>ページ</th>
+          <th>改善前</th>
+          <th>改善後</th>
+          <th>削減率</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>CREATE TABLE（大規模SQLリファレンス）</td>
+          <td>70,948 chars</td>
+          <td>44,503 chars</td>
+          <td><strong>37.3%</strong></td>
+      </tr>
+      <tr>
+          <td>SELECT（大規模SQLリファレンス）</td>
+          <td>25,068 chars</td>
+          <td>10,538 chars</td>
+          <td><strong>58.0%</strong></td>
+      </tr>
+      <tr>
+          <td>Dynamic Tables（中規模ガイド）</td>
+          <td>5,409 chars</td>
+          <td>4,529 chars</td>
+          <td><strong>16.3%</strong></td>
+      </tr>
+      <tr>
+          <td><strong>合計</strong></td>
+          <td><strong>101,425 chars</strong></td>
+          <td><strong>59,570 chars</strong></td>
+          <td><strong>41.3%</strong></td>
+      </tr>
+  </tbody>
 </table>
-<h3 id="主要な実装-1">主要な実装</h3>
-<p><strong>Markdown出力クリーンアップ:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_convert_to_markdown</span>(tag: Tag, include_code_blocks: <span style="color:#8be9fd;font-style:italic">bool</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">True</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
-</span></span><span style="display:flex;"><span>    tag <span style="color:#ff79c6">=</span> copy<span style="color:#ff79c6">.</span>copy(tag)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># コピーボタンのアーティファクトを除去</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> btn <span style="color:#ff79c6">in</span> tag<span style="color:#ff79c6">.</span>find_all(<span style="color:#f1fa8c">&#34;button&#34;</span>, class_<span style="color:#ff79c6">=</span>re<span style="color:#ff79c6">.</span>compile(<span style="color:#f1fa8c">r</span><span style="color:#f1fa8c">&#34;(copy|clipboard)&#34;</span>, re<span style="color:#ff79c6">.</span>I)):
-</span></span><span style="display:flex;"><span>        btn<span style="color:#ff79c6">.</span>decompose()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># リンクURLを除去してテキストのみ保持（トークン節約）</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> a_tag <span style="color:#ff79c6">in</span> tag<span style="color:#ff79c6">.</span>find_all(<span style="color:#f1fa8c">&#34;a&#34;</span>):
-</span></span><span style="display:flex;"><span>        a_tag<span style="color:#ff79c6">.</span>unwrap()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># 画像・SVGを除去（LLMには不要）</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> img_tag <span style="color:#ff79c6">in</span> tag<span style="color:#ff79c6">.</span>find_all([<span style="color:#f1fa8c">&#34;img&#34;</span>, <span style="color:#f1fa8c">&#34;svg&#34;</span>]):
-</span></span><span style="display:flex;"><span>        img_tag<span style="color:#ff79c6">.</span>decompose()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    content <span style="color:#ff79c6">=</span> markdownify<span style="color:#ff79c6">.</span>markdownify(<span style="color:#8be9fd;font-style:italic">str</span>(tag), <span style="color:#ff79c6">...</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># pilcrowリンクを除去</span>
-</span></span><span style="display:flex;"><span>    content <span style="color:#ff79c6">=</span> re<span style="color:#ff79c6">.</span>sub(<span style="color:#f1fa8c">r</span><span style="color:#f1fa8c">&#39;\[¶\]\([^)]*\)&#39;</span>, <span style="color:#f1fa8c">&#39;&#39;</span>, content)
-</span></span><span style="display:flex;"><span>    content <span style="color:#ff79c6">=</span> re<span style="color:#ff79c6">.</span>sub(<span style="color:#f1fa8c">r</span><span style="color:#f1fa8c">&#39;\s*¶&#39;</span>, <span style="color:#f1fa8c">&#39;&#39;</span>, content)
-</span></span><span style="display:flex;"><span>    content <span style="color:#ff79c6">=</span> content<span style="color:#ff79c6">.</span>replace(<span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">Copy</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#39;</span>, <span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#39;</span>)
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># ...</span>
-</span></span></code></pre></div><p>ポイントは除去の段階を分けている点。ボタンや画像はHTML段階で <code>decompose()</code> し、pilcrowやCopyの残骸はMarkdown変換後にテキストレベルで除去する。<code>&lt;a&gt;</code> タグは <code>unwrap()</code> でタグだけ除去しテキストは保持する。</p>
-<p><strong>見出し数キャップ:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_MAX_HEADINGS_PER_RESULT <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">30</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_fetch_headings_for_result</span>(url: <span style="color:#8be9fd;font-style:italic">str</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">list</span>[<span style="color:#8be9fd;font-style:italic">dict</span>]:
-</span></span><span style="display:flex;"><span>    headings <span style="color:#ff79c6">=</span> _extract_headings(main_content)
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">len</span>(headings) <span style="color:#ff79c6">&gt;</span> _MAX_HEADINGS_PER_RESULT:
-</span></span><span style="display:flex;"><span>        headings <span style="color:#ff79c6">=</span> [h <span style="color:#ff79c6">for</span> h <span style="color:#ff79c6">in</span> headings <span style="color:#ff79c6">if</span> h[<span style="color:#f1fa8c">&#34;level&#34;</span>] <span style="color:#ff79c6">&lt;=</span> <span style="color:#bd93f9">3</span>][:_MAX_HEADINGS_PER_RESULT]
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> headings
-</span></span></code></pre></div><p>30件以内のページはそのまま全見出しを返し、超過する巨大ページではh1-h3に絞り込む。これにより主要セクションの目次は維持しつつ、DB2ページのような120件超の見出しによる爆発を防止する。</p>
-<p><strong>スコアリング改善（子セクション除外 + 重複排除）:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_score_section</span>(section_tag: Tag, keywords: <span style="color:#8be9fd;font-style:italic">list</span>[<span style="color:#8be9fd;font-style:italic">str</span>]) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">tuple</span>[<span style="color:#8be9fd;font-style:italic">int</span>, <span style="color:#8be9fd;font-style:italic">str</span>]:
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># ネストされた子sectionのテキストを除外して、直接コンテンツのみ取得</span>
-</span></span><span style="display:flex;"><span>    direct_parts: <span style="color:#8be9fd;font-style:italic">list</span>[<span style="color:#8be9fd;font-style:italic">str</span>] <span style="color:#ff79c6">=</span> []
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> child <span style="color:#ff79c6">in</span> section_tag<span style="color:#ff79c6">.</span>children:
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">isinstance</span>(child, Tag) <span style="color:#ff79c6">and</span> child<span style="color:#ff79c6">.</span>name <span style="color:#ff79c6">==</span> <span style="color:#f1fa8c">&#34;section&#34;</span>:
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">continue</span>  <span style="color:#6272a4"># 子セクションはスキップ</span>
-</span></span><span style="display:flex;"><span>        text <span style="color:#ff79c6">=</span> child<span style="color:#ff79c6">.</span>get_text(separator<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34; &#34;</span>, strip<span style="color:#ff79c6">=</span><span style="color:#ff79c6">True</span>) <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">isinstance</span>(child, Tag) <span style="color:#ff79c6">else</span> <span style="color:#8be9fd;font-style:italic">str</span>(child)<span style="color:#ff79c6">.</span>strip()
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> text:
-</span></span><span style="display:flex;"><span>            direct_parts<span style="color:#ff79c6">.</span>append(text)
-</span></span><span style="display:flex;"><span>    section_text <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34; &#34;</span><span style="color:#ff79c6">.</span>join(direct_parts)<span style="color:#ff79c6">.</span>lower()
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># ...</span>
-</span></span></code></pre></div><p>加えて <code>_deduplicate_sections</code> で親子両方がスコア上位に入った場合の重複も排除する。</p>
-<p><strong>境界切断:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_truncate_at_boundary</span>(text: <span style="color:#8be9fd;font-style:italic">str</span>, max_length: <span style="color:#8be9fd;font-style:italic">int</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">len</span>(text) <span style="color:#ff79c6">&lt;=</span> max_length:
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> text
-</span></span><span style="display:flex;"><span>    search_start <span style="color:#ff79c6">=</span> <span style="color:#8be9fd;font-style:italic">max</span>(<span style="color:#bd93f9">0</span>, max_length <span style="color:#ff79c6">-</span> <span style="color:#bd93f9">200</span>)
-</span></span><span style="display:flex;"><span>    region <span style="color:#ff79c6">=</span> text[search_start:max_length]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># 優先度1: 段落区切り（\n\n）</span>
-</span></span><span style="display:flex;"><span>    pos <span style="color:#ff79c6">=</span> region<span style="color:#ff79c6">.</span>rfind(<span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n\n</span><span style="color:#f1fa8c">&#39;</span>)
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> pos <span style="color:#ff79c6">!=</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">return</span> text[:search_start <span style="color:#ff79c6">+</span> pos]<span style="color:#ff79c6">.</span>rstrip()
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># 優先度2: 行区切り → 優先度3: 文末 → 優先度4: スペース → フォールバック</span>
-</span></span></code></pre></div><p>末尾200文字以内で最も自然な切断点を探す。Markdownの段落境界を最優先とし、それがなければ行→文→単語の順で切断位置を決定する。</p>
-<h3 id="計測結果">計測結果</h3>
-<p>CREATE TABLEページで計測した。</p>
-<p><strong>Markdown出力サイズの比較（コードブロック除外時）:</strong></p>
+<p>リンクの多いリファレンスページほど効果が大きく、SELECTページでは58%の大幅な削減を達成した。小規模ガイドページでは削減率が比較的小さいが、元々のサイズが小さいため実用上の影響は少ない。</p>
+<h3 id="典型的な使用パターンの比較">典型的な使用パターンの比較</h3>
 <table>
-<thead>
-<tr>
-<th>バージョン</th>
-<th>文字数</th>
-<th>v0.3.0比</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>v0.3.0</td>
-<td>52,694 chars</td>
-<td>-</td>
-</tr>
-<tr>
-<td>v0.4.0</td>
-<td>44,503 chars</td>
-<td><strong>-15.5%</strong></td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>パターン</th>
+          <th>改善前</th>
+          <th>改善後</th>
+          <th>改善</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>search + get_doc_content</td>
+          <td>~9,600 chars</td>
+          <td>7,378 chars</td>
+          <td>23%削減</td>
+      </tr>
+      <tr>
+          <td>search + 2x get_doc_content</td>
+          <td>~17,800 chars</td>
+          <td>12,714 chars</td>
+          <td>29%削減</td>
+      </tr>
+      <tr>
+          <td>search + TOC + 1 section</td>
+          <td>不可能</td>
+          <td>9,408 chars</td>
+          <td>新機能</td>
+      </tr>
+      <tr>
+          <td>search(headings) + section(code=OFF)</td>
+          <td>不可能</td>
+          <td>3,115 chars</td>
+          <td><strong>最適フロー</strong></td>
+      </tr>
+      <tr>
+          <td>Usage Notes だけ欲しい</td>
+          <td>不可能（到達できない）</td>
+          <td>5,267 chars</td>
+          <td>新機能</td>
+      </tr>
+  </tbody>
 </table>
-<p>同じページ、同じ条件（コードブロック除外）でも、ノイズ除去により約8,200文字（15.5%）の削減が得られた。これはpilcrowリンク、コピーボタン、リンクURL、画像タグ、フィードバックフォームなど、LLMにとって価値のない要素を除去した結果である。</p>
-<p><strong>include_headings のコンテキスト消費:</strong></p>
+<p>最も効率的なフロー（<code>search(max_results=1, include_headings=True)</code> → <code>get_doc_section(code=OFF)</code>）で、改善前の典型フローと比べて約58%のコンテキスト削減を達成した。</p>
+<h3 id="新ツールのコンテキスト消費">新ツールのコンテキスト消費</h3>
 <table>
-<thead>
-<tr>
-<th>条件</th>
-<th>v0.3.0</th>
-<th>v0.4.0</th>
-<th>改善</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>search(5件, headings=True)</code> &ldquo;CREATE TABLE&rdquo;</td>
-<td>26,443+ chars</td>
-<td>10,853 chars</td>
-<td><strong>59%削減</strong></td>
-</tr>
-<tr>
-<td>DB2ページの見出し数</td>
-<td>120+件</td>
-<td>30件（h1-h3のみ）</td>
-<td><strong>75%削減</strong></td>
-</tr>
-<tr>
-<td><code>search(2件, headings=True)</code></td>
-<td>—</td>
-<td>4,628 chars</td>
-<td>安全な範囲</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>ツール</th>
+          <th>消費量</th>
+          <th>用途</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>search_snowflake_docs</code>（3件）</td>
+          <td>~850 chars</td>
+          <td>検索結果のみ</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_toc</code></td>
+          <td>~600 chars</td>
+          <td>ページ構造の確認</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_section</code>（1セクション）</td>
+          <td>~528 chars</td>
+          <td>特定セクションの取得</td>
+      </tr>
+      <tr>
+          <td><code>search_in_doc</code>（3セクション）</td>
+          <td>~2,400 chars</td>
+          <td>関連セクション自動抽出</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_content</code>（全文、code=OFF）</td>
+          <td>~44,503 chars</td>
+          <td>ページ全体</td>
+      </tr>
+  </tbody>
 </table>
-<p>5件検索+見出し付きという最悪ケースでも、キャップにより10,853文字に収まるようになった。</p>
-<p><strong>search_in_doc のスコアリング精度:</strong></p>
+<p><code>search_in_doc</code> で必要なセクションだけ取得すれば、<code>get_doc_content</code> 全文の約9分の1のコンテキストで済む。</p>
+<h3 id="include_headings-の影響">include_headings の影響</h3>
 <table>
-<thead>
-<tr>
-<th>クエリ</th>
-<th>v0.3.0 トップマッチ</th>
-<th>v0.4.0 トップマッチ</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>&ldquo;CTAS examples&rdquo;</td>
-<td><code>create-table</code>（親セクション全体）</td>
-<td><code>ctas-examples</code>（正確なサブセクション）</td>
-</tr>
-<tr>
-<td>&ldquo;usage notes&rdquo;</td>
-<td><code>usage-notes</code></td>
-<td><code>usage-notes</code>（変化なし）</td>
-</tr>
-</tbody>
+  <thead>
+      <tr>
+          <th>パターン</th>
+          <th>推定文字数</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>search（5件、headings=false）</td>
+          <td>~500文字</td>
+      </tr>
+      <tr>
+          <td>search（5件、headings=true）</td>
+          <td>~3,500〜5,000文字</td>
+      </tr>
+  </tbody>
 </table>
-<p>子セクション除外とネスト重複排除により、具体的なクエリが適切なサブセクションにマッチするようになった。</p>
-<p><strong>ツール別コンテキスト消費（v0.4.0）:</strong></p>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>文字数</th>
-<th>用途</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>search_snowflake_docs(3件)</code></td>
-<td>~850</td>
-<td>検索結果のみ</td>
-</tr>
-<tr>
-<td><code>get_doc_toc</code></td>
-<td>2,114</td>
-<td>24見出しの目次</td>
-</tr>
-<tr>
-<td><code>get_doc_section(usage-notes)</code></td>
-<td>4,913</td>
-<td>特定セクション</td>
-</tr>
-<tr>
-<td><code>search_in_doc(usage notes)</code></td>
-<td>4,913</td>
-<td>自動セクション選択</td>
-</tr>
-<tr>
-<td><code>get_doc_content(code=OFF)</code></td>
-<td>44,503（全文）</td>
-<td>ページ全体</td>
-</tr>
-<tr>
-<td><code>get_doc_content(code=ON)</code></td>
-<td>64,413（全文）</td>
-<td>コード含むページ全体</td>
-</tr>
-</tbody>
-</table>
-<p><code>search_in_doc</code> で必要なセクションだけ取得すれば <code>get_doc_content</code> 全文の <strong>約9分の1</strong> のコンテキストで済む。</p>
-<h3 id="複数ページでのコンテキスト節約v030比">複数ページでのコンテキスト節約（v0.3.0比）</h3>
-<p>CREATE TABLE以外のページでも同様の効果があるかを検証するため、3つの異なるタイプのページで <code>get_doc_content(include_code_blocks=False)</code> の全文取得を比較した。</p>
-<table>
-<thead>
-<tr>
-<th>ページ</th>
-<th>v0.3.0相当</th>
-<th>v0.4.0</th>
-<th>節約</th>
-<th>削減率</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>CREATE TABLE（大規模SQLリファレンス）</td>
-<td>70,948 chars</td>
-<td>44,503 chars</td>
-<td>26,445 chars</td>
-<td><strong>37.3%</strong></td>
-</tr>
-<tr>
-<td>Dynamic Tables（中規模ガイド）</td>
-<td>5,409 chars</td>
-<td>4,529 chars</td>
-<td>880 chars</td>
-<td><strong>16.3%</strong></td>
-</tr>
-<tr>
-<td>SELECT（大規模SQLリファレンス）</td>
-<td>25,068 chars</td>
-<td>10,538 chars</td>
-<td>14,530 chars</td>
-<td><strong>58.0%</strong></td>
-</tr>
-<tr>
-<td><strong>合計</strong></td>
-<td><strong>101,425 chars</strong></td>
-<td><strong>59,570 chars</strong></td>
-<td><strong>41,855 chars</strong></td>
-<td><strong>41.3%</strong></td>
-</tr>
-</tbody>
-</table>
-<p>ページの種類やサイズに関わらず、一貫してコンテキスト削減が得られた。特にSELECTページでは58%の大幅な削減を達成している。これはリンクURLやナビゲーション要素の比率がページによって異なるためで、リンクの多いリファレンスページほど効果が大きい。</p>
-<p>Dynamic Tablesのような小規模ガイドページでは削減率が16.3%と比較的小さいが、元々のサイズが小さいため実用上の影響は少ない。</p>
-<h3 id="テスト結果">テスト結果</h3>
-<p>ユニットテスト（59件）と統合テスト（96件）の合計156テストが全合格。</p>
-<table>
-<thead>
-<tr>
-<th>カテゴリ</th>
-<th>テスト数</th>
-<th>結果</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Part A: ユニットテスト（ネットワーク不要）</strong></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>_clamp_max_length</td>
-<td>7</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_truncate_at_boundary（段落/行/文/スペース/フォールバック）</td>
-<td>9</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_is_valid_snowflake_url</td>
-<td>9</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_strip_noise_elements（nav/footer/aside/feedback/form等）</td>
-<td>13</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_convert_to_markdown（リンク/画像/SVG/pilcrow/コード除去）</td>
-<td>11</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_score_section（直接テキストスコアリング）</td>
-<td>4</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_deduplicate_sections（親子重複排除）</td>
-<td>6</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_has_ancestor_in_set</td>
-<td>5</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>_extract_headings</td>
-<td>5</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td><strong>Part B: 統合テスト（実ネットワーク使用）</strong></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>buildIdキャッシュ（TTL/ヒット/日本語）</td>
-<td>7</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>httpx.AsyncClient再利用</td>
-<td>3</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>コンテキスト節約の定量検証（3ページ × 7項目）</td>
-<td>23</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>ページネーション連続性</td>
-<td>4</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>search_snowflake_docs（英語/日本語/headings）</td>
-<td>10</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>get_doc_content（基本/max_length=0/start_index超過/エラー）</td>
-<td>9</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>get_doc_toc（3ページ × 構造検証）</td>
-<td>6</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>get_doc_section（基本/max_length制限/コードON/OFF/エラー）</td>
-<td>6</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>search_in_doc（基本/構造/スコア/max_length/空クエリ/マッチなし）</td>
-<td>7</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>ネスト重複排除（実ページ）</td>
-<td>2</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>並列ヘッダフェッチ性能</td>
-<td>3</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>キャッシュ動作検証（ヒット/高速化/破壊耐性）</td>
-<td>4</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>キャッシュエビクション（LRU上限）</td>
-<td>3</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td>buildIdリトライ</td>
-<td>2</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td><strong>Part C: コンテキスト節約サマリー</strong></td>
-<td>1</td>
-<td>全合格</td>
-</tr>
-<tr>
-<td><strong>合計</strong></td>
-<td><strong>156</strong></td>
-<td><strong>全合格</strong></td>
-</tr>
-</tbody>
-</table>
-<h2 id="実際の検索シナリオでのコンテキスト消費検証v040">実際の検索シナリオでのコンテキスト消費検証（v0.4.0）</h2>
-<p>v0.4.0の改善を踏まえ、実際のSnowflake関連の検索シナリオでツールごとのコンテキスト消費を検証した。キーワード検索（「マイクロパーティション」）と文章形式の検索（「ウェアハウスのスケールアップの基準は？」）の2パターンで実施した。</p>
-<h3 id="search_snowflake_docs-include_headings-の影響">search_snowflake_docs: include_headings の影響</h3>
-<p>同じ検索（5件取得）でも <code>include_headings</code> のON/OFFでコンテキスト消費が大きく変わる。</p>
-<table>
-<thead>
-<tr>
-<th>パターン</th>
-<th>推定文字数</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>キーワード（headings=false）</td>
-<td>~500文字</td>
-</tr>
-<tr>
-<td>キーワード（headings=true）</td>
-<td>~3,500文字</td>
-</tr>
-<tr>
-<td>文章形式（headings=false）</td>
-<td>~500文字</td>
-</tr>
-<tr>
-<td>文章形式（headings=true）</td>
-<td>~5,000文字</td>
-</tr>
-</tbody>
-</table>
-<p><code>include_headings=true</code> にすると約 <strong>7〜10倍</strong> のコンテキストを消費する。ただし <code>get_doc_toc</code> の呼び出しを省略できるため、2ステップを1ステップに短縮できる。見出しの多いページ（ウェアハウス関連ページ等）ほど膨張が大きい。</p>
-<h3 id="全ツール横断比較マイクロパーティションページ">全ツール横断比較（マイクロパーティションページ）</h3>
-<p>「マイクロパーティションとデータクラスタリング」ページ（total_length: 4,835文字）を対象に、全5ツールのコンテキスト消費を比較した。</p>
-<table>
-<thead>
-<tr>
-<th>順位</th>
-<th>ツール</th>
-<th>消費量</th>
-<th>ユースケース</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td><code>get_doc_toc</code></td>
-<td>~600文字</td>
-<td>ページ構造の確認のみ</td>
-</tr>
-<tr>
-<td>2</td>
-<td><code>get_doc_section</code>（1セクション）</td>
-<td>~528文字</td>
-<td>特定セクションの詳細取得</td>
-</tr>
-<tr>
-<td>3</td>
-<td><code>search_snowflake_docs</code>（headings=false）</td>
-<td>~500文字/5件</td>
-<td>ドキュメント発見（概要のみ）</td>
-</tr>
-<tr>
-<td>4</td>
-<td><code>search_in_doc</code>（3セクション）</td>
-<td>~2,400文字</td>
-<td>ページ内の関連情報を自動抽出</td>
-</tr>
-<tr>
-<td>5</td>
-<td><code>search_snowflake_docs</code>（headings=true）</td>
-<td>~3,500文字/5件</td>
-<td>ドキュメント発見+構造把握を一括</td>
-</tr>
-<tr>
-<td>6</td>
-<td><code>get_doc_content</code>（全文）</td>
-<td>~4,835文字</td>
-<td>ページ全体の読み込み</td>
-</tr>
-</tbody>
-</table>
-<p>小〜中規模ページでは <code>get_doc_content</code> の全文取得でも5,000文字以内に収まるため、段階的取得のメリットは相対的に小さい。CREATE TABLEのような大規模ページ（44,503文字〜）こそ、<code>search_in_doc</code> や <code>get_doc_section</code> による部分取得が効果を発揮する。</p>
-<h3 id="search_in_doc-のページ間比較">search_in_doc のページ間比較</h3>
-<p><code>search_in_doc</code> のコンテキスト消費はページとクエリの関連度によって大きく変動する。</p>
-<table>
-<thead>
-<tr>
-<th>対象ページ</th>
-<th>クエリ</th>
-<th>マッチセクション数</th>
-<th>total_content_chars</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>マイクロパーティション</td>
-<td>「マイクロパーティション 利点」</td>
-<td>3件</td>
-<td>~2,400文字</td>
-</tr>
-<tr>
-<td>ウェアハウス考慮事項</td>
-<td>「スケールアップ スケールアウト 基準」</td>
-<td>2件</td>
-<td>~4,900文字</td>
-</tr>
-<tr>
-<td>ウェアハウスサイズ拡大</td>
-<td>「スケールアップ サイズ変更 基準」</td>
-<td>1件</td>
-<td>~460文字</td>
-</tr>
-</tbody>
-</table>
-<p>スコアリングで関連セクションを自動選択するため、必要な情報だけ効率的に取得できる。「ウェアハウス考慮事項」ページでは「スケールアップとスケールアウト」セクションが高スコア（24点）で正確にマッチし、スケールアップの判断基準やマルチクラスターウェアハウスとの使い分けに関する情報を返していた。</p>
-<h3 id="推奨ワークフロー">推奨ワークフロー</h3>
-<p>検証結果を踏まえた、コンテキスト効率の良いワークフローは以下の通り。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1. search_snowflake_docs(include_headings=True) で検索+目次を1回で取得
-</span></span><span style="display:flex;"><span>2. search_in_doc で関連セクションだけ自動抽出（TOC確認→セクション選択を省略）
-</span></span><span style="display:flex;"><span>3. コード例が必要な場合のみ include_code_blocks=True を指定
-</span></span></code></pre></div><p>これにより従来の <code>search</code> → <code>get_doc_toc</code> → <code>get_doc_section</code> の3ステップを最大1〜2ステップに短縮でき、ツール呼び出し回数とコンテキスト消費の両方を最適化できる。</p>
+<p><code>include_headings=true</code> にすると約7〜10倍のコンテキストを消費するが、<code>get_doc_toc</code> の呼び出しを省略できる。見出しキャップ導入前は見出しの多いページで26,443文字以上に膨張していたが、導入後は10,853文字以内に収まるようになった（<strong>59%削減</strong>）。</p>
 <h2 id="ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</h2>
-<p>今回の検証で得られた知見をまとめる。</p>
-<h3 id="1-レスポンスサイズにハードキャップを設ける">1. レスポンスサイズにハードキャップを設ける</h3>
-<p>無制限取得はコンテキスト破綻のリスクがある。LLMのコンテキストウィンドウは有限なので、MCPサーバー側で上限を設けるべきである。</p>
-<h3 id="2-ページネーションを提供する">2. ページネーションを提供する</h3>
-<p>長文ドキュメントを一度に返すのではなく、<code>start_index</code> + <code>max_length</code> で分割読み込みできるようにする。AWS版の設計が参考になる。</p>
-<h3 id="3-段階的な情報取得を可能にする">3. 段階的な情報取得を可能にする</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>検索 → 目次確認（軽量） → セクション取得（必要な部分だけ）
-</span></span></code></pre></div><p>この段階的アプローチにより、不要な情報をコンテキストに載せずに済む。</p>
-<h3 id="4-htmlmarkdown変換にはライブラリを使う">4. HTML→Markdown変換にはライブラリを使う</h3>
-<p>手書きのHTMLパーサーはバグの温床になる。<code>markdownify</code> のような実績あるライブラリを使えば、重複出力やネスト構造のハンドリングミスを避けられる。</p>
-<h3 id="5-instructions-にベストプラクティスを記載する">5. instructions にベストプラクティスを記載する</h3>
-<p>AWS版では FastMCP の <code>instructions</code> パラメータに「長文は分割読み込みすること」「見つかったら止めること」と明記している。LLMがツールをどう使うべきかのガイドをサーバー側から提供する設計は有効である。</p>
-<h3 id="6-ツール呼び出し回数を削減する">6. ツール呼び出し回数を削減する</h3>
-<p>複数のツール呼び出しを1回にまとめられるオプション（<code>include_headings</code> のような）を提供することで、往復のオーバーヘッドとコンテキスト消費の両方を削減できる。ただし、1回のレスポンスが膨張しないようパラメータの組み合わせに注意が必要。</p>
-<h3 id="7-コードブロックをデフォルトで除外する">7. コードブロックをデフォルトで除外する</h3>
-<p>構文リファレンスのようなドキュメントでは、コードブロックがレスポンスの30〜40%を占めることがある。説明文だけで十分な場合が多いため、デフォルトOFFにしてオンデマンドで取得する設計が有効。</p>
-<h3 id="8-http重複フェッチをキャッシュで排除する">8. HTTP重複フェッチをキャッシュで排除する</h3>
-<p>同一URLへの連続アクセス（TOC確認→セクション取得）は頻発する。TTL付きインメモリキャッシュでHTTPフェッチを排除することで、レイテンシとサーバー負荷の両方を改善できる。</p>
-<h3 id="9-markdown出力のノイズを除去する">9. Markdown出力のノイズを除去する</h3>
-<p>HTML→Markdown変換は万能ではなく、LLMにとって無意味な要素が混入しやすい。パーマリンクアンカー（<code>[¶](...)</code>）、コピーボタンの残骸、辿れない相対リンクURL、画像タグ、フィードバックフォームなど、トークンを消費するだけの要素はHTML段階とテキスト段階の両方で除去すべきである。</p>
-<h3 id="10-大量データを返すパラメータに安全弁を設ける">10. 大量データを返すパラメータに安全弁を設ける</h3>
-<p><code>include_headings=True</code> のようにレスポンスが膨張しうるパラメータには、上限キャップを設けるべきである。1ページ120件の見出しを全て返す必要はなく、h1-h3に絞って30件以内にするだけで59%の削減になる。</p>
+<p>今回の改善で得られた知見をまとめる。</p>
+<ol>
+<li><strong>レスポンスサイズにハードキャップを設ける</strong> — 無制限取得はコンテキスト破綻のリスクがある</li>
+<li><strong>ページネーションを提供する</strong> — <code>start_index</code> + <code>max_length</code> で分割読み込みできるようにする</li>
+<li><strong>段階的な情報取得を可能にする</strong> — 検索 → 目次確認（軽量） → セクション取得（必要な部分だけ）</li>
+<li><strong>HTML→Markdown変換にはライブラリを使う</strong> — 手書きのHTMLパーサーはバグの温床になる</li>
+<li><strong>instructionsにベストプラクティスを記載する</strong> — LLMがツールをどう使うべきかのガイドをサーバー側から提供する</li>
+<li><strong>ツール呼び出し回数を削減する</strong> — 複数のツール呼び出しを1回にまとめるオプションを提供する</li>
+<li><strong>コードブロックをデフォルトで除外する</strong> — 構文リファレンスではコードブロックがレスポンスの30〜40%を占める</li>
+<li><strong>HTTP重複フェッチをキャッシュで排除する</strong> — 同一URLへの連続アクセスは頻発する</li>
+<li><strong>Markdown出力のノイズを除去する</strong> — pilcrowリンク、コピーボタン、リンクURL、画像タグ等を除去する</li>
+<li><strong>大量データを返すパラメータに安全弁を設ける</strong> — 見出しキャップのような上限を設ける</li>
+</ol>
 <h2 id="まとめ">まとめ</h2>
-<p>ドキュメント系MCPサーバーのコンテキスト使用量を検証し、3段階の改善を実施した。</p>
-<p><strong>v0.2.0の改善:</strong></p>
-<ul>
-<li><code>markdownify</code> ライブラリ導入でテキスト重複バグを解消（同じ文字数で実効情報量1.5倍）</li>
-<li><code>start_index</code> ページネーションで長文ドキュメントの分割読み込みに対応</li>
-<li><code>get_doc_toc</code>（目次取得）と <code>get_doc_section</code>（セクション取得）で段階的な情報取得を実現</li>
-<li><code>max_length</code> のハードキャップ設定でコンテキスト破綻を防止</li>
-</ul>
-<p><strong>v0.3.0の改善:</strong></p>
-<ul>
-<li>インメモリキャッシュでHTTP重複フェッチを排除</li>
-<li><code>include_headings</code> で検索と目次取得を1回に統合（ツール呼び出し回数削減）</li>
-<li>コードブロックのデフォルトOFFで37.7%のコンテキスト削減</li>
-<li><code>search_in_doc</code> で関連セクションの自動選択（TOC確認不要）</li>
-<li>最適なフローで<strong>約58%のコンテキスト削減</strong>を達成</li>
-</ul>
-<p><strong>v0.4.0の改善:</strong></p>
-<ul>
-<li>Markdown出力のノイズ除去（pilcrow、コピーボタン、リンクURL、画像）で同一ページ <strong>15.5%削減</strong></li>
-<li>複数ページでの検証で平均 <strong>41.3%のコンテキスト削減</strong> を確認（CREATE TABLE 37.3%、SELECT 58.0%、Dynamic Tables 16.3%）</li>
-<li><code>include_headings</code> の見出しキャップ（30件上限）でコンテキスト爆発を防止（最悪ケース <strong>59%削減</strong>）</li>
-<li><code>search_in_doc</code> のスコアリング精度向上（子セクションテキストの二重カウント排除 + ネスト重複排除）</li>
-<li>境界切断の導入（段落→行→文→単語の優先度で自然な位置で切断）</li>
-<li>buildIdキャッシュ・共有HTTPクライアント・並列headings取得によるパフォーマンス改善</li>
-<li>156テスト（ユニット59件 + 統合96件 + サマリー1件）全合格</li>
-</ul>
-<p><strong>実際の検索シナリオでの検証:</strong></p>
-<ul>
-<li>「マイクロパーティション」「ウェアハウスのスケールアップ」等の実際のSnowflakeトピックで全5ツールのコンテキスト消費を横断比較</li>
-<li><code>include_headings=true</code> は headings=false の <strong>7〜10倍</strong> のコンテキストを消費（見出しの多いページほど膨張）</li>
-<li><code>search_in_doc</code> のスコアリングが実際の検索シナリオでも正確に機能（スケールアップ関連セクションを高スコアで正確にマッチ）</li>
-<li>小〜中規模ページでは <code>get_doc_content</code> 全文でも5,000文字以内に収まるため、段階的取得は大規模ページで効果大</li>
-</ul>
+<p>自作のSnowflake Docs MCPサーバーのコンテキスト使用量を実測し、以下の改善を行った。</p>
+<table>
+  <thead>
+      <tr>
+          <th>改善</th>
+          <th>効果</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>HTML→Markdown変換の品質改善</td>
+          <td>テキスト重複解消、ノイズ除去で全文取得時 <strong>平均41.3%削減</strong></td>
+      </tr>
+      <tr>
+          <td>段階的な情報取得の導入</td>
+          <td>必要なセクションだけ取得で全文の <strong>約9分の1</strong></td>
+      </tr>
+      <tr>
+          <td>コードブロックのデフォルトOFF</td>
+          <td><strong>37.7%削減</strong></td>
+      </tr>
+      <tr>
+          <td>ツール呼び出し回数の削減</td>
+          <td>3ステップ → 2ステップ</td>
+      </tr>
+      <tr>
+          <td>レスポンスサイズの制御</td>
+          <td>102,079 chars → <strong>20,000以下</strong>（破綻防止）</td>
+      </tr>
+      <tr>
+          <td>最適フロー全体</td>
+          <td><strong>約58%のコンテキスト削減</strong></td>
+      </tr>
+  </tbody>
+</table>
 <p>MCPサーバーを設計する際は、レスポンスのサイズ = LLMのコンテキスト消費であることを意識し、「必要な情報だけを、必要な分だけ、ノイズなく返す」設計にすることが重要である。</p>
+<h2 id="関連記事">関連記事</h2>
+<div class="link-card">
+    <a href="https://zatoima.github.io/snowflake-docs-mcp-server-architecture/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Snowflakeドキュメント検索MCPサーバーを作成した</div><div class="link-card-description">MCPサーバーの技術的な仕組み（Next.jsのbuildId取得、検索API、HTML→Markdown変換）</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=zatoima.github.io" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">zatoima.github.io</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://zatoima.github.io/snowflake-mcp-documentation-server-benchmark/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Snowflake MCPドキュメントサーバー2種のベンチマーク比較</div><div class="link-card-description">本MCPサーバーとCortex Agent &#43; CKEベースのMCPサーバーを20クエリ・5評価軸で比較</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=zatoima.github.io" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">zatoima.github.io</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
 <h2 id="参考資料">参考資料</h2>
 <div class="link-card">
     <a href="https://github.com/awslabs/mcp/tree/main/src/aws-documentation-mcp-server" target="_blank" rel="noopener noreferrer">
@@ -1388,7 +699,7 @@
             <span class="link-card-domain">github.com</span>
           </div>
         </div><div class="link-card-image">
-            <img src="https://opengraph.githubassets.com/a20dd10e022a614072cea55858019aca758d4b6f7b804cf920f9d92217536e52/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
+            <img src="https://opengraph.githubassets.com/58ea2e91475f7d892b636a3bd79d8a5042ddd5faadedc8135ccb03b87a641a34/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
           </div></div>
     </a>
   </div>
@@ -1396,11 +707,14 @@
     <a href="https://pypi.org/project/markdownify/" target="_blank" rel="noopener noreferrer">
       <div class="link-card-body">
         <div class="link-card-text">
-          <div class="link-card-title">Client Challenge</div><div class="link-card-meta">
+          <div class="link-card-title">&lt;meta property=&#34;og:title&#34;
+markdownify</div><div class="link-card-description">Convert HTML to markdown.</div><div class="link-card-meta">
             <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=pypi.org" alt="" loading="lazy" width="16" height="16">
             <span class="link-card-domain">pypi.org</span>
           </div>
-        </div></div>
+        </div><div class="link-card-image">
+            <img src="#ZgotmplZ" alt="" loading="lazy">
+          </div></div>
     </a>
   </div>
 
@@ -1493,95 +807,36 @@
         <li><a href="#サブエージェント経由の場合">サブエージェント経由の場合</a></li>
       </ul>
     </li>
-    <li><a href="#改善前のsnowflake-docs-mcpサーバーv010">改善前のSnowflake Docs MCPサーバー（v0.1.0）</a>
+    <li><a href="#改善前の状態">改善前の状態</a>
       <ul>
         <li><a href="#実測結果">実測結果</a></li>
-        <li><a href="#発見された問題">発見された問題</a>
-          <ul>
-            <li><a href="#1-テキスト重複バグ">1. テキスト重複バグ</a></li>
-            <li><a href="#2-max_length0-でコンテキスト破綻">2. max_length=0 でコンテキスト破綻</a></li>
-            <li><a href="#3-セクション指定取得ができない">3. セクション指定取得ができない</a></li>
-            <li><a href="#4-ページ構造の確認手段がない">4. ページ構造の確認手段がない</a></li>
-          </ul>
-        </li>
+        <li><a href="#発見された問題">発見された問題</a></li>
       </ul>
     </li>
-    <li><a href="#aws-documentation-mcpサーバーの実装調査">AWS Documentation MCPサーバーの実装調査</a>
+    <li><a href="#改善の過程">改善の過程</a>
       <ul>
-        <li><a href="#アーキテクチャ">アーキテクチャ</a></li>
-        <li><a href="#参考になった設計ポイント">参考になった設計ポイント</a></li>
+        <li><a href="#aws公式mcpサーバーの調査">AWS公式MCPサーバーの調査</a></li>
+        <li><a href="#取り組み1-htmlmarkdown変換の品質改善">取り組み1: HTML→Markdown変換の品質改善</a></li>
+        <li><a href="#取り組み2-段階的な情報取得の導入">取り組み2: 段階的な情報取得の導入</a></li>
+        <li><a href="#取り組み3-レスポンスサイズの制御">取り組み3: レスポンスサイズの制御</a></li>
+        <li><a href="#取り組み4-コードブロックのデフォルトoff">取り組み4: コードブロックのデフォルトOFF</a></li>
+        <li><a href="#取り組み5-ツール呼び出し回数の削減">取り組み5: ツール呼び出し回数の削減</a></li>
+        <li><a href="#取り組み6-ページ内キーワード検索">取り組み6: ページ内キーワード検索</a></li>
+        <li><a href="#取り組み7-キャッシュとパフォーマンス改善">取り組み7: キャッシュとパフォーマンス改善</a></li>
       </ul>
     </li>
-    <li><a href="#改善後のsnowflake-docs-mcpサーバーv020">改善後のSnowflake Docs MCPサーバー（v0.2.0）</a>
+    <li><a href="#改善結果">改善結果</a>
       <ul>
-        <li><a href="#変更一覧">変更一覧</a></li>
-        <li><a href="#ツール構成">ツール構成</a></li>
-        <li><a href="#主要な実装">主要な実装</a></li>
-      </ul>
-    </li>
-    <li><a href="#改善前後のコンテキスト使用量比較">改善前後のコンテキスト使用量比較</a>
-      <ul>
-        <li><a href="#テキスト品質の改善">テキスト品質の改善</a></li>
-        <li><a href="#get_doc_content-の比較">get_doc_content の比較</a></li>
-        <li><a href="#新ツールのコンテキスト消費">新ツールのコンテキスト消費</a></li>
+        <li><a href="#get_doc_content-全文取得の比較">get_doc_content 全文取得の比較</a></li>
+        <li><a href="#複数ページでの全文取得比較">複数ページでの全文取得比較</a></li>
         <li><a href="#典型的な使用パターンの比較">典型的な使用パターンの比較</a></li>
+        <li><a href="#新ツールのコンテキスト消費">新ツールのコンテキスト消費</a></li>
+        <li><a href="#include_headings-の影響">include_headings の影響</a></li>
       </ul>
     </li>
-    <li><a href="#さらなる最適化v030">さらなる最適化（v0.3.0）</a>
-      <ul>
-        <li><a href="#変更一覧-1">変更一覧</a></li>
-        <li><a href="#ツール構成-1">ツール構成</a></li>
-        <li><a href="#改善1-レスポンスキャッシュ">改善1: レスポンスキャッシュ</a></li>
-        <li><a href="#改善2-検索結果にheadings付与">改善2: 検索結果にheadings付与</a></li>
-        <li><a href="#改善3-コードブロックのデフォルトoff">改善3: コードブロックのデフォルトOFF</a></li>
-        <li><a href="#改善4-search_in_docページ内キーワード検索">改善4: search_in_doc（ページ内キーワード検索）</a></li>
-      </ul>
-    </li>
-    <li><a href="#v020--v030-のコンテキスト消費比較">v0.2.0 → v0.3.0 のコンテキスト消費比較</a>
-      <ul>
-        <li><a href="#フロー別比較">フロー別比較</a></li>
-      </ul>
-    </li>
-    <li><a href="#さらなる最適化v040-コンテキスト品質の改善">さらなる最適化（v0.4.0）— コンテキスト品質の改善</a>
-      <ul>
-        <li><a href="#発見された問題-1">発見された問題</a>
-          <ul>
-            <li><a href="#1-markdownの出力ノイズ">1. Markdownの出力ノイズ</a></li>
-            <li><a href="#2-include_headingstrue-のコンテキスト爆発">2. include_headings=True のコンテキスト爆発</a></li>
-            <li><a href="#3-search_in_doc-のスコアリング精度">3. search_in_doc のスコアリング精度</a></li>
-            <li><a href="#4-文字列の途中切断">4. 文字列の途中切断</a></li>
-          </ul>
-        </li>
-        <li><a href="#変更一覧-2">変更一覧</a></li>
-        <li><a href="#主要な実装-1">主要な実装</a></li>
-        <li><a href="#計測結果">計測結果</a></li>
-        <li><a href="#複数ページでのコンテキスト節約v030比">複数ページでのコンテキスト節約（v0.3.0比）</a></li>
-        <li><a href="#テスト結果">テスト結果</a></li>
-      </ul>
-    </li>
-    <li><a href="#実際の検索シナリオでのコンテキスト消費検証v040">実際の検索シナリオでのコンテキスト消費検証（v0.4.0）</a>
-      <ul>
-        <li><a href="#search_snowflake_docs-include_headings-の影響">search_snowflake_docs: include_headings の影響</a></li>
-        <li><a href="#全ツール横断比較マイクロパーティションページ">全ツール横断比較（マイクロパーティションページ）</a></li>
-        <li><a href="#search_in_doc-のページ間比較">search_in_doc のページ間比較</a></li>
-        <li><a href="#推奨ワークフロー">推奨ワークフロー</a></li>
-      </ul>
-    </li>
-    <li><a href="#ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</a>
-      <ul>
-        <li><a href="#1-レスポンスサイズにハードキャップを設ける">1. レスポンスサイズにハードキャップを設ける</a></li>
-        <li><a href="#2-ページネーションを提供する">2. ページネーションを提供する</a></li>
-        <li><a href="#3-段階的な情報取得を可能にする">3. 段階的な情報取得を可能にする</a></li>
-        <li><a href="#4-htmlmarkdown変換にはライブラリを使う">4. HTML→Markdown変換にはライブラリを使う</a></li>
-        <li><a href="#5-instructions-にベストプラクティスを記載する">5. instructions にベストプラクティスを記載する</a></li>
-        <li><a href="#6-ツール呼び出し回数を削減する">6. ツール呼び出し回数を削減する</a></li>
-        <li><a href="#7-コードブロックをデフォルトで除外する">7. コードブロックをデフォルトで除外する</a></li>
-        <li><a href="#8-http重複フェッチをキャッシュで排除する">8. HTTP重複フェッチをキャッシュで排除する</a></li>
-        <li><a href="#9-markdown出力のノイズを除去する">9. Markdown出力のノイズを除去する</a></li>
-        <li><a href="#10-大量データを返すパラメータに安全弁を設ける">10. 大量データを返すパラメータに安全弁を設ける</a></li>
-      </ul>
-    </li>
+    <li><a href="#ドキュメント系mcpサーバー設計のポイント">ドキュメント系MCPサーバー設計のポイント</a></li>
     <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#関連記事">関連記事</a></li>
     <li><a href="#参考資料">参考資料</a></li>
   </ul>
 </nav>

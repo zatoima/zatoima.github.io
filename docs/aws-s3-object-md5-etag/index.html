@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -11,21 +11,26 @@
 <meta name="keywords" content="AWS,S3," />
 
 
-<meta property="og:title" content="S3オブジェクトのmd5やEtagの関係性について整理する" />
-<meta property="og:description" content="" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://zatoima.github.io/aws-s3-object-md5-etag/" /><meta property="og:image" content="https://zatoima.github.io/images/share.png"/><meta property="article:section" content="blog" />
-<meta property="article:published_time" content="2022-01-10T00:00:00+00:00" />
-<meta property="article:modified_time" content="2022-01-10T00:00:00+00:00" /><meta property="og:site_name" content="my opinion is my own" />
+<meta property="og:url" content="https://zatoima.github.io/aws-s3-object-md5-etag/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="S3オブジェクトのmd5やEtagの関係性について整理する">
+  <meta property="og:description" content="memo blog。GitHub Pagesとして構成されています。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-01-10T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-01-10T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="S3">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
 
 
 
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://zatoima.github.io/images/share.png"/>
-
-<meta name="twitter:title" content="S3オブジェクトのmd5やEtagの関係性について整理する"/>
-<meta name="twitter:description" content=""/>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="S3オブジェクトのmd5やEtagの関係性について整理する">
+  <meta name="twitter:description" content="memo blog。GitHub Pagesとして構成されています。">
 
 
 
@@ -161,7 +166,7 @@
         <p>色々とややこしいのでメモ。</p>
 <h3 id="用語">用語</h3>
 <p><strong>MD5</strong>：特定の<em>ファイル</em>に対してツールによって算出された 16 進数を表す文字と数字からなる 32 文字の文字列。opensslコマンド等いくつか方法はあるが、<code>md5sum</code>コマンドだと下記の通りMD5値が出力される。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
 </span></span><span style="display:flex;"><span>500+0 records in
 </span></span><span style="display:flex;"><span>500+0 records out
 </span></span><span style="display:flex;"><span><span style="color:#bd93f9">524288000</span> bytes <span style="color:#ff79c6">(</span><span style="color:#bd93f9">524</span> MB<span style="color:#ff79c6">)</span> copied, 0.233084 s, 2.2 GB/s
@@ -201,7 +206,7 @@
 <p><img src="image-20211217222313956.png" alt="image-20211217222313956"></p>
 <h4 id="マルチアップロードの場合">マルチアップロードの場合</h4>
 <p>マルチアップロードされているため、EC2側で取得したハッシュとS3上でのETagが異なる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
 </span></span><span style="display:flex;"><span>500+0 records in
 </span></span><span style="display:flex;"><span>500+0 records out
 </span></span><span style="display:flex;"><span><span style="color:#bd93f9">524288000</span> bytes <span style="color:#ff79c6">(</span><span style="color:#bd93f9">524</span> MB<span style="color:#ff79c6">)</span> copied, 0.23444 s, 2.2 GB/s
@@ -221,7 +226,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Metadata&#34;</span>: <span style="color:#ff79c6">{}</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
 </span></span></code></pre></div><p>計算したい場合は下記ツール（※非公式）を使う。s3etagで出力されたハッシュとaws s3api head-objectで取得されたETagが同じであることがわかる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ gem install s3etag
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ gem install s3etag
 </span></span><span style="display:flex;"><span>Fetching: s3etag-0.0.1.gem <span style="color:#ff79c6">(</span>100%<span style="color:#ff79c6">)</span>
 </span></span><span style="display:flex;"><span>Successfully installed s3etag-0.0.1
 </span></span><span style="display:flex;"><span>Parsing documentation <span style="color:#ff79c6">for</span> s3etag-0.0.1
@@ -239,19 +244,19 @@
 </span></span></code></pre></div><p>計算式は下記の通り。デフォルトのS3のマルチアップロード時の8MBで分割されるので<code>8388608</code>を指定している。</p>
 <blockquote>
 <p><a href="https://forums.aws.amazon.com/thread.jspa?messageID=456442&amp;#456442">Again on ETAG and MD5 checksum for multipart</a></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">ETag</span> <span style="color:#ff79c6">=</span> MD5<span style="color:#ff79c6">(</span>Sum<span style="color:#ff79c6">(</span>p <span style="color:#f1fa8c">\i</span>n numberParts, MD5<span style="color:#ff79c6">(</span>PartBytes<span style="color:#ff79c6">(</span>p<span style="color:#ff79c6">)))</span> + <span style="color:#f1fa8c">&#34;-&#34;</span> + numberParts
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">ETag</span> <span style="color:#ff79c6">=</span> MD5<span style="color:#ff79c6">(</span>Sum<span style="color:#ff79c6">(</span>p <span style="color:#f1fa8c">\i</span>n numberParts, MD5<span style="color:#ff79c6">(</span>PartBytes<span style="color:#ff79c6">(</span>p<span style="color:#ff79c6">)))</span> + <span style="color:#f1fa8c">&#34;-&#34;</span> + numberParts
 </span></span></code></pre></div><ul>
 <li>分割したファイルのMD5値を合算している</li>
 <li>合算した値の末尾に – 分割数 を追記している。</li>
 </ul>
 </blockquote>
 <p>S3上のオブジェクトのMD5値を取得したい場合、下記方法もある。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ sudo yum -y install s3cmd
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ sudo yum -y install s3cmd
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
 </span></span><span style="display:flex;"><span>2021-12-17 13:11    <span style="color:#bd93f9">524288000</span>  2ab876e6e72b0fe9215ba306bea4f697-63  s3://s3-imazaj/test.txt
 </span></span></code></pre></div><h4 id="マルチアップロードではないパターン">マルチアップロードではないパターン</h4>
 <p>この場合はMD5=Etagとなる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
 </span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
@@ -276,7 +281,7 @@
 <p>S3バケットの設定</p>
 <p><img src="image-20211217222417849.png" alt="image-20211217222417849"></p>
 <h4 id="マルチアップロードの場合-1">マルチアップロードの場合</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
 </span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
 </span></span><span style="display:flex;"><span>2021-12-17 13:20    <span style="color:#bd93f9">524288000</span>  d8b61b2c0025919d5321461045c8226f     s3://s3-imazaj/test.txt
@@ -300,11 +305,11 @@
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
 </span></span><span style="display:flex;"><span>2021-12-17 13:24    <span style="color:#bd93f9">524288000</span>  24a147ee52b41c94f398613a46a06810-63  s3://s3-imazaj/test.txt
 </span></span></code></pre></div><p><code>s3etag</code>ツールを使ってもEtagとMD5値が合わなくなる</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag -t <span style="color:#bd93f9">8388608</span> -s <span style="color:#bd93f9">8388608</span> test.txt
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag -t <span style="color:#bd93f9">8388608</span> -s <span style="color:#bd93f9">8388608</span> test.txt
 </span></span><span style="display:flex;"><span>2ab876e6e72b0fe9215ba306bea4f697-63
 </span></span></code></pre></div><h4 id="マルチアップロード">≠マルチアップロード</h4>
 <p>暗号化使っている場合はマルチアップロードでないパターンでもNGとなる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;dd6006c0c101d532e17cb992b04658b0\&#34;&#34;</span>,
 </span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;aws:kms&#34;</span>,

@@ -8,7 +8,7 @@ tags: ["AWS", "RDS", "PostgreSQL"]
 categories: ["AWS", "RDS", "PostgreSQL"]
 url: aws-rds-repllication-error-conflict.html
 date: 2019-12-13T20:00:00+09:00
-lastmod: 2019-12-13T20:00:00:10+09:00
+lastmod: 2019-12-13T20:00:10+09:00
 featured: false
 draft: false
 
