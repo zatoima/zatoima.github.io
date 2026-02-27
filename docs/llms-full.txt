@@ -9,6 +9,32 @@ url: https://zatoima.github.io/
 
 ---
 
+### 1Password CLI を Service Account で非対話認証する設定手順
+
+date: 2026-02-27
+url: https://zatoima.github.io/1password-cli-service-account-setup/
+tags: 1Password
+
+はじめに 1Password CLI（op コマンド）は、ターミナルから 1Password のアイテムを操作できるツールである。具体的には以下のようなことが可能となる。
+シークレットの取得: API キーや DB パスワードをスクリプト内で安全に参照する 環境変数の注入: .env ファイルに Secret Reference を書いておき、実行時に実際の値へ置換する テンプレートの展開: 設定ファイルのテンプレートに 1Password の値を埋め込んで出力する アイテムの管理: ログイン情報やセキュアノートの作成・更新・削除を CLI から実行する 通常は実行のたびに Touch ID やマスターパスワードの入力が求められるが、自動化スクリプトや CI/CD パイプラインなど非対話的な環境ではこれが障壁となる。
+1Password Service Accounts を利用すると、トークンベースの認証により対話的な操作なしで op コマンドを実行できる。本記事では Service Account の作成から CLI との連携設定までの手順を記載する。
+認証方式の比較 1Password CLI には主に3つの認証方式がある。
+方式 対話操作 用途 Private Vault op signin（パスワード） 毎回必要 手動操作 アクセス可 Touch ID 連携 Touch ID が必要 デスクトップ環境 アクセス可 Service Account 不要 スクリプト・自動化 アクセス不可 Service Account はトークンを環境変数に設定するだけで認証が完了するため、スクリプトからの利用に適している。一方で Private Vault（個人用保管庫）にはアクセスできないという制約がある。CLI のバージョンは 2.18.0 以上が必要となる。
+Service Account の作成手順 前提: 専用 Vault の作成 Service Account は Private Vault にアクセスできないため、CLI 用の Vault を事前に作成する。
+my.1password.com にサインイン 左サイドバーの「保管庫」をクリック 「+ 新規保管庫」で任意の名前（例: Vault）を作成 Service Account の作成 左サイドバーの「開発者」をクリック 「Infrastructure Secrets」→「Service Accounts」を選択 「Create a Service Account」をクリック サービスアカウント名を入力する（例: cli-automation） 「保管庫を選択」で先ほど作成した Vault を選択し、権限（読み取り / 読み書き）を設定する 「Environment access」を設定する（デフォルトのままでよい） トークンが表示されるので、即座にコピーして安全な場所に保存する トークンは作成時に一度だけ表示される。画面を閉じると再表示できないため注意が必要である。
+トークンの設定 取得したトークンを環境変数 OP_SERVICE_ACCOUNT_TOKEN として設定する。
+# .zshrc に追記 echo &#39;export OP_SERVICE_ACCOUNT_TOKEN=&#34;ops_xxxxxxxxxxxxxxxxx&#34;&#39; &gt;&gt; ~/.zshrc # 現在のシェルに反映 source ~/.zshrc OP_CONNECT_HOST と OP_CONNECT_TOKEN が設定されている場合、これらが OP_SERVICE_ACCOUNT_TOKEN より優先されるため、不要であれば削除またはコメントアウトする。
+動作確認 設定が正しいかを確認する。
+# アクセス可能な Vault の一覧 op vault list 出力例:
+ID NAME xxxxxxxxxxxxxxxxxxxxxxxx Vault アイテムの操作も確認する。
+# アイテム一覧の確認 op item list --vault &#34;Vault&#34; # テスト用ログインアイテムの作成 op item create --category login \ --title &#34;Test Item&#34; \ --vault &#34;Vault&#34; \ --url &#34;https://example.com&#34; \ --generate-password # 特定アイテムの詳細表示 op item get &#34;Test Item&#34; --vault &#34;Vault&#34; # アイテムのパスワードフィールドだけ取得 op item get &#34;Test Item&#34; --vault &#34;Vault&#34; --fields password # セキュアノートの作成 op item create --category &#34;Secure Note&#34; \ --title &#34;API Config Note&#34; \ --vault &#34;Vault&#34; # アイテムの削除 op item delete &#34;Test Item&#34; --vault &#34;Vault&#34; op read を使うと、Secret Reference 形式でアイテムのフィールドを直接取得できる。シェルスクリプトでの利用に便利である。
+# Secret Reference 形式でパスワードを取得 op read &#34;op://Vault/Test Item/password&#34; # 環境変数に代入する例 export DB_PASSWORD=$(op read &#34;op://Vault/db-credentials/password&#34;) op inject を使うと、テンプレートファイル内のプレースホルダーを 1Password の値で置換できる。
+# テンプレート例（config.tpl） # DATABASE_URL=postgres://user:{{ op://Vault/db-credentials/password }}@localhost/mydb op inject -i config.tpl -o config.env op run を使うと、環境変数を 1Password から注入してコマンドを実行できる。
+# .env ファイル内の Secret Reference を解決して実行 # .env の内容: API_KEY=op://Vault/api-key/credential op run --env-file=.env -- python app.py いずれのコマンドもパスワード入力や Touch ID のプロンプトが表示されず完了すれば、設定は成功である。
+まとめ 1Password CLI の Service Account を使うと、トークンベースの非対話認証が可能になる Private Vault にはアクセスできないため、専用の Vault を作成する必要がある OP_SERVICE_ACCOUNT_TOKEN 環境変数にトークンを設定するだけで利用開始できる 参考資料 1Password Service Accounts | 1Password DeveloperIntroducing 1Password Service Accounts. Use service accounts to secure, orchestrate, and manage your company&amp;#x27;s infrastructure secrets. developer.1password.com Get started with 1Password Service Accounts | 1Password DeveloperLearn how to use service accounts with 1Password. developer.1password.com Use service accounts with 1Password CLI | 1Password DeveloperLearn how to use service accounts with 1Password CLI. developer.1password.com 
+
+---
+
 ### LLM論文サーベイ（2026-02-27）
 
 date: 2026-02-27
@@ -28,6 +54,48 @@ tags: LLM, AI, 論文
 原文Abstract The performance of multi-turn, agentic LLM inference is increasingly dominated by KV-Cache storage I/O rather than computation. In prevalent disaggregated architectures, loading the massive KV-Cache from external storage creates a fundamental imbalance: storage NICs on prefill engines become bandwidth-saturated, while those on decoding engines remain idle. This asymmetry severely constrains overall system throughput. We present DualPath, an inference system that breaks this bottleneck by introducing dual-path KV-Cache loading. Beyond the traditional storage-to-prefill path, DualPath enables a novel storage-to-decode path, in which the KV-Cache is loaded into decoding engines and then efficiently transferred to prefill engines via RDMA over the compute network. DualPath combines this optimized data path &ndash; which inherently avoids network congestion and avoids interference with latency-critical model execution communications &ndash; with a global scheduler that dynamically balances load across prefill and decode engines. Our evaluation on three models with production agentic workloads demonstrates that DualPath improves offline inference throughput by up to 1.87times on our in-house inference system. It can also improve online serving throughput by an average factor of 1.96times without violating SLO.
 この記事は自動生成されています。論文の詳細は各ソースURLをご参照ください。
 
+
+---
+
+### Claude Codeのスキル機能で実現するブログ記事執筆ワークフローの自動化
+
+date: 2026-02-26
+url: https://zatoima.github.io/claude-code-skills-blog-writing-automation/
+tags: Claude Code, Hugo, 自動化
+
+はじめに 本記事では、Claude Codeのスキル機能を活用し、Hugoブログ記事の執筆ワークフロー全体を自動化した構成についてまとめる。「記事を書いて」の一言で、構成プランニングから本文執筆、4段の品質チェック、デプロイまでを9つのスキルが連携して処理する仕組みを構築した。
+Claude Codeのスキル機能の概要 Claude Codeのスキルは、.claude/skills/&lt;skill-name&gt;/SKILL.md を配置することでClaudeの機能を拡張する仕組みである。YAMLフロントマターとMarkdown形式の指示文を記述するだけで、以下のような動作が可能になる。
+特徴 説明 自動トリガー description に記載したキーワードに合致する会話でClaudeが自動的にスキルを読み込む 手動実行 /skill-name のスラッシュコマンドで明示的に起動できる サブエージェント連携 context: fork の指定でサブエージェント内で隔離実行できる ツール制限 allowed-tools で使用可能なツールを限定できる サポートファイル SKILL.md以外のファイル（テンプレート、リファレンス、スクリプト等）を同一ディレクトリに格納し参照できる スキル間の連携も可能で、あるスキルの指示文からTask toolを使って別のスキルを起動するパターンで、複雑なワークフローを構築できる。
+ワークフロー全体像 構築したワークフローは、9つのスキルが以下の順序で連携動作する。
+┌─────────────────────────────────────────────────────────────┐ │ ユーザー: 「〇〇の記事を書いて」 │ └─────────────┬───────────────────────────────────────────────┘ ▼ ┌─────────────────────────┐ │ 1. article-planner │ ← 構成プランニング（参考情報収集・構成案生成） │ [ユーザー承認ゲート] │ └─────────────┬───────────┘ ▼ ┌─────────────────────────┐ │ 2. hugo-blog-post │ ← 記事本文の執筆・ファイル出力 │ + chart-visualizer │ （図表が必要な場合のみ） └─────────────┬───────────┘ ▼ ┌─────────────────────────┐ │ 3. tag-icon-generator │ ← 未登録タグのSVGアイコン生成 └─────────────┬───────────┘ ▼ ┌─────────────────────────┐ │ 4. 品質チェック（順次） │ │ 4-1. ai-writing-checker │ ← AIっぽさ検出・自動修正 │ 4-2. blog-fact-checker │ ← ファクトチェック・自動修正 │ 4-3. seo-checker │ ← SEO検証・summary自動生成 │ 4-4. internal-link- │ ← 内部リンク提案 │ checker │ └─────────────┬───────────┘ ▼ ┌─────────────────────────┐ │ 5. hugo-deploy │ ← ビルド＋GitHub Pagesデプロイ │ （ユーザー指示時のみ） │ └─────────────────────────┘ 各スキルの役割を整理する。
+# スキル名 役割 実行タイミング 1 hugo-blog-post メインオーケストレーター。全体の制御フロー定義 ユーザー指示で起動 2 article-planner トピック分析、参考情報収集、構成案生成 Step 2で自動起動 3 chart-visualizer Plotlyチャート画像の生成 構成案に図の指示がある場合 4 tag-icon-generator タグ用SVGアイコンの取得/生成 記事出力後に自動起動 5 ai-writing-checker AIっぽさの検出と自動修正 品質チェック第1段 6 blog-fact-checker 技術的正確性の検証と修正 品質チェック第2段 7 seo-checker SEOメタ情報の検証とsummary生成 品質チェック第3段 8 internal-link-checker 既存記事との内部リンク提案 品質チェック第4段 9 hugo-deploy Hugoビルドとデプロイ ユーザー指示時のみ 各スキルの設計と実装 hugo-blog-post（オーケストレーター） 全体のワークフローを制御するメインスキルである。SKILL.mdに以下の情報を定義している。
+プロジェクト情報: 記事格納先のパス、フォルダ命名規則 フロントマターテンプレート: Hugo記事のYAMLヘッダー 文体ルール: 常体（だ・である調）、絵文字禁止、簡潔記述等の制約 ショートコード: リンクカード、折りたたみ、強調ボックスの書式 実行手順: Step 1〜9の詳細な手順と各スキルの呼び出し方法 他のスキルはすべてこのオーケストレーターの指示文内でTask tool（サブエージェント）として起動される。メインのコンテキストウィンドウを消費せずに各チェック処理を実行できる点が利点である。
+article-planner（構成プランニング） 記事執筆前の構成プランニングを担当する。トピックを受け取ると以下を実行する。
+トピック分析: スコープの明確化と想定読者レベルの推定 参考情報収集: Snowflakeトピックの場合はSnowflake Docs MCPサーバーで検索、その他はWebSearchで公式ドキュメントを収集 構成案生成: メタ情報テーブル（タイトル候補、URLスラッグ、推奨タグ）とセクション構成を出力 ユーザー承認: 構成案を提示し、承認を得てから次へ進む ここで生成された「参考ドキュメントURL一覧」と「検証すべき技術的主張リスト」は、後続のファクトチェックに引き渡される。同じ情報を二重に検索することを防ぐ設計である。
+品質チェックパイプライン 記事出力後、4段のチェックを順次実行する。並列ではなく順次にしているのは、各チェッカーが同一ファイルを読み書きするため、ファイル競合を防ぐ必要があるためである。
+ai-writing-checker（AIっぽさチェック）
+正規表現パターンと構造分析の2段構成で、AI生成文章の特徴を検出する。
+チェック種別 内容 正規表現パターン です/ます体の混入、「ぜひ」「いかがでしたでしょうか」等のAI定番表現を検出 構造分析 文末パターンの多様性、はじめに/まとめの構造、見出し数、論理展開を評価 バースティネス 文長の標準偏差を算出し、均一すぎる場合に警告 検出結果を0-100のAIっぽさスコアで定量化し、CRITICAL/WARNING/INFOの3段階で報告する。CRITICALとWARNING（機械的修正可能なもの）はEdit toolで自動修正する。
+blog-fact-checker（ファクトチェック）
+記事内の技術的主張を公式ドキュメントと突き合わせて検証する。
+検証項目 方法 技術的正確性 Snowflake Docs MCPで公式ドキュメントを検索・照合 SQL構文 構文リファレンスとの突き合わせ、括弧/引用符の対応確認 URL有効性 WebFetchによるアクセス確認（404検出、リダイレクト検出） バージョン・日付 WebSearchで最新バージョンとの整合性確認 article-plannerから引き渡された参考URL一覧を活用し、検索の重複を回避する。
+seo-checker（SEOチェック）
+SEOメタ情報の検証と、summaryフィールドの自動生成を行う。
+チェック項目 基準 summary 空の場合、記事本文から100-160文字の概要を自動生成 タイトル長 41-59文字が推奨。範囲外は警告 URLスラッグ 英語・ハイフン区切りであること、30文字以内 og:image featured.jpg/pngの存在確認 internal-link-checker（内部リンクチェック）
+新規記事のタグ・キーワードと既存記事を照合し、リンク追加の提案を行う。最新100記事のフロントマターを走査し、タグが一致する記事をマッチングする。自動修正は行わず提案のみ出力する設計としている。
+補助スキル tag-icon-generatorは、記事のフロントマターに含まれるタグにアイコンが未登録の場合、Simple Icons CDNからSVGを取得する。CDNに存在しないタグにはテキストベースのフォールバックSVGを生成し、Hugoテンプレート（tag-icon.html / tag-badge-icon.html）のマッピングも自動更新する。
+hugo-deployは、hugo --config hugo.toml -d docs でビルドし、git commit + pushでGitHub Pagesにデプロイする。ユーザーが明示的に指示した場合のみ実行する。
+スキル間連携の設計パターン このワークフローで採用している設計パターンを整理する。
+データの引き渡しによる重複排除
+article-plannerが収集した「参考ドキュメントURL一覧」と「検証すべき技術的主張リスト」をblog-fact-checkerに引き渡す。fact-checkerは引き渡された情報をまず確認し、不足分のみ新規検索する。同じドキュメントを2回取得する無駄を省いている。
+順次実行による競合防止
+品質チェック4段は順次実行とした。各チェッカーがEdit toolで同一の index.md を修正するため、並列実行するとファイルの読み書きが衝突する。Step 9-1（AIっぽさチェック）の完了を待ってからStep 9-2（ファクトチェック）を起動し、以降も同様に順次実行する。
+サブエージェントへの委譲
+品質チェックの各ステップはTask tool（subagent_type=&quot;general-purpose&quot;）で起動する。メインのコンテキストウィンドウにチェック結果の詳細が蓄積されることを防ぎ、各チェッカーの処理が完了した時点で結果のサマリーだけが返る。
+ユーザー承認ゲート
+article-plannerの構成案提示後にユーザー承認を挟む。タイトル、URLスラッグ、タグ、セクション構成を確認してから本文生成に進むことで、方向性のずれを早期に修正できる。
+まとめ Claude Codeのスキル機能を活用して、ブログ記事の執筆ワークフロー全体を9つのスキルの連携で自動化した。構成プランニング、記事執筆、タグアイコン生成、4段の品質チェック（AIっぽさ、ファクト、SEO、内部リンク）、デプロイまでを「記事を書いて」の一言でトリガーできる。スキル間のデータ引き渡しによる重複排除、順次実行による競合防止、サブエージェントへの委譲によるコンテキスト保全が設計上のポイントである。
+参考資料 Extend Claude with skills - Claude Code DocsCreate, manage, and share skills to extend Claude&amp;#x27;s capabilities in Claude Code. Includes custom slash commands. code.claude.com 
 
 ---
 
