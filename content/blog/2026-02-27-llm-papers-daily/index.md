@@ -14,89 +14,91 @@ draft: false
 
 本記事は2026-02-27時点でのLLM関連の注目論文をまとめたものです。arXiv、Semantic Scholar、Hugging Face Daily Papersから自動収集し、Claude APIで日本語要約を生成しています。
 
-## 1. HyTRec: A Hybrid Temporal-Aware Attention Architecture for Long Behavior Sequential Recommendation
+## 1. GUI-Libra: Training Native GUI Agents to Reason and Act with Action-aware Supervision and Partially Verifiable RL
 
-- **著者**: Lei Xin, Yuhao Zheng, Ke Cheng, Changjiang Jiang, Zifan Zhang ほか
-- **公開日**: 2026-02-20
-- **ソース**: [huggingface](https://arxiv.org/abs/2602.18283)
-- **arXiv ID**: 2602.18283
-
-![HyTRec: A Hybrid Temporal-Aware Attention Architecture for Long Behavior Sequential Recommendation](paper_1.png)
-
-### 要約
-
-生成的推薦システムにおけるユーザーの長期行動系列モデリングにおいて、線形アテンションは効率的だが検索精度が低く、ソフトマックスアテンションは計算コストが高いというジレンマが存在する。本論文では、長期的な安定した嗜好と短期的な興味の急変を明示的に分離するハイブリッドアテンションアーキテクチャ「HyTRec」を提案する。大規模な過去の行動系列には線形アテンションを、直近のインタラクションには専用のソフトマックスアテンションを割り当てることで、数万規模のインタラクションを含む産業規模の文脈でも高精度な検索を実現する。さらに、線形層における急速な興味変化の捕捉遅延を軽減するため、新しい行動シグナルを動的に重み付けし過去のノイズを抑制するTemporal-Aware Delta Network（TADN）を設計した。産業規模データセットでの実験により、線形推論速度を維持しつつ強力なベースラインを上回り、超長系列ユーザーに対してヒット率8%以上の改善を達成することが確認された。
-
-{{< details "原文Abstract" >}}
-Modeling long sequences of user behaviors has emerged as a critical frontier in generative recommendation. However, existing solutions face a dilemma: linear attention mechanisms achieve efficiency at the cost of retrieval precision due to limited state capacity, while softmax attention suffers from prohibitive computational overhead. To address this challenge, we propose HyTRec, a model featuring a Hybrid Attention architecture that explicitly decouples long-term stable preferences from short-term intent spikes. By assigning massive historical sequences to a linear attention branch and reserving a specialized softmax attention branch for recent interactions, our approach restores precise retrieval capabilities within industrial-scale contexts involving ten thousand interactions. To mitigate the lag in capturing rapid interest drifts within the linear layers, we furthermore design Temporal-Aware Delta Network (TADN) to dynamically upweight fresh behavioral signals while effectively suppressing historical noise. Empirical results on industrial-scale datasets confirm the superiority that our model maintains linear inference speed and outperforms strong baselines, notably delivering over 8% improvement in Hit Rate for users with ultra-long sequences with great efficiency.
-{{< /details >}}
-
-## 2. DreamID-Omni: Unified Framework for Controllable Human-Centric Audio-Video Generation
-
-- **著者**: Xu Guo, Fulong Ye, Qichao Sun, Liyang Chen, Bingchuan Li ほか
-- **公開日**: 2026-02-12
-- **ソース**: [huggingface](https://arxiv.org/abs/2602.12160)
-- **arXiv ID**: 2602.12160
-
-![DreamID-Omni: Unified Framework for Controllable Human-Centric Audio-Video Generation](paper_2.png)
-
-### 要約
-
-DreamID-Omniは、人物中心の音声・映像生成を統一的に扱うフレームワークである。従来手法では参照ベースの音声映像生成、映像編集、音声駆動映像アニメーションが個別に扱われていたが、本手法はこれらを単一フレームワークで実現する。異種条件信号を統合する対称条件付き拡散Transformerを設計し、複数人物シナリオにおけるアイデンティティと音色の結合失敗や話者混同を解決するため、同期RoPEと構造化キャプションによる二重レベル分離戦略を導入した。さらに、弱制約の生成事前分布を活用して強制約タスクを正則化するマルチタスク段階的学習手法により、過学習を防ぎつつ異なる目的を調和させている。実験の結果、映像・音声・音声映像整合性の全指標で最先端性能を達成し、主要な商用モデルをも上回る結果を示した。
-
-{{< details "原文Abstract" >}}
-Recent advancements in foundation models have revolutionized joint audio-video generation. However, existing approaches typically treat human-centric tasks including reference-based audio-video generation (R2AV), video editing (RV2AV) and audio-driven video animation (RA2V) as isolated objectives. Furthermore, achieving precise, disentangled control over multiple character identities and voice timbres within a single framework remains an open challenge. In this paper, we propose DreamID-Omni, a unified framework for controllable human-centric audio-video generation. Specifically, we design a Symmetric Conditional Diffusion Transformer that integrates heterogeneous conditioning signals via a symmetric conditional injection scheme. To resolve the pervasive identity-timbre binding failures and speaker confusion in multi-person scenarios, we introduce a Dual-Level Disentanglement strategy: Synchronized RoPE at the signal level to ensure rigid attention-space binding, and Structured Captions at the semantic level to establish explicit attribute-subject mappings. Furthermore, we devise a Multi-Task Progressive Training scheme that leverages weakly-constrained generative priors to regularize strongly-constrained tasks, preventing overfitting and harmonizing disparate objectives. Extensive experiments demonstrate that DreamID-Omni achieves comprehensive state-of-the-art performance across video, audio, and audio-visual consistency, even outperforming leading proprietary commercial models. We will release our code to bridge the gap between academic research and commercial-grade applications.
-{{< /details >}}
-
-## 3. SkyReels-V4: Multi-modal Video-Audio Generation, Inpainting and Editing model
-
-- **著者**: Guibin Chen, Dixuan Lin, Jiangping Yang, Youqiang Zhang, Zhengcong Fei ほか
+- **著者**: Rui Yang, Qianhui Wu, Zhaoyang Wang, Hanyang Chen, Ke Yang ほか
 - **公開日**: 2026-02-25
-- **ソース**: [huggingface](https://arxiv.org/abs/2602.21818)
-- **arXiv ID**: 2602.21818
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.22190)
+- **arXiv ID**: 2602.22190
 
-![SkyReels-V4: Multi-modal Video-Audio Generation, Inpainting and Editing model](paper_3.png)
+![GUI-Libra: Training Native GUI Agents to Reason and Act with Action-aware Supervision and Partially Verifiable RL](paper_1.png)
 
 ### 要約
 
-SkyReels V4は、映像と音声の同時生成、インペインティング、編集を統合的に扱うマルチモーダル動画基盤モデルである。デュアルストリームのMultimodal Diffusion Transformer（MMDiT）アーキテクチャを採用し、一方のブランチが映像を、もう一方が時間的に整合した音声を生成し、マルチモーダル大規模言語モデル（MMLM）ベースのテキストエンコーダを共有する。テキスト、画像、動画クリップ、マスク、音声参照など多様な入力を受け付け、チャネル結合による定式化により、画像から動画への変換、動画延長、動画編集といった幅広いインペインティング系タスクを単一インターフェースで統一的に処理できる。1080p解像度・32FPS・最大15秒の高品質シネマレベルの映像生成を実現するため、低解像度フルシーケンスと高解像度キーフレームの同時生成に続く超解像・フレーム補間という効率化戦略を導入している。マルチモーダル入力、映像音声同時生成、生成・インペインティング・編集の統一処理を同時にサポートする初の動画基盤モデルとされている。
+オープンソースのネイティブGUIエージェントは、長期的なナビゲーションタスクにおいてクローズドソースシステムに依然として遅れを取っている。本研究では、その原因として高品質なアクション整合型推論データの不足と、GUIエージェント固有の課題を無視した汎用的な後段学習パイプラインの直接適用という2つの限界を特定した。提案手法GUI-Libraでは、81Kの精選されたGUI推論データセットの構築、推論とグラウンディングを両立させるアクション認識型SFT（推論→アクションと直接アクションのデータ混合およびトークン重み付け）、そして部分的検証可能性の下でRLを安定化させるためのKL正則化と成功適応型スケーリングを導入した。Web・モバイルの多様なベンチマークにおいて、ステップ単位の精度とエンドツーエンドのタスク完了率の両方で一貫した改善を達成し、コストのかかるオンラインデータ収集なしに大幅な性能向上が可能であることを示した。
 
 {{< details "原文Abstract" >}}
-SkyReels V4 is a unified multi modal video foundation model for joint video audio generation, inpainting, and editing. The model adopts a dual stream Multimodal Diffusion Transformer (MMDiT) architecture, where one branch synthesizes video and the other generates temporally aligned audio, while sharing a powerful text encoder based on the Multimodal Large Language Models (MMLM). SkyReels V4 accepts rich multi modal instructions, including text, images, video clips, masks, and audio references. By combining the MMLMs multi modal instruction following capability with in context learning in the video branch MMDiT, the model can inject fine grained visual guidance under complex conditioning, while the audio branch MMDiT simultaneously leverages audio references to guide sound generation. On the video side, we adopt a channel concatenation formulation that unifies a wide range of inpainting style tasks, such as image to video, video extension, and video editing under a single interface, and naturally extends to vision referenced inpainting and editing via multi modal prompts. SkyReels V4 supports up to 1080p resolution, 32 FPS, and 15 second duration, enabling high fidelity, multi shot, cinema level video generation with synchronized audio. To make such high resolution, long-duration generation computationally feasible, we introduce an efficiency strategy: Joint generation of low resolution full sequences and high-resolution keyframes, followed by dedicated super-resolution and frame interpolation models. To our knowledge, SkyReels V4 is the first video foundation model that simultaneously supports multi-modal input, joint video audio generation, and a unified treatment of generation, inpainting, and editing, while maintaining strong efficiency and quality at cinematic resolutions and durations.
+Open-source native GUI agents still lag behind closed-source systems on long-horizon navigation tasks. This gap stems from two limitations: a shortage of high-quality, action-aligned reasoning data, and the direct adoption of generic post-training pipelines that overlook the unique challenges of GUI agents. We identify two fundamental issues in these pipelines: (i) standard SFT with CoT reasoning often hurts grounding, and (ii) step-wise RLVR-tyle training faces partial verifiability, where multiple actions can be correct but only a single demonstrated action is used for verification. This makes offline step-wise metrics weak predictors of online task success. In this work, we present GUI-Libra, a tailored training recipe that addresses these challenges. First, to mitigate the scarcity of action-aligned reasoning data, we introduce a data construction and filtering pipeline and release a curated 81K GUI reasoning dataset. Second, to reconcile reasoning with grounding, we propose action-aware SFT that mixes reasoning-then-action and direct-action data and reweights tokens to emphasize action and grounding. Third, to stabilize RL under partial verifiability, we identify the overlooked importance of KL regularization in RLVR and show that a KL trust region is critical for improving offline-to-online predictability; we further introduce success-adaptive scaling to downweight unreliable negative gradients. Across diverse web and mobile benchmarks, GUI-Libra consistently improves both step-wise accuracy and end-to-end task completion. Our results suggest that carefully designed post-training and data curation can unlock significantly stronger task-solving capabilities without costly online data collection. We release our dataset, code, and models to facilitate further research on data-efficient post-training for reasoning-capable GUI agents.
 {{< /details >}}
 
-## 4. DREAM: Deep Research Evaluation with Agentic Metrics
+## 2. QuantVLA: Scale-Calibrated Post-Training Quantization for Vision-Language-Action Models
 
-- **著者**: Elad Ben Avraham, Changhao Li, Ron Dorfman, Roy Ganz, Oren Nuriel ほか
-- **公開日**: 2026-02-21
-- **ソース**: [huggingface](https://arxiv.org/abs/2602.18940)
-- **arXiv ID**: 2602.18940
+- **著者**: Jingxuan Zhang, Yunta Hsieh, Zhongwei Wang, Haokun Lin, Xin Wang ほか
+- **公開日**: 2026-02-23
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.20309)
+- **arXiv ID**: 2602.20309
 
-![DREAM: Deep Research Evaluation with Agentic Metrics](paper_4.png)
+![QuantVLA: Scale-Calibrated Post-Training Quantization for Vision-Language-Action Models](paper_2.png)
 
 ### 要約
 
-Deep Researchエージェントはアナリスト級のレポートを生成するが、単一の正解が存在しないことや研究品質の多次元性から、その評価は依然として困難である。既存のベンチマークは「合成の蜃気楼（Mirage of Synthesis）」という問題を抱えており、表面的な流暢さや引用の整合性が、事実やリーズニングの欠陥を覆い隠してしまう。本研究では4つの領域にわたる分類体系を導入し、静的な評価器では時間的妥当性や事実正確性の評価に必要なツール使用能力が本質的に欠如しているという能力の不一致を明らかにした。この課題に対処するため、評価自体をエージェント化する「能力同等性」の原則に基づくフレームワークDREAM（Deep Research Evaluation with Agentic Metrics）を提案する。DREAMはクエリ非依存メトリクスとツール呼び出しエージェントが生成する適応的メトリクスを組み合わせた評価プロトコルにより、時間的カバレッジ、根拠に基づく検証、体系的な推論検査を実現し、既存ベンチマークよりも事実的・時間的劣化に対して有意に高い感度を持つスケーラブルかつ参照不要の評価パラダイムであることが示された。
+QuantVLAは、視覚・言語・行動（VLA）モデルに対する初の学習不要なポストトレーニング量子化（PTQ）フレームワークであり、拡散トランスフォーマー（DiT）アクションヘッドの量子化にも初めて成功した手法である。本フレームワークは、選択的量子化レイアウト、注意温度マッチング、出力ヘッドバランシングという3つのスケール校正コンポーネントを組み込んでおり、追加学習なしに少量のラベルなしキャリブレーションデータのみで適用可能である。LIBEROベンチマーク上の代表的なVLAモデルにおいて、QuantVLAはフル精度ベースラインのタスク成功率を上回りつつ、量子化コンポーネントで約70%のメモリ削減と1.22倍のエンドツーエンド推論高速化を達成し、計算・メモリ・電力制約下でのスケーラブルな低ビット身体知能への実用的な道筋を示した。
 
 {{< details "原文Abstract" >}}
-Deep Research Agents generate analyst-grade reports, yet evaluating them remains challenging due to the absence of a single ground truth and the multidimensional nature of research quality. Recent benchmarks propose distinct methodologies, yet they suffer from the Mirage of Synthesis, where strong surface-level fluency and citation alignment can obscure underlying factual and reasoning defects. We characterize this gap by introducing a taxonomy across four verticals that exposes a critical capability mismatch: static evaluators inherently lack the tool-use capabilities required to assess temporal validity and factual correctness. To address this, we propose DREAM (Deep Research Evaluation with Agentic Metrics), a framework that instantiates the principle of capability parity by making evaluation itself agentic. DREAM structures assessment through an evaluation protocol combining query-agnostic metrics with adaptive metrics generated by a tool-calling agent, enabling temporally aware coverage, grounded verification, and systematic reasoning probes. Controlled evaluations demonstrate DREAM is significantly more sensitive to factual and temporal decay than existing benchmarks, offering a scalable, reference-free evaluation paradigm.
+Vision-language-action (VLA) models unify perception, language, and control for embodied agents but face significant challenges in practical deployment due to rapidly increasing compute and memory demands, especially as models scale to longer horizons and larger backbones. To address these bottlenecks, we introduce QuantVLA, a training-free post-training quantization (PTQ) framework that, to our knowledge, is the first PTQ approach for VLA systems and the first to successfully quantize a diffusion transformer (DiT) action head. QuantVLA incorporates three scale-calibrated components: (1) a selective quantization layout that integerizes all linear layers in both the language backbone and the DiT while keeping attention projections in floating point to preserve the original operator schedule; (2) attention temperature matching, a lightweight per-head scaling mechanism that stabilizes attention logits and is folded into the dequantization scales at inference; and (3) output head balancing, a per-layer residual interface calibration that mitigates post-projection energy drift. The framework requires no additional training, uses only a small unlabeled calibration buffer, and supports integer kernels for low-bit weights and activations while leaving the architecture unchanged. Across representative VLA models on LIBERO, QuantVLA exceeds the task success rates of full-precision baselines, achieves about 70% relative memory savings on the quantized components, and delivers a 1.22x speedup in end-to-end inference latency, providing a practical pathway toward scalable low-bit embodied intelligence under strict compute, memory, and power constraints.
 {{< /details >}}
 
-## 5. See and Fix the Flaws: Enabling VLMs and Diffusion Models to Comprehend Visual Artifacts via Agentic Data Synthesis
+## 3. VecGlypher: Unified Vector Glyph Generation with Language Models
 
-- **著者**: Jaehyun Park, Minyoung Ahn, Minkyu Kim, Jonghyun Lee, Jae-Gil Lee ほか
-- **公開日**: 2026-02-24
-- **ソース**: [huggingface](https://arxiv.org/abs/2602.20951)
-- **arXiv ID**: 2602.20951
+- **著者**: Xiaoke Huang, Bhavul Gauri, Kam Woh Ng, Tony Ng, Mengmeng Xu ほか
+- **公開日**: 2026-02-25
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.21461)
+- **arXiv ID**: 2602.21461
 
-![See and Fix the Flaws: Enabling VLMs and Diffusion Models to Comprehend Visual Artifacts via Agentic Data Synthesis](paper_5.png)
+![VecGlypher: Unified Vector Glyph Generation with Language Models](paper_3.png)
 
 ### 要約
 
-拡散モデルの進歩にもかかわらず、AI生成画像にはリアリズムを損なう視覚的アーティファクトが依然として含まれており、その軽減は重要な研究課題である。従来手法は人手によるアーティファクトアノテーションに依存しており、コストとスケーラビリティに課題があった。本論文では、実画像とアーティファクトを注入した画像のペアを効率的に生成するマルチエージェントフレームワーク「ArtiAgent」を提案する。ArtiAgentは、実画像からエンティティを認識・グラウンディングする知覚エージェント、拡散トランスフォーマー内のパッチ単位の埋め込み操作によりアーティファクトを注入する合成エージェント、生成されたアーティファクトをフィルタリングしローカル・グローバルな説明を付与するキュレーションエージェントの3つで構成される。このフレームワークにより、豊富なアーティファクトアノテーション付きの10万枚の画像を合成し、多様なアプリケーションにおけるその有効性と汎用性を実証した。
+ベクターグリフ（デジタルタイポグラフィの基本単位）の生成において、従来の学習ベース手法は手作業で用意した見本シートやラスター・ベクター変換の後処理に依存しており、アクセシビリティや編集性に制約があった。本論文では、テキスト記述や画像見本から高品質なベクターグリフをSVGパストークンとして直接自己回帰的に生成するマルチモーダル言語モデル「VecGlypher」を提案する。学習には、39Kのノイズを含むEnvatoフォントによる大規模継続学習でSVG構文と長距離の幾何構造を習得した後、2.5Kの専門家アノテーション付きGoogle Fontsで言語・画像と幾何情報の整合を図る2段階レシピを採用している。クロスファミリーの分布外評価において、テキストのみの生成では汎用LLMや専門ベースラインを大幅に上回り、画像参照生成ではDeepVecFont-v2やDualVectorを超える最先端性能を達成した。本手法により、ユーザーは言葉や見本画像だけでフォントを設計でき、将来のマルチモーダルデザインツールへのスケーラブルな基盤を提供する。
 
 {{< details "原文Abstract" >}}
-Despite recent advances in diffusion models, AI generated images still often contain visual artifacts that compromise realism. Although more thorough pre-training and bigger models might reduce artifacts, there is no assurance that they can be completely eliminated, which makes artifact mitigation a highly crucial area of study. Previous artifact-aware methodologies depend on human-labeled artifact datasets, which are costly and difficult to scale, underscoring the need for an automated approach to reliably acquire artifact-annotated datasets. In this paper, we propose ArtiAgent, which efficiently creates pairs of real and artifact-injected images. It comprises three agents: a perception agent that recognizes and grounds entities and subentities from real images, a synthesis agent that introduces artifacts via artifact injection tools through novel patch-wise embedding manipulation within a diffusion transformer, and a curation agent that filters the synthesized artifacts and generates both local and global explanations for each instance. Using ArtiAgent, we synthesize 100K images with rich artifact annotations and demonstrate both efficacy and versatility across diverse applications. Code is available at link.
+Vector glyphs are the atomic units of digital typography, yet most learning-based pipelines still depend on carefully curated exemplar sheets and raster-to-vector postprocessing, which limits accessibility and editability. We introduce VecGlypher, a single multimodal language model that generates high-fidelity vector glyphs directly from text descriptions or image exemplars. Given a style prompt, optional reference glyph images, and a target character, VecGlypher autoregressively emits SVG path tokens, avoiding raster intermediates and producing editable, watertight outlines in one pass. A typography-aware data and training recipe makes this possible: (i) a large-scale continuation stage on 39K noisy Envato fonts to master SVG syntax and long-horizon geometry, followed by (ii) post-training on 2.5K expert-annotated Google Fonts with descriptive tags and exemplars to align language and imagery with geometry; preprocessing normalizes coordinate frames, canonicalizes paths, de-duplicates families, and quantizes coordinates for stable long-sequence decoding. On cross-family OOD evaluation, VecGlypher substantially outperforms both general-purpose LLMs and specialized vector-font baselines for text-only generation, while image-referenced generation reaches a state-of-the-art performance, with marked gains over DeepVecFont-v2 and DualVector. Ablations show that model scale and the two-stage recipe are critical and that absolute-coordinate serialization yields the best geometry. VecGlypher lowers the barrier to font creation by letting users design with words or exemplars, and provides a scalable foundation for future multimodal design tools.
+{{< /details >}}
+
+## 4. JavisDiT++: Unified Modeling and Optimization for Joint Audio-Video Generation
+
+- **著者**: Kai Liu, Yanhao Zheng, Kai Wang, Shengqiong Wu, Rongjunchen Zhang ほか
+- **公開日**: 2026-02-22
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.19163)
+- **arXiv ID**: 2602.19163
+
+![JavisDiT++: Unified Modeling and Optimization for Joint Audio-Video Generation](paper_4.png)
+
+### 要約
+
+AIGCがテキストから画像生成を超えて動画・音声のマルチモーダル合成へと拡大する中、テキスト記述から同期・意味整合された音声と映像を同時生成する「共同音声動画生成（JAVG）」が重要な課題となっている。本論文では、JavisDiT++というJAVGの統一的なモデリングと最適化フレームワークを提案し、モダリティ固有のMixture-of-Experts（MS-MoE）設計によりクロスモーダルな相互作用を促進しつつ単一モダリティの生成品質を向上させている。さらに、音声・動画トークン間のフレームレベルでの明示的な時間同期を実現するTemporal-Aligned RoPE（TA-RoPE）戦略と、品質・一貫性・同期性の各次元で人間の選好にモデル出力を整合させるAudio-Video Direct Preference Optimization（AV-DPO）手法を導入している。Wan2.1-1.3B-T2Vをベースとし、約100万件の公開データのみで学習した本モデルは、定性的・定量的評価の両面で既存手法を大幅に上回り、最先端の性能を達成した。
+
+{{< details "原文Abstract" >}}
+AIGC has rapidly expanded from text-to-image generation toward high-quality multimodal synthesis across video and audio. Within this context, joint audio-video generation (JAVG) has emerged as a fundamental task that produces synchronized and semantically aligned sound and vision from textual descriptions. However, compared with advanced commercial models such as Veo3, existing open-source methods still suffer from limitations in generation quality, temporal synchrony, and alignment with human preferences. To bridge the gap, this paper presents JavisDiT++, a concise yet powerful framework for unified modeling and optimization of JAVG. First, we introduce a modality-specific mixture-of-experts (MS-MoE) design that enables cross-modal interaction efficacy while enhancing single-modal generation quality. Then, we propose a temporal-aligned RoPE (TA-RoPE) strategy to achieve explicit, frame-level synchronization between audio and video tokens. Besides, we develop an audio-video direct preference optimization (AV-DPO) method to align model outputs with human preference across quality, consistency, and synchrony dimensions. Built upon Wan2.1-1.3B-T2V, our model achieves state-of-the-art performance merely with around 1M public training entries, significantly outperforming prior approaches in both qualitative and quantitative evaluations. Comprehensive ablation studies have been conducted to validate the effectiveness of our proposed modules. All the code, model, and dataset are released at https://JavisVerse.github.io/JavisDiT2-page.
+{{< /details >}}
+
+## 5. DualPath: Breaking the Storage Bandwidth Bottleneck in Agentic LLM Inference
+
+- **著者**: Yongtong Wu, Shaoyuan Chen, Yinmin Zhong, Rilin Huang, Yixuan Tan ほか
+- **公開日**: 2026-02-25
+- **ソース**: [huggingface](https://arxiv.org/abs/2602.21548)
+- **arXiv ID**: 2602.21548
+
+![DualPath: Breaking the Storage Bandwidth Bottleneck in Agentic LLM Inference](paper_5.png)
+
+### 要約
+
+マルチターンのエージェント型LLM推論では、KVキャッシュのストレージI/Oが性能のボトルネックとなっており、分離型アーキテクチャにおいてプリフィルエンジンのストレージNICが帯域飽和する一方、デコードエンジン側は遊休状態になるという非対称性が生じている。本論文では、この問題を解決するDualPathを提案し、従来のストレージからプリフィルへの経路に加え、ストレージからデコードエンジンを経由しRDMAでプリフィルエンジンへ転送する新たな経路を導入する。この二重経路方式はネットワーク輻輳やレイテンシに敏感なモデル実行通信への干渉を回避でき、さらにグローバルスケジューラによりプリフィル・デコードエンジン間の負荷を動的に分散する。本番のエージェント型ワークロードを用いた3モデルでの評価では、オフライン推論スループットが最大1.87倍、オンラインサービングスループットがSLOを維持しつつ平均1.96倍に向上した。
+
+{{< details "原文Abstract" >}}
+The performance of multi-turn, agentic LLM inference is increasingly dominated by KV-Cache storage I/O rather than computation. In prevalent disaggregated architectures, loading the massive KV-Cache from external storage creates a fundamental imbalance: storage NICs on prefill engines become bandwidth-saturated, while those on decoding engines remain idle. This asymmetry severely constrains overall system throughput.
+  We present DualPath, an inference system that breaks this bottleneck by introducing dual-path KV-Cache loading. Beyond the traditional storage-to-prefill path, DualPath enables a novel storage-to-decode path, in which the KV-Cache is loaded into decoding engines and then efficiently transferred to prefill engines via RDMA over the compute network. DualPath combines this optimized data path -- which inherently avoids network congestion and avoids interference with latency-critical model execution communications -- with a global scheduler that dynamically balances load across prefill and decode engines.
+  Our evaluation on three models with production agentic workloads demonstrates that DualPath improves offline inference throughput by up to 1.87times on our in-house inference system. It can also improve online serving throughput by an average factor of 1.96times without violating SLO.
 {{< /details >}}
 
 ---
