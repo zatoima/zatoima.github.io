@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
   <meta charset="utf-8">
@@ -15,7 +15,7 @@
   <meta property="og:site_name" content="my opinion is my own">
   <meta property="og:title" content="DynamoDBからkinesis firehose経由でS3に出力時にJSON形式からCSV形式に変換するLamdba用のPythonスクリプト">
   <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
-  <meta property="og:locale" content="en">
+  <meta property="og:locale" content="ja">
   <meta property="og:type" content="article">
     <meta property="article:section" content="blog">
     <meta property="article:published_time" content="2022-05-06T00:00:00+00:00">
@@ -55,6 +55,7 @@
     "@type": "WebPage",
     "@id": "\"https://zatoima.github.io/aws-dynamodb-to-s3-csv-transform-python-lamdba/\""
   },
+  "inLanguage": "ja",
   "wordCount":  2927 ,
   "keywords": "[\"AWS\"]"
 }
@@ -82,6 +83,7 @@
 
   gtag('config', 'G-STFZ9QMXGM');
 </script>
+
 </head>
 
 <body>
@@ -102,10 +104,25 @@
           <button id="search-btn" class="header-icon-btn" aria-label="検索">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item active" lang="ja">
+      
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item" lang="en">
+      
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
             <span></span><span></span><span></span>
           </button>
         </div>
@@ -115,7 +132,7 @@
     
     <div id="search-overlay" class="search-overlay">
       <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
         <div id="search-results" class="search-results"></div>
       </div>
     </div>
@@ -145,7 +162,7 @@
         
         <div class="article-meta">
           <time class="article-date" datetime='2022-05-06'>
-            2022/05/06 に公開
+            に公開 2022/05/06
           </time>
           
           
@@ -163,16 +180,17 @@
         <h3 id="はじめに">はじめに</h3>
 <p>DynamoDBへの更新をS3に連携したい場合は下記の通りkinesis firehoseを経由させることで簡単にできるようになった。（従来はDynamoDB-Lamdba-Kinesisとすることが必要だった。）</p>
 <blockquote>
-<p>DynamoDBからkinesis firehose経由でS3に出力 | my opinion is my own 👋 <a href="https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/">https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/</a></p>
+<p>DynamoDBからkinesis firehose経由でS3に出力 | my opinion is my own 👋 <a href="https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/" target="_blank" rel="noopener noreferrer">https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/</a>
+</p>
 </blockquote>
 <p>が、不要なレコードも一緒に出力されるので必要なものだけを抽出したい場合は、Kinesis firehoseの変換機能を使用する必要がある。Node.jsのスクリプトは公式からの提供されているが、Pythonはあまり見つけられなかった。</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{<span style="color:#ff79c6">&#34;awsRegion&#34;</span>:<span style="color:#f1fa8c">&#34;ap-northeast-1&#34;</span>,<span style="color:#ff79c6">&#34;eventID&#34;</span>:<span style="color:#f1fa8c">&#34;1e84f1ca-438d-4837-a6bd-aa4592be6f8a&#34;</span>,<span style="color:#ff79c6">&#34;eventName&#34;</span>:<span style="color:#f1fa8c">&#34;MODIFY&#34;</span>,<span style="color:#ff79c6">&#34;userIdentity&#34;</span>:<span style="color:#ff79c6">null</span>,<span style="color:#ff79c6">&#34;recordFormat&#34;</span>:<span style="color:#f1fa8c">&#34;application/json&#34;</span>,<span style="color:#ff79c6">&#34;tableName&#34;</span>:<span style="color:#f1fa8c">&#34;cities&#34;</span>,<span style="color:#ff79c6">&#34;dynamodb&#34;</span>:{<span style="color:#ff79c6">&#34;ApproximateCreationDateTime&#34;</span>:<span style="color:#bd93f9">1651495525900</span>,<span style="color:#ff79c6">&#34;Keys&#34;</span>:{<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>}},<span style="color:#ff79c6">&#34;NewImage&#34;</span>:{<span style="color:#ff79c6">&#34;population&#34;</span>:{<span style="color:#ff79c6">&#34;N&#34;</span>:<span style="color:#f1fa8c">&#34;54148&#34;</span>},<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>},<span style="color:#ff79c6">&#34;name&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;下野&#34;</span>},<span style="color:#ff79c6">&#34;date_mod&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;1950-9-7&#34;</span>}},<span style="color:#ff79c6">&#34;OldImage&#34;</span>:{<span style="color:#ff79c6">&#34;population&#34;</span>:{<span style="color:#ff79c6">&#34;N&#34;</span>:<span style="color:#f1fa8c">&#34;56148&#34;</span>},<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>},<span style="color:#ff79c6">&#34;name&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;下野&#34;</span>},<span style="color:#ff79c6">&#34;date_mod&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;1950-9-7&#34;</span>}},<span style="color:#ff79c6">&#34;SizeBytes&#34;</span>:<span style="color:#bd93f9">104</span>},<span style="color:#ff79c6">&#34;eventSource&#34;</span>:<span style="color:#f1fa8c">&#34;aws:dynamodb&#34;</span>}
 </span></span></code></pre></div><h3 id="必要な設定">必要な設定</h3>
 <p>Firehose側でS3に保存時に変換したい場合は、<code>Transform source records with AWS Lambda</code>を<code>enable</code>に設定してLambda Functionを設定する</p>
-<p><img src="image-20220506114740632.png" alt="image-20220506114740632"></p>
+<p><img src="/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632.png" alt="image-20220506114740632"></p>
 <h3 id="dynamodb側のテーブル構造">DynamoDB側のテーブル構造</h3>
 <p>idとdatetimeだけが用意されているテーブル</p>
-<p><img src="image-20220506115206214.png" alt="image-20220506115206214"></p>
+<p><img src="/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214.png" alt="image-20220506115206214"></p>
 <p>下記スクリプトで適当にデータを挿入する。</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">for</span> i in <span style="color:#ff79c6">{</span>0..10000<span style="color:#ff79c6">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">do</span>
@@ -184,10 +202,12 @@
 </span></span></code></pre></div><h3 id="lambdaのpythonスクリプト">LambdaのPythonスクリプト</h3>
 <p>Kinesis Firehose側の決まりごとに沿う必要があることに注意。</p>
 <blockquote>
-<p>Amazon Kinesis Data Firehose のデータ変換 - Amazon Kinesis Data Firehose <a href="https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html">https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html</a></p>
+<p>Amazon Kinesis Data Firehose のデータ変換 - Amazon Kinesis Data Firehose <a href="https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html</a>
+</p>
 </blockquote>
 <blockquote>
-<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a></p>
+<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</p>
 <ul>
 <li>Kinesis Data Firehoseから連携されたPayload Sizeが6MBを超えるときは、PayloadをFirehoseに戻す必要がある
 <ul>
@@ -389,7 +409,8 @@
 </span></span></code></pre></div><p>後日追記②：</p>
 <p>下記を全面的に採用させていただき、そのままではエラーで動作しなかったため、一部修正して動作するようにした。</p>
 <blockquote>
-<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a></p>
+<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</p>
 </blockquote>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> json
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> boto3
@@ -531,9 +552,12 @@
 </span></span></code></pre></div><h3 id="参考">参考</h3>
 <blockquote>
 <ul>
-<li>Amazon Kinesis Firehose Data Transformation with AWS Lambda | AWS Compute Blog <a href="https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/">https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/</a></li>
-<li>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a></li>
-<li>Amazon DynamoDB ストリームを使用して、順序付けされたデータをアプリケーション間でレプリケーションする方法 | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/">https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/</a></li>
+<li>Amazon Kinesis Firehose Data Transformation with AWS Lambda | AWS Compute Blog <a href="https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/</a>
+</li>
+<li>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</li>
+<li>Amazon DynamoDB ストリームを使用して、順序付けされたデータをアプリケーション間でレプリケーションする方法 | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/</a>
+</li>
 </ul>
 </blockquote>
 
@@ -666,6 +690,8 @@
   <script src="/js/mobile-nav.js" defer></script>
   <script src="/js/search.js" defer></script>
   <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
 </body>
 
 </html>

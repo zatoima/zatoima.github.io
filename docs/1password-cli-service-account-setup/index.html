@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
   <meta charset="utf-8">
@@ -7,15 +7,15 @@
 <link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
 <title>1Password CLI を Service Account で非対話認証する設定手順 | my opinion is my own</title>
 <meta name="title" content="1Password CLI を Service Account で非対話認証する設定手順" />
-<meta name="description" content="" />
+<meta name="description" content="1Password CLI（op コマンド）をスクリプトや自動化環境で非対話的に利用するための Service Account の設定手順を記録する。専用 Vault の作成からトークンの取得・環境変数への設定、op read / op inject / op run による動作確認までの一連の流れを扱う。" />
 <meta name="keywords" content="1Password," />
 
 
 <meta property="og:url" content="https://zatoima.github.io/1password-cli-service-account-setup/">
   <meta property="og:site_name" content="my opinion is my own">
   <meta property="og:title" content="1Password CLI を Service Account で非対話認証する設定手順">
-  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
-  <meta property="og:locale" content="en">
+  <meta property="og:description" content="1Password CLI（op コマンド）をスクリプトや自動化環境で非対話的に利用するための Service Account の設定手順を記録する。専用 Vault の作成からトークンの取得・環境変数への設定、op read / op inject / op run による動作確認までの一連の流れを扱う。">
+  <meta property="og:locale" content="ja">
   <meta property="og:type" content="article">
     <meta property="article:section" content="blog">
     <meta property="article:published_time" content="2026-02-27T00:00:00+00:00">
@@ -29,7 +29,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
   <meta name="twitter:title" content="1Password CLI を Service Account で非対話認証する設定手順">
-  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+  <meta name="twitter:description" content="1Password CLI（op コマンド）をスクリプトや自動化環境で非対話的に利用するための Service Account の設定手順を記録する。専用 Vault の作成からトークンの取得・環境変数への設定、op read / op inject / op run による動作確認までの一連の流れを扱う。">
 
 
 
@@ -39,7 +39,7 @@
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   "headline": "\"1Password CLI を Service Account で非対話認証する設定手順\"",
-  "description": "\"\"",
+  "description": "\"1Password CLI（op コマンド）をスクリプトや自動化環境で非対話的に利用するための Service Account の設定手順を記録する。専用 Vault の作成からトークンの取得・環境変数への設定、op read / op inject / op run による動作確認までの一連の流れを扱う。\"",
   "datePublished": "\"2026-02-27T00:00:00Z\"",
   "dateModified": "\"2026-02-27T00:00:00Z\"",
   "author": {
@@ -55,6 +55,7 @@
     "@type": "WebPage",
     "@id": "\"https://zatoima.github.io/1password-cli-service-account-setup/\""
   },
+  "inLanguage": "ja",
   "wordCount":  1628 ,
   "keywords": "[\"1Password\"]"
 }
@@ -82,6 +83,7 @@
 
   gtag('config', 'G-STFZ9QMXGM');
 </script>
+
 </head>
 
 <body>
@@ -102,10 +104,25 @@
           <button id="search-btn" class="header-icon-btn" aria-label="検索">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </button>
-          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替">
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-          <button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item active" lang="ja">
+      
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item" lang="en">
+      
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
             <span></span><span></span><span></span>
           </button>
         </div>
@@ -115,7 +132,7 @@
     
     <div id="search-overlay" class="search-overlay">
       <div class="search-modal">
-        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl+K)" autocomplete="off">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
         <div id="search-results" class="search-results"></div>
       </div>
     </div>
@@ -145,7 +162,7 @@
         
         <div class="article-meta">
           <time class="article-date" datetime='2026-02-27'>
-            2026/02/27 に公開
+            に公開 2026/02/27
           </time>
           
           
@@ -169,7 +186,8 @@
 <li><strong>アイテムの管理</strong>: ログイン情報やセキュアノートの作成・更新・削除を CLI から実行する</li>
 </ul>
 <p>通常は実行のたびに Touch ID やマスターパスワードの入力が求められるが、自動化スクリプトや CI/CD パイプラインなど非対話的な環境ではこれが障壁となる。</p>
-<p><a href="https://developer.1password.com/docs/service-accounts/">1Password Service Accounts</a> を利用すると、トークンベースの認証により対話的な操作なしで <code>op</code> コマンドを実行できる。本記事では Service Account の作成から CLI との連携設定までの手順を記載する。</p>
+<p><a href="https://developer.1password.com/docs/service-accounts/" target="_blank" rel="noopener noreferrer">1Password Service Accounts</a>
+ を利用すると、トークンベースの認証により対話的な操作なしで <code>op</code> コマンドを実行できる。本記事では Service Account の作成から CLI との連携設定までの手順を記載する。</p>
 <h2 id="認証方式の比較">認証方式の比較</h2>
 <p>1Password CLI には主に3つの認証方式がある。</p>
 <table>
@@ -207,7 +225,8 @@
 <h3 id="前提-専用-vault-の作成">前提: 専用 Vault の作成</h3>
 <p>Service Account は Private Vault にアクセスできないため、CLI 用の Vault を事前に作成する。</p>
 <ol>
-<li><a href="https://my.1password.com">my.1password.com</a> にサインイン</li>
+<li><a href="https://my.1password.com" target="_blank" rel="noopener noreferrer">my.1password.com</a>
+ にサインイン</li>
 <li>左サイドバーの「保管庫」をクリック</li>
 <li>「+ 新規保管庫」で任意の名前（例: <code>Vault</code>）を作成</li>
 </ol>
@@ -435,6 +454,8 @@
   <script src="/js/mobile-nav.js" defer></script>
   <script src="/js/search.js" defer></script>
   <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
 </body>
 
 </html>
