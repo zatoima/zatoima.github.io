@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-CONTENT_DIR = PROJECT_ROOT / "content" / "blog"
+CONTENT_DIR = PROJECT_ROOT / "content" / "ja" / "blog"
 SCRIPTS_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPTS_DIR / "processed_papers.json"
 LOG_FILE = SCRIPTS_DIR / "pipeline.log"

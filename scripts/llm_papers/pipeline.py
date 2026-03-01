@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """LLM Papers Daily Pipeline - Main entry point.
 
@@ -40,6 +41,15 @@ def git_commit_and_push(post_dir: Path) -> None:
     logger = logging.getLogger(__name__)
 
     try:
+        # Sync with remote before committing to avoid push rejection
+        logger.info("Pulling latest changes from remote...")
+        subprocess.run(
+            ["git", "pull", "--rebase", "origin", "main"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
         # Add the content directory
         subprocess.run(
             ["git", "add", str(post_dir)],

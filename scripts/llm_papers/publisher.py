@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Hugo content generation and Git publishing."""
 
 import logging
