@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Installing Oracle Client on EC2 and Connecting to RDS (Oracle) | my opinion is my own</title>
+<meta name="title" content="Installing Oracle Client on EC2 and Connecting to RDS (Oracle)" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,EC2,Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/oracle-ec2-oracleclient-install.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Installing Oracle Client on EC2 and Connecting to RDS (Oracle)">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-10-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-10-08T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="EC2">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Installing Oracle Client on EC2 and Connecting to RDS (Oracle)">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Installing Oracle Client on EC2 and Connecting to RDS (Oracle)\"",
+  "description": "\"\"",
+  "datePublished": "\"2019-10-08T00:00:00Z\"",
+  "dateModified": "\"2019-10-08T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/oracle-ec2-oracleclient-install.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  465 ,
+  "keywords": "[\"AWS\",\"EC2\",\"Oracle\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/oracle-ec2-oracleclient-install.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/oracle-ec2-oracleclient-install.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Installing Oracle Client on EC2 and …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Installing Oracle Client on EC2 and Connecting to RDS (Oracle)</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2019-10-08'>
+            Published on 2019/10/08
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
+          
+          <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="procedure">Procedure</h2>
+<h3 id="1-install-oracle-client-basic-and-sqlplus">1. Install Oracle Client basic and sqlplus</h3>
+<h4 id="basic">basic</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo -s
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Get the rpm file with curl command</span>
+</span></span><span style="display:flex;"><span>curl -o oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Install the rpm file</span>
+</span></span><span style="display:flex;"><span>yum -y localinstall oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm
+</span></span></code></pre></div><h4 id="sqlplus">sqlplus</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo -s
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Get the rpm file with curl command</span>
+</span></span><span style="display:flex;"><span>curl -o oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Install the rpm file</span>
+</span></span><span style="display:flex;"><span>yum -y localinstall oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm
+</span></span></code></pre></div><h3 id="set-environment-variables">Set Environment Variables</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">LD_LIBRARY_PATH</span><span style="color:#ff79c6">=</span>/usr/lib/oracle/18.3/client64/lib:<span style="color:#8be9fd;font-style:italic">$LD_LIBRARY_PATH</span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PATH</span><span style="color:#ff79c6">=</span>/usr/lib/oracle/18.3/client64/bin:<span style="color:#8be9fd;font-style:italic">$PATH</span>
+</span></span></code></pre></div><h3 id="connect">Connect</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">#</span>sqlplus <span style="color:#f1fa8c">&#39;user_name@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=dns_name)(PORT=port))(CONNECT_DATA=(SID=database_name)))&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sqlplus <span style="color:#f1fa8c">&#39;oracle@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db112s.cm678nkt5thr.ap-northeast-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=oradb)))&#39;</span>
+</span></span></code></pre></div><blockquote>
+<p>Connecting to a DB Instance Running the Oracle Database Engine - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ConnectToOracleInstance.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ConnectToOracleInstance.html</a>
+</p>
+</blockquote>
+<h2 id="execution-log">Execution Log</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># curl -o oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm</span>
+</span></span><span style="display:flex;"><span>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+</span></span><span style="display:flex;"><span>                                 Dload  Upload   Total   Spent    Left  Speed
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">100</span> 49.0M  <span style="color:#bd93f9">100</span> 49.0M    <span style="color:#bd93f9">0</span>     <span style="color:#bd93f9">0</span>  16.1M      <span style="color:#bd93f9">0</span>  0:00:03  0:00:03 --:--:-- 16.1M
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># yum -y localinstall oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>Examining oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm: oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64
+</span></span><span style="display:flex;"><span>Marking oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm to be installed
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package oracle-instantclient18.3-basic.x86_64 0:18.3.0.0.0-3 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>amzn2-core/2/x86_64                                                                                                                                                  | 2.4 kB  00:00:00
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies <span style="color:#8be9fd;font-style:italic">Resolved</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                                           Arch                      Version                           Repository                                                              <span style="color:#8be9fd;font-style:italic">Size</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> oracle-instantclient18.3-basic                    x86_64                    18.3.0.0.0-3                      /oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64                    <span style="color:#bd93f9">220</span> M
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">Summary</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#bd93f9">1</span> Package
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total size: <span style="color:#bd93f9">220</span> M
+</span></span><span style="display:flex;"><span>Installed size: <span style="color:#bd93f9">220</span> M
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction <span style="color:#8be9fd;font-style:italic">test</span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">test</span> succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>  Installing : oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64                                                                                                                       1/1
+</span></span><span style="display:flex;"><span>  Verifying  : oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64                                                                                                                       1/1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  oracle-instantclient18.3-basic.x86_64 0:18.3.0.0.0-3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># curl -o oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm http://yum.oracle.com/repo/OracleLinux/OL7/oracle/instantclient/x86_64/getPackage/oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm</span>
+</span></span><span style="display:flex;"><span>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+</span></span><span style="display:flex;"><span>                                 Dload  Upload   Total   Spent    Left  Speed
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">100</span>  693k  <span style="color:#bd93f9">100</span>  693k    <span style="color:#bd93f9">0</span>     <span style="color:#bd93f9">0</span>   379k      <span style="color:#bd93f9">0</span>  0:00:01  0:00:01 --:--:--  379k
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># yum -y localinstall oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>Examining oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm: oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64
+</span></span><span style="display:flex;"><span>Marking oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm to be installed
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package oracle-instantclient18.3-sqlplus.x86_64 0:18.3.0.0.0-3 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies <span style="color:#8be9fd;font-style:italic">Resolved</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                                            Arch                     Version                          Repository                                                               <span style="color:#8be9fd;font-style:italic">Size</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> oracle-instantclient18.3-sqlplus                   x86_64                   18.3.0.0.0-3                     /oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64                   3.1 M
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">Summary</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#bd93f9">1</span> Package
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total size: 3.1 M
+</span></span><span style="display:flex;"><span>Installed size: 3.1 M
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction <span style="color:#8be9fd;font-style:italic">test</span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">test</span> succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>  Installing : oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64                                                                                                                     1/1
+</span></span><span style="display:flex;"><span>  Verifying  : oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64                                                                                                                     1/1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  oracle-instantclient18.3-sqlplus.x86_64 0:18.3.0.0.0-3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@ip-10-0-0-170 ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">LD_LIBRARY_PATH</span><span style="color:#ff79c6">=</span>/usr/lib/oracle/18.3/client64/lib:<span style="color:#8be9fd;font-style:italic">$LD_LIBRARY_PATH</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PATH</span><span style="color:#ff79c6">=</span>/usr/lib/oracle/18.3/client64/bin:<span style="color:#8be9fd;font-style:italic">$PATH</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@ip-10-0-0-170 ~<span style="color:#ff79c6">]</span>$ sqlplus <span style="color:#f1fa8c">&#39;oracle@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db112s.cm678nkt5thr.ap-northeast-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=oradb)))&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SQL*Plus: Release 18.0.0.0.0 - Production on Tue Oct <span style="color:#bd93f9">8</span> 04:30:33 <span style="color:#bd93f9">2019</span>
+</span></span><span style="display:flex;"><span>Version 18.3.0.0.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Copyright <span style="color:#ff79c6">(</span>c<span style="color:#ff79c6">)</span> 1982, 2018, Oracle.  All rights reserved.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Enter password:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Connected to:
+</span></span><span style="display:flex;"><span>Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+</span></span><span style="display:flex;"><span>With the Partitioning, Oracle Label Security, OLAP, Data Mining
+</span></span><span style="display:flex;"><span>and Real Application Testing options
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SQL&gt;
+</span></span><span style="display:flex;"><span>SQL&gt;
+</span></span></code></pre></div><h2 id="references">References</h2>
+<blockquote>
+<p>[Oracle Cloud][AWS] Installing Oracle Client on EC2 and Connecting to OCI Database (DBaaS) - IT Edge Blog <a href="https://itedge.stars.ne.jp/oracle-cloud-ec2-dbaas/" target="_blank" rel="noopener noreferrer">https://itedge.stars.ne.jp/oracle-cloud-ec2-dbaas/</a>
+</p>
+<p>Connecting to a DB Instance Running the Oracle Database Engine - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ConnectToOracleInstance.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/USER_ConnectToOracleInstance.html</a>
+</p>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2019-10-08-oracle-ec2-oracleclient-install/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-sysops-certificate.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">AWS SysOps Administrator Associate Exam: Failure …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-ec2-xwindow.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Setting Up X Window System on AWS EC2</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2foracle-ec2-oracleclient-install.html&text=Installing&#43;Oracle&#43;Client&#43;on&#43;EC2&#43;and&#43;Connecting&#43;to&#43;RDS&#43;%28Oracle%29" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/oracle-ec2-oracleclient-install.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-connect-timeout.html">Handling Timeouts When Connecting to Cloud Environments (EC2, etc.)</a></li>
+    
+    <li><a href="/en/mysql-aws-ec2-replication.html">Building a MySQL Replication Configuration on AWS EC2</a></li>
+    
+    <li><a href="/en/aws-ec2-hostname-change.html">Changing the EC2 Instance Hostname</a></li>
+    
+    <li><a href="/en/aws-sysops-certificate.html">AWS SysOps Administrator Associate Exam: Failure and Success Experience</a></li>
+    
+    <li><a href="/en/aws-vpc-cidr-ipaddress.html">Simple Method for Calculating the Number of Addresses per CIDR Netmask</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
+  
+  <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#procedure">Procedure</a>
+      <ul>
+        <li><a href="#1-install-oracle-client-basic-and-sqlplus">1. Install Oracle Client basic and sqlplus</a>
+          <ul>
+            <li><a href="#basic">basic</a></li>
+            <li><a href="#sqlplus">sqlplus</a></li>
+          </ul>
+        </li>
+        <li><a href="#set-environment-variables">Set Environment Variables</a></li>
+        <li><a href="#connect">Connect</a></li>
+      </ul>
+    </li>
+    <li><a href="#execution-log">Execution Log</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

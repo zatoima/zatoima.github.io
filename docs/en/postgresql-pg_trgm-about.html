@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Trying PostgreSQL&#39;s Full-Text Search Engine pg_trgm | my opinion is my own</title>
+<meta name="title" content="Trying PostgreSQL&#39;s Full-Text Search Engine pg_trgm" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/postgresql-pg_trgm-about.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Trying PostgreSQL&#39;s Full-Text Search Engine pg_trgm">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-03-17T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-03-17T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Trying PostgreSQL&#39;s Full-Text Search Engine pg_trgm">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Trying PostgreSQL's Full-Text Search Engine pg_trgm\"",
+  "description": "\"\"",
+  "datePublished": "\"2020-03-17T00:00:00Z\"",
+  "dateModified": "\"2020-03-17T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/postgresql-pg_trgm-about.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1271 ,
+  "keywords": "[\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/postgresql-pg_trgm-about.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/postgresql-pg_trgm-about.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Trying PostgreSQL&#39;s Full-Text Search …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-icon" loading="lazy"></div>
+        <h1>Trying PostgreSQL&#39;s Full-Text Search Engine pg_trgm</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2020-03-17'>
+            Published on 2020/03/17
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <p>For cases where you want to perform &ldquo;partial match search&rdquo; using an index in PostgreSQL. With regular B-Tree indexes, partial match searches cannot use the index. By using pg_trgm, PostgreSQL&rsquo;s full-text search engine, partial match searches can be performed easily. There is also pg_bigm and PGroonga, but this time I will try pg_trgm, which is included in contrib.</p>
+<h4 id="version">Version</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>postgres=# select version();
+</span></span><span style="display:flex;"><span>                                                 version
+</span></span><span style="display:flex;"><span>----------------------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span> PostgreSQL 10.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-39), 64-bit
+</span></span></code></pre></div><h4 id="enabling-pg_trgm">Enabling pg_trgm</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span><span style="color:#6272a4"># CREATE EXTENSION pg_trgm;</span>
+</span></span><span style="display:flex;"><span>CREATE EXTENSION
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span><span style="color:#6272a4"># \dx</span>
+</span></span><span style="display:flex;"><span>                                    List of installed extensions
+</span></span><span style="display:flex;"><span>  Name   | Version |   Schema   |                            Description
+</span></span><span style="display:flex;"><span>---------+---------+------------+-------------------------------------------------------------------
+</span></span><span style="display:flex;"><span> pg_trgm | 1.3     | public     | text similarity measurement and index searching based on trigrams
+</span></span><span style="display:flex;"><span> plpgsql | 1.0     | pg_catalog | PL/pgSQL procedural language
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span><span style="color:#bd93f9">2</span> rows<span style="color:#ff79c6">)</span>
+</span></span></code></pre></div><h5 id="create-some-test-data-100-million-text-records">Create some test data (100 million text records)</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> t1 <span style="color:#ff79c6">AS</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> to_char(num,<span style="color:#f1fa8c">&#39;FM0000000000000000&#39;</span>) textdata
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span>   generate_series(<span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">10000000</span>) num
+</span></span><span style="display:flex;"><span>;
+</span></span></code></pre></div><h5 id="insert-target-text-data-for-searching">Insert target text data for searching</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#f1fa8c">&#39;test1test2test3&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">insert</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">values</span>(<span style="color:#f1fa8c">&#39;メロスは激怒した。必ず、かの 邪智暴虐 （ じゃちぼうぎゃく ） の王を除かなければならぬと決意した。&#39;</span>);
+</span></span></code></pre></div><p>At this point, 100,000,002 records are stored in the table.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">from</span> t1;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">from</span> t1;
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">count</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------
+</span></span></span><span style="display:flex;"><span> <span style="color:#bd93f9">100000002</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span></code></pre></div><h5 id="partial-match-search-for-test2">Partial match search for &ldquo;test2&rdquo;</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>;
+</span></span></code></pre></div><h5 id="explain-analyze-results">EXPLAIN ANALYZE Results</h5>
+<p>The search took about <code>Execution time: 10061.160 ms</code>, approximately 10 seconds. It&rsquo;s slow because it performs a full table scan.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>;
+</span></span><span style="display:flex;"><span>                                                         QUERY PLAN
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> Gather  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1159776</span>.<span style="color:#bd93f9">58</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">10059</span>.<span style="color:#bd93f9">633</span>..<span style="color:#bd93f9">10061</span>.<span style="color:#bd93f9">097</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   Workers Planned: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   Workers Launched: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Parallel Seq Scan <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1157776</span>.<span style="color:#bd93f9">58</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">4167</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">10053</span>.<span style="color:#bd93f9">097</span>..<span style="color:#bd93f9">10053</span>.<span style="color:#bd93f9">098</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>         Filter: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Rows</span> Removed <span style="color:#ff79c6">by</span> Filter: <span style="color:#bd93f9">33333334</span>
+</span></span><span style="display:flex;"><span> Planning time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">938</span> ms
+</span></span><span style="display:flex;"><span> Execution time: <span style="color:#bd93f9">10061</span>.<span style="color:#bd93f9">160</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">8</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><h5 id="partial-match-search-for-邪智暴虐">Partial match search for &ldquo;邪智暴虐&rdquo;</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>;
+</span></span></code></pre></div><h5 id="explain-analyze-results-1">EXPLAIN ANALYZE Results</h5>
+<p>The search took about <code>Execution time: 9982.465 ms</code>, again approximately 10 seconds.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>;
+</span></span><span style="display:flex;"><span>                                                        QUERY PLAN
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">---------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> Gather  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1159776</span>.<span style="color:#bd93f9">58</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">9982</span>.<span style="color:#bd93f9">347</span>..<span style="color:#bd93f9">9982</span>.<span style="color:#bd93f9">403</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   Workers Planned: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   Workers Launched: <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Parallel Seq Scan <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">1157776</span>.<span style="color:#bd93f9">58</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">4167</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">9977</span>.<span style="color:#bd93f9">282</span>..<span style="color:#bd93f9">9977</span>.<span style="color:#bd93f9">282</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>)
+</span></span><span style="display:flex;"><span>         Filter: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Rows</span> Removed <span style="color:#ff79c6">by</span> Filter: <span style="color:#bd93f9">33333334</span>
+</span></span><span style="display:flex;"><span> Planning time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">052</span> ms
+</span></span><span style="display:flex;"><span> Execution time: <span style="color:#bd93f9">9982</span>.<span style="color:#bd93f9">465</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">8</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><p>Creating a full-text search index:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">index</span> pg_trgm_idx <span style="color:#ff79c6">on</span> t1 <span style="color:#ff79c6">USING</span> gin(textdata gin_trgm_ops);
+</span></span></code></pre></div><p>It took about 300 seconds to complete.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>2020-03-16 21:27:36 JST<span style="color:#ff79c6">]</span>postgres postgres 4539<span style="color:#ff79c6">[</span>53<span style="color:#ff79c6">]</span> LOG:  statement: create index pg_trgm_idx on t1 USING gin<span style="color:#ff79c6">(</span>textdata gin_trgm_ops<span style="color:#ff79c6">)</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>2020-03-16 21:32:39 JST<span style="color:#ff79c6">]</span>postgres postgres 4539<span style="color:#ff79c6">[</span>54<span style="color:#ff79c6">]</span> LOG:  duration: 303535.309 ms
+</span></span></code></pre></div><p>The table size is about 5217.8MB = approximately 5GB. The index size is about 1,461MB = approximately 1GB. I expected the index size to be larger than the table size for a full-text search index, but that may be due to the test data.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    objectname,
+</span></span><span style="display:flex;"><span>    TO_CHAR(pg_relation_size(objectname::regclass),<span style="color:#f1fa8c">&#39;999,999,999,999&#39;</span>) <span style="color:#ff79c6">AS</span> bytes
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>    (
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>        tablename <span style="color:#ff79c6">AS</span> objectname
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>        pg_tables
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">WHERE</span>
+</span></span><span style="display:flex;"><span>        schemaname <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;public&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">UNION</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>        indexname <span style="color:#ff79c6">AS</span> objectname
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>        pg_indexes
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">WHERE</span>
+</span></span><span style="display:flex;"><span>        schemaname <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;public&#39;</span>
+</span></span><span style="display:flex;"><span>    ) <span style="color:#ff79c6">AS</span> objectlist
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span>
+</span></span><span style="display:flex;"><span>    bytes <span style="color:#ff79c6">DESC</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> objectname  <span style="color:#ff79c6">|</span>      bytes
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------------+------------------
+</span></span></span><span style="display:flex;"><span> t1          <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">5</span>,<span style="color:#bd93f9">217</span>,<span style="color:#bd93f9">837</span>,<span style="color:#bd93f9">056</span>
+</span></span><span style="display:flex;"><span> pg_trgm_idx <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">461</span>,<span style="color:#bd93f9">542</span>,<span style="color:#bd93f9">912</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">2</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><h5 id="partial-match-search-for-test2-1">Partial match search for &ldquo;test2&rdquo;</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>;
+</span></span></code></pre></div><h5 id="explain-analyze-results-2">EXPLAIN ANALYZE Results</h5>
+<p>The search that took <code>Execution time: 10061.160 ms</code> now completes in <code>0.090 ms</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>;
+</span></span><span style="display:flex;"><span>                                                        QUERY PLAN
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> Bitmap Heap Scan <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">285</span>.<span style="color:#bd93f9">50</span>..<span style="color:#bd93f9">36386</span>.<span style="color:#bd93f9">84</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">021</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">022</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">Recheck</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span>   Heap Blocks: exact<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Bitmap <span style="color:#ff79c6">Index</span> Scan <span style="color:#ff79c6">on</span> pg_trgm_idx  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">283</span>.<span style="color:#bd93f9">00</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">016</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">016</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Index</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%test2%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span> Planning time: <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">148</span> ms
+</span></span><span style="display:flex;"><span> Execution time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">090</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">7</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><h5 id="partial-match-search-for-邪智暴虐-1">Partial match search for &ldquo;邪智暴虐&rdquo;</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>;
+</span></span></code></pre></div><h5 id="explain-analyze-results-3">EXPLAIN ANALYZE Results</h5>
+<p>The search that took <code>Execution time: 9982.465 ms</code> now completes in <code>0.044 ms</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>;
+</span></span><span style="display:flex;"><span>                                                        QUERY PLAN
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> Bitmap Heap Scan <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">217</span>.<span style="color:#bd93f9">50</span>..<span style="color:#bd93f9">36318</span>.<span style="color:#bd93f9">84</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">022</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">022</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">Recheck</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span>   Heap Blocks: exact<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Bitmap <span style="color:#ff79c6">Index</span> Scan <span style="color:#ff79c6">on</span> pg_trgm_idx  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">215</span>.<span style="color:#bd93f9">00</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">017</span>..<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">017</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Index</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%邪智暴虐%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span> Planning time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">107</span> ms
+</span></span><span style="display:flex;"><span> Execution time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">044</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">7</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><p>Note that due to the nature of trigrams (tri-gram), searches with 2 or fewer characters will be extremely slow, so be careful.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">explain</span> <span style="color:#ff79c6">analyze</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1 <span style="color:#ff79c6">where</span> textdata <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;%邪智%&#39;</span>;
+</span></span><span style="display:flex;"><span>                                                                 QUERY PLAN
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">------------------------------------------------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> Bitmap Heap Scan <span style="color:#ff79c6">on</span> t1  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">758005</span>.<span style="color:#bd93f9">50</span>..<span style="color:#bd93f9">794106</span>.<span style="color:#bd93f9">84</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">17</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">169524</span>.<span style="color:#bd93f9">760</span>..<span style="color:#bd93f9">169524</span>.<span style="color:#bd93f9">761</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">Recheck</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%邪智%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">Rows</span> Removed <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">Index</span> <span style="color:#ff79c6">Recheck</span>: <span style="color:#bd93f9">100000001</span>
+</span></span><span style="display:flex;"><span>   Heap Blocks: exact<span style="color:#ff79c6">=</span><span style="color:#bd93f9">636943</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ff79c6">-&gt;</span>  Bitmap <span style="color:#ff79c6">Index</span> Scan <span style="color:#ff79c6">on</span> pg_trgm_idx  (cost<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span>..<span style="color:#bd93f9">758003</span>.<span style="color:#bd93f9">00</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">10000</span> width<span style="color:#ff79c6">=</span><span style="color:#bd93f9">0</span>) (actual time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">26370</span>.<span style="color:#bd93f9">882</span>..<span style="color:#bd93f9">26370</span>.<span style="color:#bd93f9">882</span> <span style="color:#ff79c6">rows</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">100000002</span> loops<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">Index</span> Cond: (textdata <span style="color:#ff79c6">~~</span> <span style="color:#f1fa8c">&#39;%邪智%&#39;</span>::<span style="color:#8be9fd;font-style:italic">text</span>)
+</span></span><span style="display:flex;"><span> Planning time: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">261</span> ms
+</span></span><span style="display:flex;"><span> Execution time: <span style="color:#bd93f9">169524</span>.<span style="color:#bd93f9">849</span> ms
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">8</span> <span style="color:#ff79c6">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span>
+</span></span></code></pre></div><h4 id="about-recheck-cond">About Recheck Cond</h4>
+<p>The following article explains this very clearly.</p>
+<blockquote>
+<p>Explanation of the Recheck process in Bitmap Heap Scan after Bitmap Index Scan - Pat Team Leader&rsquo;s Diary <a href="https://taityo-diary.hatenablog.jp/entry/2018/07/07/071928" target="_blank" rel="noopener noreferrer">https://taityo-diary.hatenablog.jp/entry/2018/07/07/071928</a>
+</p>
+</blockquote>
+<blockquote>
+<p>postgresql - What does &ldquo;Recheck Cond&rdquo; in Explain result mean? - Stack Overflow <a href="https://stackoverflow.com/questions/50959814/what-does-recheck-cond-in-explain-result-mean/50961326#50961326" target="_blank" rel="noopener noreferrer">https://stackoverflow.com/questions/50959814/what-does-recheck-cond-in-explain-result-mean/50961326#50961326</a>
+</p>
+</blockquote>
+<h3 id="addendum">Addendum</h3>
+<p>When I changed the data to text data from the Aozora Bunko, the result was as expected: the index size became larger than the table size.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> pgstattuple(<span style="color:#f1fa8c">&#39;aozoradata&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>[ RECORD <span style="color:#bd93f9">1</span> ]<span style="color:#6272a4">------+----------
+</span></span></span><span style="display:flex;"><span>table_len          <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">807690240</span>
+</span></span><span style="display:flex;"><span>tuple_count        <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3533485</span>
+</span></span><span style="display:flex;"><span>tuple_len          <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">774167704</span>
+</span></span><span style="display:flex;"><span>tuple_percent      <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">95</span>.<span style="color:#bd93f9">85</span>
+</span></span><span style="display:flex;"><span>dead_tuple_count   <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>dead_tuple_len     <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>dead_tuple_percent <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>free_space         <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3066496</span>
+</span></span><span style="display:flex;"><span>free_percent       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">38</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> \d aozoradata
+</span></span><span style="display:flex;"><span>                            <span style="color:#ff79c6">Table</span> <span style="color:#f1fa8c">&#34;public.aozoradata&#34;</span>
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">Column</span> <span style="color:#ff79c6">|</span>  <span style="color:#ff79c6">Type</span>   <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Collation</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Nullable</span> <span style="color:#ff79c6">|</span>                <span style="color:#ff79c6">Default</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------+---------+-----------+----------+----------------------------------------
+</span></span></span><span style="display:flex;"><span> id     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">integer</span> <span style="color:#ff79c6">|</span>           <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">not</span> <span style="color:#ff79c6">null</span> <span style="color:#ff79c6">|</span> nextval(<span style="color:#f1fa8c">&#39;aozoradata_id_seq&#39;</span>::regclass)
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">data</span>   <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">text</span>    <span style="color:#ff79c6">|</span>           <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">not</span> <span style="color:#ff79c6">null</span> <span style="color:#ff79c6">|</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=#</span> <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span>     objectname,
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span>     TO_CHAR(pg_relation_size(objectname::regclass),<span style="color:#f1fa8c">&#39;999,999,999,999&#39;</span>) <span style="color:#ff79c6">AS</span> bytes
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span> <span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span>     (
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         tablename <span style="color:#ff79c6">AS</span> objectname
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         pg_tables
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">WHERE</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         schemaname <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;public&#39;</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">UNION</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         indexname <span style="color:#ff79c6">AS</span> objectname
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         pg_indexes
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     <span style="color:#ff79c6">WHERE</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>         schemaname <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;public&#39;</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">#</span>     ) <span style="color:#ff79c6">AS</span> objectlist
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span> <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-#</span>     bytes <span style="color:#ff79c6">DESC</span>;
+</span></span><span style="display:flex;"><span>   objectname   <span style="color:#ff79c6">|</span>      bytes
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">----------------+------------------
+</span></span></span><span style="display:flex;"><span> aozoradata     <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">807</span>,<span style="color:#bd93f9">690</span>,<span style="color:#bd93f9">240</span>
+</span></span><span style="display:flex;"><span> aozoradata_idx <span style="color:#ff79c6">|</span>    <span style="color:#bd93f9">1</span>,<span style="color:#bd93f9">156</span>,<span style="color:#bd93f9">775</span>,<span style="color:#bd93f9">936</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">2</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2020-03-17-PostgreSQL%e3%81%ae%e5%85%a8%e6%96%87%e6%a4%9c%e7%b4%a2%e3%82%a8%e3%83%b3%e3%82%b8%e3%83%b3%e3%81%a7%e3%81%82%e3%82%8bpg_trgm%e3%82%92%e4%bd%bf%e3%81%a3%e3%81%a6%e3%81%bf%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/postgresql-auto-vacuum-parameter-timing.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Auto Vacuum Execution Timing and Related …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/postgresql-pgcrypt-encrypt.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">OSS-DB Gold Exam Preparation (Operations …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fpostgresql-pg_trgm-about.html&text=Trying&#43;PostgreSQL%27s&#43;Full-Text&#43;Search&#43;Engine&#43;pg_trgm" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/postgresql-pg_trgm-about.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/postgresql-auto-vacuum-parameter-timing.html">Auto Vacuum Execution Timing and Related Parameters in PostgreSQL</a></li>
+    
+    <li><a href="/en/postgresql-hugepages-setting.html">Configuring HugePages for PostgreSQL</a></li>
+    
+    <li><a href="/en/postgresql-about-checkpoint_completion_target.html">Notes on PostgreSQL&#39;s checkpoint_completion_target</a></li>
+    
+    <li><a href="/en/postgresql-sql-statement-cancell.html">Canceling Running SQL Statements in PostgreSQL</a></li>
+    
+    <li><a href="/en/postgresql-signal-process-term-int-hup.html">Impact of Signals (TERM/INT/HUP) on the Postgres Process</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#version">Version</a></li>
+            <li><a href="#enabling-pg_trgm">Enabling pg_trgm</a></li>
+            <li><a href="#about-recheck-cond">About Recheck Cond</a></li>
+          </ul>
+        </li>
+        <li><a href="#addendum">Addendum</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Loading Data from S3 (External Stage) into Snowflake | my opinion is my own</title>
+<meta name="title" content="Loading Data from S3 (External Stage) into Snowflake" />
+<meta name="description" content="" />
+<meta name="keywords" content="snowflake," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/snowflake-dataload-from-s3-to-snowflake/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Loading Data from S3 (External Stage) into Snowflake">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-08-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-08-29T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Loading Data from S3 (External Stage) into Snowflake">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Loading Data from S3 (External Stage) into Snowflake\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-08-29T00:00:00Z\"",
+  "dateModified": "\"2022-08-29T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/snowflake-dataload-from-s3-to-snowflake/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  789 ,
+  "keywords": "[\"snowflake\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/snowflake-dataload-from-s3-to-snowflake/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/snowflake-dataload-from-s3-to-snowflake/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Loading Data from S3 (External Stage) …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-icon" loading="lazy"></div>
+        <h1>Loading Data from S3 (External Stage) into Snowflake</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-08-29'>
+            Published on 2022/08/29
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <p>Loading data from S3 (external stage) into Snowflake.</p>
+<h3 id="creating-an-iam-policy">Creating an IAM Policy</h3>
+<p>Created as <code>sf_policy</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;Version&#34;</span>: <span style="color:#f1fa8c">&#34;2012-10-17&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;Statement&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Effect&#34;</span>: <span style="color:#f1fa8c">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Action&#34;</span>: [
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:PutObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:GetObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:GetObjectVersion&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:DeleteObject&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:DeleteObjectVersion&#34;</span>
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Resource&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:s3:::snowflake-bucket-work/*&#34;</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Effect&#34;</span>: <span style="color:#f1fa8c">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Action&#34;</span>: [
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:ListBucket&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f1fa8c">&#34;s3:GetBucketLocation&#34;</span>
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;Resource&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:s3:::snowflake-bucket-work&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="creating-an-iam-role">Creating an IAM Role</h3>
+<p>Created as <code>sf_role</code>:</p>
+<ul>
+<li>Select AWS account</li>
+<li>Select another AWS account and temporarily enter your own AWS Account ID
+<ul>
+<li>Note: The trust relationship will be modified later to grant access to Snowflake</li>
+</ul>
+</li>
+<li>Click &ldquo;Require external ID&rdquo; and enter a dummy ID
+<ul>
+<li>The trust relationship will be modified later to specify the Snowflake stage&rsquo;s external ID. An external ID is required to allow a third party (Snowflake) to access AWS resources (i.e., S3)</li>
+</ul>
+</li>
+<li>Attach the <code>sf_policy</code> created above</li>
+</ul>
+<p><img src="/snowflake-dataload-from-s3-to-snowflake/image-20220824142339311.png" alt="image-20220824142339311"></p>
+<p><img src="/snowflake-dataload-from-s3-to-snowflake/image-20220824142551527.png" alt="image-20220824142551527"></p>
+<h3 id="creating-cloud-storage-integration-on-snowflake-side">Creating Cloud Storage Integration on Snowflake Side</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">STORAGE</span> INTEGRATION snowflake_and_s3_integration
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">TYPE</span> <span style="color:#ff79c6">=</span> EXTERNAL_STAGE
+</span></span><span style="display:flex;"><span>  STORAGE_PROVIDER <span style="color:#ff79c6">=</span> S3
+</span></span><span style="display:flex;"><span>  ENABLED <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">TRUE</span>
+</span></span><span style="display:flex;"><span>  STORAGE_AWS_ROLE_ARN <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;arn:aws:iam::&lt;AWS Account&gt;:role/sf_role&#39;</span>
+</span></span><span style="display:flex;"><span>  STORAGE_ALLOWED_LOCATIONS <span style="color:#ff79c6">=</span> (<span style="color:#f1fa8c">&#39;s3://snowflake-bucket-work/&#39;</span>)
+</span></span><span style="display:flex;"><span>;
+</span></span></code></pre></div><p>Note: Only account administrators (users with ACCOUNTADMIN role) or roles with global CREATE INTEGRATION privilege can execute this command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">STORAGE</span> INTEGRATION snowflake_and_s3_integration
+</span></span><span style="display:flex;"><span>                                   <span style="color:#ff79c6">TYPE</span> <span style="color:#ff79c6">=</span> EXTERNAL_STAGE
+</span></span><span style="display:flex;"><span>                                   STORAGE_PROVIDER <span style="color:#ff79c6">=</span> S3
+</span></span><span style="display:flex;"><span>                                   ENABLED <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">TRUE</span>
+</span></span><span style="display:flex;"><span>                                   STORAGE_AWS_ROLE_ARN <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;arn:aws:iam::&lt;AWS Account&gt;:role/sf_role&#39;</span>
+</span></span><span style="display:flex;"><span>                                   STORAGE_ALLOWED_LOCATIONS <span style="color:#ff79c6">=</span> (<span style="color:#f1fa8c">&#39;s3://snowflake-bucket-work/&#39;</span>)
+</span></span><span style="display:flex;"><span>                                 ;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">----------------------------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> status                                                         <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">----------------------------------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> Integration SNOWFLAKE_AND_S3_INTEGRATION successfully created. <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">----------------------------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">Row</span>(s) produced. Time Elapsed: <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">015</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">desc</span> integration snowflake_and_s3_integration;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------------------+---------------+------------------------------------------------+------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> property                  <span style="color:#ff79c6">|</span> property_type <span style="color:#ff79c6">|</span> property_value                                 <span style="color:#ff79c6">|</span> property_default <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">---------------------------+---------------+------------------------------------------------+------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> ENABLED                   <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">Boolean</span>       <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">true</span>                                           <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">false</span>            <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_PROVIDER          <span style="color:#ff79c6">|</span> String        <span style="color:#ff79c6">|</span> S3                                             <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_ALLOWED_LOCATIONS <span style="color:#ff79c6">|</span> List          <span style="color:#ff79c6">|</span> s3:<span style="color:#ff79c6">//</span>snowflake<span style="color:#ff79c6">-</span>bucket<span style="color:#ff79c6">-</span><span style="color:#ff79c6">work</span><span style="color:#ff79c6">/</span>                    <span style="color:#ff79c6">|</span> []               <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_BLOCKED_LOCATIONS <span style="color:#ff79c6">|</span> List          <span style="color:#ff79c6">|</span>                                                <span style="color:#ff79c6">|</span> []               <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_AWS_IAM_USER_ARN  <span style="color:#ff79c6">|</span> String        <span style="color:#ff79c6">|</span> arn:aws:iam::xxxxxxxxx:<span style="color:#ff79c6">user</span><span style="color:#ff79c6">/</span>qvl6<span style="color:#ff79c6">-</span>s<span style="color:#ff79c6">-</span>jpss8756 <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_AWS_ROLE_ARN      <span style="color:#ff79c6">|</span> String        <span style="color:#ff79c6">|</span> arn:aws:iam::<span style="color:#ff79c6">&lt;</span>AWS Account<span style="color:#ff79c6">&gt;</span>:<span style="color:#ff79c6">role</span><span style="color:#ff79c6">/</span>sf_role         <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> STORAGE_AWS_EXTERNAL_ID   <span style="color:#ff79c6">|</span> String        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">&lt;</span>Snowflake Account<span style="color:#ff79c6">&gt;</span>_SFCRole<span style="color:#ff79c6">=</span><span style="color:#bd93f9">3</span>_ZGmPmtzjlkklddeysL<span style="color:#ff79c6">+</span>zqym2qW8<span style="color:#ff79c6">=</span> <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#ff79c6">COMMENT</span>                   <span style="color:#ff79c6">|</span> String        <span style="color:#ff79c6">|</span>                                                <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---------------------------+---------------+------------------------------------------------+------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">8</span> <span style="color:#ff79c6">Row</span>(s) produced. Time Elapsed: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">713</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span>
+</span></span></code></pre></div><p>Note the values of <code>STORAGE_AWS_IAM_USER_ARN</code> and <code>STORAGE_AWS_EXTERNAL_ID</code>.</p>
+<h3 id="modifying-iam-role-trust-relationship">Modifying IAM Role Trust Relationship</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#ff79c6">&#34;Version&#34;</span>: <span style="color:#f1fa8c">&#34;2012-10-17&#34;</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#ff79c6">&#34;Statement&#34;</span>: [
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#ff79c6">&#34;Effect&#34;</span>: <span style="color:#f1fa8c">&#34;Allow&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#ff79c6">&#34;Principal&#34;</span>: {
+</span></span><span style="display:flex;"><span>				<span style="color:#ff79c6">&#34;AWS&#34;</span>: <span style="color:#f1fa8c">&#34;&lt;STORAGE_AWS_IAM_USER_ARN&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>			<span style="color:#ff79c6">&#34;Action&#34;</span>: <span style="color:#f1fa8c">&#34;sts:AssumeRole&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#ff79c6">&#34;Condition&#34;</span>: {
+</span></span><span style="display:flex;"><span>				<span style="color:#ff79c6">&#34;StringEquals&#34;</span>: {
+</span></span><span style="display:flex;"><span>					<span style="color:#ff79c6">&#34;sts:ExternalId&#34;</span>: <span style="color:#f1fa8c">&#34;&lt;STORAGE_AWS_EXTERNAL_ID&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="creating-an-external-stage">Creating an External Stage</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> STAGE s3_ext_stage STORAGE_INTEGRATION <span style="color:#ff79c6">=</span> snowflake_and_s3_integration URL <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;s3://snowflake-bucket-work/&#39;</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">CREATE</span> STAGE s3_ext_stage STORAGE_INTEGRATION <span style="color:#ff79c6">=</span> snowflake_and_s3_integration URL <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;s3://snowflake-bucket-work/&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-----------------------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> status                                        <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">-----------------------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> Stage area S3_EXT_STAGE successfully created. <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-----------------------------------------------+
+</span></span></span><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">show</span> stages;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> created_on                    <span style="color:#ff79c6">|</span> name         <span style="color:#ff79c6">|</span> database_name <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">schema_name</span> <span style="color:#ff79c6">|</span> url                         <span style="color:#ff79c6">|</span> has_credentials <span style="color:#ff79c6">|</span> has_encryption_key <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">owner</span>        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">comment</span> <span style="color:#ff79c6">|</span> region         <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">type</span>     <span style="color:#ff79c6">|</span> cloud <span style="color:#ff79c6">|</span> notification_channel <span style="color:#ff79c6">|</span> storage_integration          <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">45</span>:<span style="color:#bd93f9">45</span>.<span style="color:#bd93f9">523</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span> S3_EXT_STAGE <span style="color:#ff79c6">|</span> TESTDB        <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">PUBLIC</span>      <span style="color:#ff79c6">|</span> s3:<span style="color:#ff79c6">//</span>snowflake<span style="color:#ff79c6">-</span>bucket<span style="color:#ff79c6">-</span><span style="color:#ff79c6">work</span><span style="color:#ff79c6">/</span> <span style="color:#ff79c6">|</span> N               <span style="color:#ff79c6">|</span> N                  <span style="color:#ff79c6">|</span> ACCOUNTADMIN <span style="color:#ff79c6">|</span>         <span style="color:#ff79c6">|</span> ap<span style="color:#ff79c6">-</span>northeast<span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">EXTERNAL</span> <span style="color:#ff79c6">|</span> AWS   <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>                 <span style="color:#ff79c6">|</span> SNOWFLAKE_AND_S3_INTEGRATION <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------+--------------+---------------+-------------+-----------------------------+-----------------+--------------------+--------------+---------+----------------+----------+-------+----------------------+------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">Row</span>(s) produced. Time Elapsed: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">098</span>s
+</span></span></code></pre></div><h3 id="loading-data">Loading Data</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">copy</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">@</span>s3_ext_stage pattern<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;test.csv&#39;</span>;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">copy</span> <span style="color:#ff79c6">into</span> t1 <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">@</span>s3_ext_stage pattern<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;test.csv&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> file                                <span style="color:#ff79c6">|</span> status <span style="color:#ff79c6">|</span> rows_parsed <span style="color:#ff79c6">|</span> rows_loaded <span style="color:#ff79c6">|</span> error_limit <span style="color:#ff79c6">|</span> errors_seen <span style="color:#ff79c6">|</span> first_error <span style="color:#ff79c6">|</span> first_error_line <span style="color:#ff79c6">|</span> first_error_character <span style="color:#ff79c6">|</span> first_error_column_name <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> s3:<span style="color:#ff79c6">//</span>snowflake<span style="color:#ff79c6">-</span>bucket<span style="color:#ff79c6">-</span><span style="color:#ff79c6">work</span><span style="color:#ff79c6">/</span>test.csv <span style="color:#ff79c6">|</span> LOADED <span style="color:#ff79c6">|</span>          <span style="color:#bd93f9">10</span> <span style="color:#ff79c6">|</span>          <span style="color:#bd93f9">10</span> <span style="color:#ff79c6">|</span>           <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span>           <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>        <span style="color:#ff79c6">|</span>             <span style="color:#ff79c6">NULL</span> <span style="color:#ff79c6">|</span>                  <span style="color:#ff79c6">NULL</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">NULL</span>                    <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------------+--------+-------------+-------------+-------------+-------------+-------------+------------------+-----------------------+-------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">Row</span>(s) produced. Time Elapsed: <span style="color:#bd93f9">2</span>.<span style="color:#bd93f9">675</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> t1;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---+--------+--------+----+-------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> A <span style="color:#ff79c6">|</span> B      <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">C</span>      <span style="color:#ff79c6">|</span>  D <span style="color:#ff79c6">|</span> E                             <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span><span style="color:#6272a4">---+--------+--------+----+-------------------------------|
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">3</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">5</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">5</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">6</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">6</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">7</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">7</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">8</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">8</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">9</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">9</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">111111</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">222222</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">10</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">2022</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">08</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">23</span> <span style="color:#bd93f9">22</span>:<span style="color:#bd93f9">47</span>:<span style="color:#bd93f9">44</span>.<span style="color:#bd93f9">214</span> <span style="color:#ff79c6">-</span><span style="color:#bd93f9">0700</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">---+--------+--------+----+-------------------------------+
+</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">10</span> <span style="color:#ff79c6">Row</span>(s) produced. Time Elapsed: <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">198</span>s
+</span></span><span style="display:flex;"><span>zatoima<span style="color:#ff79c6">#</span>COMPUTE_WH<span style="color:#ff79c6">@</span>TESTDB.<span style="color:#ff79c6">PUBLIC</span><span style="color:#ff79c6">&gt;</span>
+</span></span></code></pre></div><h4 id="load-options">Load Options</h4>
+<p>ON_ERROR options:</p>
+<table>
+  <thead>
+      <tr>
+          <th>CONTINUE</th>
+          <th>If an error is found, continue loading the file. Rows where errors are found will not be loaded.</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>SKIP_FILE</td>
+          <td>If an error is found, skip the file.</td>
+      </tr>
+      <tr>
+          <td>SKIP_FILE_n</td>
+          <td>If the number of error rows found in the file is n or more, skip the file.</td>
+      </tr>
+      <tr>
+          <td>SKIP_FILE_n%</td>
+          <td>If the percentage of error rows found in the file exceeds the specified percentage, skip the file.</td>
+      </tr>
+      <tr>
+          <td>ABORT_STATEMENT</td>
+          <td>If an error is found in the data file, abort the load operation.</td>
+      </tr>
+  </tbody>
+</table>
+<ul>
+<li><a href="https://docs.snowflake.com/en/sql-reference/sql/copy-into-table.html#copy-options-copyoptions" target="_blank" rel="noopener noreferrer">COPY INTO <!-- raw HTML omitted --> — Snowflake Documentation</a>
+</li>
+</ul>
+<h3 id="unloading-data">Unloading Data</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">copy</span> <span style="color:#ff79c6">into</span> <span style="color:#ff79c6">@</span>s3_ext_stage<span style="color:#ff79c6">/</span>unload<span style="color:#ff79c6">/</span> <span style="color:#ff79c6">from</span> t1;
+</span></span></code></pre></div><p>By default, data is unloaded in compressed form.</p>
+<h3 id="references">References</h3>
+<ul>
+<li>
+<p><a href="https://docs.snowflake.com/en/user-guide/data-load-s3-config-storage-integration.html" target="_blank" rel="noopener noreferrer">Option 1: Configuring a Snowflake Storage Integration to Access Amazon S3 — Snowflake Documentation</a>
+</p>
+</li>
+<li>
+<p><a href="https://docs.snowflake.com/en/user-guide/data-unload-s3.html#unloading-into-amazon-s3" target="_blank" rel="noopener noreferrer">Unloading to Amazon S3 — Snowflake Documentation</a>
+</p>
+</li>
+</ul>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-08-29-S3%e3%81%8b%e3%82%89Snowflake%e3%81%ab%e3%83%87%e3%83%bc%e3%82%bf%e3%83%ad%e3%83%bc%e3%83%89%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/snowflake-snowpro-core-certification-study/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">SnowPro Core Certification Exam Guide Preparation</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/snowflake-security-access-control/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Snowflake Access Control and Permission Management</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fsnowflake-dataload-from-s3-to-snowflake%2f&text=Loading&#43;Data&#43;from&#43;S3&#43;%28External&#43;Stage%29&#43;into&#43;Snowflake" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/snowflake-dataload-from-s3-to-snowflake/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/snowflake-snowpro-core-certification-study/">SnowPro Core Certification Exam Guide Preparation</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#creating-an-iam-policy">Creating an IAM Policy</a></li>
+        <li><a href="#creating-an-iam-role">Creating an IAM Role</a></li>
+        <li><a href="#creating-cloud-storage-integration-on-snowflake-side">Creating Cloud Storage Integration on Snowflake Side</a></li>
+        <li><a href="#modifying-iam-role-trust-relationship">Modifying IAM Role Trust Relationship</a></li>
+        <li><a href="#creating-an-external-stage">Creating an External Stage</a></li>
+        <li><a href="#loading-data">Loading Data</a>
+          <ul>
+            <li><a href="#load-options">Load Options</a></li>
+          </ul>
+        </li>
+        <li><a href="#unloading-data">Unloading Data</a></li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store | my opinion is my own</title>
+<meta name="title" content="Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-aurora-postgresql-parameter-store-connect.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-06-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-06-25T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store\"",
+  "description": "\"\"",
+  "datePublished": "\"2020-06-25T00:00:00Z\"",
+  "dateModified": "\"2020-06-25T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-aurora-postgresql-parameter-store-connect.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  440 ,
+  "keywords": "[\"AWS\",\"Aurora\",\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-aurora-postgresql-parameter-store-connect.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-aurora-postgresql-parameter-store-connect.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Managing Aurora PostgreSQL Passwords …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Managing Aurora PostgreSQL Passwords Using AWS Systems Manager Parameter Store</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2020-06-25'>
+            Published on 2020/06/25
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="prerequisites">Prerequisites</h3>
+<h4 id="introduction">Introduction</h4>
+<p>Create a user <code>testuser</code> with password <code>p@sstest</code> on the Aurora PostgreSQL side.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE ROLE testuser WITH LOGIN PASSWORD &#39;p@sstest&#39;;
+</span></span></code></pre></div><p>When logging in with psql, set the credentials as environment variables and connect as follows. However, keeping the password somewhere is not a secure approach.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span>user@bastin <span style="color:#ff79c6">~</span>]<span style="color:#ff79c6">$</span> <span style="color:#ff79c6">export</span> PGUSER<span style="color:#ff79c6">=</span>testuser
+</span></span><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span>user@bastin <span style="color:#ff79c6">~</span>]<span style="color:#ff79c6">$</span> <span style="color:#ff79c6">export</span> PGPASSWORD<span style="color:#ff79c6">=</span>xxxxx
+</span></span><span style="display:flex;"><span>[ec2<span style="color:#ff79c6">-</span>user@bastin <span style="color:#ff79c6">~</span>]<span style="color:#ff79c6">$</span> psql <span style="color:#ff79c6">-</span>h aurorapgsqlv1<span style="color:#ff79c6">.</span>cluster<span style="color:#ff79c6">-</span>xxxxxx<span style="color:#ff79c6">.</span>ap<span style="color:#ff79c6">-</span>northeast<span style="color:#ff79c6">-</span><span style="color:#bd93f9">1.</span>rds<span style="color:#ff79c6">.</span>amazonaws<span style="color:#ff79c6">.</span>com <span style="color:#ff79c6">-</span>d postgres
+</span></span><span style="display:flex;"><span>psql (<span style="color:#bd93f9">11.5</span>, server <span style="color:#bd93f9">11.7</span>)
+</span></span><span style="display:flex;"><span>SSL connection (protocol: TLSv1<span style="color:#ff79c6">.</span><span style="color:#bd93f9">2</span>, cipher: ECDHE<span style="color:#ff79c6">-</span>RSA<span style="color:#ff79c6">-</span>AES256<span style="color:#ff79c6">-</span>GCM<span style="color:#ff79c6">-</span>SHA384, bits: <span style="color:#bd93f9">256</span>, compression: off)
+</span></span><span style="display:flex;"><span>Type <span style="color:#f1fa8c">&#34;help&#34;</span> <span style="color:#ff79c6">for</span> help<span style="color:#ff79c6">.</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> \conninfo
+</span></span><span style="display:flex;"><span>You are connected to database <span style="color:#f1fa8c">&#34;postgres&#34;</span> as user <span style="color:#f1fa8c">&#34;testuser&#34;</span> on host <span style="color:#f1fa8c">&#34;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34;</span> at port <span style="color:#f1fa8c">&#34;5432&#34;</span><span style="color:#ff79c6">.</span>
+</span></span><span style="display:flex;"><span>SSL connection (protocol: TLSv1<span style="color:#ff79c6">.</span><span style="color:#bd93f9">2</span>, cipher: ECDHE<span style="color:#ff79c6">-</span>RSA<span style="color:#ff79c6">-</span>AES256<span style="color:#ff79c6">-</span>GCM<span style="color:#ff79c6">-</span>SHA384, bits: <span style="color:#bd93f9">256</span>, compression: off)
+</span></span></code></pre></div><h4 id="store-parameters-in-systems-manager">Store Parameters in Systems Manager</h4>
+<p>Store two parameters. The userid is stored as a <code>plain text (String)</code> and the password as a <code>SecureString</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>aws ssm put-parameter --name &#39;pgsql.connect.userid&#39; --type &#39;String&#39; --value &#39;testuser&#39;
+</span></span><span style="display:flex;"><span>aws ssm put-parameter --name &#39;pgsql.connect.password&#39; --type &#39;SecureString&#39; --value &#39;p@sstest&#39;
+</span></span></code></pre></div><p>Retrieve a parameter. Getting <code>pgsql.connect.userid</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.userid&#39;
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    &#34;InvalidParameters&#34;: [],
+</span></span><span style="display:flex;"><span>    &#34;Parameters&#34;: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            &#34;Name&#34;: &#34;pgsql.connect.userid&#34;,
+</span></span><span style="display:flex;"><span>            &#34;DataType&#34;: &#34;text&#34;,
+</span></span><span style="display:flex;"><span>            &#34;LastModifiedDate&#34;: 1592740003.175,
+</span></span><span style="display:flex;"><span>            &#34;Value&#34;: &#34;testuser&#34;,
+</span></span><span style="display:flex;"><span>            &#34;Version&#34;: 1,
+</span></span><span style="display:flex;"><span>            &#34;Type&#34;: &#34;String&#34;,
+</span></span><span style="display:flex;"><span>            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.userid&#34;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Next, get <code>pgsql.connect.password</code>. For parameters stored as <code>SecureString</code>, the <code>--with-decryption</code> flag must be added to the command. Without this option, the value is output in encrypted form. (KMS is used internally, and decryption is only possible with KMS permissions.)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39;
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    &#34;InvalidParameters&#34;: [],
+</span></span><span style="display:flex;"><span>    &#34;Parameters&#34;: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            &#34;Name&#34;: &#34;pgsql.connect.password&#34;,
+</span></span><span style="display:flex;"><span>            &#34;DataType&#34;: &#34;text&#34;,
+</span></span><span style="display:flex;"><span>            &#34;LastModifiedDate&#34;: 1592740007.647,
+</span></span><span style="display:flex;"><span>            &#34;Value&#34;: &#34;AQICAHimGbBDsXKAeEMDoI4Kw/rpZAgukrSwYmqXyAKBupBtkwFYzzG2rJ2dnIePkkrTPZdsAAAAZjBkBgkqhkiG9w0BBwagVzBVAgEAMFAGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMoiJHw/NeYmZj35gYAgEQgCNgQlRcIz7EgkLxyHV4weHFwONVhdTI9m3OilaP2ikVHLbqQg==&#34;,
+</span></span><span style="display:flex;"><span>            &#34;Version&#34;: 1,
+</span></span><span style="display:flex;"><span>            &#34;Type&#34;: &#34;SecureString&#34;,
+</span></span><span style="display:flex;"><span>            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&#34;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$
+</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ aws ssm get-parameters --name &#39;pgsql.connect.password&#39; --with-decryption
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    &#34;InvalidParameters&#34;: [],
+</span></span><span style="display:flex;"><span>    &#34;Parameters&#34;: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            &#34;Name&#34;: &#34;pgsql.connect.password&#34;,
+</span></span><span style="display:flex;"><span>            &#34;DataType&#34;: &#34;text&#34;,
+</span></span><span style="display:flex;"><span>            &#34;LastModifiedDate&#34;: 1592740007.647,
+</span></span><span style="display:flex;"><span>            &#34;Value&#34;: &#34;p@sstest&#34;,
+</span></span><span style="display:flex;"><span>            &#34;Version&#34;: 1,
+</span></span><span style="display:flex;"><span>            &#34;Type&#34;: &#34;SecureString&#34;,
+</span></span><span style="display:flex;"><span>            &#34;ARN&#34;: &#34;arn:aws:ssm:ap-northeast-1:xxxxxx:parameter/pgsql.connect.password&#34;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="connecting-to-aurora-postgresql">Connecting to Aurora (PostgreSQL)</h4>
+<p>Using the <code>aws ssm get-parameters</code> command eliminates the security risk of hardcoding passwords.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PGUSER</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>aws ssm get-parameters --name <span style="color:#f1fa8c">&#39;pgsql.connect.userid&#39;</span> | jq -r <span style="color:#f1fa8c">&#39;.Parameters[].Value&#39;</span><span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PGPASSWORD</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>aws ssm get-parameters --name <span style="color:#f1fa8c">&#39;pgsql.connect.password&#39;</span> --with-decryption | jq -r <span style="color:#f1fa8c">&#39;.Parameters[].Value&#39;</span><span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">echo</span> <span style="color:#8be9fd;font-style:italic">$PGUSER</span>
+</span></span><span style="display:flex;"><span>testuser
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">echo</span> <span style="color:#8be9fd;font-style:italic">$PGPASSWORD</span>
+</span></span><span style="display:flex;"><span>p@sstest
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres
+</span></span><span style="display:flex;"><span>psql <span style="color:#ff79c6">(</span>11.5, server 11.7<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#ff79c6">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>Type <span style="color:#f1fa8c">&#34;help&#34;</span> <span style="color:#ff79c6">for</span> help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span>&gt; <span style="color:#f1fa8c">\c</span>onninfo
+</span></span><span style="display:flex;"><span>You are connected to database <span style="color:#f1fa8c">&#34;postgres&#34;</span> as user <span style="color:#f1fa8c">&#34;testuser&#34;</span> on host <span style="color:#f1fa8c">&#34;aurorapgsqlv1.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34;</span> at port <span style="color:#f1fa8c">&#34;5432&#34;</span>.
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#ff79c6">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span>&gt;
+</span></span></code></pre></div><p>Next, I&rsquo;ll try <code>AWS Secrets Manager</code>, which can be used similarly.</p>
+<h4 id="additional-references">Additional References</h4>
+<p>EC2 Systems Manager &ldquo;Parameter Store&rdquo; That Can Store Arbitrary Parameters Turned Out to Be Convenient - kakakakakku blog <a href="https://kakakakakku.hatenablog.com/entry/2017/06/10/181603" target="_blank" rel="noopener noreferrer">https://kakakakakku.hatenablog.com/entry/2017/06/10/181603</a>
+</p>
+<p>AWS Parameter Store vs. Secrets Manager — Which Should You Use? Comparison - Qiita <a href="https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5" target="_blank" rel="noopener noreferrer">https://qiita.com/tomoya_oka/items/a3dd44879eea0d1e3ef5</a>
+</p>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2020-06-25-Systems%20Manager%e3%81%ae%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf%e3%82%b9%e3%83%88%e3%82%a2%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%97%e3%81%a6Aurora%20PostgreSQL%e3%81%ae%e3%83%91%e3%82%b9%e3%83%af%e3%83%bc%e3%83%89%e3%82%92%e7%ae%a1%e7%90%86/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/oracle-postgresql-char-varchar-byte.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Differences in char/varchar Byte vs. Character …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-aurora-postgresql-iam-connect.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Connecting to Aurora (PostgreSQL) Using IAM …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-aurora-postgresql-parameter-store-connect.html&text=Managing&#43;Aurora&#43;PostgreSQL&#43;Passwords&#43;Using&#43;AWS&#43;Systems&#43;Manager&#43;Parameter&#43;Store" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-aurora-postgresql-parameter-store-connect.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-aurora-bytea-insert-binary-data.html">Inserting Binary Data into a bytea Column in Aurora (PostgreSQL) Using Python</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-s3-import.html">Importing CSV Files from S3 into RDS/Aurora (PostgreSQL)</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-log-download.html">Bulk Downloading RDS/Aurora Logs via CLI</a></li>
+    
+    <li><a href="/en/postgresql-aozora-bunko-data-import.html">Importing Morphological Analysis Data of Aozora Bunko Works into RDS PostgreSQL</a></li>
+    
+    <li><a href="/en/aws-ec2-postgresql-pgcli-install-howto.html">Installing pgcli (Extended CLI for PostgreSQL) on EC2 (Amazon Linux)</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a>
+          <ul>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#store-parameters-in-systems-manager">Store Parameters in Systems Manager</a></li>
+            <li><a href="#connecting-to-aurora-postgresql">Connecting to Aurora (PostgreSQL)</a></li>
+            <li><a href="#additional-references">Additional References</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Running sysbench on RDS (PostgreSQL) | my opinion is my own</title>
+<meta name="title" content="Running sysbench on RDS (PostgreSQL)" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,RDS,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-rds-postgresql-sysbench.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Running sysbench on RDS (PostgreSQL)">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-10-28T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-10-28T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Running sysbench on RDS (PostgreSQL)">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Running sysbench on RDS (PostgreSQL)\"",
+  "description": "\"\"",
+  "datePublished": "\"2019-10-28T00:00:00Z\"",
+  "dateModified": "\"2019-10-28T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-rds-postgresql-sysbench.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  316 ,
+  "keywords": "[\"AWS\",\"RDS\",\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-rds-postgresql-sysbench.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-rds-postgresql-sysbench.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Running sysbench on RDS (PostgreSQL)</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Running sysbench on RDS (PostgreSQL)</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2019-10-28'>
+            Published on 2019/10/28
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="prerequisites">Prerequisites</h3>
+<hr>
+<p>This assumes sysbench is already installed on the OS where it will be run.</p>
+<blockquote>
+<p>Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux) - zato logger <a href="https://www.zatolog.com/entry/aws-ec2-sysbench-install-howto" target="_blank" rel="noopener noreferrer">https://www.zatolog.com/entry/aws-ec2-sysbench-install-howto</a>
+</p>
+</blockquote>
+<h3 id="preparation">Preparation</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-- Connect
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$ psql -h aurora-postgressql-dev.cluster-xxxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d postdb
+</span></span><span style="display:flex;"><span>Password <span style="color:#ff79c6">for</span> user postgres:
+</span></span><span style="display:flex;"><span>psql <span style="color:#ff79c6">(</span>9.2.24, server 10.7<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>WARNING: psql version 9.2, server version 10.0.
+</span></span><span style="display:flex;"><span>         Some psql features might not work.
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#ff79c6">(</span>cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>Type <span style="color:#f1fa8c">&#34;help&#34;</span> <span style="color:#ff79c6">for</span> help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- Create user, grant privileges, create database
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt; CREATE USER sbtest WITH PASSWORD <span style="color:#f1fa8c">&#39;sbtest&#39;</span>;
+</span></span><span style="display:flex;"><span>CREATE ROLE
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt; CREATE DATABASE sbtest;
+</span></span><span style="display:flex;"><span>CREATE DATABASE
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt; GRANT ALL PRIVILEGES ON DATABASE sbtest TO sbtest;
+</span></span><span style="display:flex;"><span>GRANT
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postdb</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-- Verify connection with created user
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$ psql -h aurora-postgressql-dev.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U sbtest -d sbtest
+</span></span><span style="display:flex;"><span>Password <span style="color:#ff79c6">for</span> user sbtest:
+</span></span><span style="display:flex;"><span>psql <span style="color:#ff79c6">(</span>9.2.24, server 10.7<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>WARNING: psql version 9.2, server version 10.0.
+</span></span><span style="display:flex;"><span>         Some psql features might not work.
+</span></span><span style="display:flex;"><span>SSL connection <span style="color:#ff79c6">(</span>cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>Type <span style="color:#f1fa8c">&#34;help&#34;</span> <span style="color:#ff79c6">for</span> help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">sbtest</span><span style="color:#ff79c6">=</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">sbtest</span><span style="color:#ff79c6">=</span>&gt;
+</span></span></code></pre></div><h3 id="create-benchmark-tables">Create Benchmark Tables</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-- sysbench prepare
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$ sysbench /usr/share/sysbench/oltp_read_write.lua --db-driver<span style="color:#ff79c6">=</span>pgsql --table-size<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> --pgsql-host<span style="color:#ff79c6">=</span>aurora-postgressql-dev.cluster-xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --pgsql-user<span style="color:#ff79c6">=</span>sbtest --pgsql-password<span style="color:#ff79c6">=</span>sbtest --pgsql-db<span style="color:#ff79c6">=</span>sbtest --db-ps-mode<span style="color:#ff79c6">=</span>disable prepare
+</span></span><span style="display:flex;"><span>sysbench 1.0.17 <span style="color:#ff79c6">(</span>using system LuaJIT 2.0.4<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Creating table <span style="color:#f1fa8c">&#39;sbtest1&#39;</span>...
+</span></span><span style="display:flex;"><span>Inserting <span style="color:#bd93f9">1000</span> records into <span style="color:#f1fa8c">&#39;sbtest1&#39;</span>
+</span></span><span style="display:flex;"><span>Creating a secondary index on <span style="color:#f1fa8c">&#39;sbtest1&#39;</span>...
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$
+</span></span></code></pre></div><h3 id="performance-measurement">Performance Measurement</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-- sysbench run
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$ sysbench /usr/share/sysbench/oltp_read_write.lua --db-driver<span style="color:#ff79c6">=</span>pgsql --table-size<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1000</span> --pgsql-db<span style="color:#ff79c6">=</span>sbtest --pgsql-host<span style="color:#ff79c6">=</span>aurora-postgressql-dev.cluster-xxxxxxxxx.ap-northeast-1.rds.amazonaws.com --pgsql-user<span style="color:#ff79c6">=</span>sbtest --pgsql-password<span style="color:#ff79c6">=</span>sbtest --time<span style="color:#ff79c6">=</span><span style="color:#bd93f9">300</span> --db-ps-mode<span style="color:#ff79c6">=</span>disable --threads<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span> run
+</span></span><span style="display:flex;"><span>sysbench 1.0.17 <span style="color:#ff79c6">(</span>using system LuaJIT 2.0.4<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Running the <span style="color:#8be9fd;font-style:italic">test</span> with following options:
+</span></span><span style="display:flex;"><span>Number of threads: <span style="color:#bd93f9">16</span>
+</span></span><span style="display:flex;"><span>Initializing random number generator from current <span style="color:#8be9fd;font-style:italic">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Initializing worker threads...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Threads started!
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SQL statistics:
+</span></span><span style="display:flex;"><span>    queries performed:
+</span></span><span style="display:flex;"><span>        read:                            <span style="color:#bd93f9">61096</span>
+</span></span><span style="display:flex;"><span>        write:                           <span style="color:#bd93f9">12922</span>
+</span></span><span style="display:flex;"><span>        other:                           <span style="color:#bd93f9">9695</span>
+</span></span><span style="display:flex;"><span>        total:                           <span style="color:#bd93f9">83713</span>
+</span></span><span style="display:flex;"><span>    transactions:                        <span style="color:#bd93f9">3125</span>   <span style="color:#ff79c6">(</span>10.40 per sec.<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>    queries:                             <span style="color:#bd93f9">83713</span>  <span style="color:#ff79c6">(</span>278.61 per sec.<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>    ignored errors:                      <span style="color:#bd93f9">1239</span>   <span style="color:#ff79c6">(</span>4.12 per sec.<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>    reconnects:                          <span style="color:#bd93f9">0</span>      <span style="color:#ff79c6">(</span>0.00 per sec.<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>General statistics:
+</span></span><span style="display:flex;"><span>    total time:                          300.4662s
+</span></span><span style="display:flex;"><span>    total number of events:              <span style="color:#bd93f9">3125</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Latency <span style="color:#ff79c6">(</span>ms<span style="color:#ff79c6">)</span>:
+</span></span><span style="display:flex;"><span>         min:                                   10.53
+</span></span><span style="display:flex;"><span>         avg:                                 1538.24
+</span></span><span style="display:flex;"><span>         max:                                19170.98
+</span></span><span style="display:flex;"><span>         95th percentile:                     6026.41
+</span></span><span style="display:flex;"><span>         sum:                              4807006.80
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Threads fairness:
+</span></span><span style="display:flex;"><span>    events <span style="color:#ff79c6">(</span>avg/stddev<span style="color:#ff79c6">)</span>:           195.3125/8.45
+</span></span><span style="display:flex;"><span>    execution <span style="color:#8be9fd;font-style:italic">time</span> <span style="color:#ff79c6">(</span>avg/stddev<span style="color:#ff79c6">)</span>:   300.4379/0.02
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@donald-dev-ec2-bastin ~<span style="color:#ff79c6">]</span>$
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2019-10-28-RDS%28PostgreSQL%29%e3%81%absysbench%e3%82%92%e5%ae%9f%e8%a1%8c%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-ec2-sysbench-install-howto.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Installing the RDBMS Benchmark Tool sysbench on …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-awscli-rds-descrive-db-snapshot.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Outputting aws rds describe-db-snapshots Results …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-rds-postgresql-sysbench.html&text=Running&#43;sysbench&#43;on&#43;RDS&#43;%28PostgreSQL%29" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-rds-postgresql-sysbench.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-ec2-psql-install.html">Connecting to Aurora (PostgreSQL) from EC2 Using psql</a></li>
+    
+    <li><a href="/en/aws-rds-stop-cautions.html">Precautions When Stopping an AWS RDS Instance</a></li>
+    
+    <li><a href="/en/aws-ec2-sysbench-install-howto.html">Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)</a></li>
+    
+    <li><a href="/en/aws-ec2-instancestore-setting.html">T2 Instance Type Cannot Be Used When Using EC2 Instance Store</a></li>
+    
+    <li><a href="/en/aws-ec2-awscli-setting-credentials.html">Initial AWS CLI Setup (AWS Credentials Configuration)</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#preparation">Preparation</a></li>
+        <li><a href="#create-benchmark-tables">Create Benchmark Tables</a></li>
+        <li><a href="#performance-measurement">Performance Measurement</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

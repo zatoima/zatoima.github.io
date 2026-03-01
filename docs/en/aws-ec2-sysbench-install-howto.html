@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux) | my opinion is my own</title>
+<meta name="title" content="Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,EC2," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-ec2-sysbench-install-howto.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2019-10-21T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-10-21T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="EC2">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)\"",
+  "description": "\"\"",
+  "datePublished": "\"2019-10-21T00:00:00Z\"",
+  "dateModified": "\"2019-10-21T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-ec2-sysbench-install-howto.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  526 ,
+  "keywords": "[\"AWS\",\"EC2\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-ec2-sysbench-install-howto.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-ec2-sysbench-install-howto.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Installing the RDBMS Benchmark Tool …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Installing the RDBMS Benchmark Tool sysbench on EC2 (Amazon Linux)</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2019-10-21'>
+            Published on 2019/10/21
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="commands-to-run">Commands to Run</h3>
+<hr>
+<p>sysbench exists in the EPEL repository, so it needs to be installed in advance.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo -s
+</span></span><span style="display:flex;"><span>wget https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm
+</span></span><span style="display:flex;"><span>rpm -ivh epel-release-7-12.noarch.rpm
+</span></span><span style="display:flex;"><span>yum -y install epel-release
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yum -y install sysbench
+</span></span></code></pre></div><h3 id="execution-log">Execution Log</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># wget https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm</span>
+</span></span><span style="display:flex;"><span>--2019-10-21 07:47:27--  https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-12.noarch.rpm
+</span></span><span style="display:flex;"><span>Resolving dl.fedoraproject.org <span style="color:#ff79c6">(</span>dl.fedoraproject.org<span style="color:#ff79c6">)</span>... 209.132.181.25, 209.132.181.23, 209.132.181.24
+</span></span><span style="display:flex;"><span>Connecting to dl.fedoraproject.org <span style="color:#ff79c6">(</span>dl.fedoraproject.org<span style="color:#ff79c6">)</span>|209.132.181.25|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... <span style="color:#bd93f9">200</span> OK
+</span></span><span style="display:flex;"><span>Length: <span style="color:#bd93f9">15264</span> <span style="color:#ff79c6">(</span>15K<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">[</span>application/x-rpm<span style="color:#ff79c6">]</span>
+</span></span><span style="display:flex;"><span>Saving to: <span style="color:#f1fa8c">&#39;epel-release-7-12.noarch.rpm&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>100%<span style="color:#ff79c6">[==================================================================================================================================================</span>&gt;<span style="color:#ff79c6">]</span> 15,264      --.-K/s   in 0.1s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2019-10-21 07:47:28 <span style="color:#ff79c6">(</span><span style="color:#bd93f9">119</span> KB/s<span style="color:#ff79c6">)</span> - <span style="color:#f1fa8c">&#39;epel-release-7-12.noarch.rpm&#39;</span> saved <span style="color:#ff79c6">[</span>15264/15264<span style="color:#ff79c6">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># ll</span>
+</span></span><span style="display:flex;"><span>total <span style="color:#bd93f9">55692</span>
+</span></span><span style="display:flex;"><span>-rw-r--r--  <span style="color:#bd93f9">1</span> root     root        <span style="color:#bd93f9">15264</span> Sep <span style="color:#bd93f9">18</span> 12:56 epel-release-7-12.noarch.rpm
+</span></span><span style="display:flex;"><span>-rw-rw-r--  <span style="color:#bd93f9">1</span> ec2-user ec2-user  <span style="color:#bd93f9">4856388</span> Oct <span style="color:#bd93f9">16</span> 02:34 <span style="color:#ff79c6">function</span>.zip
+</span></span><span style="display:flex;"><span>-rw-r--r--  <span style="color:#bd93f9">1</span> root     root     <span style="color:#bd93f9">51434432</span> Oct  <span style="color:#bd93f9">8</span> 04:05 oracle-instantclient18.3-basic-18.3.0.0.0-3.x86_64.rpm
+</span></span><span style="display:flex;"><span>-rw-r--r--  <span style="color:#bd93f9">1</span> root     root       <span style="color:#bd93f9">709700</span> Oct  <span style="color:#bd93f9">8</span> 04:08 oracle-instantclient18.3-sqlplus-18.3.0.0.0-3.x86_64.rpm
+</span></span><span style="display:flex;"><span>drwxrwxr-x  <span style="color:#bd93f9">3</span> ec2-user ec2-user       <span style="color:#bd93f9">18</span> Oct  <span style="color:#bd93f9">8</span> 04:23 oradiag_ec2-user
+</span></span><span style="display:flex;"><span>drwxrwxr-x <span style="color:#bd93f9">19</span> ec2-user ec2-user     <span style="color:#bd93f9">4096</span> Oct <span style="color:#bd93f9">16</span> 02:33 package
+</span></span><span style="display:flex;"><span>drwxrwxr-x  <span style="color:#bd93f9">3</span> ec2-user ec2-user       <span style="color:#bd93f9">21</span> Oct <span style="color:#bd93f9">16</span> 00:45 venv
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># rpm -ivh epel-release-7-11.noarch.rpm</span>
+</span></span><span style="display:flex;"><span>error: open of epel-release-7-11.noarch.rpm failed: No such file or directory
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># rpm -ivh epel-release-7-12.noarch.rpm</span>
+</span></span><span style="display:flex;"><span>warning: epel-release-7-12.noarch.rpm: Header V3 RSA/SHA256 Signature, key ID 352c64e5: NOKEY
+</span></span><span style="display:flex;"><span>Preparing...                          <span style="color:#6272a4">################################# [100%]</span>
+</span></span><span style="display:flex;"><span>Updating / installing...
+</span></span><span style="display:flex;"><span>   1:epel-release-7-12                <span style="color:#6272a4">################################# [100%]</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># yum -y install epel-release</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span>epel/x86_64/metalink                                                                                                                                                 | 6.0 kB  00:00:00
+</span></span><span style="display:flex;"><span>epel                                                                                                                                                                 | 5.4 kB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>1/3<span style="color:#ff79c6">)</span>: epel/x86_64/group_gz                                                                                                                                          |  <span style="color:#bd93f9">90</span> kB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>2/3<span style="color:#ff79c6">)</span>: epel/x86_64/updateinfo                                                                                                                                        | 1.0 MB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>3/3<span style="color:#ff79c6">)</span>: epel/x86_64/primary_db                                                                                                                                        | 6.9 MB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">186</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Package epel-release-7-12.noarch already installed and latest version
+</span></span><span style="display:flex;"><span>Nothing to <span style="color:#ff79c6">do</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4"># yum -y install sysbench</span>
+</span></span><span style="display:flex;"><span>Loaded plugins: extras_suggestions, langpacks, priorities, update-motd
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">186</span> packages excluded due to repository priority protections
+</span></span><span style="display:flex;"><span>Resolving Dependencies
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package sysbench.x86_64 0:1.0.17-2.el7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libck.so.0<span style="color:#ff79c6">()(</span>64bit<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">for</span> package: sysbench-1.0.17-2.el7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Processing Dependency: libluajit-5.1.so.2<span style="color:#ff79c6">()(</span>64bit<span style="color:#ff79c6">)</span> <span style="color:#ff79c6">for</span> package: sysbench-1.0.17-2.el7.x86_64
+</span></span><span style="display:flex;"><span>--&gt; Running transaction check
+</span></span><span style="display:flex;"><span>---&gt; Package ck.x86_64 0:0.5.2-2.el7 will be installed
+</span></span><span style="display:flex;"><span>---&gt; Package luajit.x86_64 0:2.0.4-3.el7 will be installed
+</span></span><span style="display:flex;"><span>--&gt; Finished Dependency Resolution
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependencies <span style="color:#8be9fd;font-style:italic">Resolved</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span> Package                                      Arch                                       Version                                             Repository                                <span style="color:#8be9fd;font-style:italic">Size</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Installing:
+</span></span><span style="display:flex;"><span> sysbench                                     x86_64                                     1.0.17-2.el7                                        epel                                     <span style="color:#bd93f9">152</span> k
+</span></span><span style="display:flex;"><span>Installing <span style="color:#ff79c6">for</span> dependencies:
+</span></span><span style="display:flex;"><span> ck                                           x86_64                                     0.5.2-2.el7                                         epel                                      <span style="color:#bd93f9">26</span> k
+</span></span><span style="display:flex;"><span> luajit                                       x86_64                                     2.0.4-3.el7                                         epel                                     <span style="color:#bd93f9">343</span> k
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">Summary</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">============================================================================================================================================================================================</span>
+</span></span><span style="display:flex;"><span>Install  <span style="color:#bd93f9">1</span> Package <span style="color:#ff79c6">(</span>+2 Dependent packages<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Total download size: <span style="color:#bd93f9">521</span> k
+</span></span><span style="display:flex;"><span>Installed size: 1.7 M
+</span></span><span style="display:flex;"><span>Downloading packages:
+</span></span><span style="display:flex;"><span>warning: /var/cache/yum/x86_64/2/epel/packages/ck-0.5.2-2.el7.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID 352c64e5: NOKEY
+</span></span><span style="display:flex;"><span>Public key <span style="color:#ff79c6">for</span> ck-0.5.2-2.el7.x86_64.rpm is not installed
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>1/3<span style="color:#ff79c6">)</span>: ck-0.5.2-2.el7.x86_64.rpm                                                                                                                                     |  <span style="color:#bd93f9">26</span> kB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>2/3<span style="color:#ff79c6">)</span>: sysbench-1.0.17-2.el7.x86_64.rpm                                                                                                                              | <span style="color:#bd93f9">152</span> kB  00:00:00
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span>3/3<span style="color:#ff79c6">)</span>: luajit-2.0.4-3.el7.x86_64.rpm                                                                                                                                 | <span style="color:#bd93f9">343</span> kB  00:00:00
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>Total                                                                                                                                                       2.0 MB/s | <span style="color:#bd93f9">521</span> kB  00:00:00
+</span></span><span style="display:flex;"><span>Retrieving key from file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+</span></span><span style="display:flex;"><span>Importing GPG key 0x352C64E5:
+</span></span><span style="display:flex;"><span> Userid     : <span style="color:#f1fa8c">&#34;Fedora EPEL (7) &lt;epel@fedoraproject.org&gt;&#34;</span>
+</span></span><span style="display:flex;"><span> Fingerprint: 91e9 7d7c 4a5e 96f1 7f3e 888f 6a2f aea2 352c 64e5
+</span></span><span style="display:flex;"><span> Package    : epel-release-7-12.noarch <span style="color:#ff79c6">(</span>installed<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span> From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+</span></span><span style="display:flex;"><span>Running transaction check
+</span></span><span style="display:flex;"><span>Running transaction <span style="color:#8be9fd;font-style:italic">test</span>
+</span></span><span style="display:flex;"><span>Transaction <span style="color:#8be9fd;font-style:italic">test</span> succeeded
+</span></span><span style="display:flex;"><span>Running transaction
+</span></span><span style="display:flex;"><span>Warning: RPMDB altered outside of yum.
+</span></span><span style="display:flex;"><span>  Installing : luajit-2.0.4-3.el7.x86_64                                                                                                                                                1/3
+</span></span><span style="display:flex;"><span>  Installing : ck-0.5.2-2.el7.x86_64                                                                                                                                                    2/3
+</span></span><span style="display:flex;"><span>  Installing : sysbench-1.0.17-2.el7.x86_64                                                                                                                                             3/3
+</span></span><span style="display:flex;"><span>  Verifying  : ck-0.5.2-2.el7.x86_64                                                                                                                                                    1/3
+</span></span><span style="display:flex;"><span>  Verifying  : sysbench-1.0.17-2.el7.x86_64                                                                                                                                             2/3
+</span></span><span style="display:flex;"><span>  Verifying  : luajit-2.0.4-3.el7.x86_64                                                                                                                                                3/3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installed:
+</span></span><span style="display:flex;"><span>  sysbench.x86_64 0:1.0.17-2.el7
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Dependency Installed:
+</span></span><span style="display:flex;"><span>  ck.x86_64 0:0.5.2-2.el7                                                                    luajit.x86_64 0:2.0.4-3.el7
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Complete!
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>root@donald-dev-ec2-bastin ec2-user<span style="color:#ff79c6">]</span><span style="color:#6272a4">#</span>
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2019-10-21-EC2%28Amazon%20Linux%29%e3%81%abRDBMS%e3%83%99%e3%83%b3%e3%83%81%e3%83%9e%e3%83%bc%e3%82%af%e3%83%84%e3%83%bc%e3%83%ab%e3%81%aesysbench%e3%82%92%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-ec2-instancestore-setting.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">T2 Instance Type Cannot Be Used When Using EC2 …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-rds-postgresql-sysbench.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Running sysbench on RDS (PostgreSQL)</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-ec2-sysbench-install-howto.html&text=Installing&#43;the&#43;RDBMS&#43;Benchmark&#43;Tool&#43;sysbench&#43;on&#43;EC2&#43;%28Amazon&#43;Linux%29" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-ec2-sysbench-install-howto.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-ec2-instancestore-setting.html">T2 Instance Type Cannot Be Used When Using EC2 Instance Store</a></li>
+    
+    <li><a href="/en/aws-ec2-psql-install.html">Connecting to Aurora (PostgreSQL) from EC2 Using psql</a></li>
+    
+    <li><a href="/en/aws-ec2-awscli-setting-credentials.html">Initial AWS CLI Setup (AWS Credentials Configuration)</a></li>
+    
+    <li><a href="/en/aws-oracle-ec2-pre-install_1.html">Pre-Installation Preparation for Oracle Database 12cR1 on RHEL on EC2</a></li>
+    
+    <li><a href="/en/aws-oracle-ec2-runinstaller-error.html">runinstaller Execution Error on EC2</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/ec2/" class="tag-badge"><img src="/images/tags/ec2.svg" alt="EC2" class="tag-badge-icon" loading="lazy">EC2</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#commands-to-run">Commands to Run</a></li>
+        <li><a href="#execution-log">Execution Log</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Parameters to Consider Changing for RDS and Aurora (PostgreSQL) | my opinion is my own</title>
+<meta name="title" content="Parameters to Consider Changing for RDS and Aurora (PostgreSQL)" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,RDS,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-aurora-rds-postgresql-parameter-change.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Parameters to Consider Changing for RDS and Aurora (PostgreSQL)">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-01-21T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-01-21T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Parameters to Consider Changing for RDS and Aurora (PostgreSQL)">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Parameters to Consider Changing for RDS and Aurora (PostgreSQL)\"",
+  "description": "\"\"",
+  "datePublished": "\"2021-01-21T00:00:00Z\"",
+  "dateModified": "\"2021-01-21T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-aurora-rds-postgresql-parameter-change.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  779 ,
+  "keywords": "[\"AWS\",\"Aurora\",\"RDS\",\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-aurora-rds-postgresql-parameter-change.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-aurora-rds-postgresql-parameter-change.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Parameters to Consider Changing for RDS …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Parameters to Consider Changing for RDS and Aurora (PostgreSQL)</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2021-01-21'>
+            Published on 2021/01/21
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+          
+          <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h1 id="introduction">Introduction</h1>
+<p>Since Aurora and RDS are managed services, parameter tuning is generally not required, but depending on requirements or performance issues, tuning may be necessary. This is a summary of those parameters.</p>
+<h1 id="list-of-parameters-to-consider-changing">List of Parameters to Consider Changing</h1>
+<p>Added as I notice them. Current parameter values (setting column) are extracted from Aurora and RDS using <code>r5.large</code> instance type.</p>
+<p>Note that even though these are &ldquo;parameters to consider changing,&rdquo; the modifiable parameters differ between Aurora and RDS, and some cannot be changed. For example, checkpoint_timeout is typically adjusted for checkpoint tuning, but it appears that RDS allows changes while Aurora does not.</p>
+<blockquote>
+<p>List of Non-Modifiable Parameters for RDS and Aurora PostgreSQL | my opinion is my own <a href="https://zatoima.github.io/aws-aurora-rds-postgresql-parameter-modifiable.html" target="_blank" rel="noopener noreferrer">https://zatoima.github.io/aws-aurora-rds-postgresql-parameter-modifiable.html</a>
+</p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>name</th>
+          <th>setting(Aurora)</th>
+          <th>setting(RDS)</th>
+          <th>boot_val</th>
+          <th>unit</th>
+          <th>context</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>archive_timeout</td>
+          <td>300 (non-modifiable)</td>
+          <td>300 (non-modifiable)</td>
+          <td>0</td>
+          <td>s</td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>autovacuum_max_workers</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+          <td></td>
+          <td>postmaster</td>
+      </tr>
+      <tr>
+          <td>checkpoint_completion_target</td>
+          <td>0.5</td>
+          <td>0.9</td>
+          <td>0.5</td>
+          <td></td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>checkpoint_timeout</td>
+          <td>60</td>
+          <td>300 (non-modifiable)</td>
+          <td>300</td>
+          <td>s</td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>deadlock_timeout</td>
+          <td>1000</td>
+          <td>1000</td>
+          <td>1000</td>
+          <td>ms</td>
+          <td>superuser</td>
+      </tr>
+      <tr>
+          <td>effective_io_concurrency</td>
+          <td>256</td>
+          <td>1 (non-modifiable)</td>
+          <td>256</td>
+          <td></td>
+          <td>user</td>
+      </tr>
+      <tr>
+          <td>lc_messages</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td>superuser</td>
+      </tr>
+      <tr>
+          <td>log_filename</td>
+          <td>postgresql.log.%Y-%m-%d-%H%M</td>
+          <td>postgresql.log.%Y-%m-%d-%H</td>
+          <td>postgresql-%Y-%m-%d_%H%M%S.log</td>
+          <td></td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>log_hostname</td>
+          <td>off</td>
+          <td>on</td>
+          <td>off</td>
+          <td></td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>log_min_duration_statement</td>
+          <td>-1</td>
+          <td>-1</td>
+          <td>-1</td>
+          <td>ms</td>
+          <td>rds_superuser</td>
+      </tr>
+      <tr>
+          <td>log_rotation_age</td>
+          <td>60</td>
+          <td>60</td>
+          <td>1440</td>
+          <td>min</td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>log_rotation_size</td>
+          <td>100000</td>
+          <td>10240</td>
+          <td>10240</td>
+          <td>kB</td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>log_timezone</td>
+          <td>UTC (non-modifiable)</td>
+          <td>UTC (non-modifiable)</td>
+          <td>GMT</td>
+          <td></td>
+          <td>sighup</td>
+      </tr>
+      <tr>
+          <td>max_connections</td>
+          <td>1710</td>
+          <td>1710</td>
+          <td>100</td>
+          <td></td>
+          <td>postmaster</td>
+      </tr>
+      <tr>
+          <td>max_parallel_maintenance_workers</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+          <td></td>
+          <td>user</td>
+      </tr>
+      <tr>
+          <td>max_parallel_workers</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+          <td></td>
+          <td>user</td>
+      </tr>
+      <tr>
+          <td>max_parallel_workers_per_gather</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+          <td></td>
+          <td>user</td>
+      </tr>
+      <tr>
+          <td>max_worker_processes</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+          <td></td>
+          <td>postmaster</td>
+      </tr>
+      <tr>
+          <td>random_page_cost</td>
+          <td>4</td>
+          <td>4</td>
+          <td>4</td>
+          <td></td>
+          <td>user</td>
+      </tr>
+      <tr>
+          <td>shared_buffers</td>
+          <td>1304235</td>
+          <td>497507</td>
+          <td>1024</td>
+          <td>8kB</td>
+          <td>postmaster</td>
+      </tr>
+      <tr>
+          <td>superuser_reserved_connections</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+          <td></td>
+          <td>postmaster</td>
+      </tr>
+      <tr>
+          <td>wal_buffers</td>
+          <td>2048</td>
+          <td>8192</td>
+          <td>-1</td>
+          <td>8kB</td>
+          <td>postmaster</td>
+      </tr>
+  </tbody>
+</table>
+<h1 id="sql-for-extraction">SQL for Extraction</h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    name,
+</span></span><span style="display:flex;"><span>    setting,
+</span></span><span style="display:flex;"><span>    boot_val,
+</span></span><span style="display:flex;"><span>    unit,
+</span></span><span style="display:flex;"><span>    context
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span>
+</span></span><span style="display:flex;"><span>    pg_settings
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#ff79c6">IN</span> (<span style="color:#f1fa8c">&#39;max_connections&#39;</span>,<span style="color:#f1fa8c">&#39;superuser_reserved_connections&#39;</span>,<span style="color:#f1fa8c">&#39;lc_messages&#39;</span>,<span style="color:#f1fa8c">&#39;archive_timeout&#39;</span>,<span style="color:#f1fa8c">&#39;log_filename&#39;</span>,<span style="color:#f1fa8c">&#39;log_rotation_age&#39;</span>,<span style="color:#f1fa8c">&#39;log_rotation_size&#39;</span>,<span style="color:#f1fa8c">&#39;log_min_duration_statement&#39;</span>,<span style="color:#f1fa8c">&#39;log_hostname&#39;</span>,<span style="color:#f1fa8c">&#39;log_timezone&#39;</span>,<span style="color:#f1fa8c">&#39;shared_buffers&#39;</span>,<span style="color:#f1fa8c">&#39;effective_io_concurrency&#39;</span>,<span style="color:#f1fa8c">&#39;max_worker_processes&#39;</span>,<span style="color:#f1fa8c">&#39;max_parallel_maintenance_workers&#39;</span>,<span style="color:#f1fa8c">&#39;max_parallel_workers_per_gather&#39;</span>,<span style="color:#f1fa8c">&#39;max_parallel_workers&#39;</span>,<span style="color:#f1fa8c">&#39;wal_buffers&#39;</span>,<span style="color:#f1fa8c">&#39;checkpoint_timeout&#39;</span>,<span style="color:#f1fa8c">&#39;checkpoint_completion_target&#39;</span>,<span style="color:#f1fa8c">&#39;random_page_cost&#39;</span>,<span style="color:#f1fa8c">&#39;autovacuum_max_workers&#39;</span>,<span style="color:#f1fa8c">&#39;deadlock_timeout&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">1</span>;
+</span></span></code></pre></div><h1 id="individual-parameter-notes">Individual Parameter Notes</h1>
+<h4 id="deadlock_timeout">deadlock_timeout</h4>
+<p>Since deadlock detection is costly, it may be worth raising this above the default of 1000ms (1 second).</p>
+<h4 id="checkpoint_completion_target">checkpoint_completion_target</h4>
+<h4 id="checkpoint_timeout">checkpoint_timeout</h4>
+<p>Default values differ between Aurora and RDS. Consider changing if performance issues arise.</p>
+<p>Note: Aurora has no concept of checkpoints itself, and memory coming into log_buffer flows directly to the storage side, so it&rsquo;s unclear whether changing this has any effect.</p>
+<blockquote>
+<p>Notes on PostgreSQL&rsquo;s checkpoint_completion_target | my opinion is my own <a href="https://zatoima.github.io/postgresql-about-checkpoint_completion_target.html" target="_blank" rel="noopener noreferrer">https://zatoima.github.io/postgresql-about-checkpoint_completion_target.html</a>
+</p>
+</blockquote>
+<h4 id="log_filename">log_filename</h4>
+<h4 id="log_hostname">log_hostname</h4>
+<h4 id="log_min_duration_statement">log_min_duration_statement</h4>
+<h4 id="log_rotation_age">log_rotation_age</h4>
+<h4 id="log_rotation_size">log_rotation_size</h4>
+<h4 id="log_timezone">log_timezone</h4>
+<p>Change based on logging requirements.</p>
+<h4 id="max_connections">max_connections</h4>
+<p>Compared to the OSS PostgreSQL default of <code>100</code>, the parameter is already adjusted, but the actual number of connections depends on requirements. When the instance type is scaled up, max_connections increases as well.</p>
+<h4 id="autovacuum_max_workers">autovacuum_max_workers</h4>
+<h4 id="max_parallel_maintenance_workers">max_parallel_maintenance_workers</h4>
+<h4 id="max_parallel_workers">max_parallel_workers</h4>
+<h4 id="max_parallel_workers_per_gather">max_parallel_workers_per_gather</h4>
+<h4 id="max_worker_processes">max_worker_processes</h4>
+<p>Fine-tune when tuning Vacuum and Analyze.</p>
+<h4 id="shared_buffers">shared_buffers</h4>
+<p>For Aurora, the default value in the DB parameter group is set to 75% of total memory. This is because Aurora PostgreSQL does not use double buffering and does not need the OS filesystem cache. Fine-tune if you want to allocate more to other memory parameters.</p>
+<blockquote>
+<p>Understanding why there is a difference in shared_buffers DB parameter default values between Amazon RDS PostgreSQL and Aurora PostgreSQL <a href="https://aws.amazon.com/jp/premiumsupport/knowledge-center/rds-aurora-postgresql-shared-buffers/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/premiumsupport/knowledge-center/rds-aurora-postgresql-shared-buffers/</a>
+</p>
+</blockquote>
+<h4 id="wal_buffers">wal_buffers</h4>
+<p>The amount of shared memory used for WAL data not yet written to disk. This buffer is written to disk at commit time. If writes are high and there are many CPUs, extending to a few MB can be effective, but the default value should generally be fine for both Aurora and RDS.</p>
+<h4 id="random_page_cost">random_page_cost</h4>
+<p>Sets the planner&rsquo;s estimate for the cost of a non-sequentially fetched disk page. Reducing this value makes index scans relatively more attractive. Since SSDs are generally faster than HDDs for random reads, setting this to <code>1.0</code> for SSD is common. It may be worth lowering below the default of 4.0 in some cases.</p>
+<h1 id="parameters-that-change-with-instance-type-scale-up">Parameters That Change with Instance Type Scale-Up</h1>
+<p>I investigated which parameters change among the above when scaling up. <code>max_connections</code> and <code>shared_buffers</code> change. On the other hand, despite increases in CPU and memory, parallelism settings and wal_buffers don&rsquo;t change.</p>
+<table>
+  <thead>
+      <tr>
+          <th>name</th>
+          <th>setting(Aurora) r5.large</th>
+          <th>setting(Aurora) r5.2xlarge</th>
+          <th>setting(RDS) r5.large</th>
+          <th>setting(RDS) r5.2xlarge</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>archive_timeout</td>
+          <td>300</td>
+          <td>300</td>
+          <td>300</td>
+          <td>300</td>
+      </tr>
+      <tr>
+          <td>autovacuum_max_workers</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+      </tr>
+      <tr>
+          <td>checkpoint_completion_target</td>
+          <td>0.5</td>
+          <td>0.5</td>
+          <td>0.9</td>
+          <td>0.9</td>
+      </tr>
+      <tr>
+          <td>checkpoint_timeout</td>
+          <td>60</td>
+          <td>60</td>
+          <td>300</td>
+          <td>300</td>
+      </tr>
+      <tr>
+          <td>deadlock_timeout</td>
+          <td>1000</td>
+          <td>1000</td>
+          <td>1000</td>
+          <td>1000</td>
+      </tr>
+      <tr>
+          <td>effective_io_concurrency</td>
+          <td>256</td>
+          <td>256</td>
+          <td>1</td>
+          <td>1</td>
+      </tr>
+      <tr>
+          <td>lc_messages</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>log_filename</td>
+          <td>postgresql.log.%Y-%m-%d-%H%M</td>
+          <td>postgresql.log.%Y-%m-%d-%H%M</td>
+          <td>postgresql.log.%Y-%m-%d-%H</td>
+          <td>postgresql.log.%Y-%m-%d-%H</td>
+      </tr>
+      <tr>
+          <td>log_hostname</td>
+          <td>off</td>
+          <td>off</td>
+          <td>on</td>
+          <td>on</td>
+      </tr>
+      <tr>
+          <td>log_min_duration_statement</td>
+          <td>-1</td>
+          <td>-1</td>
+          <td>-1</td>
+          <td>-1</td>
+      </tr>
+      <tr>
+          <td>log_rotation_age</td>
+          <td>60</td>
+          <td>60</td>
+          <td>60</td>
+          <td>60</td>
+      </tr>
+      <tr>
+          <td>log_rotation_size</td>
+          <td>100000</td>
+          <td>100000</td>
+          <td>10240</td>
+          <td>10240</td>
+      </tr>
+      <tr>
+          <td>log_timezone</td>
+          <td>UTC</td>
+          <td>UTC</td>
+          <td>UTC</td>
+          <td>UTC</td>
+      </tr>
+      <tr>
+          <td>max_connections</td>
+          <td>1710</td>
+          <td>5000</td>
+          <td>1710</td>
+          <td>5000</td>
+      </tr>
+      <tr>
+          <td>max_parallel_maintenance_workers</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+      </tr>
+      <tr>
+          <td>max_parallel_workers</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+      </tr>
+      <tr>
+          <td>max_parallel_workers_per_gather</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+          <td>2</td>
+      </tr>
+      <tr>
+          <td>max_worker_processes</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+          <td>8</td>
+      </tr>
+      <tr>
+          <td>random_page_cost</td>
+          <td>4</td>
+          <td>4</td>
+          <td>4</td>
+          <td>4</td>
+      </tr>
+      <tr>
+          <td>shared_buffers</td>
+          <td>1304235</td>
+          <td>5474754</td>
+          <td>497507</td>
+          <td>2029633</td>
+      </tr>
+      <tr>
+          <td>superuser_reserved_connections</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3</td>
+      </tr>
+      <tr>
+          <td>wal_buffers</td>
+          <td>2048</td>
+          <td>2048</td>
+          <td>8192</td>
+          <td>8192</td>
+      </tr>
+  </tbody>
+</table>
+<h1 id="references">References</h1>
+<blockquote>
+<p>PostgresqlCO.NF: PostgreSQL configuration for humans <a href="https://postgresqlco.nf/doc/ja/param/" target="_blank" rel="noopener noreferrer">https://postgresqlco.nf/doc/ja/param/</a>
+</p>
+</blockquote>
+<blockquote>
+<p>PostgreSQL 11 parameter dissection - Speaker Deck <a href="https://speakerdeck.com/ester41/postgresql-11-parameter?slide=2" target="_blank" rel="noopener noreferrer">https://speakerdeck.com/ester41/postgresql-11-parameter?slide=2</a>
+</p>
+<p>PostgreSQL stable operation: failure prevention and detection <a href="https://www.ospn.jp/osc2014.enterprise/pdf/OSC2014_Enterprise_hp.pdf" target="_blank" rel="noopener noreferrer">https://www.ospn.jp/osc2014.enterprise/pdf/OSC2014_Enterprise_hp.pdf</a>
+</p>
+<p>PostgreSQL Performance Tuning - Qiita <a href="https://qiita.com/cuzic/items/f9b846e6171a54079d77" target="_blank" rel="noopener noreferrer">https://qiita.com/cuzic/items/f9b846e6171a54079d77</a>
+</p>
+<p>Best Practices for Migrating an Oracle Database to Amazon RDS PostgreSQL or Amazon Aurora PostgreSQL: Target Database Considerations for the PostgreSQL Environment | Amazon Web Services Blog <a href="https://aws.amazon.com/jp/blogs/news/best-practices-for-migrating-an-oracle-database-to-amazon-rds-postgresql-or-amazon-aurora-postgresql-target-database-considerations-for-the-postgresql-environment/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/blogs/news/best-practices-for-migrating-an-oracle-database-to-amazon-rds-postgresql-or-amazon-aurora-postgresql-target-database-considerations-for-the-postgresql-environment/</a>
+</p>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2021-01-21-RDS%e3%81%a8Aurora%e3%81%a7%e5%a4%89%e6%9b%b4%e3%82%92%e6%a4%9c%e8%a8%8e%e3%81%99%e3%82%8b%e3%83%91%e3%83%a9%e3%83%a1%e3%83%bc%e3%82%bf/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-aurora-rds-postgresql-parameter-modifiable.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">List of Non-Modifiable Parameters for RDS and …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-aurora-neptune-maintenance-about.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">About Maintenance (Patch Application) for Aurora …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-aurora-rds-postgresql-parameter-change.html&text=Parameters&#43;to&#43;Consider&#43;Changing&#43;for&#43;RDS&#43;and&#43;Aurora&#43;%28PostgreSQL%29" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-aurora-rds-postgresql-parameter-change.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-aurora-rds-postgresql-parameter-modifiable.html">List of Non-Modifiable Parameters for RDS and Aurora PostgreSQL</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-s3-import.html">Importing CSV Files from S3 into RDS/Aurora (PostgreSQL)</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-log-download.html">Bulk Downloading RDS/Aurora Logs via CLI</a></li>
+    
+    <li><a href="/en/postgresql-aozora-bunko-data-import.html">Importing Morphological Analysis Data of Aozora Bunko Works into RDS PostgreSQL</a></li>
+    
+    <li><a href="/en/aws-ec2-postgresql-pgcli-install-howto.html">Installing pgcli (Extended CLI for PostgreSQL) on EC2 (Amazon Linux)</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+  
+  <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#deadlock_timeout">deadlock_timeout</a></li>
+            <li><a href="#checkpoint_completion_target">checkpoint_completion_target</a></li>
+            <li><a href="#checkpoint_timeout">checkpoint_timeout</a></li>
+            <li><a href="#log_filename">log_filename</a></li>
+            <li><a href="#log_hostname">log_hostname</a></li>
+            <li><a href="#log_min_duration_statement">log_min_duration_statement</a></li>
+            <li><a href="#log_rotation_age">log_rotation_age</a></li>
+            <li><a href="#log_rotation_size">log_rotation_size</a></li>
+            <li><a href="#log_timezone">log_timezone</a></li>
+            <li><a href="#max_connections">max_connections</a></li>
+            <li><a href="#autovacuum_max_workers">autovacuum_max_workers</a></li>
+            <li><a href="#max_parallel_maintenance_workers">max_parallel_maintenance_workers</a></li>
+            <li><a href="#max_parallel_workers">max_parallel_workers</a></li>
+            <li><a href="#max_parallel_workers_per_gather">max_parallel_workers_per_gather</a></li>
+            <li><a href="#max_worker_processes">max_worker_processes</a></li>
+            <li><a href="#shared_buffers">shared_buffers</a></li>
+            <li><a href="#wal_buffers">wal_buffers</a></li>
+            <li><a href="#random_page_cost">random_page_cost</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

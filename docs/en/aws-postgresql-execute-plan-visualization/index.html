@@ -57,7 +57,7 @@
     "@id": "\"https://zatoima.github.io/en/aws-postgresql-execute-plan-visualization/\""
   },
   "inLanguage": "en",
-  "wordCount":  666 ,
+  "wordCount":  652 ,
   "keywords": "[\"AWS\",\"PostgreSQL\"]"
 }
 </script>
@@ -190,14 +190,14 @@
       </div>
       <div class="article-content">
         <p>First, let&rsquo;s try gocmdpev.</p>
-<h3 id="install-go">Install Go</h3>
+<h3 id="install-go">Install go</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ sudo yum -y install go
 </span></span><span style="display:flex;"><span>Loaded plugins: langpacks, priorities, update-motd
 </span></span><span style="display:flex;"><span>amzn2-core                                                                                                                                                                                        | 3.7 kB  00:00:00
 </span></span><span style="display:flex;"><span><span style="color:#bd93f9">228</span> packages excluded due to repository priority protections
 </span></span><span style="display:flex;"><span>Resolving Dependencies
 </span></span><span style="display:flex;"><span>--&gt; Running transaction check
-</span></span><span style="display:flex;"><span>~<span style="color:#ff79c6">(</span>omitted<span style="color:#ff79c6">)</span>~
+</span></span><span style="display:flex;"><span>~omitted~
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>Installed:
 </span></span><span style="display:flex;"><span>  golang.x86_64 0:1.15.14-1.amzn2.0.1
@@ -215,21 +215,21 @@
 </span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ ./go/bin/gocmdpev --version
 </span></span><span style="display:flex;"><span>1.0.0
-</span></span></code></pre></div><h3 id="generate-test-data-for-visualization">Generate Test Data for Visualization</h3>
+</span></span></code></pre></div><h3 id="generating-test-data-for-visualization">Generating test data for visualization</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pgbench -i -s <span style="color:#bd93f9">100</span> -U postgres -h xxxx.cluster-xxxx.ap-northeast-1.rds.amazonaws.com pgbench
 </span></span></code></pre></div><h3 id="test-sql">Test SQL</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>EXPLAIN <span style="color:#ff79c6">(</span>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON<span style="color:#ff79c6">)</span> SELECT t1.aid,t1.bid,t1.abalance,t2.bbalance FROM pgbench_accounts t1, pgbench_branches t2 where t1.bid<span style="color:#ff79c6">=</span>t2.bid ORDER BY t1.abalance DESC;
-</span></span></code></pre></div><p>This SQL involves sorting and joins that are likely to be problematic.</p>
+</span></span></code></pre></div><p>This SQL involves sorting and joins, which may be problematic.</p>
 <p><img src="/en/aws-postgresql-execute-plan-visualization/image-20210806144117978.png" alt="image-20210806144117978"></p>
-<p>With FORMAT specified, generate an execution plan to pass to gocmdpev.</p>
+<p>Generate an execution plan for passing to gocmdpev with FORMAT specification.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>vi explain.sql
 </span></span></code></pre></div><p>Write the following SQL to <code>explain.sql</code>. Specify <code>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON</code> as EXPLAIN options.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">EXPLAIN</span> (<span style="color:#ff79c6">ANALYZE</span>, COSTS, <span style="color:#ff79c6">VERBOSE</span>, BUFFERS, FORMAT JSON) <span style="color:#ff79c6">SELECT</span> t1.aid,t1.bid,t1.abalance,t2.bbalance <span style="color:#ff79c6">FROM</span> pgbench_accounts t1, pgbench_branches t2 <span style="color:#ff79c6">where</span> t1.bid<span style="color:#ff79c6">=</span>t2.bid <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> t1.abalance <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><p>Execute the SQL and output the execution plan to <code>analyze.json</code>:</p>
+</span></span></code></pre></div><p>Execute the SQL and output the execution plan to <code>analyze.json</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>psql -h auroraserverlessv1.cluster-cm678nkt5thr.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench -qAt -f explain.sql &gt; analyze.json
-</span></span></code></pre></div><p>Pass the output <code>analyze.json</code> to gocmdpev:</p>
+</span></span></code></pre></div><p>Pass the output <code>analyze.json</code> to gocmdpev.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat analyze.json | gocmdpev
-</span></span></code></pre></div><p>The output will look like the following. It displays where time is being spent with color coding, making it easier to analyze.</p>
+</span></span></code></pre></div><p>The output below shows where time is being spent with color coding, making analysis easier.</p>
 <p><img src="/en/aws-postgresql-execute-plan-visualization/image-20210806144714670.png" alt="image-20210806144714670"></p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ cat analyze.json | gocmdpev
 </span></span><span style="display:flex;"><span>○ Total Cost: 1,790,852.84
@@ -296,14 +296,14 @@
 </span></span><span style="display:flex;"><span>          │ ○ Rows: <span style="color:#bd93f9">100</span>
 </span></span><span style="display:flex;"><span>          │   on public.pgbench_branches
 </span></span><span style="display:flex;"><span>          ⌡► t2.bbalance + t2.bid
-</span></span></code></pre></div><p>There is also a visualization tool called pev. It may be more intuitive and easier to view. You can choose between them depending on whether you want to check via CLI or GUI. Like gocmdpev, it can visualize plans by loading <code>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON</code> output.</p>
+</span></span></code></pre></div><p>There is also a visualization tool called pev. It may be more intuitive and easier to read. You can choose between CLI-based gocmdpev and GUI-based pev. Like gocmdpev, pev can visualize execution plans by loading <code>ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON</code> output.</p>
 <blockquote>
 <p><a href="https://github.com/AlexTatiyants/pev" target="_blank" rel="noopener noreferrer">https://github.com/AlexTatiyants/pev</a>
 </p>
 <p><a href="http://tatiyants.com/pev/#/plans/new" target="_blank" rel="noopener noreferrer">http://tatiyants.com/pev/#/plans/new</a>
 </p>
 </blockquote>
-<p>As stated below, it processes locally, but it&rsquo;s worth being cautious just in case:</p>
+<p>As stated below, plans are processed locally, but it may be wise to be cautious:</p>
 <blockquote>
 <p>DISCLAIMER: Pev stores your plans locally (localStorage) and will not send them anywhere.</p>
 </blockquote>
@@ -339,7 +339,7 @@
       
       <a href="https://zatoima.github.io/en/alexa-change-word-voice-control-piyolog/" class="prev-next-link next-link">
         <span class="prev-next-label">Next article →</span>
-        <span class="prev-next-title">Handling Voice Input Errors in Alexa&#39;s PiyoLog …</span>
+        <span class="prev-next-title">Using Alexa Routines to Handle Voice Input Errors …</span>
       </a>
       
     </nav>
@@ -360,15 +360,15 @@
   <h2 class="related-articles-title">Related articles</h2>
   <ul class="related-list">
     
-    <li><a href="/en/aws-aurora-postgresql-hammerdb-benchmark.html">Running HammerDB TPC-C Against Aurora PostgreSQL</a></li>
+    <li><a href="/en/aws-aurora-rds-postgresql-pg_proctab-extention/">Exploring the pg_proctab Extension for Aurora/RDS PostgreSQL</a></li>
     
-    <li><a href="/en/aws-postgresql-rdsproxy-failover.html">Performing Failover of Aurora PostgreSQL Using RDS Proxy</a></li>
+    <li><a href="/en/aws-aurora-rds-postgresql-pg-collector.html">About awslabs pg-collector</a></li>
     
-    <li><a href="/en/aws-aurora-aws-cli-create-cluster-instance/">Creating Aurora PostgreSQL with AWS CLI</a></li>
+    <li><a href="/en/aws-aurora-failover-time-test/">Measuring Aurora PostgreSQL Failover Time</a></li>
     
-    <li><a href="/en/aws-ec2-python-selenium-install.html">Setting Up Python &#43; Selenium on Amazon EC2</a></li>
+    <li><a href="/en/aws-aurora-rds-postgresql-compare-link.html">Comparison Notes for Aurora PostgreSQL and RDS (Link Collection)</a></li>
     
-    <li><a href="/en/aws-kms-import-key.html">Notes and Considerations for BYOK-Imported KMS Keys</a></li>
+    <li><a href="/en/aws-aurora-rds-postgresql-nologging-load.html">Loading Large Amounts of Data into NOLOGGING (UNLOGGED) Tables in PostgreSQL</a></li>
     
   </ul>
 </div>
@@ -395,8 +395,8 @@
   <ul>
     <li>
       <ul>
-        <li><a href="#install-go">Install Go</a></li>
-        <li><a href="#generate-test-data-for-visualization">Generate Test Data for Visualization</a></li>
+        <li><a href="#install-go">Install go</a></li>
+        <li><a href="#generating-test-data-for-visualization">Generating test data for visualization</a></li>
         <li><a href="#test-sql">Test SQL</a></li>
       </ul>
     </li>

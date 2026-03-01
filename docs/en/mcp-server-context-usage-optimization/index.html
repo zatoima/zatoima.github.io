@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Measuring and Improving Context Usage of Document MCP Servers | my opinion is my own</title>
+<meta name="title" content="Measuring and Improving Context Usage of Document MCP Servers" />
+<meta name="description" content="" />
+<meta name="keywords" content="MCP,Claude,LLM,Snowflake," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/mcp-server-context-usage-optimization/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Measuring and Improving Context Usage of Document MCP Servers">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-02-25T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-02-25T00:00:00+00:00">
+    <meta property="article:tag" content="MCP">
+    <meta property="article:tag" content="Claude">
+    <meta property="article:tag" content="LLM">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Measuring and Improving Context Usage of Document MCP Servers">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Measuring and Improving Context Usage of Document MCP Servers\"",
+  "description": "\"\"",
+  "datePublished": "\"2026-02-25T00:00:00Z\"",
+  "dateModified": "\"2026-02-25T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/mcp-server-context-usage-optimization/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1944 ,
+  "keywords": "[\"MCP\",\"Claude\",\"LLM\",\"Snowflake\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/mcp-server-context-usage-optimization/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/mcp-server-context-usage-optimization/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Measuring and Improving Context Usage of …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/mcp.svg" alt="MCP" class="tag-icon" loading="lazy"></div>
+        <h1>Measuring and Improving Context Usage of Document MCP Servers</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-02-25'>
+            Published on 2026/02/25
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 3 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/mcp/" class="tag-badge"><img src="/images/tags/mcp.svg" alt="MCP" class="tag-badge-icon" loading="lazy">MCP</a>
+          
+          <a href="https://zatoima.github.io/en/blog/claude/" class="tag-badge"><img src="/images/tags/claude.svg" alt="Claude" class="tag-badge-icon" loading="lazy">Claude</a>
+          
+          <a href="https://zatoima.github.io/en/blog/llm/" class="tag-badge"><img src="/images/tags/llm.svg" alt="LLM" class="tag-badge-icon" loading="lazy">LLM</a>
+          
+          <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="introduction">Introduction</h2>
+<p>MCP servers provide external tools to LLM agents, but all tool responses go into the LLM&rsquo;s context window. This means the amount of data an MCP tool returns directly translates to context consumption.</p>
+<p>This article documents the process and results of measuring the context usage of my custom Snowflake Docs MCP server, identifying issues, and implementing improvements.</p>
+<div class="link-card">
+    <a href="https://github.com/zatoima/snowflake-docs-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - zatoima/snowflake-docs-mcp-server: MCP server for searching and retrieving Snowflake official documentation</div><div class="link-card-description">MCP server for searching and retrieving Snowflake official documentation - zatoima/snowflake-docs-mcp-server</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/58ea2e91475f7d892b636a3bd79d8a5042ddd5faadedc8135ccb03b87a641a34/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<h2 id="the-relationship-between-mcp-tool-responses-and-context">The Relationship Between MCP Tool Responses and Context</h2>
+<p>The results of MCP tool calls are loaded into the context window as input to the LLM.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[User message] + [System prompt] + [MCP tool results] + [Past conversation] = Context consumption
+</span></span></code></pre></div><p>Document retrieval MCP tools can return thousands to tens of thousands of characters per call. Without careful design, just a few calls can consume most of the context, making it difficult to continue the conversation.</p>
+<h3 id="when-using-subagents">When Using Subagents</h3>
+<p>When MCP tools are used via Claude Code&rsquo;s subagent (Task tool), the raw tool responses stay within the subagent&rsquo;s context, and only a summary is returned to the main context. This can dramatically reduce main context consumption.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Method</th>
+          <th>Main context consumption</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Direct call</td>
+          <td>Full text of tool results</td>
+      </tr>
+      <tr>
+          <td>Via subagent</td>
+          <td>Summary only (50-90% reduction)</td>
+      </tr>
+  </tbody>
+</table>
+<p>However, since subagents increase total token consumption and add latency, routing everything through subagents is not practical. It is important to control response sizes appropriately on the MCP server side.</p>
+<h2 id="state-before-improvement">State Before Improvement</h2>
+<p>Before improvement, the server provided two tools.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Tool</th>
+          <th>Function</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>search_snowflake_docs</code></td>
+          <td>Keyword search (excerpt 200 chars, max 20 results)</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_content</code></td>
+          <td>Full page retrieval (HTML to Markdown conversion)</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="measurement-results">Measurement Results</h3>
+<p>Measurements were taken using the CREATE TABLE page (one of the largest pages in Snowflake documentation).</p>
+<p><strong>search_snowflake_docs:</strong></p>
+<table>
+  <thead>
+      <tr>
+          <th>max_results</th>
+          <th>Response chars</th>
+          <th>Estimated tokens</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>3 results</td>
+          <td>~850</td>
+          <td>~250</td>
+      </tr>
+      <tr>
+          <td>5 results (default)</td>
+          <td>~1,400</td>
+          <td>~400</td>
+      </tr>
+      <tr>
+          <td>10 results</td>
+          <td>~2,800</td>
+          <td>~800</td>
+      </tr>
+      <tr>
+          <td>20 results (max)</td>
+          <td>~5,500</td>
+          <td>~1,500</td>
+      </tr>
+  </tbody>
+</table>
+<p>The search tool is lightweight and not problematic.</p>
+<p><strong>get_doc_content:</strong></p>
+<table>
+  <thead>
+      <tr>
+          <th>max_length</th>
+          <th>Response chars</th>
+          <th>Estimated tokens</th>
+          <th>Notes</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2,000</td>
+          <td>~2,200</td>
+          <td>~600</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>4,000</td>
+          <td>~4,200</td>
+          <td>~1,100</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>8,000 (default)</td>
+          <td>~8,200</td>
+          <td>~2,200</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>0 (unlimited)</td>
+          <td><strong>102,079</strong></td>
+          <td><strong>~25,000+</strong></td>
+          <td>Exceeds context limit</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="issues-identified">Issues Identified</h3>
+<p><strong>1. Text Duplication Bug</strong></p>
+<p>The HTML to Markdown conversion used a <code>descendants</code> iterator, causing the same text to appear twice for <code>&lt;p&gt;</code> tags inside <code>&lt;li&gt;</code> elements.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>- Requires a value (NOT NULL).
+</span></span><span style="display:flex;"><span>Requires a value (NOT NULL).          ← duplicate
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>- Has a default value.
+</span></span><span style="display:flex;"><span>Has a default value.                  ← duplicate
+</span></span></code></pre></div><p>A list of 10 items expanded to 20 lines, with <strong>30-40% of content wasted on unnecessary duplication</strong>.</p>
+<p><strong>2. Context Failure at max_length=0</strong></p>
+<p>Retrieving the CREATE TABLE page without limits returned 102,079 characters, exceeding Claude Code&rsquo;s token limit and being offloaded to a file. Once offloaded to a file, it can no longer be directly referenced within the context, making it essentially unusable.</p>
+<p><strong>3. No Way to Retrieve Specific Sections</strong></p>
+<p>The approach of truncating from the beginning of the page to <code>max_length</code> characters made it impossible to reach important information in the latter half of pages, such as Usage Notes or Examples.</p>
+<p><strong>4. No Way to Check Page Structure</strong></p>
+<p>To find out what sections existed, a full page retrieval with <code>get_doc_content</code> was required.</p>
+<p><strong>5. Noise in Markdown Output</strong></p>
+<p>After HTML to Markdown conversion, many unnecessary artifacts remained for the LLM.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>## Usage notes[¶](#usage-notes &#34;Link to this heading&#34;)     ← pilcrow links (~40 chars/heading)
+</span></span><span style="display:flex;"><span>Copy                                                        ← remnants of copy buttons
+</span></span><span style="display:flex;"><span>[COPY INTO &lt;table&gt;](copy-into-table)                        ← unresolvable relative links
+</span></span></code></pre></div><p>The CREATE TABLE page alone (with 24 headings) consumed approximately 960 characters in pilcrow links.</p>
+<h2 id="improvement-process">Improvement Process</h2>
+<h3 id="studying-the-aws-official-mcp-server">Studying the AWS Official MCP Server</h3>
+<p>As a reference for improvements, I studied the implementation of the documentation MCP server officially provided by AWS. Key design points that were instructive:</p>
+<ul>
+<li><strong>Using the markdownify library</strong>: Rather than a hand-written HTML parser, it uses the <code>markdownify</code> library for HTML to Markdown conversion, which structurally prevents issues like duplication bugs</li>
+<li><strong>Pagination via start_index</strong>: Design for reading long documents in chunks using the <code>start_index</code> parameter</li>
+<li><strong>Safe max_length constraint</strong>: Pydantic Field with <code>gt=0, lt=1000000</code> constraint to prevent 0 (unlimited) input</li>
+<li><strong>Best practices in instructions</strong>: Explicitly states &ldquo;Stop reading documents over 30,000 characters once the needed information is found&rdquo;</li>
+</ul>
+<h3 id="improvement-1-html-to-markdown-conversion-quality">Improvement 1: HTML to Markdown Conversion Quality</h3>
+<p>Replaced the hand-written <code>descendants</code> loop with the <code>markdownify</code> library. This resolved the text duplication bug, effectively increasing the information density by approximately 1.5x for the same character count.</p>
+<p>Additionally, implemented noise removal after Markdown conversion:</p>
+<ul>
+<li>Remove pilcrow links (<code>[¶](...)</code>)</li>
+<li>Remove copy button remnants (<code>Copy</code>)</li>
+<li>Remove link URLs (keep text only)</li>
+<li>Remove image and SVG tags</li>
+<li>Remove feedback, rating, survey, and form elements</li>
+</ul>
+<p>The key is separating the removal stages. Buttons and images are removed at the HTML stage with <code>decompose()</code>, while pilcrow and Copy remnants are removed at the text level after Markdown conversion. <code>&lt;a&gt;</code> tags are <code>unwrap()</code>-ed to remove the tag while preserving the text.</p>
+<h3 id="improvement-2-introducing-gradual-information-retrieval">Improvement 2: Introducing Gradual Information Retrieval</h3>
+<p>Expanded from 2 tools to 5, enabling gradual information retrieval.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>search_snowflake_docs  → Document search (with include_headings=True, can also get TOC simultaneously)
+</span></span><span style="display:flex;"><span>search_in_doc          → In-page keyword search (auto-selects relevant sections)
+</span></span><span style="display:flex;"><span>get_doc_toc            → Get page table of contents (lightweight)
+</span></span><span style="display:flex;"><span>get_doc_section        → Retrieve a specific section
+</span></span><span style="display:flex;"><span>get_doc_content        → Retrieve full page content (with pagination)
+</span></span></code></pre></div><p>Recommended usage flow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1. search_snowflake_docs(include_headings=True) to get search results + TOC in one call
+</span></span><span style="display:flex;"><span>2. search_in_doc to automatically extract only relevant sections
+</span></span><span style="display:flex;"><span>3. Only specify include_code_blocks=True when code examples are needed
+</span></span></code></pre></div><h3 id="improvement-3-response-size-control">Improvement 3: Response Size Control</h3>
+<p>Added a hard cap on <code>max_length</code> to prevent context failures.</p>
+<table>
+  <thead>
+      <tr>
+          <th>max_length value</th>
+          <th>Behavior</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>Honors full retrieval intent, returns up to hard cap (20,000)</td>
+      </tr>
+      <tr>
+          <td>1–20,000</td>
+          <td>Uses specified value as-is</td>
+      </tr>
+      <tr>
+          <td>20,001+</td>
+          <td>Capped at 20,000</td>
+      </tr>
+      <tr>
+          <td>Negative</td>
+          <td>Falls back to default (5,000)</td>
+      </tr>
+  </tbody>
+</table>
+<p>Additionally introduced pagination via <code>start_index</code> parameter and natural boundary cutting (priority: paragraph → line → sentence → word).</p>
+<h3 id="improvement-4-code-blocks-off-by-default">Improvement 4: Code Blocks Off by Default</h3>
+<p>Code blocks occupy the majority of context on syntax reference pages. Measurements on the CREATE TABLE page showed that removing code blocks achieves a <strong>37.7% context reduction</strong>.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Mode</th>
+          <th>Size</th>
+          <th>Reduction</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Code blocks ON</td>
+          <td>52,694 chars</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>Code blocks OFF</td>
+          <td>32,851 chars</td>
+          <td>37.7%</td>
+      </tr>
+  </tbody>
+</table>
+<p>Changed the default value of the <code>include_code_blocks</code> parameter to <code>False</code>, requiring explicit specification only when syntax or code examples are needed.</p>
+<h3 id="improvement-5-reducing-tool-call-count">Improvement 5: Reducing Tool Call Count</h3>
+<p>Added the <code>include_headings</code> parameter to <code>search_snowflake_docs</code>, enabling retrieval of heading structure simultaneously with search.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Before: search → get_doc_toc → get_doc_section  (3 calls)
+</span></span><span style="display:flex;"><span>After:  search(include_headings=True) → get_doc_section  (2 calls)
+</span></span></code></pre></div><p>However, pages with many headings (DB2 migration guides with 120+ headings, etc.) caused response bloat, so a cap of 30 headings per result was added. When exceeded, it narrows down to h1-h3 only.</p>
+<h3 id="improvement-6-in-page-keyword-search">Improvement 6: In-Page Keyword Search</h3>
+<p>Added the <code>search_in_doc</code> tool. Passing a URL and keyword scores all sections within the page and returns only the most relevant sections. This enables the MCP server itself to handle the judgment of TOC review → section selection.</p>
+<p>A scoring accuracy issue arose: because a parent section&rsquo;s <code>get_text()</code> includes all child section text, parent scores were always higher. Resolved by excluding child section text from parent scores and deduplicating nested results.</p>
+<h3 id="improvement-7-caching-and-performance-improvements">Improvement 7: Caching and Performance Improvements</h3>
+<ul>
+<li>In-memory cache with TTL to eliminate duplicate HTTP fetches of the same URL (5 minutes, LRU limit of 50 entries)</li>
+<li>buildId cache (1 hour TTL)</li>
+<li>Connection pooling via shared HTTP client</li>
+<li>Parallel heading retrieval via <code>asyncio.gather</code></li>
+</ul>
+<h2 id="improvement-results">Improvement Results</h2>
+<h3 id="full-page-retrieval-comparison-for-get_doc_content">Full Page Retrieval Comparison for get_doc_content</h3>
+<p>Comparison of full page retrieval of the CREATE TABLE page using <code>get_doc_content(include_code_blocks=False)</code>.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Condition</th>
+          <th>Before</th>
+          <th>After</th>
+          <th>Notes</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>max_length=2000</td>
+          <td>~2,200 chars (30-40% duplicate)</td>
+          <td>2,269 chars (no duplicates)</td>
+          <td>~1.5x information per character</td>
+      </tr>
+      <tr>
+          <td>max_length=5000</td>
+          <td>—</td>
+          <td>5,351 chars</td>
+          <td>New default after improvement</td>
+      </tr>
+      <tr>
+          <td>max_length=8000</td>
+          <td>~8,200 chars (30-40% duplicate)</td>
+          <td>8,450 chars (no duplicates)</td>
+          <td>Previous default</td>
+      </tr>
+      <tr>
+          <td>max_length=0</td>
+          <td><strong>102,079 chars (context failure)</strong></td>
+          <td><strong>20,000 or less (safe)</strong></td>
+          <td>95%+ reduction</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="full-page-retrieval-comparison-across-multiple-pages">Full Page Retrieval Comparison Across Multiple Pages</h3>
+<p>Verified the same effect applies to pages other than CREATE TABLE.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Page</th>
+          <th>Before</th>
+          <th>After</th>
+          <th>Reduction</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>CREATE TABLE (large SQL reference)</td>
+          <td>70,948 chars</td>
+          <td>44,503 chars</td>
+          <td><strong>37.3%</strong></td>
+      </tr>
+      <tr>
+          <td>SELECT (large SQL reference)</td>
+          <td>25,068 chars</td>
+          <td>10,538 chars</td>
+          <td><strong>58.0%</strong></td>
+      </tr>
+      <tr>
+          <td>Dynamic Tables (medium guide)</td>
+          <td>5,409 chars</td>
+          <td>4,529 chars</td>
+          <td><strong>16.3%</strong></td>
+      </tr>
+      <tr>
+          <td><strong>Total</strong></td>
+          <td><strong>101,425 chars</strong></td>
+          <td><strong>59,570 chars</strong></td>
+          <td><strong>41.3%</strong></td>
+      </tr>
+  </tbody>
+</table>
+<p>Reference pages with many links show greater improvement, achieving 58% reduction on the SELECT page. Small guide pages show relatively smaller reduction rates, but since the original size is small, the practical impact is minimal.</p>
+<h3 id="typical-usage-pattern-comparison">Typical Usage Pattern Comparison</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Pattern</th>
+          <th>Before</th>
+          <th>After</th>
+          <th>Improvement</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>search + get_doc_content</td>
+          <td>~9,600 chars</td>
+          <td>7,378 chars</td>
+          <td>23% reduction</td>
+      </tr>
+      <tr>
+          <td>search + 2x get_doc_content</td>
+          <td>~17,800 chars</td>
+          <td>12,714 chars</td>
+          <td>29% reduction</td>
+      </tr>
+      <tr>
+          <td>search + TOC + 1 section</td>
+          <td>Not possible</td>
+          <td>9,408 chars</td>
+          <td>New feature</td>
+      </tr>
+      <tr>
+          <td>search(headings) + section(code=OFF)</td>
+          <td>Not possible</td>
+          <td>3,115 chars</td>
+          <td><strong>Optimal flow</strong></td>
+      </tr>
+      <tr>
+          <td>Want only Usage Notes</td>
+          <td>Not possible (unreachable)</td>
+          <td>5,267 chars</td>
+          <td>New feature</td>
+      </tr>
+  </tbody>
+</table>
+<p>The most efficient flow (<code>search(max_results=1, include_headings=True)</code> → <code>get_doc_section(code=OFF)</code>) achieves approximately <strong>58% context reduction</strong> compared to the typical pre-improvement flow.</p>
+<h3 id="context-consumption-of-new-tools">Context Consumption of New Tools</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Tool</th>
+          <th>Consumption</th>
+          <th>Use case</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>search_snowflake_docs</code> (3 results)</td>
+          <td>~850 chars</td>
+          <td>Search results only</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_toc</code></td>
+          <td>~600 chars</td>
+          <td>Checking page structure</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_section</code> (1 section)</td>
+          <td>~528 chars</td>
+          <td>Retrieving a specific section</td>
+      </tr>
+      <tr>
+          <td><code>search_in_doc</code> (3 sections)</td>
+          <td>~2,400 chars</td>
+          <td>Auto-extracting relevant sections</td>
+      </tr>
+      <tr>
+          <td><code>get_doc_content</code> (full, code=OFF)</td>
+          <td>~44,503 chars</td>
+          <td>Entire page</td>
+      </tr>
+  </tbody>
+</table>
+<p>Using <code>search_in_doc</code> to retrieve only needed sections requires about 1/9th the context of a full <code>get_doc_content</code> retrieval.</p>
+<h3 id="impact-of-include_headings">Impact of include_headings</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Pattern</th>
+          <th>Estimated chars</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>search (5 results, headings=false)</td>
+          <td>~500 chars</td>
+      </tr>
+      <tr>
+          <td>search (5 results, headings=true)</td>
+          <td>~3,500–5,000 chars</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>include_headings=true</code> consumes approximately 7-10x more context, but saves the <code>get_doc_toc</code> call. Before the heading cap was introduced, pages with many headings could expand to 26,443+ characters; after introduction, it stays within 10,853 characters (<strong>59% reduction</strong>).</p>
+<h2 id="key-points-for-designing-document-mcp-servers">Key Points for Designing Document MCP Servers</h2>
+<p>Here is a summary of the insights gained from this improvement work.</p>
+<ol>
+<li><strong>Set a hard cap on response size</strong> — Unlimited retrieval risks context failure</li>
+<li><strong>Provide pagination</strong> — Enable chunked reading with <code>start_index</code> + <code>max_length</code></li>
+<li><strong>Enable gradual information retrieval</strong> — Search → lightweight TOC check → section retrieval (only what&rsquo;s needed)</li>
+<li><strong>Use a library for HTML to Markdown conversion</strong> — Hand-written HTML parsers are a source of bugs</li>
+<li><strong>Document best practices in instructions</strong> — Provide guidance from the server side on how the LLM should use the tools</li>
+<li><strong>Reduce tool call count</strong> — Provide options to consolidate multiple tool calls into one</li>
+<li><strong>Exclude code blocks by default</strong> — Code blocks occupy 30-40% of responses on syntax reference pages</li>
+<li><strong>Cache to eliminate duplicate HTTP fetches</strong> — Consecutive access to the same URL is common</li>
+<li><strong>Remove noise from Markdown output</strong> — Remove pilcrow links, copy buttons, link URLs, image tags, etc.</li>
+<li><strong>Add safety limits to parameters returning large amounts of data</strong> — Set caps like heading caps</li>
+</ol>
+<h2 id="summary">Summary</h2>
+<p>The context usage of my custom Snowflake Docs MCP server was measured and the following improvements were made.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Improvement</th>
+          <th>Effect</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>HTML to Markdown conversion quality</td>
+          <td>Eliminated duplication, noise removal: <strong>average 41.3% reduction</strong> in full retrieval</td>
+      </tr>
+      <tr>
+          <td>Gradual information retrieval</td>
+          <td>Retrieve only needed sections: <strong>about 1/9th</strong> of full page</td>
+      </tr>
+      <tr>
+          <td>Code blocks off by default</td>
+          <td><strong>37.7% reduction</strong></td>
+      </tr>
+      <tr>
+          <td>Reduced tool call count</td>
+          <td>3 steps → 2 steps</td>
+      </tr>
+      <tr>
+          <td>Response size control</td>
+          <td>102,079 chars → <strong>20,000 or less</strong> (prevents failure)</td>
+      </tr>
+      <tr>
+          <td>Optimal flow overall</td>
+          <td><strong>~58% context reduction</strong></td>
+      </tr>
+  </tbody>
+</table>
+<p>When designing MCP servers, it is important to be aware that response size equals LLM context consumption, and to design with the principle of &ldquo;returning only the necessary information, in the necessary amount, without noise.&rdquo;</p>
+<h2 id="related-articles">Related Articles</h2>
+<div class="link-card">
+    <a href="https://zatoima.github.io/snowflake-docs-mcp-server-architecture/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Creating a Snowflake Documentation Search MCP Server</div><div class="link-card-description">Technical mechanism of the MCP server (Next.js buildId retrieval, search API, HTML to Markdown conversion)</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=zatoima.github.io" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">zatoima.github.io</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://zatoima.github.io/snowflake-mcp-documentation-server-benchmark/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Benchmark Comparison of Two Snowflake MCP Documentation Servers</div><div class="link-card-description">Comparison of this MCP server and a Cortex Agent &#43; CKE-based MCP server across 20 queries and 5 evaluation axes</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=zatoima.github.io" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">zatoima.github.io</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<h2 id="references">References</h2>
+<div class="link-card">
+    <a href="https://github.com/awslabs/mcp/tree/main/src/aws-documentation-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">mcp/src/aws-documentation-mcp-server at main · awslabs/mcp</div><div class="link-card-description">Official MCP Servers for AWS. Contribute to awslabs/mcp development by creating an account on GitHub.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://repository-images.githubusercontent.com/952238700/4fcd85d9-3950-4896-81cd-a03df4be9892" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://github.com/zatoima/snowflake-docs-mcp-server" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - zatoima/snowflake-docs-mcp-server: MCP server for searching and retrieving Snowflake official documentation</div><div class="link-card-description">MCP server for searching and retrieving Snowflake official documentation - zatoima/snowflake-docs-mcp-server</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/58ea2e91475f7d892b636a3bd79d8a5042ddd5faadedc8135ccb03b87a641a34/zatoima/snowflake-docs-mcp-server" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://pypi.org/project/markdownify/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">&lt;meta property=&#34;og:title&#34;
+markdownify</div><div class="link-card-description">Convert HTML to markdown.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=pypi.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">pypi.org</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="#ZgotmplZ" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-02-25-mcp-server-context-usage-optimization/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/llm-papers-pipeline-with-claude-code/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Building an Automated LLM Paper Collection, …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/llm-papers-2026-02-25/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">LLM Papers Survey (2026-02-25)</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fmcp-server-context-usage-optimization%2f&text=Measuring&#43;and&#43;Improving&#43;Context&#43;Usage&#43;of&#43;Document&#43;MCP&#43;Servers" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/mcp-server-context-usage-optimization/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/llm-papers-pipeline-with-claude-code/">Building an Automated LLM Paper Collection, Summarization, and Publishing Pipeline with Claude Code</a></li>
+    
+    <li><a href="/en/snowflake-docs-mcp-server-architecture/">Creating a Snowflake Documentation Search MCP Server</a></li>
+    
+    <li><a href="/en/llm-papers-2026-02-25/">LLM Papers Survey (2026-02-25)</a></li>
+    
+    <li><a href="/en/llm-papers-2026-02-24/">LLM Papers Survey (2026-02-24)</a></li>
+    
+    <li><a href="/en/llm-papers-2026-02-23/">LLM Papers Survey (2026-02-23)</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/mcp/" class="tag-badge"><img src="/images/tags/mcp.svg" alt="MCP" class="tag-badge-icon" loading="lazy">MCP</a>
+  
+  <a href="https://zatoima.github.io/en/blog/claude/" class="tag-badge"><img src="/images/tags/claude.svg" alt="Claude" class="tag-badge-icon" loading="lazy">Claude</a>
+  
+  <a href="https://zatoima.github.io/en/blog/llm/" class="tag-badge"><img src="/images/tags/llm.svg" alt="LLM" class="tag-badge-icon" loading="lazy">LLM</a>
+  
+  <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#the-relationship-between-mcp-tool-responses-and-context">The Relationship Between MCP Tool Responses and Context</a>
+      <ul>
+        <li><a href="#when-using-subagents">When Using Subagents</a></li>
+      </ul>
+    </li>
+    <li><a href="#state-before-improvement">State Before Improvement</a>
+      <ul>
+        <li><a href="#measurement-results">Measurement Results</a></li>
+        <li><a href="#issues-identified">Issues Identified</a></li>
+      </ul>
+    </li>
+    <li><a href="#improvement-process">Improvement Process</a>
+      <ul>
+        <li><a href="#studying-the-aws-official-mcp-server">Studying the AWS Official MCP Server</a></li>
+        <li><a href="#improvement-1-html-to-markdown-conversion-quality">Improvement 1: HTML to Markdown Conversion Quality</a></li>
+        <li><a href="#improvement-2-introducing-gradual-information-retrieval">Improvement 2: Introducing Gradual Information Retrieval</a></li>
+        <li><a href="#improvement-3-response-size-control">Improvement 3: Response Size Control</a></li>
+        <li><a href="#improvement-4-code-blocks-off-by-default">Improvement 4: Code Blocks Off by Default</a></li>
+        <li><a href="#improvement-5-reducing-tool-call-count">Improvement 5: Reducing Tool Call Count</a></li>
+        <li><a href="#improvement-6-in-page-keyword-search">Improvement 6: In-Page Keyword Search</a></li>
+        <li><a href="#improvement-7-caching-and-performance-improvements">Improvement 7: Caching and Performance Improvements</a></li>
+      </ul>
+    </li>
+    <li><a href="#improvement-results">Improvement Results</a>
+      <ul>
+        <li><a href="#full-page-retrieval-comparison-for-get_doc_content">Full Page Retrieval Comparison for get_doc_content</a></li>
+        <li><a href="#full-page-retrieval-comparison-across-multiple-pages">Full Page Retrieval Comparison Across Multiple Pages</a></li>
+        <li><a href="#typical-usage-pattern-comparison">Typical Usage Pattern Comparison</a></li>
+        <li><a href="#context-consumption-of-new-tools">Context Consumption of New Tools</a></li>
+        <li><a href="#impact-of-include_headings">Impact of include_headings</a></li>
+      </ul>
+    </li>
+    <li><a href="#key-points-for-designing-document-mcp-servers">Key Points for Designing Document MCP Servers</a></li>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#related-articles">Related Articles</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
