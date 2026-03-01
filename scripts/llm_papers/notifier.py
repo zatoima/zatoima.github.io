@@ -19,14 +19,22 @@ def _get_claude_env() -> dict:
 
 
 def _format_slack_message(
-    papers: list[Paper], summaries: dict[str, str], date: str, blog_url: str
+    papers: list[Paper],
+    summaries: dict[str, str],
+    date: str,
+    blog_url: str,
+    total_delta: int = 0,
 ) -> str:
     """Format papers into a Slack message."""
     lines = [
         f"📄 *LLM論文サーベイ（{date}）*",
-        f"本日の注目論文 {len(papers)}件をピックアップしました。",
-        "",
     ]
+    if total_delta > 0:
+        lines.append(f"新着{total_delta}件中、注目論文{len(papers)}件をピックアップしました。")
+    else:
+        lines.append(f"本日の注目論文 {len(papers)}件をピックアップしました。")
+    lines.append("")
+
     emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
     for i, paper in enumerate(papers):
         emoji = emojis[i] if i < len(emojis) else f"{i+1}."
@@ -34,7 +42,8 @@ def _format_slack_message(
         # Truncate summary for Slack readability
         if len(summary) > 150:
             summary = summary[:147] + "..."
-        lines.append(f"{emoji} *{paper.title}*")
+        score_info = f" (score: {paper.popularity_score:.0f})"
+        lines.append(f"{emoji} *{paper.title}*{score_info}")
         lines.append(summary)
         lines.append(f"🔗 <{paper.url}|{paper.source}>")
         lines.append("")
@@ -44,11 +53,14 @@ def _format_slack_message(
 
 
 def notify_slack(
-    papers: list[Paper], summaries: dict[str, str], date: str
+    papers: list[Paper],
+    summaries: dict[str, str],
+    date: str,
+    total_delta: int = 0,
 ) -> bool:
     """Send paper summary to Slack #notify channel via claude CLI + MCP."""
     blog_url = f"https://zatoima.github.io/llm-papers-{date}/"
-    message = _format_slack_message(papers, summaries, date, blog_url)
+    message = _format_slack_message(papers, summaries, date, blog_url, total_delta)
 
     # Escape single quotes in message for shell
     escaped_message = message.replace("'", "'\\''")

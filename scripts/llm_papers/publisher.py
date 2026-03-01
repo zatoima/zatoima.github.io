@@ -25,6 +25,7 @@ def generate_hugo_content(
     summaries: dict[str, str],
     screenshots: dict[str, str],
     date: str | None = None,
+    total_delta: int = 0,
 ) -> Path:
     """Generate a Hugo blog post with paper summaries."""
     if date is None:
@@ -38,6 +39,20 @@ def generate_hugo_content(
 
     tags_str = ", ".join(f'"{t}"' for t in HUGO_TAGS)
     cats_str = ", ".join(f'"{c}"' for c in HUGO_CATEGORIES)
+
+    if total_delta > 0:
+        intro = (
+            f"本記事は{date}時点でのLLM関連の注目論文をまとめたものです。"
+            f"arXiv、Semantic Scholar、Hugging Face Daily Papersから自動収集した"
+            f"新着{total_delta}件のうち、人気度の高い{len(papers)}件をピックアップし、"
+            f"Claude APIで日本語要約を生成しています。"
+        )
+    else:
+        intro = (
+            f"本記事は{date}時点でのLLM関連の注目論文をまとめたものです。"
+            f"arXiv、Semantic Scholar、Hugging Face Daily Papersから自動収集し、"
+            f"Claude APIで日本語要約を生成しています。"
+        )
 
     lines = [
         "---",
@@ -54,7 +69,7 @@ def generate_hugo_content(
         "",
         "## はじめに",
         "",
-        f"本記事は{date}時点でのLLM関連の注目論文をまとめたものです。arXiv、Semantic Scholar、Hugging Face Daily Papersから自動収集し、Claude APIで日本語要約を生成しています。",
+        intro,
         "",
     ]
 
@@ -75,6 +90,7 @@ def generate_hugo_content(
         lines.append(f"- **ソース**: [{paper.source}]({paper.url})")
         if paper.arxiv_id:
             lines.append(f"- **arXiv ID**: {paper.arxiv_id}")
+        lines.append(f"- **人気度スコア**: {paper.popularity_score:.0f}")
         lines.append("")
 
         # Screenshot

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Organizing the Relationship Between MD5 and ETag for S3 Objects | zatoima</title>
+<meta name="title" content="Organizing the Relationship Between MD5 and ETag for S3 Objects" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,S3," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-s3-object-md5-etag/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Organizing the Relationship Between MD5 and ETag for S3 Objects">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-01-10T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-01-10T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="S3">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Organizing the Relationship Between MD5 and ETag for S3 Objects">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Organizing the Relationship Between MD5 and ETag for S3 Objects\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-01-10T00:00:00Z\"",
+  "dateModified": "\"2022-01-10T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-s3-object-md5-etag/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  855 ,
+  "keywords": "[\"AWS\",\"S3\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-s3-object-md5-etag/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-s3-object-md5-etag/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/aws-s3-object-md5-etag/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/aws-s3-object-md5-etag/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Organizing the Relationship Between MD5 …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Organizing the Relationship Between MD5 and ETag for S3 Objects</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-01-10'>
+            Published on 2022/01/10
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/s3/" class="tag-badge"><img src="/images/tags/s3.svg" alt="S3" class="tag-badge-icon" loading="lazy">S3</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <p>This can be confusing, so here are my notes.</p>
+<h3 id="terminology">Terminology</h3>
+<p><strong>MD5</strong>: A 32-character string of hexadecimal digits computed by a tool for a specific <em>file</em>. There are several methods such as the openssl command, but using the <code>md5sum</code> command outputs the MD5 value as shown below.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
+</span></span><span style="display:flex;"><span>500+0 records in
+</span></span><span style="display:flex;"><span>500+0 records out
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">524288000</span> bytes <span style="color:#ff79c6">(</span><span style="color:#bd93f9">524</span> MB<span style="color:#ff79c6">)</span> copied, 0.233084 s, 2.2 GB/s
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+</span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
+</span></span></code></pre></div><p><strong>ETag</strong>: An HTTP response header that identifies a specific version of a resource. Whenever something changes about the resource at a URL, the ETag gets a new value.</p>
+<p>The AWS explanation of ETag is as follows. <!-- raw HTML omitted -->Note especially that the ETag value changes depending on the S3 encryption method (SSE-S3 or SSE-KMS), and that objects created by Multipart Upload or Part Copy operations have ETags that are not MD5 digests, regardless of the encryption method.<!-- raw HTML omitted --></p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html" target="_blank" rel="noopener noreferrer">Common Response Headers - Amazon Simple Storage Service</a>
+</li>
+</ul>
+<blockquote>
+<p>ETag</p>
+<p>The entity tag represents a specific version of the object. The ETag reflects changes only to the contents of an object, not its metadata. The ETag may or may not be an MD5 digest of the object data. Whether or not it is depends on how the object was created and how it is encrypted as described below:</p>
+<ul>
+<li>Objects created through the AWS Management Console or by the PUT Object, POST Object, or Copy operation:
+<ul>
+<li>Objects encrypted by SSE-S3 or plaintext have ETags that are an MD5 digest of their data.</li>
+<li>Objects encrypted by SSE-C or SSE-KMS have ETags that are not an MD5 digest of their object data.</li>
+</ul>
+</li>
+<li>Objects created by either the Multipart Upload or Part Copy operation have ETags that are not MD5 digests, regardless of the method of encryption.</li>
+</ul>
+</blockquote>
+<h3 id="pattern-1-objects-encrypted-with-sse-s3-or-plaintext">Pattern 1: Objects Encrypted with SSE-S3 or Plaintext</h3>
+<h4 id="bucket-configuration">Bucket Configuration</h4>
+<p><img src="/aws-s3-object-md5-etag/image-20211217222313956.png" alt="image-20211217222313956"></p>
+<h4 id="multipart-upload-case">Multipart Upload Case</h4>
+<p>Since the file was uploaded via multipart, the hash obtained on the EC2 side differs from the ETag on S3.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ dd <span style="color:#ff79c6">if</span><span style="color:#ff79c6">=</span>/dev/zero <span style="color:#8be9fd;font-style:italic">of</span><span style="color:#ff79c6">=</span>~/test.txt <span style="color:#8be9fd;font-style:italic">bs</span><span style="color:#ff79c6">=</span>1M <span style="color:#8be9fd;font-style:italic">count</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">500</span>
+</span></span><span style="display:flex;"><span>500+0 records in
+</span></span><span style="display:flex;"><span>500+0 records out
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">524288000</span> bytes <span style="color:#ff79c6">(</span><span style="color:#bd93f9">524</span> MB<span style="color:#ff79c6">)</span> copied, 0.23444 s, 2.2 GB/s
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+</span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3 cp ~/test.txt  s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>upload: ./test.txt to s3://s3-imazaj/test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api head-object --bucket s3-imazaj --key test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;AcceptRanges&#34;</span>: <span style="color:#f1fa8c">&#34;bytes&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;LastModified&#34;</span>: <span style="color:#f1fa8c">&#34;Fri, 17 Dec 2021 13:11:36 GMT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentLength&#34;</span>: 524288000,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;2ab876e6e72b0fe9215ba306bea4f697-63\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;f6twG5M7LGpjOzhGSIm9Tn1lnhnlN_ia&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentType&#34;</span>: <span style="color:#f1fa8c">&#34;text/plain&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;AES256&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Metadata&#34;</span>: <span style="color:#ff79c6">{}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span></code></pre></div><p>To calculate the ETag, use the following tool (unofficial). You can see that the hash output by s3etag matches the ETag obtained from aws s3api head-object.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ gem install s3etag
+</span></span><span style="display:flex;"><span>Fetching: s3etag-0.0.1.gem <span style="color:#ff79c6">(</span>100%<span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>Successfully installed s3etag-0.0.1
+</span></span><span style="display:flex;"><span>Parsing documentation <span style="color:#ff79c6">for</span> s3etag-0.0.1
+</span></span><span style="display:flex;"><span>Installing ri documentation <span style="color:#ff79c6">for</span> s3etag-0.0.1
+</span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> gem installed
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag
+</span></span><span style="display:flex;"><span>s3etag file
+</span></span><span style="display:flex;"><span>    -t, --thre<span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag
+</span></span><span style="display:flex;"><span>s3etag file
+</span></span><span style="display:flex;"><span>    -t, --threshold threshold
+</span></span><span style="display:flex;"><span>    -p, --max-parts max-parts
+</span></span><span style="display:flex;"><span>    -s, --min_part_size min_part_size
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag -t <span style="color:#bd93f9">8388608</span> -s <span style="color:#bd93f9">8388608</span> test.txt
+</span></span><span style="display:flex;"><span>2ab876e6e72b0fe9215ba306bea4f697-63
+</span></span></code></pre></div><p>The calculation formula is as follows. We specify <code>8388608</code> because S3&rsquo;s default multipart upload splits at 8MB.</p>
+<blockquote>
+<p><a href="https://forums.aws.amazon.com/thread.jspa?messageID=456442&amp;#456442" target="_blank" rel="noopener noreferrer">Again on ETAG and MD5 checksum for multipart</a>
+</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">ETag</span> <span style="color:#ff79c6">=</span> MD5<span style="color:#ff79c6">(</span>Sum<span style="color:#ff79c6">(</span>p <span style="color:#f1fa8c">\i</span>n numberParts, MD5<span style="color:#ff79c6">(</span>PartBytes<span style="color:#ff79c6">(</span>p<span style="color:#ff79c6">)))</span> + <span style="color:#f1fa8c">&#34;-&#34;</span> + numberParts
+</span></span></code></pre></div><ul>
+<li>The MD5 values of the split files are summed</li>
+<li>The number of splits is appended after a dash at the end of the summed value.</li>
+</ul>
+</blockquote>
+<p>To get the MD5 value of an object on S3, you can also use the following method.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ sudo yum -y install s3cmd
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>2021-12-17 13:11    <span style="color:#bd93f9">524288000</span>  2ab876e6e72b0fe9215ba306bea4f697-63  s3://s3-imazaj/test.txt
+</span></span></code></pre></div><h4 id="non-multipart-upload-case">Non-Multipart Upload Case</h4>
+<p>In this case, MD5 = ETag.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+</span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;d8b61b2c0025919d5321461045c8226f\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;AES256&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;Einc9JkCj2itDk3BDSQJPAu1HoblkzfU&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api head-object --bucket s3-imazaj --key test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;AcceptRanges&#34;</span>: <span style="color:#f1fa8c">&#34;bytes&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;LastModified&#34;</span>: <span style="color:#f1fa8c">&#34;Fri, 17 Dec 2021 13:20:58 GMT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentLength&#34;</span>: 524288000,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;d8b61b2c0025919d5321461045c8226f\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;Einc9JkCj2itDk3BDSQJPAu1HoblkzfU&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentType&#34;</span>: <span style="color:#f1fa8c">&#34;binary/octet-stream&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;AES256&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Metadata&#34;</span>: <span style="color:#ff79c6">{}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>2021-12-17 13:20    <span style="color:#bd93f9">524288000</span>  d8b61b2c0025919d5321461045c8226f     s3://s3-imazaj/test.txt
+</span></span></code></pre></div><h3 id="pattern-2-objects-encrypted-with-sse-kms">Pattern 2: Objects Encrypted with SSE-KMS</h3>
+<p>S3 Bucket Configuration</p>
+<p><img src="/aws-s3-object-md5-etag/image-20211217222417849.png" alt="image-20211217222417849"></p>
+<h4 id="multipart-upload-case-1">Multipart Upload Case</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+</span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>2021-12-17 13:20    <span style="color:#bd93f9">524288000</span>  d8b61b2c0025919d5321461045c8226f     s3://s3-imazaj/test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ md5sum test.txt
+</span></span><span style="display:flex;"><span>d8b61b2c0025919d5321461045c8226f  test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3 cp test.txt  s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>upload: ./test.txt to s3://s3-imazaj/test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api head-object --bucket s3-imazaj --key test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;AcceptRanges&#34;</span>: <span style="color:#f1fa8c">&#34;bytes&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;LastModified&#34;</span>: <span style="color:#f1fa8c">&#34;Fri, 17 Dec 2021 13:24:52 GMT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentLength&#34;</span>: 524288000,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;24a147ee52b41c94f398613a46a06810-63\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;abQHe4HT0IMzx5biXy1olm6NqJKkk8Cs&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentType&#34;</span>: <span style="color:#f1fa8c">&#34;text/plain&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;aws:kms&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Metadata&#34;</span>: <span style="color:#ff79c6">{}</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;SSEKMSKeyId&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;BucketKeyEnabled&#34;</span>: <span style="color:#8be9fd;font-style:italic">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3cmd ls --list-md5 s3://s3-imazaj/
+</span></span><span style="display:flex;"><span>2021-12-17 13:24    <span style="color:#bd93f9">524288000</span>  24a147ee52b41c94f398613a46a06810-63  s3://s3-imazaj/test.txt
+</span></span></code></pre></div><p>Even using the <code>s3etag</code> tool, the ETag and MD5 values do not match.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ s3etag -t <span style="color:#bd93f9">8388608</span> -s <span style="color:#bd93f9">8388608</span> test.txt
+</span></span><span style="display:flex;"><span>2ab876e6e72b0fe9215ba306bea4f697-63
+</span></span></code></pre></div><h4 id="non-multipart-upload">Non-Multipart Upload</h4>
+<p>When encryption is used, even the non-multipart upload case fails.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api put-object --bucket s3-imazaj --key test.txt --body test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;dd6006c0c101d532e17cb992b04658b0\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;aws:kms&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;8k7ceRD0TRNWLTmiQlaqersys_0nZgln&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;SSEKMSKeyId&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;BucketKeyEnabled&#34;</span>: <span style="color:#8be9fd;font-style:italic">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws s3api head-object --bucket s3-imazaj --key test.txt
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;AcceptRanges&#34;</span>: <span style="color:#f1fa8c">&#34;bytes&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;LastModified&#34;</span>: <span style="color:#f1fa8c">&#34;Fri, 17 Dec 2021 13:26:25 GMT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentLength&#34;</span>: 524288000,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ETag&#34;</span>: <span style="color:#f1fa8c">&#34;\&#34;dd6006c0c101d532e17cb992b04658b0\&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;VersionId&#34;</span>: <span style="color:#f1fa8c">&#34;8k7ceRD0TRNWLTmiQlaqersys_0nZgln&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ContentType&#34;</span>: <span style="color:#f1fa8c">&#34;binary/octet-stream&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;ServerSideEncryption&#34;</span>: <span style="color:#f1fa8c">&#34;aws:kms&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Metadata&#34;</span>: <span style="color:#ff79c6">{}</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;SSEKMSKeyId&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:kms:ap-northeast-1:xxxxxxxxxxxxx:key/d2c7662c-19fa-40d2-a348-bbc2d7e79f6e&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;BucketKeyEnabled&#34;</span>: <span style="color:#8be9fd;font-style:italic">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span></code></pre></div><h3 id="references">References</h3>
+<ul>
+<li><a href="https://qiita.com/speaktech/items/0710a3de2628ef730500" target="_blank" rel="noopener noreferrer">Verifying Whether Data Copied to S3 Is Identical to the Source - Qiita</a>
+</li>
+<li><a href="https://techblog.recochoku.jp/3659" target="_blank" rel="noopener noreferrer">ETag Values for S3 Multipart Uploads | recochoku Tech Blog</a>
+</li>
+</ul>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-01-10-S3%e3%82%aa%e3%83%96%e3%82%b8%e3%82%a7%e3%82%af%e3%83%88%e3%81%aemd5%e3%82%84Etag%e3%81%ae%e9%96%a2%e4%bf%82%e6%80%a7%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6%e6%95%b4%e7%90%86%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-ecr-container-push-pull/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Notes on Pushing and Pulling Container Images …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-s3-object-checksum-how-to/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">How to Perform Integrity Checks on S3 Objects</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-s3-object-md5-etag%2f&text=Organizing&#43;the&#43;Relationship&#43;Between&#43;MD5&#43;and&#43;ETag&#43;for&#43;S3&#43;Objects" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-s3-object-md5-etag/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-ecr-container-push-pull/">Notes on Pushing and Pulling Container Images to/from ECR</a></li>
+    
+    <li><a href="/en/aws-mongodb-install/">Installing MongoDB (5.x) on Amazon Linux</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-data-prepare-query-execute/">Preparing Test Data and Running Queries for Redshift Spectrum</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-performance-check/">Checking Redshift Spectrum Performance</a></li>
+    
+    <li><a href="/en/aws-postgresql-execute-plan-visualization/">Visualizing PostgreSQL SQL Execution Plans (pev, gocmdpev)</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/s3/" class="tag-badge"><img src="/images/tags/s3.svg" alt="S3" class="tag-badge-icon" loading="lazy">S3</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#terminology">Terminology</a></li>
+        <li><a href="#pattern-1-objects-encrypted-with-sse-s3-or-plaintext">Pattern 1: Objects Encrypted with SSE-S3 or Plaintext</a>
+          <ul>
+            <li><a href="#bucket-configuration">Bucket Configuration</a></li>
+            <li><a href="#multipart-upload-case">Multipart Upload Case</a></li>
+            <li><a href="#non-multipart-upload-case">Non-Multipart Upload Case</a></li>
+          </ul>
+        </li>
+        <li><a href="#pattern-2-objects-encrypted-with-sse-kms">Pattern 2: Objects Encrypted with SSE-KMS</a>
+          <ul>
+            <li><a href="#multipart-upload-case-1">Multipart Upload Case</a></li>
+            <li><a href="#non-multipart-upload">Non-Multipart Upload</a></li>
+          </ul>
+        </li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

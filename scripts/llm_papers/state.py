@@ -12,12 +12,14 @@ logger = logging.getLogger(__name__)
 
 def load_state() -> dict:
     """Load processed papers state from JSON file."""
-    default = {"processed_ids": {}, "last_run": None}
+    default = {"processed_ids": {}, "seen_ids": {}, "last_run": None}
     if STATE_FILE.exists():
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         if "processed_ids" not in data:
             return default
+        if "seen_ids" not in data:
+            data["seen_ids"] = {}
         return data
     return default
 
@@ -36,8 +38,22 @@ def is_processed(state: dict, paper_id: str) -> bool:
 
 
 def mark_processed(state: dict, paper_id: str, title: str) -> None:
-    """Mark a paper as processed."""
+    """Mark a paper as processed (featured in blog)."""
     state["processed_ids"][paper_id] = {
         "title": title,
         "processed_at": datetime.now().isoformat(),
     }
+
+
+def is_seen(state: dict, paper_id: str) -> bool:
+    """Check if a paper has been seen in a previous fetch."""
+    return paper_id in state["seen_ids"]
+
+
+def mark_seen(state: dict, paper_id: str, title: str) -> None:
+    """Mark a paper as seen (fetched, regardless of whether it was featured)."""
+    if paper_id not in state["seen_ids"]:
+        state["seen_ids"][paper_id] = {
+            "title": title,
+            "first_seen_at": datetime.now().isoformat(),
+        }

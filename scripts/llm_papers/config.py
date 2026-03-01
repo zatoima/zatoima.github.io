@@ -60,6 +60,13 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
 REQUEST_DELAY = 3.0  # seconds between API calls
 
+# Popularity scoring
+POPULARITY_THRESHOLD = 3.0  # Minimum composite score to be considered "popular"
+MULTI_SOURCE_BONUS = 5.0  # Bonus for appearing in multiple sources
+HF_UPVOTE_WEIGHT = 1.0  # Weight for HuggingFace upvotes
+CITATION_WEIGHT = 2.0  # Weight for citation count
+MIN_PAPERS_TO_POST = 1  # Minimum popular papers required to publish a blog post
+
 # Hugo settings
 HUGO_TAGS = ["LLM", "AI", "論文"]
 HUGO_CATEGORIES = ["LLM", "AI", "論文"]

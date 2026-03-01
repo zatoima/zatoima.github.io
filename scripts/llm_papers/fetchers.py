@@ -17,6 +17,7 @@ from config import (
     HF_DAILY_PAPERS_URL,
     LLM_FILTER_KEYWORDS,
     MAX_RETRIES,
+    MULTI_SOURCE_BONUS,
     REQUEST_DELAY,
     RETRY_DELAY,
     SEMANTIC_SCHOLAR_KEYWORDS,
@@ -41,6 +42,7 @@ class Paper:
     doi: str | None = None
     categories: list[str] = field(default_factory=list)
     popularity_score: float = 0.0  # Higher = more popular
+    source_count: int = 1  # Number of sources this paper appeared in
 
 
 def _retry_request(func, *args, **kwargs):
@@ -266,20 +268,39 @@ def fetch_huggingface_daily_papers() -> list[Paper]:
 
 
 def deduplicate_papers(papers: list[Paper]) -> list[Paper]:
-    """Remove duplicate papers based on paper_id, preferring arXiv source."""
+    """Remove duplicate papers based on paper_id, preferring arXiv source.
+
+    Tracks how many sources each paper appeared in and applies a
+    multi-source bonus to the popularity score.
+    """
+    # Count occurrences per paper_id
+    id_count: dict[str, int] = {}
+    for paper in papers:
+        id_count[paper.paper_id] = id_count.get(paper.paper_id, 0) + 1
+
     seen = {}
     for paper in papers:
         key = paper.paper_id
         if key not in seen or paper.source == "arxiv":
             seen[key] = paper
 
-    # Also deduplicate by normalized title
+    # Also deduplicate by normalized title, tracking title-based source counts
+    title_to_ids: dict[str, list[str]] = {}
+    for paper in seen.values():
+        normalized = re.sub(r"\s+", " ", paper.title.lower().strip())
+        title_to_ids.setdefault(normalized, []).append(paper.paper_id)
+
     title_seen = {}
     unique = []
     for paper in seen.values():
         normalized = re.sub(r"\s+", " ", paper.title.lower().strip())
         if normalized not in title_seen:
             title_seen[normalized] = True
+            # source_count = direct ID matches + title-based matches
+            sc = max(id_count.get(paper.paper_id, 1), len(title_to_ids.get(normalized, [])))
+            paper.source_count = sc
+            if sc > 1:
+                paper.popularity_score += MULTI_SOURCE_BONUS
             unique.append(paper)
 
     logger.info(
