@@ -11,12 +11,16 @@
   var iconSmallMoon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   var iconSmallMonitor = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
 
+  var labelLight = btn ? btn.getAttribute('data-label-light') || 'Light' : 'Light';
+  var labelDark = btn ? btn.getAttribute('data-label-dark') || 'Dark' : 'Dark';
+  var labelSystem = btn ? btn.getAttribute('data-label-system') || 'System' : 'System';
+
   var dropdown = document.createElement('div');
   dropdown.className = 'theme-dropdown';
   dropdown.innerHTML =
-    '<button class="theme-dropdown-item" data-theme-value="light">' + iconSmallSun + ' ライト</button>' +
-    '<button class="theme-dropdown-item" data-theme-value="dark">' + iconSmallMoon + ' ダーク</button>' +
-    '<button class="theme-dropdown-item" data-theme-value="system">' + iconSmallMonitor + ' システム</button>';
+    '<button class="theme-dropdown-item" data-theme-value="light">' + iconSmallSun + ' ' + labelLight + '</button>' +
+    '<button class="theme-dropdown-item" data-theme-value="dark">' + iconSmallMoon + ' ' + labelDark + '</button>' +
+    '<button class="theme-dropdown-item" data-theme-value="system">' + iconSmallMonitor + ' ' + labelSystem + '</button>';
   btn.parentNode.appendChild(dropdown);
 
   function getStored() {

@@ -1,12 +1,15 @@
 // Search functionality
 (function() {
-  let searchData = null;
-  const overlay = document.getElementById('search-overlay');
-  const input = document.getElementById('search-input');
-  const results = document.getElementById('search-results');
-  const searchBtn = document.getElementById('search-btn');
+  var searchData = null;
+  var overlay = document.getElementById('search-overlay');
+  var input = document.getElementById('search-input');
+  var results = document.getElementById('search-results');
+  var searchBtn = document.getElementById('search-btn');
 
   if (!overlay || !input || !results) return;
+
+  var minCharsMsg = input ? input.getAttribute('data-min-chars') || 'Enter at least 2 characters' : 'Enter at least 2 characters';
+  var noResultsMsg = input ? input.getAttribute('data-no-results') || 'No results found' : 'No results found';
 
   function openSearch() {
     overlay.classList.add('active');
@@ -36,44 +39,43 @@
     if (e.key === 'Escape') closeSearch();
   });
 
-  async function loadSearchData() {
-    if (searchData) return searchData;
-    try {
-      const res = await fetch('/index.json');
-      searchData = await res.json();
-      return searchData;
-    } catch (e) {
-      console.error('Failed to load search data:', e);
-      return [];
-    }
+  function loadSearchData() {
+    if (searchData) return Promise.resolve(searchData);
+    var lang = document.documentElement.lang || 'ja';
+    var searchUrl = (lang === 'ja' || !lang) ? '/index.json' : '/' + lang + '/index.json';
+    return fetch(searchUrl)
+      .then(function(res) { return res.json(); })
+      .then(function(data) { searchData = data; return searchData; })
+      .catch(function(e) { console.error('Failed to load search data:', e); return []; });
   }
 
-  input.addEventListener('input', async function() {
-    const query = this.value.trim().toLowerCase();
+  input.addEventListener('input', function() {
+    var query = this.value.trim().toLowerCase();
     if (query.length < 2) {
-      results.innerHTML = '<div class="search-hint">2文字以上入力してください</div>';
+      results.innerHTML = '<div class="search-hint">' + minCharsMsg + '</div>';
       return;
     }
 
-    const data = await loadSearchData();
-    const keywords = query.split(/\s+/);
+    loadSearchData().then(function(data) {
+      var keywords = query.split(/\s+/);
 
-    const matched = data.filter(function(item) {
-      const text = (item.title + ' ' + item.content + ' ' + (item.tags || []).join(' ')).toLowerCase();
-      return keywords.every(function(kw) { return text.indexOf(kw) !== -1; });
-    }).slice(0, 20);
+      var matched = data.filter(function(item) {
+        var text = (item.title + ' ' + item.content + ' ' + (item.tags || []).join(' ')).toLowerCase();
+        return keywords.every(function(kw) { return text.indexOf(kw) !== -1; });
+      }).slice(0, 20);
 
-    if (matched.length === 0) {
-      results.innerHTML = '<div class="search-hint">見つかりませんでした</div>';
-      return;
-    }
+      if (matched.length === 0) {
+        results.innerHTML = '<div class="search-hint">' + noResultsMsg + '</div>';
+        return;
+      }
 
-    results.innerHTML = matched.map(function(item) {
-      return '<a href="' + item.url + '" class="search-result-item">' +
-        '<span class="search-result-title">' + escapeHtml(item.title) + '</span>' +
-        '<span class="search-result-date">' + item.date + '</span>' +
-        '</a>';
-    }).join('');
+      results.innerHTML = matched.map(function(item) {
+        return '<a href="' + item.url + '" class="search-result-item">' +
+          '<span class="search-result-title">' + escapeHtml(item.title) + '</span>' +
+          '<span class="search-result-date">' + item.date + '</span>' +
+          '</a>';
+      }).join('');
+    });
   });
 
   function escapeHtml(text) {
