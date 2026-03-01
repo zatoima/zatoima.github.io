@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Analyzing ALB (Application Load Balancer) Logs with Athena | my opinion is my own</title>
+<meta name="title" content="Analyzing ALB (Application Load Balancer) Logs with Athena" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,ALB,Athena," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-athena-alb-log-analitics.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Analyzing ALB (Application Load Balancer) Logs with Athena">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-09-02T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-09-02T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="ALB">
+    <meta property="article:tag" content="Athena">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Analyzing ALB (Application Load Balancer) Logs with Athena">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Analyzing ALB (Application Load Balancer) Logs with Athena\"",
+  "description": "\"\"",
+  "datePublished": "\"2020-09-02T00:00:00Z\"",
+  "dateModified": "\"2020-09-02T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-athena-alb-log-analitics.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1338 ,
+  "keywords": "[\"AWS\",\"ALB\",\"Athena\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-athena-alb-log-analitics.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-athena-alb-log-analitics.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Analyzing ALB (Application Load …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Analyzing ALB (Application Load Balancer) Logs with Athena</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2020-09-02'>
+            Published on 2020/09/02
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/alb/" class="tag-badge">ALB</a>
+          
+          <a href="https://zatoima.github.io/en/blog/athena/" class="tag-badge">Athena</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="enabling-elb-logs">Enabling ELB Logs</h3>
+<p>Enable access logs from &ldquo;Edit attributes&rdquo; under Attributes. After a while, ELB logs will accumulate in the specified S3 bucket.</p>
+<p><img src="/en/aws-athena-alb-log-analitics/image-20200902205725025.png" alt="image-20200902205725025"></p>
+<p><img src="/en/aws-athena-alb-log-analitics/image-20200902205749483.png" alt="image-20200902205749483"></p>
+<h3 id="athena">Athena</h3>
+<h4 id="create-a-database-in-athena">Create a Database in Athena</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">database</span> alb_db
+</span></span></code></pre></div><h4 id="create-a-table-in-athena">Create a Table in Athena</h4>
+<p>The path specified for LOCATION should be the Bucket and path specified when configuring ELB access logs. After creating this table, you can issue SQL-based queries using Athena.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">EXTERNAL</span> <span style="color:#ff79c6">TABLE</span> <span style="color:#ff79c6">IF</span> <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">EXISTS</span> alb_logs (
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">type</span> string,
+</span></span><span style="display:flex;"><span>            time string,
+</span></span><span style="display:flex;"><span>            elb string,
+</span></span><span style="display:flex;"><span>            client_ip string,
+</span></span><span style="display:flex;"><span>            client_port <span style="color:#8be9fd;font-style:italic">int</span>,
+</span></span><span style="display:flex;"><span>            target_ip string,
+</span></span><span style="display:flex;"><span>            target_port <span style="color:#8be9fd;font-style:italic">int</span>,
+</span></span><span style="display:flex;"><span>            request_processing_time double,
+</span></span><span style="display:flex;"><span>            target_processing_time double,
+</span></span><span style="display:flex;"><span>            response_processing_time double,
+</span></span><span style="display:flex;"><span>            elb_status_code string,
+</span></span><span style="display:flex;"><span>            target_status_code string,
+</span></span><span style="display:flex;"><span>            received_bytes <span style="color:#8be9fd;font-style:italic">bigint</span>,
+</span></span><span style="display:flex;"><span>            sent_bytes <span style="color:#8be9fd;font-style:italic">bigint</span>,
+</span></span><span style="display:flex;"><span>            request_verb string,
+</span></span><span style="display:flex;"><span>            request_url string,
+</span></span><span style="display:flex;"><span>            request_proto string,
+</span></span><span style="display:flex;"><span>            user_agent string,
+</span></span><span style="display:flex;"><span>            ssl_cipher string,
+</span></span><span style="display:flex;"><span>            ssl_protocol string,
+</span></span><span style="display:flex;"><span>            target_group_arn string,
+</span></span><span style="display:flex;"><span>            trace_id string,
+</span></span><span style="display:flex;"><span>            domain_name string,
+</span></span><span style="display:flex;"><span>            chosen_cert_arn string,
+</span></span><span style="display:flex;"><span>            matched_rule_priority string,
+</span></span><span style="display:flex;"><span>            request_creation_time string,
+</span></span><span style="display:flex;"><span>            actions_executed string,
+</span></span><span style="display:flex;"><span>            redirect_url string,
+</span></span><span style="display:flex;"><span>            lambda_error_reason string,
+</span></span><span style="display:flex;"><span>            target_port_list string,
+</span></span><span style="display:flex;"><span>            target_status_code_list string,
+</span></span><span style="display:flex;"><span>            new_field string
+</span></span><span style="display:flex;"><span>            )
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">ROW</span> FORMAT SERDE <span style="color:#f1fa8c">&#39;org.apache.hadoop.hive.serde2.RegexSerDe&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">WITH</span> SERDEPROPERTIES (
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#39;serialization.format&#39;</span> <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;1&#39;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#39;input.regex&#39;</span> <span style="color:#ff79c6">=</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#39;([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*):([0-9]*) ([^ ]*)[:-]([0-9]*) ([-.0-9]*) ([-.0-9]*) ([-.0-9]*) (|[-0-9]*) (-|[-0-9]*) ([-0-9]*) ([-0-9]*) \&#34;([^ ]*) ([^ ]*) (- |[^ ]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([A-Z0-9-]+) ([A-Za-z0-9.-]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; ([-.0-9]*) ([^ ]*) \&#34;([^\&#34;]*)\&#34; \&#34;([^\&#34;]*)\&#34; \&#34;([^ ]*)\&#34; \&#34;([^\s]+)\&#34; \&#34;([^\s]+)\&#34;(.*)&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">LOCATION</span> <span style="color:#f1fa8c">&#39;s3://&lt;Bucket name&gt;/AWSLogs/&lt;Account ID&gt;/elasticloadbalancing/ap-northeast-1/&#39;</span>;
+</span></span></code></pre></div><p>After creating this table, you can issue SQL-based queries using Athena. The created table looks like this:</p>
+<p><img src="/en/aws-athena-alb-log-analitics/image-20200902210737819.png" alt="image-20200902210737819"></p>
+<p>For descriptions of each column, refer to the following:</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html</a>
+</p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">Field</th>
+          <th style="text-align: left">Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left">type</td>
+          <td style="text-align: left">The type of request or connection. Valid values are (ignore other values): <code>http</code> — HTTP, <code>https</code> — HTTP over SSL/TLS, <code>h2</code> — HTTP/2 over SSL/TLS, <code>ws</code> — WebSockets, <code>wss</code> — WebSockets over SSL/TLS</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">time</td>
+          <td style="text-align: left">The time when the load balancer generated a response to the client (ISO 8601 format). For WebSocket, this is the time the connection is closed.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">elb</td>
+          <td style="text-align: left">The resource ID of the load balancer. When parsing access log entries, the resource ID can contain slashes (/).</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">client:port</td>
+          <td style="text-align: left">The IP address and port of the client making the request.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">target:port</td>
+          <td style="text-align: left">The IP address and port of the target that processed this request. If the client did not send the full request, the load balancer cannot dispatch the request to a target, and this value is set to -. For Lambda function targets, this value is set to -. If the request was blocked by AWS WAF, this value is set to - and the elb_status_code value is set to 403.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">request_processing_time</td>
+          <td style="text-align: left">The total elapsed time (in seconds, with millisecond precision) from the time the load balancer received the request until the time it sent it to a target. Set to -1 if the load balancer can&rsquo;t dispatch the request to a target.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">target_processing_time</td>
+          <td style="text-align: left">The total elapsed time (in seconds, with millisecond precision) from the time the load balancer sent the request to a target until the target started sending the response headers. Set to -1 if the load balancer can&rsquo;t dispatch the request to a target.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">response_processing_time</td>
+          <td style="text-align: left">The total elapsed time (in seconds, with millisecond precision) from the time the load balancer received the response headers from the target until it started sending the response to the client. Includes both the queuing time at the load balancer and the connection acquisition time from the load balancer to the client. Set to -1 if the load balancer can&rsquo;t send the request to a target.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">elb_status_code</td>
+          <td style="text-align: left">The status code of the response from the load balancer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">target_status_code</td>
+          <td style="text-align: left">The status code of the response from the target. This value is recorded only if a connection was established to the target and the target sent a response. Otherwise, it is set to -.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">received_bytes</td>
+          <td style="text-align: left">The size of the request, in bytes, received from the client (requester). For HTTP requests, this includes the headers. For WebSocket, this is the total number of bytes received from the client on the connection.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">sent_bytes</td>
+          <td style="text-align: left">The size of the response, in bytes, sent to the client (requester). For HTTP requests, this includes the headers. For WebSocket, this is the total number of bytes sent to the client on the connection.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;request&rdquo;</td>
+          <td style="text-align: left">The request line from the client, enclosed in double quotes, logged in the following format: HTTP method + protocol://host:port/uri + HTTP version. The load balancer preserves the URL sent by the client as-is when recording the request URI.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;user_agent&rdquo;</td>
+          <td style="text-align: left">A User-Agent string that identifies the client that originated the request (enclosed in double quotes).</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ssl_cipher</td>
+          <td style="text-align: left">[HTTPS listeners] The SSL cipher. This value is set to - if the listener is not an HTTPS listener.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">ssl_protocol</td>
+          <td style="text-align: left">[HTTPS listeners] The SSL protocol. This value is set to - if the listener is not an HTTPS listener.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">target_group_arn</td>
+          <td style="text-align: left">The Amazon Resource Name (ARN) of the target group.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;trace_id&rdquo;</td>
+          <td style="text-align: left">The content of the X-Amzn-Trace-Id header (enclosed in double quotes).</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&lt;domain_name&gt;</td>
+          <td style="text-align: left">[HTTPS listeners] The SNI domain provided by the client during the TLS handshake (enclosed in double quotes). Set to - if the client doesn&rsquo;t support SNI or the domain doesn&rsquo;t match a certificate and the default certificate is presented to the client.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">chosen_cert_arn</td>
+          <td style="text-align: left">[HTTPS listeners] The ARN of the certificate presented to the client (enclosed in double quotes). Set to session-reused if the session is reused. Set to - if the listener is not an HTTPS listener.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">matched_rule_priority</td>
+          <td style="text-align: left">The priority value of the rule that matched the request. If a rule matched, this is a value from 1 to 50,000. If no rule matched and the default action was executed, this value is set to 0. If an error occurs while evaluating the rules, it is set to -1. For other errors, it is set to -.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">request_creation_time</td>
+          <td style="text-align: left">The time when the load balancer received the request from the client (ISO 8601 format).</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;actions_executed&rdquo;</td>
+          <td style="text-align: left">The actions taken when processing the request (enclosed in double quotes). This is a comma-separated list that can include the values described in Actions taken. Set to - if no actions were executed, such as for a malformed request.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;redirect_url&rdquo;</td>
+          <td style="text-align: left">The URL of the redirect target for the redirect action in the HTTP response&rsquo;s location header (enclosed in double quotes). Set to - if no redirect action was executed.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;error_reason&rdquo;</td>
+          <td style="text-align: left">The error reason code (enclosed in double quotes). If the request failed, this is one of the error codes described in Error reason codes. Set to - if the actions taken do not include an authenticate action or if the target is not a Lambda function.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;target:port_list&rdquo;</td>
+          <td style="text-align: left">A space-delimited list of IP addresses and ports for the targets that processed this request (enclosed in double quotes). Currently this list can contain one item and it matches the target:port field. Set to - if the client did not send the full request. Set to - for Lambda function targets.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left">&ldquo;target_status_code_list&rdquo;</td>
+          <td style="text-align: left">A space-delimited list of status codes from the responses of the targets (enclosed in double quotes). Currently this list can contain one item and it matches the target_status_code field. Recorded only if a connection was established to the target and the target sent a response. Otherwise, set to -.</td>
+      </tr>
+  </tbody>
+</table>
+<p>Here are sample query examples. For publicly exposed ELBs, you&rsquo;ll notice many suspicious attacks coming in.</p>
+<h5 id="display-the-first-100-access-log-entries-in-ascending-order">Display the First 100 Access Log Entries in Ascending Order</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> time <span style="color:#ff79c6">ASC</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">100</span>;
+</span></span></code></pre></div><h5 id="list-all-client-ip-addresses-that-accessed-the-alb-and-how-many-times">List All Client IP Addresses That Accessed the ALB and How Many Times</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">distinct</span> client_ip, <span style="color:#ff79c6">count</span>() <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">from</span> alb_logs
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span>() <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><h5 id="list-the-average-amount-of-data-in-kilobytes-passing-through-the-alb-per-requestresponse-pair">List the Average Amount of Data (in Kilobytes) Passing Through the ALB per Request/Response Pair</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> (<span style="color:#ff79c6">avg</span>(sent_bytes)<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">0</span> <span style="color:#ff79c6">+</span> <span style="color:#ff79c6">avg</span>(received_bytes)<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span>.<span style="color:#bd93f9">0</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">as</span> prewarm_kilobytes <span style="color:#ff79c6">from</span> alb_logs;
+</span></span></code></pre></div><h5 id="list-the-number-of-times-a-given-url-was-visited-by-client-in-descending-order">List the Number of Times a Given URL Was Visited, by Client, in Descending Order</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> client_ip, elb, request_url, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">from</span> alb_logs
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip, elb, request_url
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span> <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><h5 id="list-the-top-10-urls-most-frequently-accessed-by-firefox-users">List the Top 10 URLs Most Frequently Accessed by Firefox Users</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> request_url, user_agent, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">count</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> user_agent <span style="color:#ff79c6">LIKE</span> <span style="color:#f1fa8c">&#39;%Firefox%&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> request_url, user_agent
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">DESC</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">10</span>;
+</span></span></code></pre></div><h5 id="list-clients-by-amount-of-data-sent-in-megabytes-to-the-alb-in-descending-order">List Clients by Amount of Data Sent (in Megabytes) to the ALB, in Descending Order</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> client_ip, <span style="color:#ff79c6">sum</span>(received_bytes<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000000</span>.<span style="color:#bd93f9">0</span>) <span style="color:#ff79c6">as</span> client_datareceived_megabytes
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> alb_logs
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">by</span> client_ip
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">by</span> client_datareceived_megabytes <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><h3 id="references">References</h3>
+<blockquote>
+<p>Analyze load balancer access logs using Athena <a href="https://aws.amazon.com/premiumsupport/knowledge-center/athena-analyze-access-logs/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/premiumsupport/knowledge-center/athena-analyze-access-logs/</a>
+</p>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2020-09-02-ALB%28Application%20Load%20Balancer%29%e3%81%ae%e3%83%ad%e3%82%b0%e3%82%92Athena%e3%81%a7%e5%88%86%e6%9e%90/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-ec2-userdata-apache-install.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Auto-Installing Apache on EC2 Using User Data</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-docs-guthub-commit-log.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Checking AWS Documentation Update History on …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-athena-alb-log-analitics.html&text=Analyzing&#43;ALB&#43;%28Application&#43;Load&#43;Balancer%29&#43;Logs&#43;with&#43;Athena" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-athena-alb-log-analitics.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-ec2-userdata-apache-install.html">Auto-Installing Apache on EC2 Using User Data</a></li>
+    
+    <li><a href="/en/aws-postgresql-rdsproxy-failover.html">Performing Failover of Aurora PostgreSQL Using RDS Proxy</a></li>
+    
+    <li><a href="/en/wordpress-ec2-multipul-host.html">How to Host Multiple WordPress Sites on a Single EC2 Instance</a></li>
+    
+    <li><a href="/en/aws-neptune-create-instance-execute-query-try.html">From Creating an Amazon Neptune Instance to Loading Data and Executing Queries</a></li>
+    
+    <li><a href="/en/aws-rds-oneliner-get.html">Getting RDS DB Parameters with a One-liner</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/alb/" class="tag-badge">ALB</a>
+  
+  <a href="https://zatoima.github.io/en/blog/athena/" class="tag-badge">Athena</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#enabling-elb-logs">Enabling ELB Logs</a></li>
+        <li><a href="#athena">Athena</a>
+          <ul>
+            <li><a href="#create-a-database-in-athena">Create a Database in Athena</a></li>
+            <li><a href="#create-a-table-in-athena">Create a Table in Athena</a></li>
+          </ul>
+        </li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

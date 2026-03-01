@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Using PostGIS (Geospatial) in Aurora PostgreSQL | my opinion is my own</title>
+<meta name="title" content="Using PostGIS (Geospatial) in Aurora PostgreSQL" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Aurora,PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-aurora-postgresql-postgis/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Using PostGIS (Geospatial) in Aurora PostgreSQL">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-07-05T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-07-05T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Aurora">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Using PostGIS (Geospatial) in Aurora PostgreSQL">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Using PostGIS (Geospatial) in Aurora PostgreSQL\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-07-05T00:00:00Z\"",
+  "dateModified": "\"2022-07-05T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-aurora-postgresql-postgis/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1256 ,
+  "keywords": "[\"AWS\",\"Aurora\",\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-aurora-postgresql-postgis/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-aurora-postgresql-postgis/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Using PostGIS (Geospatial) in Aurora …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Using PostGIS (Geospatial) in Aurora PostgreSQL</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-07-05'>
+            Published on 2022/07/05
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="prerequisites">Prerequisites</h3>
+<hr>
+<h4 id="reference">Reference</h4>
+<ul>
+<li><a href="https://docs.aws.amazon.com/en_us/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.PostGIS.html" target="_blank" rel="noopener noreferrer">Managing Spatial Data with the PostGIS Extension - Amazon Relational Database Service</a>
+</li>
+</ul>
+<h4 id="enabling-extensions">Enabling Extensions</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION postgis;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION fuzzystrmatch;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION postgis_tiger_geocoder;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION postgis_topology;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> EXTENSION postgis;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> EXTENSION fuzzystrmatch;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> EXTENSION postgis_tiger_geocoder;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> EXTENSION postgis_topology;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> EXTENSION
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> \dx
+</span></span><span style="display:flex;"><span>                                              List <span style="color:#ff79c6">of</span> installed extensions
+</span></span><span style="display:flex;"><span>          Name          <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Version</span> <span style="color:#ff79c6">|</span>   <span style="color:#ff79c6">Schema</span>   <span style="color:#ff79c6">|</span>                              Description
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">------------------------+---------+------------+------------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> aws_commons            <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">2</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> Common <span style="color:#ff79c6">data</span> types across AWS services
+</span></span><span style="display:flex;"><span> aws_s3                 <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">1</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> AWS S3 extension <span style="color:#ff79c6">for</span> importing <span style="color:#ff79c6">data</span> <span style="color:#ff79c6">from</span> S3
+</span></span><span style="display:flex;"><span> fuzzystrmatch          <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">1</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> determine similarities <span style="color:#ff79c6">and</span> distance <span style="color:#ff79c6">between</span> strings
+</span></span><span style="display:flex;"><span> pg_buffercache         <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">3</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> examine the shared buffer <span style="color:#ff79c6">cache</span>
+</span></span><span style="display:flex;"><span> pg_stat_statements     <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">8</span>     <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> track planning <span style="color:#ff79c6">and</span> execution <span style="color:#ff79c6">statistics</span> <span style="color:#ff79c6">of</span> <span style="color:#ff79c6">all</span> <span style="color:#ff79c6">SQL</span> statements executed
+</span></span><span style="display:flex;"><span> plpgsql                <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">0</span>     <span style="color:#ff79c6">|</span> pg_catalog <span style="color:#ff79c6">|</span> PL<span style="color:#ff79c6">/</span>pgSQL <span style="color:#ff79c6">procedural</span> <span style="color:#ff79c6">language</span>
+</span></span><span style="display:flex;"><span> postgis                <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span>.<span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">5</span>   <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">public</span>     <span style="color:#ff79c6">|</span> PostGIS geometry <span style="color:#ff79c6">and</span> geography spatial types <span style="color:#ff79c6">and</span> functions
+</span></span><span style="display:flex;"><span> postgis_tiger_geocoder <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span>.<span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">5</span>   <span style="color:#ff79c6">|</span> tiger      <span style="color:#ff79c6">|</span> PostGIS tiger geocoder <span style="color:#ff79c6">and</span> reverse geocoder
+</span></span><span style="display:flex;"><span> postgis_topology       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">3</span>.<span style="color:#bd93f9">1</span>.<span style="color:#bd93f9">5</span>   <span style="color:#ff79c6">|</span> topology   <span style="color:#ff79c6">|</span> PostGIS topology spatial types <span style="color:#ff79c6">and</span> functions
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">9</span> <span style="color:#ff79c6">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span></code></pre></div><h4 id="version-check">Version Check</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> postgis_version();
+</span></span><span style="display:flex;"><span>            postgis_version
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">---------------------------------------
+</span></span></span><span style="display:flex;"><span> <span style="color:#bd93f9">3</span>.<span style="color:#bd93f9">1</span> USE_GEOS<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> USE_PROJ<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> USE_STATS<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span></code></pre></div><h4 id="permission-changes">Permission Changes</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> tiger <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> tiger_data <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> topology <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> \dn
+</span></span><span style="display:flex;"><span>       List <span style="color:#ff79c6">of</span> schemas
+</span></span><span style="display:flex;"><span>    Name     <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">Owner</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------------+---------------
+</span></span></span><span style="display:flex;"><span> aws_commons <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> aws_s3      <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">public</span>      <span style="color:#ff79c6">|</span> postgres
+</span></span><span style="display:flex;"><span> tiger       <span style="color:#ff79c6">|</span> rdsadmin
+</span></span><span style="display:flex;"><span> tiger_data  <span style="color:#ff79c6">|</span> rdsadmin
+</span></span><span style="display:flex;"><span> topology    <span style="color:#ff79c6">|</span> rdsadmin
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">6</span> <span style="color:#ff79c6">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> tiger <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> tiger_data <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span> topology <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SCHEMA</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> \dn
+</span></span><span style="display:flex;"><span>       List <span style="color:#ff79c6">of</span> schemas
+</span></span><span style="display:flex;"><span>    Name     <span style="color:#ff79c6">|</span>     <span style="color:#ff79c6">Owner</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------------+---------------
+</span></span></span><span style="display:flex;"><span> aws_commons <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> aws_s3      <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">public</span>      <span style="color:#ff79c6">|</span> postgres
+</span></span><span style="display:flex;"><span> tiger       <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> tiger_data  <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span> topology    <span style="color:#ff79c6">|</span> rds_superuser
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">6</span> <span style="color:#ff79c6">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span></code></pre></div><p>Transfer object ownership to the <code>rds_superuser</code> role.</p>
+<p>This generates ALTER statements for execution:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">FUNCTION</span> <span style="color:#ff79c6">exec</span>(<span style="color:#8be9fd;font-style:italic">text</span>) <span style="color:#ff79c6">returns</span> <span style="color:#8be9fd;font-style:italic">text</span> <span style="color:#ff79c6">language</span> plpgsql <span style="color:#ff79c6">volatile</span> <span style="color:#ff79c6">AS</span> $f$ <span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">EXECUTE</span> $<span style="color:#bd93f9">1</span>; <span style="color:#ff79c6">RETURN</span> $<span style="color:#bd93f9">1</span>; <span style="color:#ff79c6">END</span>; $f$;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">exec</span>(<span style="color:#f1fa8c">&#39;ALTER TABLE &#39;</span> <span style="color:#ff79c6">||</span> quote_ident(s.nspname) <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39;.&#39;</span> <span style="color:#ff79c6">||</span> quote_ident(s.relname) <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39; OWNER TO rds_superuser;&#39;</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">FROM</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span> nspname, relname
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span> pg_class <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">JOIN</span> pg_namespace n <span style="color:#ff79c6">ON</span> (<span style="color:#ff79c6">c</span>.relnamespace <span style="color:#ff79c6">=</span> n.oid)
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">WHERE</span> nspname <span style="color:#ff79c6">in</span> (<span style="color:#f1fa8c">&#39;tiger&#39;</span>,<span style="color:#f1fa8c">&#39;topology&#39;</span>) <span style="color:#ff79c6">AND</span>
+</span></span><span style="display:flex;"><span>    relkind <span style="color:#ff79c6">IN</span> (<span style="color:#f1fa8c">&#39;r&#39;</span>,<span style="color:#f1fa8c">&#39;S&#39;</span>,<span style="color:#f1fa8c">&#39;v&#39;</span>) <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> relkind <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;S&#39;</span>)
+</span></span><span style="display:flex;"><span>s;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">FUNCTION</span> <span style="color:#ff79c6">exec</span>(<span style="color:#8be9fd;font-style:italic">text</span>) <span style="color:#ff79c6">returns</span> <span style="color:#8be9fd;font-style:italic">text</span> <span style="color:#ff79c6">language</span> plpgsql <span style="color:#ff79c6">volatile</span> <span style="color:#ff79c6">AS</span> $f$ <span style="color:#ff79c6">BEGIN</span> <span style="color:#ff79c6">EXECUTE</span> $<span style="color:#bd93f9">1</span>; <span style="color:#ff79c6">RETURN</span> $<span style="color:#bd93f9">1</span>; <span style="color:#ff79c6">END</span>; $f$;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">FUNCTION</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">exec</span>(<span style="color:#f1fa8c">&#39;ALTER TABLE &#39;</span> <span style="color:#ff79c6">||</span> quote_ident(s.nspname) <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39;.&#39;</span> <span style="color:#ff79c6">||</span> quote_ident(s.relname) <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39; OWNER TO rds_superuser;&#39;</span>)
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>   <span style="color:#ff79c6">FROM</span> (
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>     <span style="color:#ff79c6">SELECT</span> nspname, relname
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>     <span style="color:#ff79c6">FROM</span> pg_class <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">JOIN</span> pg_namespace n <span style="color:#ff79c6">ON</span> (<span style="color:#ff79c6">c</span>.relnamespace <span style="color:#ff79c6">=</span> n.oid)
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>     <span style="color:#ff79c6">WHERE</span> nspname <span style="color:#ff79c6">in</span> (<span style="color:#f1fa8c">&#39;tiger&#39;</span>,<span style="color:#f1fa8c">&#39;topology&#39;</span>) <span style="color:#ff79c6">AND</span>
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>     relkind <span style="color:#ff79c6">IN</span> (<span style="color:#f1fa8c">&#39;r&#39;</span>,<span style="color:#f1fa8c">&#39;S&#39;</span>,<span style="color:#f1fa8c">&#39;v&#39;</span>) <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> relkind <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;S&#39;</span>)
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> s;
+</span></span><span style="display:flex;"><span>                                <span style="color:#ff79c6">exec</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------------------------------------------------------------------
+</span></span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.loader_variables <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.loader_lookuptables <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zip_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.tract <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.geocode_settings_default <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.tabblock <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.county <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.bg <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.direction_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_gaz <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.geocode_settings <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_lex <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.<span style="color:#ff79c6">state</span> <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_rules <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.secondary_unit_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> topology.topology <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> topology.layer <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.place <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zip_state <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zip_state_loc <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.state_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.cousub <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.street_type_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.edges <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.place_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.addrfeat <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.county_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.faces <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.countysub_lookup <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.featnames <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zip_lookup_all <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.addr <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zip_lookup_base <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zcta5 <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.tabblock20 <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.loader_platform <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_lex_id_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.county_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.state_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.place_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.cousub_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.edges_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.addrfeat_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.faces_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.featnames_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.addr_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.zcta5_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.tract_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.tabblock_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.bg_gid_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_gaz_id_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> tiger.pagc_rules_id_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">TABLE</span> topology.topology_id_seq <span style="color:#ff79c6">OWNER</span> <span style="color:#ff79c6">TO</span> rds_superuser;
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">53</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><h3 id="using-postgis">Using PostGIS</h3>
+<hr>
+<h4 id="test-1">Test 1</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> t1 (id <span style="color:#8be9fd;font-style:italic">int</span> <span style="color:#ff79c6">primary</span> <span style="color:#ff79c6">key</span>);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> addGeometryColumn(<span style="color:#f1fa8c">&#39;t1&#39;</span>, <span style="color:#f1fa8c">&#39;p1&#39;</span>, <span style="color:#bd93f9">4326</span>, <span style="color:#f1fa8c">&#39;POINT&#39;</span>, <span style="color:#bd93f9">2</span>);
+</span></span><span style="display:flex;"><span>             addgeometrycolumn
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-------------------------------------------
+</span></span></span><span style="display:flex;"><span> <span style="color:#ff79c6">public</span>.t1.p1 SRID:<span style="color:#bd93f9">4326</span> <span style="color:#ff79c6">TYPE</span>:POINT DIMS:<span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> \d t1
+</span></span><span style="display:flex;"><span>                       <span style="color:#ff79c6">Table</span> <span style="color:#f1fa8c">&#34;public.t1&#34;</span>
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">Column</span> <span style="color:#ff79c6">|</span>         <span style="color:#ff79c6">Type</span>         <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Collation</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Nullable</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">Default</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------+----------------------+-----------+----------+---------
+</span></span></span><span style="display:flex;"><span> id     <span style="color:#ff79c6">|</span> <span style="color:#8be9fd;font-style:italic">integer</span>              <span style="color:#ff79c6">|</span>           <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">not</span> <span style="color:#ff79c6">null</span> <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span> p1     <span style="color:#ff79c6">|</span> geometry(Point,<span style="color:#bd93f9">4326</span>) <span style="color:#ff79c6">|</span>           <span style="color:#ff79c6">|</span>          <span style="color:#ff79c6">|</span>
+</span></span><span style="display:flex;"><span>Indexes:
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;t1_pkey&#34;</span> <span style="color:#ff79c6">PRIMARY</span> <span style="color:#ff79c6">KEY</span>, btree (id)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> t1 <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">1</span>, ST_GeomFromText(<span style="color:#f1fa8c">&#39;POINT(139 36)&#39;</span>,<span style="color:#bd93f9">4326</span>));
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#bd93f9">0</span> <span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> id, ST_AsText(p1) <span style="color:#ff79c6">FROM</span> t1;
+</span></span><span style="display:flex;"><span> id <span style="color:#ff79c6">|</span>   st_astext
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">----+---------------
+</span></span></span><span style="display:flex;"><span>  <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span> <span style="color:#bd93f9">36</span>)
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span> id,
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>   ST_Transform(p1, <span style="color:#bd93f9">32654</span>) <span style="color:#ff79c6">&lt;-&gt;</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>   ST_Transform(ST_GeomFromText(<span style="color:#f1fa8c">&#39;POINT(139.11234 35.998765)&#39;</span>, <span style="color:#bd93f9">4326</span>), <span style="color:#bd93f9">32654</span>)
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>   <span style="color:#ff79c6">AS</span> distance <span style="color:#ff79c6">FROM</span> t1 <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> distance ;
+</span></span><span style="display:flex;"><span> id <span style="color:#ff79c6">|</span>      distance
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">----+--------------------
+</span></span></span><span style="display:flex;"><span>  <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">10129</span>.<span style="color:#bd93f9">774748121428</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span></code></pre></div><h4 id="test-2">Test 2</h4>
+<h4 id="create-table">Create Table</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> geo_sample (
+</span></span><span style="display:flex;"><span> id <span style="color:#8be9fd;font-style:italic">integer</span> <span style="color:#ff79c6">PRIMARY</span> <span style="color:#ff79c6">KEY</span>,
+</span></span><span style="display:flex;"><span> name <span style="color:#8be9fd;font-style:italic">varchar</span>(<span style="color:#bd93f9">255</span>),
+</span></span><span style="display:flex;"><span> geom geometry(POINT, <span style="color:#bd93f9">4326</span>)
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><h4 id="insert-data">Insert Data</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> geo_sample <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">1</span>, <span style="color:#f1fa8c">&#39;Omotesando Station&#39;</span>, ST_GeomFromText(<span style="color:#f1fa8c">&#39;POINT(139.712288 35.664342)&#39;</span>,<span style="color:#bd93f9">4326</span>));
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> geo_sample <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">2</span>, <span style="color:#f1fa8c">&#39;Aoyama-itchome Station&#39;</span>, ST_GeomFromText(<span style="color:#f1fa8c">&#39;POINT(139.725146 35.672963)&#39;</span>,<span style="color:#bd93f9">4326</span>));
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> geo_sample <span style="color:#ff79c6">VALUES</span> (<span style="color:#bd93f9">3</span>, <span style="color:#f1fa8c">&#39;Akasaka Station&#39;</span>, ST_GeomFromText(<span style="color:#f1fa8c">&#39;POINT(139.7365419 35.671949)&#39;</span>,<span style="color:#bd93f9">4326</span>));
+</span></span></code></pre></div><h4 id="calculate-distance-between-two-points-st_distance">Calculate Distance Between Two Points: ST_Distance()</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">select</span> a.name <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39; to &#39;</span> <span style="color:#ff79c6">||</span> b.name,
+</span></span><span style="display:flex;"><span>ST_Distance(
+</span></span><span style="display:flex;"><span> ST_Transform(a.geom, <span style="color:#bd93f9">2163</span>),
+</span></span><span style="display:flex;"><span> ST_Transform(b.geom, <span style="color:#bd93f9">2163</span>))
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">from</span> geo_sample a, geo_sample b
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">where</span> a.name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Omotesando Station&#39;</span> <span style="color:#ff79c6">and</span> b.name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Aoyama-itchome Station&#39;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> a.name <span style="color:#ff79c6">||</span> <span style="color:#f1fa8c">&#39; to &#39;</span> <span style="color:#ff79c6">||</span> b.name,
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> ST_Distance(
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>  ST_Transform(a.geom, <span style="color:#bd93f9">2163</span>),
+</span></span><span style="display:flex;"><span>postgres(<span style="color:#ff79c6">&gt;</span>  ST_Transform(b.geom, <span style="color:#bd93f9">2163</span>))
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">from</span> geo_sample a, geo_sample b
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">where</span> a.name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Omotesando Station&#39;</span> <span style="color:#ff79c6">and</span> b.name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Aoyama-itchome Station&#39;</span>;
+</span></span><span style="display:flex;"><span>               <span style="color:#ff79c6">?</span><span style="color:#ff79c6">column</span><span style="color:#ff79c6">?</span>               <span style="color:#ff79c6">|</span>    st_distance
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------------------------------------+--------------------
+</span></span></span><span style="display:flex;"><span> Omotesando Station <span style="color:#ff79c6">to</span> Aoyama<span style="color:#ff79c6">-</span>itchome <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1184</span>.<span style="color:#bd93f9">3450716154289</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
+</span></span></code></pre></div><h4 id="check-with-pgadmin">Check with PgAdmin</h4>
+<p>You can easily verify with PgAdmin as well.</p>
+<p><img src="/en/aws-aurora-postgresql-postgis/image-20220705172110215.png" alt="image-20220705172110215"></p>
+<h4 id="test-3">Test 3</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> geotable (
+</span></span><span style="display:flex;"><span>    id   <span style="color:#8be9fd;font-style:italic">SERIAL</span> <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">NULL</span> <span style="color:#ff79c6">PRIMARY</span> <span style="color:#ff79c6">KEY</span>,
+</span></span><span style="display:flex;"><span>    name <span style="color:#8be9fd;font-style:italic">varchar</span> (<span style="color:#bd93f9">255</span>) <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">NULL</span>,
+</span></span><span style="display:flex;"><span>    geom geography(POINT, <span style="color:#bd93f9">4326</span>) <span style="color:#ff79c6">NOT</span> <span style="color:#ff79c6">NULL</span>
+</span></span><span style="display:flex;"><span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Insert data
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> geotable (name, geom) <span style="color:#ff79c6">VALUES</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Ueno Station&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.777254 35.713768)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Saigo Takamori Statue&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.774029 35.711846)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Ueno Forest Art Museum&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.774744 35.712737)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Shinobazu Pond Benten&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.770872 35.712351)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Dr. Noguchi Hideyo Statue&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.775696 35.716293)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;National Museum of Western Art&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.775803 35.71542)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;National Museum of Nature and Science&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.776544 35.716319)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Tokyo Metropolitan Art Museum&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.772776 35.717186)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Tokyo National Museum&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.776462 35.718883)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Hanayashiki&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.794547 35.71528)&#39;</span>)),
+</span></span><span style="display:flex;"><span>(<span style="color:#f1fa8c">&#39;Kaminarimon Gate&#39;</span>, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.792692 35.710635)&#39;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Create spatial index
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">INDEX</span> gist_geotable <span style="color:#ff79c6">on</span> geotable <span style="color:#ff79c6">USING</span> GIST (geom);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    name,
+</span></span><span style="display:flex;"><span>    ST_AsText(geom),
+</span></span><span style="display:flex;"><span>    ST_Distance(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.777254 35.713768)&#39;</span>, geom) <span style="color:#ff79c6">as</span> dist
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> geotable
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> ST_DWithin(geom, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.777254 35.713768)&#39;</span>), <span style="color:#bd93f9">500</span>.<span style="color:#bd93f9">0</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> dist;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     name,
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     ST_AsText(geom),
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     ST_Distance(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.777254 35.713768)&#39;</span>, geom) <span style="color:#ff79c6">as</span> dist
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">FROM</span> geotable
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">WHERE</span> ST_DWithin(geom, ST_GeographyFromText(<span style="color:#f1fa8c">&#39;SRID=4326;POINT(139.777254 35.713768)&#39;</span>), <span style="color:#bd93f9">500</span>.<span style="color:#bd93f9">0</span>)
+</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> dist;
+</span></span><span style="display:flex;"><span>              name              <span style="color:#ff79c6">|</span>          st_astext          <span style="color:#ff79c6">|</span>     dist
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">--------------------------------+-----------------------------+--------------
+</span></span></span><span style="display:flex;"><span> Ueno Station                   <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">777254</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">713768</span>) <span style="color:#ff79c6">|</span>            <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">National</span> Museum <span style="color:#ff79c6">of</span> Western Art <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">775803</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">71542</span>)  <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">225</span>.<span style="color:#bd93f9">46891659</span>
+</span></span><span style="display:flex;"><span> Ueno Forest Art Museum         <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">774744</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">712737</span>) <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">254</span>.<span style="color:#bd93f9">30812788</span>
+</span></span><span style="display:flex;"><span> <span style="color:#ff79c6">National</span> Museum <span style="color:#ff79c6">of</span> Nature...   <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">776544</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">716319</span>) <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">290</span>.<span style="color:#bd93f9">24270722</span>
+</span></span><span style="display:flex;"><span> Dr. Noguchi Hideyo Statue      <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">775696</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">716293</span>) <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">313</span>.<span style="color:#bd93f9">62968599</span>
+</span></span><span style="display:flex;"><span> Saigo Takamori Statue          <span style="color:#ff79c6">|</span> POINT(<span style="color:#bd93f9">139</span>.<span style="color:#bd93f9">774029</span> <span style="color:#bd93f9">35</span>.<span style="color:#bd93f9">711846</span>) <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">361</span>.<span style="color:#bd93f9">44255611</span>
+</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">6</span> <span style="color:#ff79c6">rows</span>)
+</span></span></code></pre></div><blockquote>
+<ul>
+<li>PostGIS (extension module for implementing geographic information systems) <a href="https://www.sraoss.co.jp/tech-blog/pgsql/postgis/" target="_blank" rel="noopener noreferrer">https://www.sraoss.co.jp/tech-blog/pgsql/postgis/</a>
+</li>
+<li><a href="https://note.com/kotarai/n/nd2bfbafbef6e" target="_blank" rel="noopener noreferrer">Let&rsquo;s visualize location data! [PostGIS introduction]|kota|note</a>
+</li>
+</ul>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-07-05-Aurora%20PostgreSQL%e3%81%a7PostGIS%ef%bc%88%e4%bd%8d%e7%bd%ae%e6%83%85%e5%a0%b1%ef%bc%89%e3%82%92%e4%bd%bf%e7%94%a8%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-s3-event-missing/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">S3 Event Missed Notifications Do Not Occur as of …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-redshift-internal-re-invented/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Resources on Redshift&#39;s Internal Architecture</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-aurora-postgresql-postgis%2f&text=Using&#43;PostGIS&#43;%28Geospatial%29&#43;in&#43;Aurora&#43;PostgreSQL" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-aurora-postgresql-postgis/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-aurora-postgresql-hammerdb-benchmark.html">Running HammerDB TPC-C Against Aurora PostgreSQL</a></li>
+    
+    <li><a href="/en/aws-postgresql-rdsproxy-failover.html">Performing Failover of Aurora PostgreSQL Using RDS Proxy</a></li>
+    
+    <li><a href="/en/aws-postgresql-execute-plan-visualization/">Visualizing PostgreSQL SQL Execution Plans (pev, gocmdpev)</a></li>
+    
+    <li><a href="/en/aws-aurora-aws-cli-create-cluster-instance/">Creating Aurora PostgreSQL with AWS CLI</a></li>
+    
+    <li><a href="/en/aws-docs-guthub-commit-log.html">Checking AWS Documentation Update History on GitHub and Getting RSS Feeds</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/aurora/" class="tag-badge"><img src="/images/tags/aurora.svg" alt="Aurora" class="tag-badge-icon" loading="lazy">Aurora</a>
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a>
+          <ul>
+            <li><a href="#reference">Reference</a></li>
+            <li><a href="#enabling-extensions">Enabling Extensions</a></li>
+            <li><a href="#version-check">Version Check</a></li>
+            <li><a href="#permission-changes">Permission Changes</a></li>
+          </ul>
+        </li>
+        <li><a href="#using-postgis">Using PostGIS</a>
+          <ul>
+            <li><a href="#test-1">Test 1</a></li>
+            <li><a href="#test-2">Test 2</a></li>
+            <li><a href="#create-table">Create Table</a></li>
+            <li><a href="#insert-data">Insert Data</a></li>
+            <li><a href="#calculate-distance-between-two-points-st_distance">Calculate Distance Between Two Points: ST_Distance()</a></li>
+            <li><a href="#check-with-pgadmin">Check with PgAdmin</a></li>
+            <li><a href="#test-3">Test 3</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

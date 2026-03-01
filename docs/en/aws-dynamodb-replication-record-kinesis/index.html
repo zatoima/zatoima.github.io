@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams | my opinion is my own</title>
+<meta name="title" content="Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,DynamoDB," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-dynamodb-replication-record-kinesis/">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-06-24T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-06-24T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="DynamoDB">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-06-24T00:00:00Z\"",
+  "dateModified": "\"2022-06-24T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-dynamodb-replication-record-kinesis/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  273 ,
+  "keywords": "[\"AWS\",\"DynamoDB\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-dynamodb-replication-record-kinesis/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-dynamodb-replication-record-kinesis/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Viewing the Contents of Records Streamed …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Viewing the Contents of Records Streamed from DynamoDB to Kinesis Streams</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-06-24'>
+            Published on 2022/06/24
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/dynamodb/" class="tag-badge">DynamoDB</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="table-definition">Table Definition</h3>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws dynamodb create-table <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --table-name dynamotest <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --attribute-definitions <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>      <span style="color:#8be9fd;font-style:italic">AttributeName</span><span style="color:#ff79c6">=</span>id,AttributeType<span style="color:#ff79c6">=</span>S <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>      <span style="color:#8be9fd;font-style:italic">AttributeName</span><span style="color:#ff79c6">=</span>datetime,AttributeType<span style="color:#ff79c6">=</span>S <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --key-schema <span style="color:#8be9fd;font-style:italic">AttributeName</span><span style="color:#ff79c6">=</span>id,KeyType<span style="color:#ff79c6">=</span>HASH <span style="color:#8be9fd;font-style:italic">AttributeName</span><span style="color:#ff79c6">=</span>datetime,KeyType<span style="color:#ff79c6">=</span>RANGE <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --billing-mode PAY_PER_REQUEST
+</span></span></code></pre></div><h3 id="dynamodb-kinesis-data-streams-configuration">DynamoDB Kinesis Data Streams Configuration</h3>
+<hr>
+<p><img src="/en/aws-dynamodb-replication-record-kinesis/image-20220624150839801.png" alt="image-20220624150839801"></p>
+<h3 id="table-insert--update">Table Insert &amp; Update</h3>
+<hr>
+<p>2 INSERTs, 2 UPDATEs (all updating the same key)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws dynamodb put-item --table-name kinesis-test --item <span style="color:#f1fa8c">&#34;{ \&#34;datetime\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; }, \&#34;id\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; } }&#34;</span>
+</span></span><span style="display:flex;"><span>aws dynamodb put-item --table-name kinesis-test --item <span style="color:#f1fa8c">&#34;{ \&#34;datetime\&#34;: { \&#34;S\&#34;: \&#34;bbbbbbbbbbb\&#34; }, \&#34;id\&#34;: { \&#34;S\&#34;: \&#34;bbbbbbbbbbb\&#34; } }&#34;</span>
+</span></span><span style="display:flex;"><span>aws dynamodb update-item  --table-name kinesis-test --key <span style="color:#f1fa8c">&#34;{ \&#34;datetime\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; }, \&#34;id\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; } }&#34;</span> --attribute-updates <span style="color:#f1fa8c">&#39;{&#34;ccc&#34;: {&#34;Value&#34;: {&#34;S&#34;:&#34;sample text&#34;}}}&#39;</span>
+</span></span><span style="display:flex;"><span>aws dynamodb update-item  --table-name kinesis-test --key <span style="color:#f1fa8c">&#34;{ \&#34;datetime\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; }, \&#34;id\&#34;: { \&#34;S\&#34;: \&#34;aaaaaaaaaaa\&#34; } }&#34;</span> --attribute-updates <span style="color:#f1fa8c">&#39;{&#34;ccc&#34;: {&#34;Value&#34;: {&#34;S&#34;:&#34;gogogogo&#34;}}}&#39;</span>
+</span></span><span style="display:flex;"><span>aws dynamodb scan --table-name kinesis-test
+</span></span></code></pre></div><h3 id="results">Results</h3>
+<hr>
+<p>Decoding base64 allows you to see the data contents.</p>
+<blockquote>
+<p><a href="https://www.base64decode.org/" target="_blank" rel="noopener noreferrer">https://www.base64decode.org/</a>
+</p>
+</blockquote>
+<p>Data was streamed to on-demand Kinesis Data Streams. Shards 0 and 1 have no data, shard 2 has 1 record, and shard 3 has 3 records. Updates with the same DynamoDB key go into the same shard.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">SHARD_ITERATOR</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>aws kinesis get-shard-iterator --shard-id shardId-000000000002 --shard-iterator-type TRIM_HORIZON --stream-name ddb-stream-test --query <span style="color:#f1fa8c">&#39;ShardIterator&#39;</span><span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws kinesis get-records --shard-iterator <span style="color:#8be9fd;font-style:italic">$SHARD_ITERATOR</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Records&#34;</span>: <span style="color:#ff79c6">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;49630754920274845572843534141988045219888124757907865634&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;ApproximateArrivalTimestamp&#34;</span>: <span style="color:#f1fa8c">&#34;2022-06-24T14:23:08.513000+09:00&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;Data&#34;</span>: <span style="color:#f1fa8c">&#34;eyJhd3NSZWdpb24iOiJhcC1ub3J0aGVhc3QtMSIsImV2ZW50SUQiOiJlYjFiOWM2Ni03MTY5LTQzNjQtYjY0Mi1hYzU2ZjAxY2JhZjAiLCJldmVudE5hbWUiOiJJTlNFUlQiLCJ1c2VySWRlbnRpdHkiOm51bGwsInJlY29yZEZvcm1hdCI6ImFwcGxpY2F0aW9uL2pzb24iLCJ0YWJsZU5hbWUiOiJraW5lc2lzLXRlc3QiLCJkeW5hbW9kYiI6eyJBcHByb3hpbWF0ZUNyZWF0aW9uRGF0ZVRpbWUiOjE2NTYwNDgxODc5MjIsIktleXMiOnsiaWQiOnsiUyI6ImJiYmJiYmJiYmJiIn0sImRhdGV0aW1lIjp7IlMiOiJiYmJiYmJiYmJiYiJ9fSwiTmV3SW1hZ2UiOnsiaWQiOnsiUyI6ImJiYmJiYmJiYmJiIn0sImRhdGV0aW1lIjp7IlMiOiJiYmJiYmJiYmJiYiJ9fSwiU2l6ZUJ5dGVzIjo2NH0sImV2ZW50U291cmNlIjoiYXdzOmR5bmFtb2RiIn0=&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;PartitionKey&#34;</span>: <span style="color:#f1fa8c">&#34;49DE9F3D57177739BC4A3A6E32350613&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">]</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;NextShardIterator&#34;</span>: <span style="color:#f1fa8c">&#34;AAAAAAAAAAFAzXEe3Y9ICjI+/VTUw038RKRC5PNLwKueAvRHUdllhOoWHRyUnc4ReetrVMFOdWcng4Qe2czh/zhnWallAJmQC+yqO7kEY8ZgGFw8lfBAgrnbp4dMnZtuoEAgC66TxKmQhFieDQB5pprN5fhfMq1Ep0BVsqsr1SgXpv4aH1U5fsbKHpuGbiUOleZyDyigqofl0k2tFFERdwwNcXX5YEM81iK9JrAEoiQp4Fl5b7Y7pA==&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;MillisBehindLatest&#34;</span>: <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">SHARD_ITERATOR</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>aws kinesis get-shard-iterator --shard-id shardId-000000000003 --shard-iterator-type TRIM_HORIZON --stream-name ddb-stream-test --query <span style="color:#f1fa8c">&#39;ShardIterator&#39;</span><span style="color:#ff79c6">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws kinesis get-records --shard-iterator <span style="color:#8be9fd;font-style:italic">$SHARD_ITERATOR</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Records&#34;</span>: <span style="color:#ff79c6">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;49630754920297146318042064765128372012341141379089432626&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;ApproximateArrivalTimestamp&#34;</span>: <span style="color:#f1fa8c">&#34;2022-06-24T14:18:58.894000+09:00&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;Data&#34;</span>: <span style="color:#f1fa8c">&#34;eyJhd3NSZWdpb24iOiJhcC1ub3J0aGVhc3QtMSIsImV2ZW50SUQiOiJjMWViYmM3NS00Mjk3LTQwNzQtYWJlMC0yZmQ2OTMwNjk3YzUiLCJldmVudE5hbWUiOiJJTlNFUlQiLCJ1c2VySWRlbnRpdHkiOm51bGwsInJlY29yZEZvcm1hdCI6ImFwcGxpY2F0aW9uL2pzb24iLCJ0YWJsZU5hbWUiOiJraW5lc2lzLXRlc3QiLCJkeW5hbW9kYiI6eyJBcHByb3hpbWF0ZUNyZWF0aW9uRGF0ZVRpbWUiOjE2NTYwNDc5Mzg3MzksIktleXMiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9fSwiTmV3SW1hZ2UiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9fSwiU2l6ZUJ5dGVzIjo2NH0sImV2ZW50U291cmNlIjoiYXdzOmR5bmFtb2RiIn0=&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;PartitionKey&#34;</span>: <span style="color:#f1fa8c">&#34;D1174FF2F6189C4B8B91C573346158AD&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">}</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;49630754920297146318042064765135625567258871347896385586&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;ApproximateArrivalTimestamp&#34;</span>: <span style="color:#f1fa8c">&#34;2022-06-24T14:29:13.673000+09:00&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;Data&#34;</span>: <span style="color:#f1fa8c">&#34;eyJhd3NSZWdpb24iOiJhcC1ub3J0aGVhc3QtMSIsImV2ZW50SUQiOiJmMWRjZmYxZS1hNzg0LTQzMWItYmI2MS00Mjc0YmU5NjM1YWQiLCJldmVudE5hbWUiOiJNT0RJRlkiLCJ1c2VySWRlbnRpdHkiOm51bGwsInJlY29yZEZvcm1hdCI6ImFwcGxpY2F0aW9uL2pzb24iLCJ0YWJsZU5hbWUiOiJraW5lc2lzLXRlc3QiLCJkeW5hbW9kYiI6eyJBcHByb3hpbWF0ZUNyZWF0aW9uRGF0ZVRpbWUiOjE2NTYwNDg1NTM1NTcsIktleXMiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9fSwiTmV3SW1hZ2UiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9LCJjY2MiOnsiUyI6InNhbXBsZSB0ZXh0In19LCJPbGRJbWFnZSI6eyJpZCI6eyJTIjoiYWFhYWFhYWFhYWEifSwiZGF0ZXRpbWUiOnsiUyI6ImFhYWFhYWFhYWFhIn19LCJTaXplQnl0ZXMiOjExMH0sImV2ZW50U291cmNlIjoiYXdzOmR5bmFtb2RiIn0=&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;PartitionKey&#34;</span>: <span style="color:#f1fa8c">&#34;D1174FF2F6189C4B8B91C573346158AD&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">}</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;49630754920297146318042064765136834493078514152056553522&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;ApproximateArrivalTimestamp&#34;</span>: <span style="color:#f1fa8c">&#34;2022-06-24T14:36:03.966000+09:00&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;Data&#34;</span>: <span style="color:#f1fa8c">&#34;eyJhd3NSZWdpb24iOiJhcC1ub3J0aGVhc3QtMSIsImV2ZW50SUQiOiI0NmQ2Mjc3Ni03ZjU1LTQwNGEtODc2Ni1iNDlhYWI4Y2QxZmMiLCJldmVudE5hbWUiOiJNT0RJRlkiLCJ1c2VySWRlbnRpdHkiOm51bGwsInJlY29yZEZvcm1hdCI6ImFwcGxpY2F0aW9uL2pzb24iLCJ0YWJsZU5hbWUiOiJraW5lc2lzLXRlc3QiLCJkeW5hbW9kYiI6eyJBcHByb3hpbWF0ZUNyZWF0aW9uRGF0ZVRpbWUiOjE2NTYwNDg5NjM1NjYsIktleXMiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9fSwiTmV3SW1hZ2UiOnsiaWQiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImRhdGV0aW1lIjp7IlMiOiJhYWFhYWFhYWFhYSJ9LCJjY2MiOnsiUyI6ImdvZ29nb2dvIn19LCJPbGRJbWFnZSI6eyJpZCI6eyJTIjoiYWFhYWFhYWFhYWEifSwiZGF0ZXRpbWUiOnsiUyI6ImFhYWFhYWFhYWFhIn0sImNjYyI6eyJTIjoic2FtcGxlIHRleHQifX0sIlNpemVCeXRlcyI6MTIxfSwiZXZlbnRTb3VyY2UiOiJhd3M6ZHluYW1vZGIifQ==&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;PartitionKey&#34;</span>: <span style="color:#f1fa8c">&#34;D1174FF2F6189C4B8B91C573346158AD&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">]</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;NextShardIterator&#34;</span>: <span style="color:#f1fa8c">&#34;AAAAAAAAAAEbQXenaHcCeosgGJwhLcOtqHDk/l5RQk/qOmihRWM/yJirzXs3pArN6Y8sm+gF97rqlDWAvjNvy+MpuUmm+U+29j4qtyUB117A86ImSQYNIA6bT5fkUyUUIr/nutrVFx+3+PwHZeDEx1aACuJL9znIV37rWwrfocGs8zeDbRBStom5Dk84VBYrAubwM9KPZyCRSJvIuZgJHnerHb9PQKC40+O3TcyoMZZ4EoHpt4mhww==&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;MillisBehindLatest&#34;</span>: <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-06-24-DynamoDB%e3%81%8b%e3%82%89Kinesis%20Streams%e3%81%ab%e6%b5%81%e3%81%97%e3%81%9f%e3%83%ac%e3%82%b3%e3%83%bc%e3%83%89%e3%81%ae%e4%b8%ad%e8%ba%ab%e3%82%92%e8%a6%8b%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-api-gateway-cloudfront-restrict-resource-policy/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Restricting API Gateway Origin Access to …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-s3-access-iam-bucket-policy/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Cross-Account S3 Access</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-dynamodb-replication-record-kinesis%2f&text=Viewing&#43;the&#43;Contents&#43;of&#43;Records&#43;Streamed&#43;from&#43;DynamoDB&#43;to&#43;Kinesis&#43;Streams" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-dynamodb-replication-record-kinesis/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-api-gateway-cloudfront-restrict-resource-policy/">Restricting API Gateway Origin Access to CloudFront Only Using Resource Policies</a></li>
+    
+    <li><a href="/en/aws-lambda-sam-codepipeline-deploy/">Integrating Lambda Deployment with SAM into CodePipeline</a></li>
+    
+    <li><a href="/en/aws-lambda-sam-api-canary-deploy/">Canary Deployment with SAM for API Gateway &#43; Lambda</a></li>
+    
+    <li><a href="/en/aws-aurora-postgres-lambda-s3-event/">Detect S3 file PUT from Lambda and load CSV data into Aurora PostgreSQL table</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-data-prepare-query-execute/">Preparing Test Data for Redshift Spectrum and Executing Queries</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/dynamodb/" class="tag-badge">DynamoDB</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#table-definition">Table Definition</a></li>
+        <li><a href="#dynamodb-kinesis-data-streams-configuration">DynamoDB Kinesis Data Streams Configuration</a></li>
+        <li><a href="#table-insert--update">Table Insert &amp; Update</a></li>
+        <li><a href="#results">Results</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

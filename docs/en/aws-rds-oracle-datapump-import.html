@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Importing into RDS (Oracle) with Data Pump | my opinion is my own</title>
+<meta name="title" content="Importing into RDS (Oracle) with Data Pump" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,RDS,Oracle," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-rds-oracle-datapump-import.html">
+  <meta property="og:site_name" content="my opinion is my own">
+  <meta property="og:title" content="Importing into RDS (Oracle) with Data Pump">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2020-01-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2020-01-08T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="RDS">
+    <meta property="article:tag" content="Oracle">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Importing into RDS (Oracle) with Data Pump">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Importing into RDS (Oracle) with Data Pump\"",
+  "description": "\"\"",
+  "datePublished": "\"2020-01-08T00:00:00Z\"",
+  "dateModified": "\"2020-01-08T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-rds-oracle-datapump-import.html\""
+  },
+  "inLanguage": "en",
+  "wordCount":  939 ,
+  "keywords": "[\"AWS\",\"RDS\",\"Oracle\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-rds-oracle-datapump-import.html" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-rds-oracle-datapump-import.html" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">my opinion is my own</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown">
+    
+    <a href="https://zatoima.github.io/" class="lang-dropdown-item" lang="ja">
+      日本語
+    </a>
+    
+    <a href="https://zatoima.github.io/en/" class="lang-dropdown-item active" lang="en">
+      English
+    </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Importing into RDS (Oracle) with Data …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Importing into RDS (Oracle) with Data Pump</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2020-01-08'>
+            Published on 2020/01/08
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h4 id="reviewing-the-precautions">Reviewing the Precautions</h4>
+<p>First, let&rsquo;s look through the manual. Full database imports are not supported; imports must be done at the schema or table level. Since Amazon RDS for Oracle does not allow access to the administrative users <code>SYS</code> or <code>SYSDBA</code>, importing in <code>full</code> mode or importing schemas for Oracle-managed components can damage the Oracle data directory and affect database stability. Note that the fast and convenient transportable tablespace feature is also not supported.</p>
+<blockquote>
+<h4 id="importing-data-into-oracle-on-amazon-rds---amazon-relational-database-service-httpsdocsawsamazoncomja_">Importing Data into Oracle on Amazon RDS - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html</a>
+</h4>
+</blockquote>
+<blockquote>
+<ul>
+<li>
+<p>To import specific schemas or objects, run the import in <code>schema</code> or <code>table</code> mode.</p>
+</li>
+<li>
+<p>Limit the schemas you import to those required by your application.</p>
+</li>
+<li>
+<p>Do not import in <code>full</code> mode.</p>
+<p>Because Amazon RDS for Oracle does not allow access to the administrative users <code>SYS</code> or <code>SYSDBA</code>, importing in <code>full</code> mode or importing schemas for Oracle-managed components can damage the Oracle data directory and affect database stability.</p>
+</li>
+<li>
+<p>If you are loading a large amount of data, transfer the dump file to your target Amazon RDS for Oracle DB instance, create a DB snapshot of the instance, and test the import to confirm it completes without issues. If any database components are invalid, delete the DB instance and recreate it from the DB snapshot. The restored DB instance will include all dump files that were staged on the DB instance when the DB snapshot was created.</p>
+</li>
+<li>
+<p>Do not import dump files created using the Oracle Data Pump export parameters (<code>TRANSPORT_TABLESPACES</code>, <code>TRANSPORTABLE</code>, <code>TRANSPORT_FULL_CHECK</code>). Importing such dump files is not supported for Amazon RDS for Oracle DB instances.</p>
+</li>
+</ul>
+</blockquote>
+<p>Note that since the Data Pump dump file is transferred to DATA_PUMP_DIR (a directory object) inside RDS, temporarily more storage is required inside RDS. Be careful not to cause a <code>Storage Full</code> error. Since the files are not automatically deleted after import, you will need to delete them using UTL_FILE.FREMOVE as needed.</p>
+<h4 id="data-pump-methods">Data Pump Methods</h4>
+<p>There are two methods for importing with Data Pump:</p>
+<ol>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.S3" target="_blank" rel="noopener noreferrer">Importing Data Using Oracle Data Pump and an Amazon S3 Bucket</a>
+</li>
+<li><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html#Oracle.Procedural.Importing.DataPump.DBLink" target="_blank" rel="noopener noreferrer">Importing Data Using Oracle Data Pump and a Database Link</a>
+</li>
+</ol>
+<h4 id="importing-data-via-an-s3-bucket">Importing Data via an S3 Bucket</h4>
+<h5 id="create-an-option-group-and-attach-it-to-the-existing-rds-oracle">Create an Option Group and Attach It to the Existing RDS (Oracle)</h5>
+<p>Select Option Groups</p>
+<!-- raw HTML omitted -->
+<p>Create an option group</p>
+<!-- raw HTML omitted -->
+<p>Enter the name, description, engine, and major engine version</p>
+<!-- raw HTML omitted -->
+<p>After creating the group, add an option</p>
+<!-- raw HTML omitted -->
+<p>Select &ldquo;oracle-s3-integration&rdquo; as the option. Set &ldquo;Apply Immediately&rdquo; to &ldquo;Yes&rdquo;.</p>
+<!-- raw HTML omitted -->
+<p>In the &ldquo;Database settings&rdquo;, there is an &ldquo;Option Group&rdquo; field. Specify the option group you just created.</p>
+<!-- raw HTML omitted -->
+<h5 id="create-required-policies-and-iam-roles-and-attach-to-the-rds-instance">Create Required Policies and IAM Roles and Attach to the RDS Instance</h5>
+<blockquote>
+<p>Amazon S3 Integration - Amazon Relational Database Service <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/oracle-s3-integration.html#oracle-s3-integration.preparing</a>
+</p>
+</blockquote>
+<h5 id="expanding-the-tablespace">Expanding the Tablespace</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> tablespace USERS resize <span style="color:#bd93f9">30</span><span style="color:#ff79c6">G</span>;
+</span></span></code></pre></div><h5 id="grant-privileges-to-the-import-user">Grant Privileges to the Import User</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">DROP</span> <span style="color:#ff79c6">USER</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span> <span style="color:#ff79c6">CASCADE</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">USER</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span> identified <span style="color:#ff79c6">BY</span> <span style="color:#f1fa8c">&#34;oracle&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">USER</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span> QUOTA UNLIMITED <span style="color:#ff79c6">ON</span> USERS;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> DBA <span style="color:#ff79c6">to</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> <span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">SESSION</span> <span style="color:#ff79c6">TO</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> <span style="color:#f1fa8c">&#34;RESOURCE&#34;</span> <span style="color:#ff79c6">TO</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> UNLIMITED TABLESPACE <span style="color:#ff79c6">TO</span> <span style="color:#f1fa8c">&#34;DPUSR&#34;</span>;
+</span></span></code></pre></div><h5 id="transferring-the-data-pump-dump-file-from-s3-and-importing">Transferring the Data Pump Dump File from S3 and Importing</h5>
+<p>First, check the directory objects.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">set</span> pages <span style="color:#bd93f9">2000</span> lin <span style="color:#bd93f9">2000</span>
+</span></span><span style="display:flex;"><span>col filename <span style="color:#ff79c6">for</span> a30
+</span></span><span style="display:flex;"><span>col FILESIZE <span style="color:#ff79c6">for</span> <span style="color:#bd93f9">99999999999</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> <span style="color:#ff79c6">session</span> <span style="color:#ff79c6">set</span> nls_date_format<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;BDUMP&#39;</span>));
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span></code></pre></div><p>Specify the S3 bucket and download it to <code>DATA_PUMP_DIR</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">select</span> rdsadmin.rdsadmin_s3_tasks.download_from_s3(p_bucket_name <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;pluto-dev-s3-test&#39;</span>, p_directory_name <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>) <span style="color:#ff79c6">AS</span> TASK_ID <span style="color:#ff79c6">FROM</span> DUAL;
+</span></span></code></pre></div><p>Check the log as needed. A task ID is output to the console when <code>rdsadmin.rdsadmin_s3_tasks.download_from_s3</code> is executed; use it as an argument to rdsadmin.rds_file_util.read_text_file.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#8be9fd;font-style:italic">text</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span>(rdsadmin.rds_file_util.read_text_file(<span style="color:#f1fa8c">&#39;BDUMP&#39;</span>,<span style="color:#f1fa8c">&#39;dbtask-1574174424228-1248.log&#39;</span>));
+</span></span></code></pre></div><p>Confirm that the dmp file is placed under DATA_PUMP_DIR</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>FILENAME		       <span style="color:#ff79c6">TYPE</span>	      FILESIZE MTIME
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">------------------------------ ---------- ------------ -------------------
+</span></span></span><span style="display:flex;"><span>datapump<span style="color:#ff79c6">/</span>		       directory	  <span style="color:#bd93f9">4096</span> <span style="color:#bd93f9">2019</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">12</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">06</span> <span style="color:#bd93f9">01</span>:<span style="color:#bd93f9">02</span>:<span style="color:#bd93f9">22</span>
+</span></span><span style="display:flex;"><span>datapump_meta.dmp 	       file	       <span style="color:#bd93f9">8237056</span> <span style="color:#bd93f9">2019</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">12</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">06</span> <span style="color:#bd93f9">01</span>:<span style="color:#bd93f9">02</span>:<span style="color:#bd93f9">22</span>
+</span></span></code></pre></div><p>Import using the dbms_datapump procedure</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">DECLARE</span>
+</span></span><span style="display:flex;"><span>    hdnl <span style="color:#8be9fd;font-style:italic">NUMBER</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#ff79c6">=</span> dbms_datapump.<span style="color:#ff79c6">open</span> (<span style="color:#ff79c6">operation</span> <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;IMPORT&#39;</span>, job_mode <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;FULL&#39;</span>, <span style="color:#ff79c6">version</span> <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;COMPATIBLE&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;import.log&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;expdat.dmp&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.START_JOB(handle <span style="color:#ff79c6">=&gt;</span> hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">end</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">/</span>
+</span></span></code></pre></div><h4 id="importing-data-via-a-database-link">Importing Data via a Database Link</h4>
+<p>Create a database link. This is done on the source from which the Data Pump dump file will be transferred.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">drop</span> <span style="color:#ff79c6">database</span> link ora121;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">create</span> <span style="color:#ff79c6">database</span> link ora121 <span style="color:#ff79c6">connect</span> <span style="color:#ff79c6">to</span> master identified <span style="color:#ff79c6">by</span> <span style="color:#f1fa8c">&#34;Oracle2019%&#34;</span> <span style="color:#ff79c6">using</span> <span style="color:#f1fa8c">&#39;(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=ora121rds.xxxxxxxxxx.ap-northeast-1.rds.amazonaws.com)(PORT=1521))(CONNECT_DATA=(SID=ora121)))&#39;</span>;
+</span></span></code></pre></div><p>Transfer the dump file.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
+</span></span><span style="display:flex;"><span>DBMS_FILE_TRANSFER.PUT_FILE(
+</span></span><span style="display:flex;"><span>    source_directory_object       <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DP_DIR&#39;</span>,
+</span></span><span style="display:flex;"><span>    source_file_name              <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;expdat.dmp&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_directory_object  <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_file_name         <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;expdat.dmp&#39;</span>,
+</span></span><span style="display:flex;"><span>    destination_database          <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;ora121&#39;</span>
+</span></span><span style="display:flex;"><span>);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">END</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">/</span>
+</span></span></code></pre></div><p>Verify the transfer. Check from the RDS side.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">set</span> pages <span style="color:#bd93f9">2000</span> lin <span style="color:#bd93f9">2000</span>
+</span></span><span style="display:flex;"><span>col filename <span style="color:#ff79c6">for</span> a30
+</span></span><span style="display:flex;"><span>col FILESIZE <span style="color:#ff79c6">for</span> <span style="color:#bd93f9">99999999999</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> <span style="color:#ff79c6">session</span> <span style="color:#ff79c6">set</span> nls_date_format<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;YYYY/MM/DD HH24:MI:SS&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;BDUMP&#39;</span>));
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">from</span> <span style="color:#ff79c6">table</span> (rdsadmin.rds_file_util.listdir(p_directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>));
+</span></span></code></pre></div><p>Import.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">DECLARE</span>
+</span></span><span style="display:flex;"><span>hdnl <span style="color:#8be9fd;font-style:italic">NUMBER</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#ff79c6">=</span> DBMS_DATAPUMP.<span style="color:#ff79c6">open</span>( <span style="color:#ff79c6">operation</span> <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;IMPORT&#39;</span>, job_mode <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;SCHEMA&#39;</span>, job_name<span style="color:#ff79c6">=&gt;</span><span style="color:#ff79c6">null</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;expdat.dmp&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.add_file( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;imp.log&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.METADATA_FILTER(hdnl,<span style="color:#f1fa8c">&#39;SCHEMA_EXPR&#39;</span>,<span style="color:#f1fa8c">&#39;IN (&#39;&#39;HR&#39;&#39;)&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.start_job(hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">END</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">/</span>
+</span></span></code></pre></div><p>Check the log as needed</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#8be9fd;font-style:italic">TEXT</span> <span style="color:#ff79c6">FROM</span> <span style="color:#ff79c6">TABLE</span>(RDSADMIN.RDS_FILE_UTIL.READ_TEXT_FILE(<span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>,<span style="color:#f1fa8c">&#39;imp.log&#39;</span>));
+</span></span></code></pre></div><p>How to delete logs</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">EXEC</span> UTL_FILE.FREMOVE(<span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>,<span style="color:#f1fa8c">&#39;imp.log&#39;</span>);
+</span></span></code></pre></div><p>Import using the dbms_datapump procedure</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">DECLARE</span>
+</span></span><span style="display:flex;"><span>    hdnl <span style="color:#8be9fd;font-style:italic">NUMBER</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">BEGIN</span>
+</span></span><span style="display:flex;"><span>    hdnl :<span style="color:#ff79c6">=</span> dbms_datapump.<span style="color:#ff79c6">open</span> (<span style="color:#ff79c6">operation</span> <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;IMPORT&#39;</span>, job_mode <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;FULL&#39;</span>, <span style="color:#ff79c6">version</span> <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;COMPATIBLE&#39;</span>);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;import.log&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_log_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.ADD_FILE( handle <span style="color:#ff79c6">=&gt;</span> hdnl, filename <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;expdat.dmp&#39;</span>, directory <span style="color:#ff79c6">=&gt;</span> <span style="color:#f1fa8c">&#39;DATA_PUMP_DIR&#39;</span>, filetype <span style="color:#ff79c6">=&gt;</span> dbms_datapump.ku$_file_type_dump_file);
+</span></span><span style="display:flex;"><span>    DBMS_DATAPUMP.START_JOB(handle <span style="color:#ff79c6">=&gt;</span> hdnl);
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">end</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">/</span>
+</span></span></code></pre></div><h4 id="other">Other</h4>
+<p>The following document describes a method to transfer to DATA_PUMP_DIR using a Perl script.</p>
+<p><a href="https://d0.awsstatic.com/whitepapers/strategies-for-migrating-oracle-database-to-aws.pdf" target="_blank" rel="noopener noreferrer">Strategies for Migrating Oracle Databases to AWS</a>
+</p>
+<p>​	Data Migration Using Oracle Data Pump -  Next Steps for a Database on Amazon RDS</p>
+<blockquote>
+<p>[AWS] Transferring Data Pump Dump Files to an RDS for Oracle Instance | Developers.IO <a href="https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/" target="_blank" rel="noopener noreferrer">https://dev.classmethod.jp/cloud/aws/transfer-data-pump-file-to-rds-instace/</a>
+</p>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2020-01-08-RDS%28Oracle%29%e3%81%abData%20Pump%e3%81%a7%e3%82%a4%e3%83%b3%e3%83%9d%e3%83%bc%e3%83%88%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/postgresql-pgBadger-test.html" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Trying pgBadger, a PostgreSQL Log Analysis Tool</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/blog-github-contributions-before-date.html" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Creating GitHub Contributions with Past Dates</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-rds-oracle-datapump-import.html&text=Importing&#43;into&#43;RDS&#43;%28Oracle%29&#43;with&#43;Data&#43;Pump" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-rds-oracle-datapump-import.html" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/goldengate-flashbackscn-instantiationSCN.html">Instantiation SCN When Using FLASHBACK_SCN During expdp</a></li>
+    
+    <li><a href="/en/goldengate-12c-18c-install-implement.html">Installing GoldenGate and Building a Replication Environment Between Databases</a></li>
+    
+    <li><a href="/en/goldengate-merge-replication.html">Propagation of MERGE Statements via GoldenGate</a></li>
+    
+    <li><a href="/en/oracle-migration-tde-tts.html">Migrating TDE-Encrypted Tablespace Using Transportable Tablespaces (TTS)</a></li>
+    
+    <li><a href="/en/oracle-rman-ruplicate.html">Duplicating a Database Using RMAN&#39;s duplicate Command</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/rds/" class="tag-badge"><img src="/images/tags/rds.svg" alt="RDS" class="tag-badge-icon" loading="lazy">RDS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#reviewing-the-precautions">Reviewing the Precautions</a></li>
+            <li><a href="#importing-data-into-oracle-on-amazon-rds---amazon-relational-database-service-httpsdocsawsamazoncomja_">Importing Data into Oracle on Amazon RDS - Amazon Relational Database Service https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/Oracle.Procedural.Importing.html</a></li>
+            <li><a href="#data-pump-methods">Data Pump Methods</a></li>
+            <li><a href="#importing-data-via-an-s3-bucket">Importing Data via an S3 Bucket</a></li>
+            <li><a href="#importing-data-via-a-database-link">Importing Data via a Database Link</a></li>
+            <li><a href="#other">Other</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
