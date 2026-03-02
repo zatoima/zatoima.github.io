@@ -1623,25 +1623,17 @@ sudo yum install -y mongodb-org mongo -version Starting MongoDB sudo systemctl s
 
 ---
 
-### Using PostgreSQL's dblink Extension: Execution and Caveats
+### Running the postgres_fdw Extension in PostgreSQL
 
-date: 2021-12-19
-url: https://zatoima.github.io/en/postgres-extension-dblink-install-and-causion/
+date: 2021-12-21
+url: https://zatoima.github.io/en/postgres-extension-fdw-install/
 tags: PostgreSQL
 
-This is about dblink, not postgres_fdw. The environment used is Aurora PostgreSQL.
-dblink https://www.postgresql.jp/document/13/html/contrib-dblink-function.html Running dblink Installing dblink postgres=&gt; \dx List of installed extensions Name | Version | Schema | Description ---------+---------+------------+------------------------------ plpgsql | 1.0 | pg_catalog | PL/pgSQL procedural language (1 row) postgres=&gt; create extension dblink; CREATE EXTENSION postgres=&gt; \dx List of installed extensions Name | Version | Schema | Description ---------+---------+------------+-------------------------------------------------------------- dblink | 1.2 | public | connect to other PostgreSQL databases from within a database plpgsql | 1.0 | pg_catalog | PL/pgSQL procedural language (2 rows) postgres=&gt; Preparation: Creating a Database and Table We will use dblink to retrieve data from table t1 in the test1 database from another database. Here we create the database and table for that purpose.
-create database test1; \c test1; create table t1(a numeric primary key, b varchar(30)); insert into t1 values(1,&#39;this data is at test1 database&#39;); Method 1: Connecting by Creating a Named Connection Creating a Connection postgres=&gt; select dblink_connect(&#39;dblink-test1&#39;,&#39;dbname=test1 user=postgres password=postgres&#39;); dblink_connect ---------------- OK (1 row) Querying When querying, you need to specify the data types of the remote table&rsquo;s columns.
-postgres=&gt; select * from dblink(&#39;dblink-test1&#39;,&#39;select a,b from t1&#39;) as t1(a numeric, b varchar(30)) ; a | b ---+-------------------------------- 1 | this data is at test1 database (1 row) Without the data types, you&rsquo;ll get the following error:
-postgres=&gt; select * from dblink(&#39;dblink-test1&#39;,&#39;select a,b from t1&#39;); ERROR: a column definition list is required for functions returning &#34;record&#34; LINE 1: select * from dblink(&#39;dblink-test1&#39;,&#39;select a,b from t1&#39;); Disconnecting postgres=&gt; select dblink_disconnect(&#39;dblink-test1&#39;); dblink_disconnect ------------------- OK (1 row) After disconnecting, queries will naturally result in an error:
-postgres=&gt; select * from dblink(&#39;dblink-test1&#39;,&#39;select a,b from t1&#39;) as t1(a numeric, b varchar(30)) ; ERROR: password is required DETAIL: Non-superusers must provide a password in the connection string. postgres=&gt; Method 2: Connecting Without Creating a Named Connection postgres=&gt; select * from dblink(&#39;dbname=test1 user=postgres password=postgres&#39;,&#39;select a,b from t1&#39;) as t1(a numeric, b varchar(30)) ; a | b ---+-------------------------------- 1 | this data is at test1 database (1 row) Caveats Unique dblink SQL syntax
-As described above, you need to specify the data types for each column of the remote table. The documentation suggests using views as a convenient workaround. https://www.postgresql.jp/document/13/html/contrib-dblink-function.html A convenient way to use dblink with predetermined queries is to create a view. This allows the column type information to be buried in the view, instead of having to spell it out in every query. For example:
-CREATE VIEW myremote_pg_proc AS SELECT * FROM dblink(&#39;dbname=postgres options=-csearch_path=&#39;, &#39;select proname, prosrc from pg_proc&#39;) AS t1(proname name, prosrc text); SELECT * FROM myremote_pg_proc WHERE proname LIKE &#39;bytea%&#39;; When joining remote tables with local tables, all data from the remote table is transferred locally before the join processing or WHERE clause filtering is applied. Depending on the table, this means transferring a large volume of data, resulting in an inefficient execution plan. Even if indexes exist on the remote table, all rows are fetched regardless. This may be manageable for communication within the same server, but when communicating over a network, bandwidth becomes a concern. Even within the same server, it can become a bottleneck depending on the volume of data transferred. Simply fetching all rows is inherently costly.
-In the example below, t1 is a local table and t2 is a remote table. Although we specify t2.a=10 and there is an index on that column, ideally only one row should be fetched, but the execution plan does not work that way. The execution time is also extremely long.
-postgres=&gt; explain analyze select t1.d from dblink(&#39;dbname=test1 user=postgres password=postgres&#39;,&#39;select a from t2&#39;) as t2(a integer), t1 where t1.a=t2.a and t2.a=10; QUERY PLAN ----------------------------------------------------------------------------------------------------------------------- Nested Loop (cost=0.00..13.68 rows=5 width=8) (actual time=50611.640..58457.467 rows=1 loops=1) -&gt; Seq Scan on t1 (cost=0.00..1.12 rows=1 width=12) (actual time=1.910..1.914 rows=1 loops=1) Filter: (a = 10) Rows Removed by Filter: 9 -&gt; Function Scan on dblink t2 (cost=0.00..12.50 rows=5 width=4) (actual time=50609.726..58455.547 rows=1 loops=1) Filter: (a = 10) Rows Removed by Filter: 99999999 Planning time: 41.712 ms Execution time: 58712.667 ms (9 rows) Queries via dblink are treated as separate transactions, so to ensure consistency with the current transaction, you need to consider using two-phase commit .
-Conclusion For database link functionality, it&rsquo;s better to use postgres_fdw, which is considered the successor.
-https://www.postgresql.jp/document/13/html/postgres-fdw.html The functionality of this module substantially overlaps with that of the older dblink module. However, postgres_fdw provides more transparent and standards-compliant syntax for accessing remote tables, and can give better performance in many cases.
-References dblink https://www.postgresql.jp/document/13/html/contrib-dblink-function.html dblink | Let&rsquo;s POSTGRES https://lets.postgresql.jp/documents/technical/contrib/dblink PostgreSQL9.3 New Features Verification Vol.2 | Ashisuto https://www.ashisuto.co.jp/corporate/column/technical-column/detail/1198469_2274.html 
+Running postgres_fdw Enabling the Extension CREATE EXTENSION postgres_fdw; Defining a Foreign Server Create a foreign server for the test1 database.
+CREATE SERVER fdw_app FOREIGN DATA WRAPPER postgres_fdw OPTIONS (dbname &#39;test1&#39;); Defining a User Mapping for the Foreign Server CREATE USER MAPPING FOR public SERVER fdw_app OPTIONS (user &#39;postgres&#39;, password &#39;postgres&#39;); Creating a Foreign Table Create the t2 table as a foreign table using the fdw_app foreign server.
+CREATE FOREIGN TABLE t2 (a integer, b text,c text, d timestamp with time zone) SERVER fdw_app; For foreign tables, the type appears as foreign table.
+postgres=&gt; \d List of relations Schema | Name | Type | Owner --------+-------------+---------------+---------- public | t1 | table | postgres public | t2 | foreign table | postgres public | v_dblink_t1 | view | postgres You can also create foreign tables using IMPORT FOREIGN SCHEMA .
+Querying postgres=&gt; select count(*) from t2; count ----------- 100000000 (1 row) Characteristics of postgres_fdw Pushdown functionality WHERE clauses (filtering) and ORDER BY clauses (sorting) in SQL statements are executed on the remote side A clear advantage over dblink Supports updates Does not support INSERT statements with ON CONFLICT DO UPDATE clause Considerations for postgres_fdw Transaction control Care must be taken regarding the timing of COMMIT on the remote side and the transaction isolation level (see reference links for details) Performance Tends to become slower depending on the amount of data transferred The remote execution option has a default fetch_size of 100, so tuning may be necessary depending on the use case References F.33. postgres_fdw https://www.postgresql.jp/document/13/html/postgres-fdw.html PostgreSQL 9.6 の postgres_fdw について検証してみた | SIOS Tech. Lab https://tech-lab.sios.jp/archives/8641#i 外部データとの連携 ～FDWで様々なデータソースとつなぐ～｜PostgreSQLインサイド : 富士通 https://www.fujitsu.com/jp/products/software/resources/feature-stories/postgres/article-index/fdw-overview/ 
 
 ---
 
@@ -6567,5 +6559,15 @@ To resolve this Hugo issue, either:
 (A) Manually delete Hugo&rsquo;s default cache folder and re-run Hugo. Hugo&rsquo;s cache folder defaults to $TMPDIR/hugo_cache/ on Mac/Linux and %TMP%\hugo_cache\ on Windows.
 Or, (B) Set a custom Hugo cache folder when you run Hugo, for example: hugo server --cacheDir ./cache/ where ./cache/ is the path of a temporary folder to create. Then you can easily locate and delete Hugo&rsquo;s cache folder should you experience this issue.
 Note: usually hugo mod clean --all should delete Hugo&rsquo;s cache, however, users report a Hugo bug running the command in this situation. You can provide your feedback on the Hugo issues .
+
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+完了しました。PostgreSQLのdblink拡張機能の記事を英語に翻訳し、コミット・ビルド・デプロイまで実行しました。
 
 
