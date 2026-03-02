@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL | zatoima</title>
+<meta name="title" content="Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL" />
+<meta name="description" content="" />
+<meta name="keywords" content="PostgreSQL," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/postgresql-database-logical-backup-restore-table/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2021-10-27T00:00:00+00:00">
+    <meta property="article:modified_time" content="2021-10-27T00:00:00+00:00">
+    <meta property="article:tag" content="PostgreSQL">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL\"",
+  "description": "\"\"",
+  "datePublished": "\"2021-10-27T00:00:00Z\"",
+  "dateModified": "\"2021-10-27T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/postgresql-database-logical-backup-restore-table/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  538 ,
+  "keywords": "[\"PostgreSQL\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/postgresql-database-logical-backup-restore-table/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/postgresql-database-logical-backup-restore-table/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/postgresql-database-logical-backup-restore-table/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/postgresql-database-logical-backup-restore-table/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Restoring Individual Tables from a Full …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-icon" loading="lazy"></div>
+        <h1>Restoring Individual Tables from a Full Database Logical Backup in PostgreSQL</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2021-10-27'>
+            Published on 2021/10/27
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="commands">Commands</h2>
+<h3 id="back-up-the-entire-database-with-pg_dump">Back Up the Entire Database with pg_dump</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>pg_dump -Fc -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres pgbench &gt; pgbench.dump
+</span></span></code></pre></div><h3 id="restore-only-a-specific-table-with-pg_restore">Restore Only a Specific Table with pg_restore</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style="color:#f1fa8c">&#34;create database pgbench_restore&#34;</span>
+</span></span><span style="display:flex;"><span>pg_restore -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench_restore -t pgbench_accounts pgbench.dump
+</span></span></code></pre></div><h2 id="execution-log">Execution Log</h2>
+<h3 id="backup">Backup</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ pg_dump -Fc -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres pgbench &gt; pgbench.dump
+</span></span><span style="display:flex;"><span>pg_dump: last built-in OID is <span style="color:#bd93f9">16383</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading extensions
+</span></span><span style="display:flex;"><span>pg_dump: identifying extension members
+</span></span><span style="display:flex;"><span>pg_dump: reading schemas
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined tables
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined functions
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined types
+</span></span><span style="display:flex;"><span>pg_dump: reading procedural languages
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined aggregate functions
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operators
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined access methods
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operator classes
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined operator families
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search parsers
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search templates
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search dictionaries
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined text search configurations
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined foreign-data wrappers
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined foreign servers
+</span></span><span style="display:flex;"><span>pg_dump: reading default privileges
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined collations
+</span></span><span style="display:flex;"><span>pg_dump: reading user-defined conversions
+</span></span><span style="display:flex;"><span>pg_dump: reading <span style="color:#8be9fd;font-style:italic">type</span> casts
+</span></span><span style="display:flex;"><span>pg_dump: reading transforms
+</span></span><span style="display:flex;"><span>pg_dump: reading table inheritance information
+</span></span><span style="display:flex;"><span>pg_dump: reading event triggers
+</span></span><span style="display:flex;"><span>pg_dump: finding extension tables
+</span></span><span style="display:flex;"><span>pg_dump: finding inheritance relationships
+</span></span><span style="display:flex;"><span>pg_dump: reading column info <span style="color:#ff79c6">for</span> interesting tables
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#f1fa8c">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#f1fa8c">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#f1fa8c">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: finding the columns and types of table <span style="color:#f1fa8c">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: flagging inherited columns in subtables
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading indexes <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: flagging indexes in partitioned tables
+</span></span><span style="display:flex;"><span>pg_dump: reading extended statistics
+</span></span><span style="display:flex;"><span>pg_dump: reading constraints
+</span></span><span style="display:flex;"><span>pg_dump: reading triggers
+</span></span><span style="display:flex;"><span>pg_dump: reading rewrite rules
+</span></span><span style="display:flex;"><span>pg_dump: reading policies
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading row security enabled <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading policies <span style="color:#ff79c6">for</span> table <span style="color:#f1fa8c">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: reading publications
+</span></span><span style="display:flex;"><span>pg_dump: reading publication membership
+</span></span><span style="display:flex;"><span>pg_dump: reading subscriptions
+</span></span><span style="display:flex;"><span>pg_dump: reading large objects
+</span></span><span style="display:flex;"><span>pg_dump: reading dependency data
+</span></span><span style="display:flex;"><span>pg_dump: saving <span style="color:#8be9fd;font-style:italic">encoding</span> <span style="color:#ff79c6">=</span> UTF8
+</span></span><span style="display:flex;"><span>pg_dump: saving <span style="color:#8be9fd;font-style:italic">standard_conforming_strings</span> <span style="color:#ff79c6">=</span> on
+</span></span><span style="display:flex;"><span>pg_dump: saving <span style="color:#8be9fd;font-style:italic">search_path</span> <span style="color:#ff79c6">=</span>
+</span></span><span style="display:flex;"><span>pg_dump: saving database definition
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#f1fa8c">&#34;public.pgbench_accounts&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#f1fa8c">&#34;public.pgbench_branches&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#f1fa8c">&#34;public.pgbench_history&#34;</span>
+</span></span><span style="display:flex;"><span>pg_dump: dumping contents of table <span style="color:#f1fa8c">&#34;public.pgbench_tellers&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$
+</span></span></code></pre></div><h3 id="create-a-database-for-restore">Create a Database for Restore</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c &#34;create database pgbench_restore&#34;
+</span></span><span style="display:flex;"><span>CREATE DATABASE
+</span></span></code></pre></div><h3 id="restore-an-individual-table-to-the-restore-database">Restore an Individual Table to the Restore Database</h3>
+<p>Restore only the pgbench_accounts table:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ pg_restore -v -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -U postgres -d pgbench_restore -t pgbench_accounts pgbench.dump
+</span></span><span style="display:flex;"><span>pg_restore: connecting to database for restore
+</span></span><span style="display:flex;"><span>pg_restore: creating TABLE &#34;public.pgbench_accounts&#34;
+</span></span><span style="display:flex;"><span>pg_restore: processing data for table &#34;public.pgbench_accounts&#34;
+</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ psql -h auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com -d pgbench_restore -U postgres
+</span></span><span style="display:flex;"><span>psql (11.12, server 10.14)
+</span></span><span style="display:flex;"><span>SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES128-GCM-SHA256, bits: 128, compression: off)
+</span></span><span style="display:flex;"><span>Type &#34;help&#34; for help.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pgbench_restore=&gt; \conninfo
+</span></span><span style="display:flex;"><span>You are connected to database &#34;pgbench_restore&#34; as user &#34;postgres&#34; on host &#34;auroratest1.cluster-xxxxxxx.ap-northeast-1.rds.amazonaws.com&#34; at port &#34;5432&#34;.
+</span></span><span style="display:flex;"><span>SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES128-GCM-SHA256, bits: 128, compression: off)
+</span></span><span style="display:flex;"><span>pgbench_restore=&gt; \d
+</span></span><span style="display:flex;"><span>              List of relations
+</span></span><span style="display:flex;"><span> Schema |       Name       | Type  |  Owner
+</span></span><span style="display:flex;"><span>--------+------------------+-------+----------
+</span></span><span style="display:flex;"><span> public | pgbench_accounts | table | postgres
+</span></span><span style="display:flex;"><span>(1 row)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pgbench_restore=&gt;
+</span></span></code></pre></div>
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2021-10-27-PostgreSQL%e3%81%a7%e3%83%87%e3%83%bc%e3%82%bf%e3%83%99%e3%83%bc%e3%82%b9%e5%85%a8%e4%bd%93%e3%81%ae%e8%ab%96%e7%90%86%e3%83%90%e3%83%83%e3%82%af%e3%82%a2%e3%83%83%e3%83%97%e3%81%8b%e3%82%89%e5%80%8b%e5%88%a5%e3%83%86%e3%83%bc%e3%83%96%e3%83%ab%e3%82%92%e3%83%aa%e3%82%b9%e3%83%88%e3%82%a2%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-athena-glue-awswrangler-csv-to-parquet/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">CSV to Parquet Using awswrangler</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-mongodb-install/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Installing MongoDB (5.x) on Amazon Linux</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fpostgresql-database-logical-backup-restore-table%2f&text=Restoring&#43;Individual&#43;Tables&#43;from&#43;a&#43;Full&#43;Database&#43;Logical&#43;Backup&#43;in&#43;PostgreSQL" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/postgresql-database-logical-backup-restore-table/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-postgresql-execute-plan-visualization/">Visualizing PostgreSQL SQL Execution Plans (pev, gocmdpev)</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-postgresql-pg_proctab-extention/">Exploring the pg_proctab Extension for Aurora/RDS PostgreSQL</a></li>
+    
+    <li><a href="/en/postgresql-pgbench-performance-sql-test/">Load Testing with Custom SQL Using pgbench</a></li>
+    
+    <li><a href="/en/aws-aurora-rds-postgresql-pg-collector.html">About awslabs pg-collector</a></li>
+    
+    <li><a href="/en/oracle-postgresql-sequence-cache-incompatible.html">Behavioral Differences in Sequence Cache Between Oracle and PostgreSQL</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/postgresql/" class="tag-badge"><img src="/images/tags/postgresql.svg" alt="PostgreSQL" class="tag-badge-icon" loading="lazy">PostgreSQL</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#commands">Commands</a>
+      <ul>
+        <li><a href="#back-up-the-entire-database-with-pg_dump">Back Up the Entire Database with pg_dump</a></li>
+        <li><a href="#restore-only-a-specific-table-with-pg_restore">Restore Only a Specific Table with pg_restore</a></li>
+      </ul>
+    </li>
+    <li><a href="#execution-log">Execution Log</a>
+      <ul>
+        <li><a href="#backup">Backup</a></li>
+        <li><a href="#create-a-database-for-restore">Create a Database for Restore</a></li>
+        <li><a href="#restore-an-individual-table-to-the-restore-database">Restore an Individual Table to the Restore Database</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
