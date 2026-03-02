@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する | zatoima</title>
+<meta name="title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する" />
+<meta name="description" content="" />
+<meta name="keywords" content="Snowflake,Cortex,AI," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="ja">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="article:tag" content="Cortex">
+    <meta property="article:tag" content="AI">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する\"",
+  "description": "\"\"",
+  "datePublished": "\"2026-03-02T00:00:00Z\"",
+  "dateModified": "\"2026-03-02T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/\""
+  },
+  "inLanguage": "ja",
+  "wordCount":  2559 ,
+  "keywords": "[\"Snowflake\",\"Cortex\",\"AI\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/snowflake-cortex-agent-run-vs-data-agent-run/" />
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">メインコンテンツへスキップ</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/" class="lang-dropdown-item active" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/snowflake-cortex-agent-run-vs-data-agent-run/" class="lang-dropdown-item" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Snowflake Cortex の AGENT_RUN と …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-icon" loading="lazy"></div>
+        <h1>Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-02'>
+            2026/03/02に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約5分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          
+          <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge">Cortex</a>
+          
+          <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><img src="/images/tags/ai.svg" alt="AI" class="tag-badge-icon" loading="lazy">AI</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="はじめに">はじめに</h2>
+<p>Snowflake Cortex には、エージェントを SQL から呼び出す関数が2つある。</p>
+<ul>
+<li><a href="https://docs.snowflake.com/en/sql-reference/functions/agent_run-snowflake-cortex" target="_blank" rel="noopener noreferrer">AGENT_RUN (SNOWFLAKE.CORTEX)</a>
+ — エージェントオブジェクトなしで直接実行する関数</li>
+<li><a href="https://docs.snowflake.com/en/sql-reference/functions/data_agent_run-snowflake-cortex" target="_blank" rel="noopener noreferrer">DATA_AGENT_RUN (SNOWFLAKE.CORTEX)</a>
+ — 事前に作成したエージェントオブジェクトを呼び出す関数</li>
+</ul>
+<p>どちらも <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents" target="_blank" rel="noopener noreferrer">Cortex Agents</a>
+ の SQL ラッパーだが、設計思想と使い方が異なる。本記事では両関数の違いを Snowflake 上で実際に検証し、使い分けのポイントを整理する。</p>
+<h2 id="cortex-agents-の基本概念">Cortex Agents の基本概念</h2>
+<h3 id="cortex-agents-とは">Cortex Agents とは</h3>
+<p>Cortex Agents は、構造化データと非構造化データを横断してオーケストレーションを行い、インサイトを提供する AI エージェント機能。タスクの計画、ツールによる実行、レスポンス生成を一貫して処理する。2025年11月に GA となった機能で、以下のツールを組み合わせて利用できる。</p>
+<table>
+  <thead>
+      <tr>
+          <th>ツール</th>
+          <th>種別</th>
+          <th>概要</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Cortex Analyst (semantic view)</td>
+          <td>構造化データ</td>
+          <td>セマンティックビューを使った Text-to-SQL</td>
+      </tr>
+      <tr>
+          <td>Cortex Search Service</td>
+          <td>非構造化データ</td>
+          <td>ベクトル検索による文書検索</td>
+      </tr>
+      <tr>
+          <td>Custom tools</td>
+          <td>カスタム</td>
+          <td>外部 API や Snowpark Container Services</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="エージェントオブジェクトとは">エージェントオブジェクトとは</h3>
+<p><code>CREATE AGENT</code> コマンドで Snowflake 上に作成する管理オブジェクト。モデル設定、指示（instructions）、ツール定義などをオブジェクトとして保存し、再利用できる。<code>DATA_AGENT_RUN</code> を使う際は、このオブジェクトの作成が前提となる。</p>
+<h2 id="agent_run-と-data_agent_run-の概要比較">AGENT_RUN と DATA_AGENT_RUN の概要比較</h2>
+<table>
+  <thead>
+      <tr>
+          <th>項目</th>
+          <th>AGENT_RUN</th>
+          <th>DATA_AGENT_RUN</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>エージェントオブジェクト</td>
+          <td>不要</td>
+          <td>必須（<code>CREATE AGENT</code> で事前作成）</td>
+      </tr>
+      <tr>
+          <td>第1引数</td>
+          <td>なし（request_body のみ）</td>
+          <td>エージェントの完全修飾名</td>
+      </tr>
+      <tr>
+          <td>設定の渡し方</td>
+          <td>request_body に直接記述</td>
+          <td>エージェントオブジェクトに定義済み</td>
+      </tr>
+      <tr>
+          <td>request_body で指定できる設定</td>
+          <td>model, instructions, orchestration, tools など全項目</td>
+          <td>messages, stream, tool_choice など実行時パラメータのみ</td>
+      </tr>
+      <tr>
+          <td>CI/CD 対応</td>
+          <td>△（設定がコードに分散）</td>
+          <td>○（<code>ALTER AGENT</code> で設定を集中管理）</td>
+      </tr>
+      <tr>
+          <td>主なユースケース</td>
+          <td>試験・プロトタイピング</td>
+          <td>本番運用・エンタープライズ向け</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="検証agent_runエージェントオブジェクトなし">検証：AGENT_RUN（エージェントオブジェクトなし）</h2>
+<p>エージェントオブジェクトを作成せず、設定をすべて request_body に含めて実行する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> SNOWFLAKE.CORTEX.AGENT_RUN(
+</span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#39;{
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;messages&#34;: [
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      {
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;role&#34;: &#34;user&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;content&#34;: [{&#34;type&#34;: &#34;text&#34;, &#34;text&#34;: &#34;Snowflake Cortex Agentsとは何ですか？2文で簡潔に答えてください。&#34;}]
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      }
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    ],
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;stream&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  }&#39;</span>
+</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">AS</span> response;
+</span></span></code></pre></div><p>実行結果（整形）:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;schema_version&#34;</span>: <span style="color:#f1fa8c">&#34;v2&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;sequence_number&#34;</span>: <span style="color:#bd93f9">29</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;metadata&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;usage&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;tokens_consumed&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;context_window&#34;</span>: <span style="color:#bd93f9">200000</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;input_tokens&#34;</span>: {<span style="color:#ff79c6">&#34;cache_read&#34;</span>: <span style="color:#bd93f9">0</span>, <span style="color:#ff79c6">&#34;cache_write&#34;</span>: <span style="color:#bd93f9">0</span>, <span style="color:#ff79c6">&#34;total&#34;</span>: <span style="color:#bd93f9">82</span>, <span style="color:#ff79c6">&#34;uncached&#34;</span>: <span style="color:#bd93f9">82</span>},
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;model_name&#34;</span>: <span style="color:#f1fa8c">&#34;claude-sonnet-4-5&#34;</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;output_tokens&#34;</span>: {<span style="color:#ff79c6">&#34;total&#34;</span>: <span style="color:#bd93f9">76</span>}
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;role&#34;</span>: <span style="color:#f1fa8c">&#34;assistant&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;content&#34;</span>: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;text&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;text&#34;</span>: <span style="color:#f1fa8c">&#34;Snowflake Cortex Agents is a framework within Snowflake that enables users to build and deploy AI-powered conversational agents that can interact with data directly in Snowflake. These agents leverage large language models and can execute SQL queries, access Snowflake data, and provide intelligent responses to natural language questions about enterprise data.&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>設定なしのシンプルな呼び出しでも動作する。<code>model</code> を指定しない場合は自動選択されるが、今回の検証では <code>claude-sonnet-4-5</code> が選択された。</p>
+<h2 id="検証data_agent_runエージェントオブジェクトあり">検証：DATA_AGENT_RUN（エージェントオブジェクトあり）</h2>
+<h3 id="step-1-エージェントオブジェクトの作成">Step 1: エージェントオブジェクトの作成</h3>
+<p><code>CREATE AGENT</code> の構文は <code>FROM SPECIFICATION $$...$$</code> を使う。<code>SPECIFICATION = $$...$$</code> では構文エラーになるため注意が必要。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">OR</span> <span style="color:#ff79c6">REPLACE</span> AGENT CORTEX_VERIFY_DB.AGENT_TEST.SIMPLE_AGENT
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">COMMENT</span> <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Cortex Agent検証用シンプルエージェント&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">FROM</span> SPECIFICATION
+</span></span><span style="display:flex;"><span>  $$
+</span></span><span style="display:flex;"><span>  models:
+</span></span><span style="display:flex;"><span>    orchestration: claude<span style="color:#ff79c6">-</span>sonnet<span style="color:#ff79c6">-</span><span style="color:#bd93f9">4</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">5</span>
+</span></span><span style="display:flex;"><span>  instructions:
+</span></span><span style="display:flex;"><span>    response: <span style="color:#f1fa8c">&#34;日本語で簡潔に回答する&#34;</span>
+</span></span><span style="display:flex;"><span>  $$;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>+------------------------------------------+
+</span></span><span style="display:flex;"><span>| status                                   |
+</span></span><span style="display:flex;"><span>|------------------------------------------|
+</span></span><span style="display:flex;"><span>| Agent SIMPLE_AGENT successfully created. |
+</span></span><span style="display:flex;"><span>+------------------------------------------+
+</span></span></code></pre></div><h3 id="step-2-show-agents--describe-agent-で確認">Step 2: SHOW AGENTS / DESCRIBE AGENT で確認</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SHOW</span> AGENTS;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>+-------------------------+--------------+------------------+------------+----------+---------------------------+---------+
+</span></span><span style="display:flex;"><span>| created_on              | name         | database_name    | schema_name| owner    | comment                   | profile |
+</span></span><span style="display:flex;"><span>|-------------------------+--------------+------------------+------------+----------+---------------------------+---------|
+</span></span><span style="display:flex;"><span>| 2026-03-02 15:26:49.715 | SIMPLE_AGENT | CORTEX_VERIFY_DB | AGENT_TEST | SYSADMIN | Cortex Agent検証用シンプルエージェント | None    |
+</span></span><span style="display:flex;"><span>+-------------------------+--------------+------------------+------------+----------+---------------------------+---------+
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">DESCRIBE</span> AGENT CORTEX_VERIFY_DB.AGENT_TEST.SIMPLE_AGENT;
+</span></span></code></pre></div><p><code>agent_spec</code> カラムに YAML で定義した設定が JSON 形式で格納されているのが確認できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;models&#34;</span>: {<span style="color:#ff79c6">&#34;orchestration&#34;</span>: <span style="color:#f1fa8c">&#34;claude-sonnet-4-5&#34;</span>},
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;instructions&#34;</span>: {<span style="color:#ff79c6">&#34;response&#34;</span>: <span style="color:#f1fa8c">&#34;日本語で簡潔に回答する&#34;</span>}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="step-3-data_agent_run-で呼び出し">Step 3: DATA_AGENT_RUN で呼び出し</h3>
+<p>第1引数にエージェントの完全修飾名（<code>DB.SCHEMA.AGENT_NAME</code>）を指定する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> SNOWFLAKE.CORTEX.DATA_AGENT_RUN(
+</span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#39;CORTEX_VERIFY_DB.AGENT_TEST.SIMPLE_AGENT&#39;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#39;{
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;messages&#34;: [
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      {
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;role&#34;: &#34;user&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;content&#34;: [{&#34;type&#34;: &#34;text&#34;, &#34;text&#34;: &#34;Snowflake Cortex Agentsとは何ですか？2文で簡潔に答えてください。&#34;}]
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      }
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    ],
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;stream&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  }&#39;</span>
+</span></span><span style="display:flex;"><span>) <span style="color:#ff79c6">AS</span> response;
+</span></span></code></pre></div><p>実行結果（整形）:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;schema_version&#34;</span>: <span style="color:#f1fa8c">&#34;v2&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;sequence_number&#34;</span>: <span style="color:#bd93f9">31</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;metadata&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;usage&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;tokens_consumed&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;context_window&#34;</span>: <span style="color:#bd93f9">200000</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;input_tokens&#34;</span>: {<span style="color:#ff79c6">&#34;cache_read&#34;</span>: <span style="color:#bd93f9">0</span>, <span style="color:#ff79c6">&#34;cache_write&#34;</span>: <span style="color:#bd93f9">0</span>, <span style="color:#ff79c6">&#34;total&#34;</span>: <span style="color:#bd93f9">106</span>, <span style="color:#ff79c6">&#34;uncached&#34;</span>: <span style="color:#bd93f9">106</span>},
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;model_name&#34;</span>: <span style="color:#f1fa8c">&#34;claude-sonnet-4-5&#34;</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;output_tokens&#34;</span>: {<span style="color:#ff79c6">&#34;total&#34;</span>: <span style="color:#bd93f9">97</span>}
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;role&#34;</span>: <span style="color:#f1fa8c">&#34;assistant&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;content&#34;</span>: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;text&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;text&#34;</span>: <span style="color:#f1fa8c">&#34;Snowflake Cortex Agentsは、Snowflakeのデータプラットフォーム上で動作するAIエージェントフレームワークです。自然言語でデータにアクセスし、分析タスクを自動化できる対話型のインテリジェントエージェントを構築するためのサービスです。&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>エージェントオブジェクトに <code>instructions: response: &quot;日本語で簡潔に回答する&quot;</code> を定義しているため、日本語で回答が返っている。<code>AGENT_RUN</code> と回答言語が異なる点がわかりやすい違いとなっている。</p>
+<h3 id="入力トークン数の比較">入力トークン数の比較</h3>
+<p>同じ質問での入力トークン数を比較すると、<code>DATA_AGENT_RUN</code> の方が多くなる。</p>
+<table>
+  <thead>
+      <tr>
+          <th>関数</th>
+          <th>input_tokens</th>
+          <th>output_tokens</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>AGENT_RUN</td>
+          <td>82</td>
+          <td>76</td>
+      </tr>
+      <tr>
+          <td>DATA_AGENT_RUN</td>
+          <td>106</td>
+          <td>97</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>DATA_AGENT_RUN</code> は エージェントオブジェクトに定義した <code>instructions</code> などの設定がシステムプロンプトとして自動的に付加されるため、入力トークン数が増加する。</p>
+<h2 id="レスポンスのパース">レスポンスのパース</h2>
+<p>どちらの関数も JSON 文字列を返す。<code>TRY_PARSE_JSON</code> で VARIANT 型に変換することで、後続のクエリで各フィールドにアクセスできる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">WITH</span> agent_response <span style="color:#ff79c6">AS</span> (
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">SELECT</span> TRY_PARSE_JSON(
+</span></span><span style="display:flex;"><span>    SNOWFLAKE.CORTEX.AGENT_RUN(
+</span></span><span style="display:flex;"><span>      <span style="color:#f1fa8c">&#39;{
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;messages&#34;: [
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">          {&#34;role&#34;: &#34;user&#34;, &#34;content&#34;: [{&#34;type&#34;: &#34;text&#34;, &#34;text&#34;: &#34;Snowflake Cortex Agentsとは？&#34;}]}
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        ],
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        &#34;stream&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      }&#39;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>  ) <span style="color:#ff79c6">AS</span> response
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>  response:schema_version::STRING                  <span style="color:#ff79c6">AS</span> schema_version,
+</span></span><span style="display:flex;"><span>  response:<span style="color:#ff79c6">role</span>::STRING                            <span style="color:#ff79c6">AS</span> <span style="color:#ff79c6">role</span>,
+</span></span><span style="display:flex;"><span>  response:content[<span style="color:#bd93f9">0</span>]:<span style="color:#8be9fd;font-style:italic">text</span>::STRING                 <span style="color:#ff79c6">AS</span> answer_text,
+</span></span><span style="display:flex;"><span>  response:metadata:<span style="color:#ff79c6">usage</span>:tokens_consumed[<span style="color:#bd93f9">0</span>]:model_name::STRING <span style="color:#ff79c6">AS</span> model_name,
+</span></span><span style="display:flex;"><span>  response:metadata:<span style="color:#ff79c6">usage</span>:tokens_consumed[<span style="color:#bd93f9">0</span>]:input_tokens:total::<span style="color:#8be9fd;font-style:italic">INT</span>  <span style="color:#ff79c6">AS</span> input_tokens,
+</span></span><span style="display:flex;"><span>  response:metadata:<span style="color:#ff79c6">usage</span>:tokens_consumed[<span style="color:#bd93f9">0</span>]:output_tokens:total::<span style="color:#8be9fd;font-style:italic">INT</span> <span style="color:#ff79c6">AS</span> output_tokens
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> agent_response;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>+----------------+-----------+---------------------------------------+------------------+--------------+---------------+
+</span></span><span style="display:flex;"><span>| SCHEMA_VERSION | ROLE      | ANSWER_TEXT                           | MODEL_NAME       | INPUT_TOKENS | OUTPUT_TOKENS |
+</span></span><span style="display:flex;"><span>|----------------+-----------+---------------------------------------+------------------+--------------+---------------|
+</span></span><span style="display:flex;"><span>| v2             | assistant | Snowflake Cortex Agentsは、Snowflake... | claude-sonnet-4-5 | 82           | 76            |
+</span></span><span style="display:flex;"><span>+----------------+-----------+---------------------------------------+------------------+--------------+---------------+
+</span></span></code></pre></div><p><code>DATA_AGENT_RUN</code> でも全く同じパス記法でアクセスできる。レスポンスのスキーマは両関数で共通している。</p>
+<h2 id="使い分けのポイント">使い分けのポイント</h2>
+<table>
+  <thead>
+      <tr>
+          <th>観点</th>
+          <th>AGENT_RUN を選ぶ</th>
+          <th>DATA_AGENT_RUN を選ぶ</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>目的</td>
+          <td>試験・プロトタイピング</td>
+          <td>本番アプリケーション</td>
+      </tr>
+      <tr>
+          <td>設定管理</td>
+          <td>コード（SQL）で管理したい</td>
+          <td>Snowflake オブジェクトとして管理したい</td>
+      </tr>
+      <tr>
+          <td>再利用性</td>
+          <td>毎回設定を渡すため低い</td>
+          <td>エージェントオブジェクトを複数クライアントで共有</td>
+      </tr>
+      <tr>
+          <td>CI/CD</td>
+          <td>向いていない</td>
+          <td><code>ALTER AGENT</code> で設定変更を一元管理できる</td>
+      </tr>
+      <tr>
+          <td>権限設定</td>
+          <td><code>CORTEX_USER</code> または <code>CORTEX_AGENT_USER</code></td>
+          <td>上記に加え <code>CREATE AGENT</code>、<code>USAGE ON AGENT</code> が必要</td>
+      </tr>
+      <tr>
+          <td>トークン消費</td>
+          <td>必要最小限</td>
+          <td>エージェント設定分が加算される</td>
+      </tr>
+  </tbody>
+</table>
+<p>どちらを選ぶかの判断基準:</p>
+<ul>
+<li><strong>まず動かして試したい</strong> → <code>AGENT_RUN</code> で設定を直接渡せば、エージェントオブジェクトなしで即座に検証できる</li>
+<li><strong>チームで共有・継続運用する</strong> → <code>DATA_AGENT_RUN</code> + <code>CREATE AGENT</code> で設定をオブジェクトとして管理し、<code>ALTER AGENT</code> で変更を集中管理する</li>
+</ul>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li><code>AGENT_RUN</code> はエージェントオブジェクト不要。モデル、指示、ツールを request_body に直接渡して即時実行できる。試験・プロトタイピングに向いている</li>
+<li><code>DATA_AGENT_RUN</code> は <code>CREATE AGENT</code> で作成したオブジェクトを名前で呼び出す。設定の再利用・CI/CD 対応が必要な本番運用向けの選択肢</li>
+<li>どちらも内部的には Cortex Agents Run REST API のラッパーで、レスポンスのスキーマは共通（<code>schema_version</code>, <code>role</code>, <code>content</code>, <code>metadata</code> を含む JSON）</li>
+<li><code>DATA_AGENT_RUN</code> はエージェントオブジェクトの設定がシステムプロンプトに付加されるため、同じ質問でも入力トークン数が <code>AGENT_RUN</code> より多くなる</li>
+</ul>
+<h2 id="参考資料">参考資料</h2>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/sql-reference/functions/agent_run-snowflake-cortex" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">AGENT_RUN (SNOWFLAKE.CORTEX) | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/sql-reference/functions/data_agent_run-snowflake-cortex" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">DATA_AGENT_RUN (SNOWFLAKE.CORTEX) | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Cortex Agents | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/sql-reference/sql/create-agent" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">CREATE AGENT | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-02-Snowflake-Cortex-AGENT_RUN-%e3%81%a8-DATA_AGENT_RUN-%e3%81%ae%e9%81%95%e3%81%84%e3%82%92%e6%a4%9c%e8%a8%bc%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      GitHubで編集を提案
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/snowflake-cloud-services-billing/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">Snowflake クラウドサービス利用料の仕組みと最適化</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/oci-always-free-arm64-benchmark/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">OCI Always Free ARM64のパフォーマンスをベンチマーク計測する</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fsnowflake-cortex-agent-run-vs-data-agent-run%2f&text=Snowflake&#43;Cortex&#43;%E3%81%AE&#43;AGENT_RUN&#43;%E3%81%A8&#43;DATA_AGENT_RUN&#43;%E3%81%AE%E9%81%95%E3%81%84%E3%82%92%E6%A4%9C%E8%A8%BC%E3%81%99%E3%82%8B" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/llm-papers-2026-03-02/">LLM論文サーベイ（2026-03-02）</a></li>
+    
+    <li><a href="/snowflake-cloud-services-billing/">Snowflake クラウドサービス利用料の仕組みと最適化</a></li>
+    
+    <li><a href="/llm-papers-2026-03-01/">LLM論文サーベイ（2026-03-01）</a></li>
+    
+    <li><a href="/llm-papers-2026-02-28/">LLM論文サーベイ（2026-02-28）</a></li>
+    
+    <li><a href="/llm-papers-2026-02-27/">LLM論文サーベイ（2026-02-27）</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  
+  <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge">Cortex</a>
+  
+  <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><img src="/images/tags/ai.svg" alt="AI" class="tag-badge-icon" loading="lazy">AI</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#はじめに">はじめに</a></li>
+    <li><a href="#cortex-agents-の基本概念">Cortex Agents の基本概念</a>
+      <ul>
+        <li><a href="#cortex-agents-とは">Cortex Agents とは</a></li>
+        <li><a href="#エージェントオブジェクトとは">エージェントオブジェクトとは</a></li>
+      </ul>
+    </li>
+    <li><a href="#agent_run-と-data_agent_run-の概要比較">AGENT_RUN と DATA_AGENT_RUN の概要比較</a></li>
+    <li><a href="#検証agent_runエージェントオブジェクトなし">検証：AGENT_RUN（エージェントオブジェクトなし）</a></li>
+    <li><a href="#検証data_agent_runエージェントオブジェクトあり">検証：DATA_AGENT_RUN（エージェントオブジェクトあり）</a>
+      <ul>
+        <li><a href="#step-1-エージェントオブジェクトの作成">Step 1: エージェントオブジェクトの作成</a></li>
+        <li><a href="#step-2-show-agents--describe-agent-で確認">Step 2: SHOW AGENTS / DESCRIBE AGENT で確認</a></li>
+        <li><a href="#step-3-data_agent_run-で呼び出し">Step 3: DATA_AGENT_RUN で呼び出し</a></li>
+        <li><a href="#入力トークン数の比較">入力トークン数の比較</a></li>
+      </ul>
+    </li>
+    <li><a href="#レスポンスのパース">レスポンスのパース</a></li>
+    <li><a href="#使い分けのポイント">使い分けのポイント</a></li>
+    <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#参考資料">参考資料</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

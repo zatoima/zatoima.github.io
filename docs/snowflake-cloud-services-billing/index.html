@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Snowflake クラウドサービス利用料の仕組みと最適化 | zatoima</title>
+<meta name="title" content="Snowflake クラウドサービス利用料の仕組みと最適化" />
+<meta name="description" content="Snowflake のクラウドサービス（Cloud Services）レイヤーの仕組みと課金ルールを解説する。1日のCS消費がVWクレジットの10%を超えた場合のみ超過分が課金される「10%ルール」の詳細、METERING_DAILY_HISTORY・WAREHOUSE_METERING_HISTORY・QUERY_HISTORYを使った費用追跡クエリ、および削減優先順位を整理する。" />
+<meta name="keywords" content="Snowflake,コスト管理," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/snowflake-cloud-services-billing/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Snowflake クラウドサービス利用料の仕組みと最適化">
+  <meta property="og:description" content="Snowflake のクラウドサービス（Cloud Services）レイヤーの仕組みと課金ルールを解説する。1日のCS消費がVWクレジットの10%を超えた場合のみ超過分が課金される「10%ルール」の詳細、METERING_DAILY_HISTORY・WAREHOUSE_METERING_HISTORY・QUERY_HISTORYを使った費用追跡クエリ、および削減優先順位を整理する。">
+  <meta property="og:locale" content="ja">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="article:tag" content="コスト管理">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Snowflake クラウドサービス利用料の仕組みと最適化">
+  <meta name="twitter:description" content="Snowflake のクラウドサービス（Cloud Services）レイヤーの仕組みと課金ルールを解説する。1日のCS消費がVWクレジットの10%を超えた場合のみ超過分が課金される「10%ルール」の詳細、METERING_DAILY_HISTORY・WAREHOUSE_METERING_HISTORY・QUERY_HISTORYを使った費用追跡クエリ、および削減優先順位を整理する。">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Snowflake クラウドサービス利用料の仕組みと最適化\"",
+  "description": "\"Snowflake のクラウドサービス（Cloud Services）レイヤーの仕組みと課金ルールを解説する。1日のCS消費がVWクレジットの10%を超えた場合のみ超過分が課金される「10%ルール」の詳細 …\"",
+  "datePublished": "\"2026-03-02T00:00:00Z\"",
+  "dateModified": "\"2026-03-02T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/snowflake-cloud-services-billing/\""
+  },
+  "inLanguage": "ja",
+  "wordCount":  3035 ,
+  "keywords": "[\"Snowflake\",\"コスト管理\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/snowflake-cloud-services-billing/" />
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/snowflake-cloud-services-billing/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">メインコンテンツへスキップ</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/snowflake-cloud-services-billing/" class="lang-dropdown-item active" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/snowflake-cloud-services-billing/" class="lang-dropdown-item" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Snowflake クラウドサービス利用料の仕組みと最適化</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-icon" loading="lazy"></div>
+        <h1>Snowflake クラウドサービス利用料の仕組みと最適化</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-02'>
+            2026/03/02に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約6分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          
+          <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><img src="/images/tags/%e3%82%b3%e3%82%b9%e3%83%88%e7%ae%a1%e7%90%86.svg" alt="コスト管理" class="tag-badge-icon" loading="lazy">コスト管理</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="はじめに">はじめに</h2>
+<p>Snowflake の利用明細を見ると、ウェアハウスのコンピュートとは別に「クラウドサービス（Cloud Services）」というクレジット消費が記録されている。これが何者で、どういう条件で課金され、どう追跡・削減するかを整理する。</p>
+<p>公式ドキュメント: <a href="https://docs.snowflake.com/en/user-guide/cost-understanding-compute" target="_blank" rel="noopener noreferrer">Understanding compute cost</a>
+ / <a href="https://docs.snowflake.com/en/user-guide/cost-optimize-cloud-services" target="_blank" rel="noopener noreferrer">Optimizing cloud services for cost</a>
+</p>
+<hr>
+<h2 id="クラウドサービスレイヤーとは">クラウドサービスレイヤーとは</h2>
+<p>Snowflake のアーキテクチャは大きく3層に分かれる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>┌────────────────────────────────────────────┐
+</span></span><span style="display:flex;"><span>│        Cloud Services Layer                │  ← 今回の対象
+</span></span><span style="display:flex;"><span>│  認証 / メタデータ管理 / クエリコンパイル      │
+</span></span><span style="display:flex;"><span>│  アクセス制御 / トランザクション管理           │
+</span></span><span style="display:flex;"><span>├────────────────────────────────────────────┤
+</span></span><span style="display:flex;"><span>│        Compute Layer（仮想ウェアハウス）      │  ← クエリ・DML実行
+</span></span><span style="display:flex;"><span>├────────────────────────────────────────────┤
+</span></span><span style="display:flex;"><span>│        Storage Layer                       │  ← データ永続化
+</span></span><span style="display:flex;"><span>└────────────────────────────────────────────┘
+</span></span></code></pre></div><p>クラウドサービスレイヤーは、ユーザーが明示的にウェアハウスを起動しなくても、Snowflake が内部的に常時稼働させているコンポーネントになる。主な役割は以下のとおり。</p>
+<table>
+  <thead>
+      <tr>
+          <th>機能</th>
+          <th>内容</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>認証・認可</td>
+          <td>ログイン検証、ロール解決、行ポリシー評価</td>
+      </tr>
+      <tr>
+          <td>メタデータ管理</td>
+          <td>テーブル定義、パーティション情報、統計情報の管理</td>
+      </tr>
+      <tr>
+          <td>クエリコンパイル</td>
+          <td>SQL のパース、最適化プラン生成、プルーニング</td>
+      </tr>
+      <tr>
+          <td>トランザクション管理</td>
+          <td>ACID 保証、スナップショット管理</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="10ルールcloud-services-adjustment">10%ルール（Cloud Services Adjustment）</h2>
+<h3 id="課金の仕組み">課金の仕組み</h3>
+<p>クラウドサービスのクレジット消費は<strong>常に発生</strong>するが、課金（請求）されるのは一定の条件を超えた場合のみとなる。</p>
+<blockquote>
+<p><strong>1日（UTC）のクラウドサービス消費量が、同日の仮想ウェアハウス消費量の10%を超えた場合のみ、超過分が課金される。</strong></p>
+</blockquote>
+<p>超過分のみが課金される仕組みを「Cloud Services Adjustment（調整）」と呼ぶ。METERING_DAILY_HISTORY ビューの <code>CREDITS_ADJUSTMENT_CLOUD_SERVICES</code> 列が負の値で記録され、その分だけ差し引かれる。</p>
+<div class="callout callout-info">
+  <span class="callout-icon"></span>
+  <div class="callout-content">サーバーレスコンピュート（Snowpipe、Automatic Clustering 等）は、この10%調整の計算対象外となる。調整に使われるのは<strong>仮想ウェアハウスのクレジットのみ</strong>。</div>
+</div>
+
+<h3 id="計算例">計算例</h3>
+<p>公式ドキュメントの具体例を以下に示す。</p>
+<table>
+  <thead>
+      <tr>
+          <th>日付</th>
+          <th>VW使用クレジット</th>
+          <th>CS使用クレジット</th>
+          <th>調整額（10%以下は全額控除）</th>
+          <th>課金クレジット</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Nov 1</td>
+          <td>100</td>
+          <td>20</td>
+          <td>−10</td>
+          <td>110</td>
+      </tr>
+      <tr>
+          <td>Nov 2</td>
+          <td>120</td>
+          <td>10</td>
+          <td>−10</td>
+          <td>120</td>
+      </tr>
+      <tr>
+          <td>Nov 3</td>
+          <td>80</td>
+          <td>5</td>
+          <td>−5</td>
+          <td>80</td>
+      </tr>
+      <tr>
+          <td>Nov 4</td>
+          <td>100</td>
+          <td>13</td>
+          <td>−10</td>
+          <td>103</td>
+      </tr>
+      <tr>
+          <td><strong>合計</strong></td>
+          <td><strong>400</strong></td>
+          <td><strong>48</strong></td>
+          <td><strong>−35</strong></td>
+          <td><strong>413</strong></td>
+      </tr>
+  </tbody>
+</table>
+<ul>
+<li>Nov 1: CS=20 &gt; VW×10%=10 → 超過10クレジット分が課金。調整額は −10</li>
+<li>Nov 2: CS=10 &lt; VW×10%=12 → CS が10%未満 → 調整額は −10（CS全額控除）</li>
+<li>Nov 3: CS=5 &lt; VW×10%=8 → 全額調整。調整額は −5（CS全額控除）</li>
+<li>Nov 4: CS=13 &gt; VW×10%=10 → 超過3クレジット分が課金。調整額は −10</li>
+</ul>
+<hr>
+<h2 id="クラウドサービス費用が発生するユースケース">クラウドサービス費用が発生するユースケース</h2>
+<p>以下のいずれも、仮想ウェアハウスを<strong>使わずに</strong>クラウドサービスのみでリソースを消費するパターンになる。</p>
+<table>
+  <thead>
+      <tr>
+          <th>パターン</th>
+          <th>発生原因</th>
+          <th>推奨対策</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>COPYコマンドの低選択性</td>
+          <td>S3ファイル一覧取得はCSのみで実行</td>
+          <td>S3バケットに日付プレフィックスを付与し、対象ファイルを絞る</td>
+      </tr>
+      <tr>
+          <td>高頻度DDL・クローニング</td>
+          <td>CREATE/DROP/CLONE はメタデータ操作のみ</td>
+          <td>クローンの粒度を見直す（スキーマ全体→テーブル単位へ）</td>
+      </tr>
+      <tr>
+          <td>高頻度の単純クエリ</td>
+          <td><code>SELECT 1</code>、<code>SELECT CURRENT_SESSION()</code> の大量実行</td>
+          <td>JDBC ドライバの <code>getSessionId()</code> メソッドを使ってキャッシュ活用</td>
+      </tr>
+      <tr>
+          <td>INFORMATION_SCHEMA の高頻度クエリ</td>
+          <td>I_Sクエリはウェアハウス不使用</td>
+          <td><code>ACCOUNT_USAGE</code> スキーマへ切り替える</td>
+      </tr>
+      <tr>
+          <td>高頻度SHOWコマンド</td>
+          <td>アプリ・サードパーティツールがメタデータを頻繁に取得</td>
+          <td>ツール側のポーリング頻度を見直す</td>
+      </tr>
+      <tr>
+          <td>単一行INSERT・細粒度スキーマ</td>
+          <td>小さいメタデータ操作の積み重ね</td>
+          <td>バルクロードに変更。マルチテナントはスキーマ共有 + <code>customer_id</code> クラスタリングへ</td>
+      </tr>
+      <tr>
+          <td>複雑なSQLクエリ</td>
+          <td>JOINが多い、<code>IN</code> 句に大きなリスト</td>
+          <td>コンパイル時間が長いクエリを見直す</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="クラウドサービス費用の追跡方法">クラウドサービス費用の追跡方法</h2>
+<h3 id="1-日次課金サマリーmetering_daily_history">1. 日次課金サマリー（METERING_DAILY_HISTORY）</h3>
+<p><code>SNOWFLAKE.ACCOUNT_USAGE.METERING_DAILY_HISTORY</code> ビューで、日ごとのCS使用量と調整後の実課金量を確認できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- 過去1ヶ月のCS課金サマリー（課金量が多い日順）
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    usage_date,
+</span></span><span style="display:flex;"><span>    credits_used_cloud_services,
+</span></span><span style="display:flex;"><span>    credits_adjustment_cloud_services,
+</span></span><span style="display:flex;"><span>    credits_used_cloud_services <span style="color:#ff79c6">+</span> credits_adjustment_cloud_services <span style="color:#ff79c6">AS</span> billed_cloud_services
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> snowflake.account_usage.metering_daily_history
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> usage_date <span style="color:#ff79c6">&gt;=</span> DATEADD(<span style="color:#ff79c6">month</span>, <span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span>, <span style="color:#ff79c6">CURRENT_TIMESTAMP</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> credits_used_cloud_services <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><p>実行結果のイメージ：</p>
+<table>
+  <thead>
+      <tr>
+          <th>USAGE_DATE</th>
+          <th>CREDITS_USED_CLOUD_SERVICES</th>
+          <th>CREDITS_ADJUSTMENT_CLOUD_SERVICES</th>
+          <th>BILLED_CLOUD_SERVICES</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>2026-03-01</td>
+          <td>15.234</td>
+          <td>-10.000</td>
+          <td>5.234</td>
+      </tr>
+      <tr>
+          <td>2026-02-28</td>
+          <td>8.120</td>
+          <td>-8.120</td>
+          <td>0.000</td>
+      </tr>
+      <tr>
+          <td>2026-02-27</td>
+          <td>12.500</td>
+          <td>-10.000</td>
+          <td>2.500</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>billed_cloud_services</code> が 0 の行は、その日のCS消費がVWの10%以内に収まっており課金されていないことを意味する。</p>
+<p>主要列の意味：</p>
+<table>
+  <thead>
+      <tr>
+          <th>列名</th>
+          <th>説明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>CREDITS_USED_CLOUD_SERVICES</code></td>
+          <td>その日の実際のCS消費量</td>
+      </tr>
+      <tr>
+          <td><code>CREDITS_ADJUSTMENT_CLOUD_SERVICES</code></td>
+          <td>調整額（負の値。最大で10%分）</td>
+      </tr>
+      <tr>
+          <td><code>CREDITS_BILLED</code></td>
+          <td>実際に請求されるクレジット合計</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="2-ウェアハウス別の分析warehouse_metering_history">2. ウェアハウス別の分析（WAREHOUSE_METERING_HISTORY）</h3>
+<p>CSの割合が高いウェアハウスを特定することで、問題のある処理を絞り込める。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- CS割合が高いウェアハウスを特定
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    warehouse_name,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SUM</span>(credits_used)                <span style="color:#ff79c6">AS</span> credits_used,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SUM</span>(credits_used_cloud_services) <span style="color:#ff79c6">AS</span> credits_used_cloud_services,
+</span></span><span style="display:flex;"><span>    ROUND(
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">SUM</span>(credits_used_cloud_services) <span style="color:#ff79c6">/</span> <span style="color:#ff79c6">NULLIF</span>(<span style="color:#ff79c6">SUM</span>(credits_used), <span style="color:#bd93f9">0</span>) <span style="color:#ff79c6">*</span> <span style="color:#bd93f9">100</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#bd93f9">2</span>
+</span></span><span style="display:flex;"><span>    )                                <span style="color:#ff79c6">AS</span> pct_cloud_services
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> snowflake.account_usage.warehouse_metering_history
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> TO_DATE(start_time) <span style="color:#ff79c6">&gt;=</span> DATEADD(<span style="color:#ff79c6">month</span>, <span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span>, <span style="color:#ff79c6">CURRENT_TIMESTAMP</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> credits_used_cloud_services <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><p>実行結果のイメージ：</p>
+<table>
+  <thead>
+      <tr>
+          <th>WAREHOUSE_NAME</th>
+          <th>CREDITS_USED</th>
+          <th>CREDITS_USED_CLOUD_SERVICES</th>
+          <th>PCT_CLOUD_SERVICES</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ANALYTICS_WH</td>
+          <td>45.200</td>
+          <td>9.800</td>
+          <td>21.68</td>
+      </tr>
+      <tr>
+          <td>ETL_WH</td>
+          <td>120.500</td>
+          <td>18.200</td>
+          <td>15.10</td>
+      </tr>
+      <tr>
+          <td>ADHOC_WH</td>
+          <td>30.100</td>
+          <td>2.500</td>
+          <td>8.31</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>PCT_CLOUD_SERVICES</code> が 10% を大きく超えているウェアハウスは、前節のパターンに該当する処理が動いている可能性が高い。</p>
+<h3 id="3-クエリタイプ別の分析query_history">3. クエリタイプ別の分析（QUERY_HISTORY）</h3>
+<p>どの種類の操作がCSを多く消費しているか確認する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- 過去7日間のクエリタイプ別CS消費量
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    query_type,
+</span></span><span style="display:flex;"><span>    ROUND(<span style="color:#ff79c6">SUM</span>(credits_used_cloud_services), <span style="color:#bd93f9">6</span>) <span style="color:#ff79c6">AS</span> cs_credits,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">COUNT</span>(<span style="color:#bd93f9">1</span>)                                   <span style="color:#ff79c6">AS</span> num_queries
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> snowflake.account_usage.query_history
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> start_time <span style="color:#ff79c6">&gt;=</span> TIMESTAMPADD(<span style="color:#ff79c6">day</span>, <span style="color:#ff79c6">-</span><span style="color:#bd93f9">7</span>, <span style="color:#ff79c6">CURRENT_TIMESTAMP</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">DESC</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">10</span>;
+</span></span></code></pre></div><p>実行結果のイメージ：</p>
+<table>
+  <thead>
+      <tr>
+          <th>QUERY_TYPE</th>
+          <th>CS_CREDITS</th>
+          <th>NUM_QUERIES</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>SELECT</td>
+          <td>0.024500</td>
+          <td>15823</td>
+      </tr>
+      <tr>
+          <td>COPY</td>
+          <td>0.018200</td>
+          <td>342</td>
+      </tr>
+      <tr>
+          <td>INSERT</td>
+          <td>0.009100</td>
+          <td>5621</td>
+      </tr>
+      <tr>
+          <td>SHOW</td>
+          <td>0.005800</td>
+          <td>12045</td>
+      </tr>
+      <tr>
+          <td>CREATE_TABLE</td>
+          <td>0.001200</td>
+          <td>87</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>SHOW</code> クエリの件数が多く CS 消費が高い場合、サードパーティツールが頻繁にメタデータを取得していると考えられる。</p>
+<h3 id="4-snowsight-での確認">4. Snowsight での確認</h3>
+<p>Snowsight の <strong>Admin &gt; Cost Management</strong> からグラフィカルに確認できる。サービスタイプや期間でフィルタリングでき、クエリを書かずに傾向を把握するのに適している。</p>
+<hr>
+<h2 id="補足">補足</h2>
+<h3 id="information_schema-と-account_usage-の違い">INFORMATION_SCHEMA と ACCOUNT_USAGE の違い</h3>
+<p>追跡クエリを書く際、スキーマ選択で挙動が変わる点に注意が必要となる。</p>
+<table>
+  <thead>
+      <tr>
+          <th>比較項目</th>
+          <th>INFORMATION_SCHEMA</th>
+          <th>ACCOUNT_USAGE</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>データ取得方法</td>
+          <td>クラウドサービスのみ</td>
+          <td>仮想ウェアハウスを使用</td>
+      </tr>
+      <tr>
+          <td>CS消費への影響</td>
+          <td>高頻度実行時に増加</td>
+          <td>ウェアハウスに計上</td>
+      </tr>
+      <tr>
+          <td>データ反映速度</td>
+          <td>リアルタイム</td>
+          <td>最大180分のレイテンシ</td>
+      </tr>
+      <tr>
+          <td>保持期間</td>
+          <td>7日〜6ヶ月</td>
+          <td>最大365日</td>
+      </tr>
+  </tbody>
+</table>
+<p>モニタリング用途では <code>ACCOUNT_USAGE</code> を使うのがコスト面で有利なケースが多い。</p>
+<h3 id="metering_daily_history-の注意点">METERING_DAILY_HISTORY の注意点</h3>
+<ul>
+<li>ビューのレイテンシは最大<strong>180分（3時間）</strong></li>
+<li><code>CREDITS_USED_CLOUD_SERVICES</code> 列のレイテンシは最大<strong>6時間</strong>（<code>WAREHOUSE_METERING_HISTORY</code> 側）</li>
+<li>月次請求と照合する際は、セッションのタイムゾーンを UTC に設定してから参照する</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SESSION</span> <span style="color:#ff79c6">SET</span> TIMEZONE <span style="color:#ff79c6">=</span> UTC;
+</span></span></code></pre></div><h3 id="コスト削減の優先順位">コスト削減の優先順位</h3>
+<p>実際の対策として効果が出やすい順に並べると以下のようになる。</p>
+<ol>
+<li><strong>INFORMATION_SCHEMA → ACCOUNT_USAGE への切り替え</strong> — コード変更だけで対応可能</li>
+<li><strong>高頻度 SHOW コマンドの削減</strong> — ツール設定の見直しで対応</li>
+<li><strong>単一行 INSERT のバルク化</strong> — アーキテクチャ変更が必要だが効果大</li>
+<li><strong>COPY コマンドの S3 バケット構造見直し</strong> — 段階的に対応可能</li>
+</ol>
+<hr>
+<h2 id="まとめ">まとめ</h2>
+<ul>
+<li>クラウドサービスレイヤーは認証・メタデータ管理・クエリコンパイルを担い、常時クレジットを消費する</li>
+<li>課金は「1日のCS消費がVWの10%を超えた場合の超過分のみ」という仕組みで、多くの場合は調整が効く</li>
+<li><code>METERING_DAILY_HISTORY</code>・<code>WAREHOUSE_METERING_HISTORY</code>・<code>QUERY_HISTORY</code> の3つのビューで段階的に原因を特定できる</li>
+<li>CS費用が高い場合はまず「高頻度のSHOW/INFORMATION_SCHEMAクエリ」と「単一行INSERT」を疑う</li>
+</ul>
+<h2 id="参考資料">参考資料</h2>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/user-guide/cost-understanding-compute" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Understanding compute cost | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/user-guide/cost-optimize-cloud-services" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Optimizing cloud services for cost | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/user-guide/cost-exploring-compute" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Exploring compute cost | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/sql-reference/account-usage/metering_daily_history" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">METERING_DAILY_HISTORY view | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-02-snowflake-cloud-services-billing/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      GitHubで編集を提案
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/duckdb-install-quickstart/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">DuckDB インストール入門</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fsnowflake-cloud-services-billing%2f&text=Snowflake&#43;%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E5%88%A9%E7%94%A8%E6%96%99%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF%E3%81%A8%E6%9C%80%E9%81%A9%E5%8C%96" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/snowflake-cloud-services-billing/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/snowflake-cortex-agent-run-vs-data-agent-run/">Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する</a></li>
+    
+    <li><a href="/snowflake-mcp-documentation-server-benchmark/">Snowflake MCPドキュメントサーバー2種のベンチマーク比較</a></li>
+    
+    <li><a href="/mcp-server-context-usage-optimization/">ドキュメント系MCPサーバーのコンテキスト使用量を検証し改善した</a></li>
+    
+    <li><a href="/snowflake-docs-mcp-server-architecture/">Snowflakeドキュメント検索MCPサーバーを作成した</a></li>
+    
+    <li><a href="/snowflake-directory-table-integration/">Snowflakeのディレクトリテーブルとメタデータ自動更新</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  
+  <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><img src="/images/tags/%e3%82%b3%e3%82%b9%e3%83%88%e7%ae%a1%e7%90%86.svg" alt="コスト管理" class="tag-badge-icon" loading="lazy">コスト管理</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#はじめに">はじめに</a></li>
+    <li><a href="#クラウドサービスレイヤーとは">クラウドサービスレイヤーとは</a></li>
+    <li><a href="#10ルールcloud-services-adjustment">10%ルール（Cloud Services Adjustment）</a>
+      <ul>
+        <li><a href="#課金の仕組み">課金の仕組み</a></li>
+        <li><a href="#計算例">計算例</a></li>
+      </ul>
+    </li>
+    <li><a href="#クラウドサービス費用が発生するユースケース">クラウドサービス費用が発生するユースケース</a></li>
+    <li><a href="#クラウドサービス費用の追跡方法">クラウドサービス費用の追跡方法</a>
+      <ul>
+        <li><a href="#1-日次課金サマリーmetering_daily_history">1. 日次課金サマリー（METERING_DAILY_HISTORY）</a></li>
+        <li><a href="#2-ウェアハウス別の分析warehouse_metering_history">2. ウェアハウス別の分析（WAREHOUSE_METERING_HISTORY）</a></li>
+        <li><a href="#3-クエリタイプ別の分析query_history">3. クエリタイプ別の分析（QUERY_HISTORY）</a></li>
+        <li><a href="#4-snowsight-での確認">4. Snowsight での確認</a></li>
+      </ul>
+    </li>
+    <li><a href="#補足">補足</a>
+      <ul>
+        <li><a href="#information_schema-と-account_usage-の違い">INFORMATION_SCHEMA と ACCOUNT_USAGE の違い</a></li>
+        <li><a href="#metering_daily_history-の注意点">METERING_DAILY_HISTORY の注意点</a></li>
+        <li><a href="#コスト削減の優先順位">コスト削減の優先順位</a></li>
+      </ul>
+    </li>
+    <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#参考資料">参考資料</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
