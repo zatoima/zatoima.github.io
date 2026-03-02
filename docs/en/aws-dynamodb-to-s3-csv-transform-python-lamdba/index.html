@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose | zatoima</title>
+<meta name="title" content="Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-05-06T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-05-06T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-05-06T00:00:00Z\"",
+  "dateModified": "\"2022-05-06T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  2369 ,
+  "keywords": "[\"AWS\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-dynamodb-to-s3-csv-transform-python-lamdba/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/aws-dynamodb-to-s3-csv-transform-python-lamdba/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Python Script for Lambda to Convert JSON …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Python Script for Lambda to Convert JSON to CSV When Outputting from DynamoDB to S3 via Kinesis Firehose</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-05-06'>
+            Published on 2022/05/06
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 4 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h3 id="introduction">Introduction</h3>
+<p>When you want to sync DynamoDB updates to S3, it has become easy to do so by routing through Kinesis Firehose as shown below. (Previously, it was necessary to use a DynamoDB-Lambda-Kinesis pipeline.)</p>
+<blockquote>
+<p>DynamoDBからkinesis firehose経由でS3に出力 | my opinion is my own 👋 <a href="https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/" target="_blank" rel="noopener noreferrer">https://zatoima.github.io/aws-dynamodb-to-s3-by-kinesis/</a>
+</p>
+</blockquote>
+<p>However, since unnecessary records are also output together, if you want to extract only the necessary ones, you need to use the transformation feature of Kinesis Firehose. While Node.js scripts are officially provided, I couldn&rsquo;t find many Python examples.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{<span style="color:#ff79c6">&#34;awsRegion&#34;</span>:<span style="color:#f1fa8c">&#34;ap-northeast-1&#34;</span>,<span style="color:#ff79c6">&#34;eventID&#34;</span>:<span style="color:#f1fa8c">&#34;1e84f1ca-438d-4837-a6bd-aa4592be6f8a&#34;</span>,<span style="color:#ff79c6">&#34;eventName&#34;</span>:<span style="color:#f1fa8c">&#34;MODIFY&#34;</span>,<span style="color:#ff79c6">&#34;userIdentity&#34;</span>:<span style="color:#ff79c6">null</span>,<span style="color:#ff79c6">&#34;recordFormat&#34;</span>:<span style="color:#f1fa8c">&#34;application/json&#34;</span>,<span style="color:#ff79c6">&#34;tableName&#34;</span>:<span style="color:#f1fa8c">&#34;cities&#34;</span>,<span style="color:#ff79c6">&#34;dynamodb&#34;</span>:{<span style="color:#ff79c6">&#34;ApproximateCreationDateTime&#34;</span>:<span style="color:#bd93f9">1651495525900</span>,<span style="color:#ff79c6">&#34;Keys&#34;</span>:{<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>}},<span style="color:#ff79c6">&#34;NewImage&#34;</span>:{<span style="color:#ff79c6">&#34;population&#34;</span>:{<span style="color:#ff79c6">&#34;N&#34;</span>:<span style="color:#f1fa8c">&#34;54148&#34;</span>},<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>},<span style="color:#ff79c6">&#34;name&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;下野&#34;</span>},<span style="color:#ff79c6">&#34;date_mod&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;1950-9-7&#34;</span>}},<span style="color:#ff79c6">&#34;OldImage&#34;</span>:{<span style="color:#ff79c6">&#34;population&#34;</span>:{<span style="color:#ff79c6">&#34;N&#34;</span>:<span style="color:#f1fa8c">&#34;56148&#34;</span>},<span style="color:#ff79c6">&#34;key&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;t0926&#34;</span>},<span style="color:#ff79c6">&#34;name&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;下野&#34;</span>},<span style="color:#ff79c6">&#34;date_mod&#34;</span>:{<span style="color:#ff79c6">&#34;S&#34;</span>:<span style="color:#f1fa8c">&#34;1950-9-7&#34;</span>}},<span style="color:#ff79c6">&#34;SizeBytes&#34;</span>:<span style="color:#bd93f9">104</span>},<span style="color:#ff79c6">&#34;eventSource&#34;</span>:<span style="color:#f1fa8c">&#34;aws:dynamodb&#34;</span>}
+</span></span></code></pre></div><h3 id="required-configuration">Required Configuration</h3>
+<p>To transform data when saving to S3 on the Firehose side, set <code>Transform source records with AWS Lambda</code> to <code>enable</code> and configure the Lambda Function.</p>
+<p><img src="/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506114740632.png" alt="image-20220506114740632"></p>
+<h3 id="dynamodb-table-structure">DynamoDB Table Structure</h3>
+<p>A table with only id and datetime columns.</p>
+<p><img src="/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/image-20220506115206214.png" alt="image-20220506115206214"></p>
+<p>Insert some sample data using the following script.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">for</span> i in <span style="color:#ff79c6">{</span>0..10000<span style="color:#ff79c6">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">NOW</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">`</span>date --iso-8601<span style="color:#ff79c6">=</span>seconds<span style="color:#f1fa8c">`</span>
+</span></span><span style="display:flex;"><span>  aws dynamodb put-item --table-name dynamotest --item <span style="color:#f1fa8c">&#34;{ \&#34;datetime\&#34;: { \&#34;S\&#34;: \&#34;</span><span style="color:#f1fa8c">${</span><span style="color:#8be9fd;font-style:italic">NOW</span><span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">\&#34; }, \&#34;id\&#34;: { \&#34;S\&#34;: \&#34;</span><span style="color:#f1fa8c">${</span><span style="color:#8be9fd;font-style:italic">i</span><span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">\&#34; } }&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">echo</span> <span style="color:#8be9fd;font-style:italic">$i</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ff79c6">$((</span><span style="color:#8be9fd;font-style:italic">$RANDOM</span> <span style="color:#ff79c6">%</span> <span style="color:#bd93f9">5</span><span style="color:#ff79c6">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">done</span>
+</span></span></code></pre></div><h3 id="lambda-python-script">Lambda Python Script</h3>
+<p>Note that you need to comply with the conventions on the Kinesis Firehose side.</p>
+<blockquote>
+<p>Amazon Kinesis Data Firehose のデータ変換 - Amazon Kinesis Data Firehose <a href="https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html</a>
+</p>
+</blockquote>
+<blockquote>
+<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</p>
+<ul>
+<li>When the Payload Size delivered from Kinesis Data Firehose exceeds 6MB, the Payload needs to be returned to Firehose
+<ul>
+<li>Furthermore, if the number of returned Records exceeds 500, they need to be split</li>
+</ul>
+</li>
+<li>When returning data that has completed Transform processing to Firehose, it needs to follow a prescribed format, and the actual Data must be base64 encoded</li>
+</ul>
+</blockquote>
+<p>Note that the following script does not account for payload limits or record counts. Be careful when dealing with DynamoDB tables that have high update volumes.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> json
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> base64
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">lambda_handler</span>(event, context):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    results <span style="color:#ff79c6">=</span> []
+</span></span><span style="display:flex;"><span>    records <span style="color:#ff79c6">=</span> event[<span style="color:#f1fa8c">&#34;records&#34;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> record <span style="color:#ff79c6">in</span> records:
+</span></span><span style="display:flex;"><span>        record_id <span style="color:#ff79c6">=</span> record<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;recordId&#39;</span>)
+</span></span><span style="display:flex;"><span>        data <span style="color:#ff79c6">=</span> json<span style="color:#ff79c6">.</span>loads(base64<span style="color:#ff79c6">.</span>b64decode(record<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;data&#39;</span>)))
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4">#print(&#34;Raw Data : &#34; + str(data))</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">id</span> <span style="color:#ff79c6">=</span> data[<span style="color:#f1fa8c">&#39;dynamodb&#39;</span>][<span style="color:#f1fa8c">&#39;Keys&#39;</span>][<span style="color:#f1fa8c">&#39;id&#39;</span>][<span style="color:#f1fa8c">&#39;S&#39;</span>]
+</span></span><span style="display:flex;"><span>        datetime <span style="color:#ff79c6">=</span> data[<span style="color:#f1fa8c">&#39;dynamodb&#39;</span>][<span style="color:#f1fa8c">&#39;Keys&#39;</span>][<span style="color:#f1fa8c">&#39;datetime&#39;</span>][<span style="color:#f1fa8c">&#39;S&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4">#print(&#34;New Data : &#34; + str(id) + str(datetime))</span>
+</span></span><span style="display:flex;"><span>        return_data <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;,&#39;</span><span style="color:#ff79c6">.</span>join([<span style="color:#8be9fd;font-style:italic">id</span>,datetime])  <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4">#print(&#34;return_data : &#34;  +  str(return_data))</span>
+</span></span><span style="display:flex;"><span>     
+</span></span><span style="display:flex;"><span>        data <span style="color:#ff79c6">=</span> base64<span style="color:#ff79c6">.</span>b64encode(return_data<span style="color:#ff79c6">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        results<span style="color:#ff79c6">.</span>append({
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;result&#34;</span>:<span style="color:#f1fa8c">&#34;Ok&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;recordId&#34;</span>:record_id,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;data&#34;</span>:data
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;records&#34;</span>:results
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>The JSON data flowing from the DynamoDB side is as shown below, so we parse this JSON data and extract only what is needed. In this case, I configured it to output insert operations for the columns (<code>id</code> and <code>datetime</code>) in CSV format.</p>
+<p>*Note: This is a sample, so these are not actual column names.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;Records&#34;</span>: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventID&#34;</span>: <span style="color:#f1fa8c">&#34;c4ca4238a0b923820dcc509a6f75849b&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventName&#34;</span>: <span style="color:#f1fa8c">&#34;INSERT&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventVersion&#34;</span>: <span style="color:#f1fa8c">&#34;1.1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSource&#34;</span>: <span style="color:#f1fa8c">&#34;aws:dynamodb&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;awsRegion&#34;</span>: <span style="color:#f1fa8c">&#34;us-east-1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;dynamodb&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;Keys&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;NewImage&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Message&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;S&#34;</span>: <span style="color:#f1fa8c">&#34;New item!&#34;</span>
+</span></span><span style="display:flex;"><span>          },
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;ApproximateCreationDateTime&#34;</span>: <span style="color:#bd93f9">1428537600</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;4421584500000000017450439091&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SizeBytes&#34;</span>: <span style="color:#bd93f9">26</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;StreamViewType&#34;</span>: <span style="color:#f1fa8c">&#34;NEW_AND_OLD_IMAGES&#34;</span>
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSourceARN&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&#34;</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventID&#34;</span>: <span style="color:#f1fa8c">&#34;c81e728d9d4c2f636f067f89cc14862c&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventName&#34;</span>: <span style="color:#f1fa8c">&#34;MODIFY&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventVersion&#34;</span>: <span style="color:#f1fa8c">&#34;1.1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSource&#34;</span>: <span style="color:#f1fa8c">&#34;aws:dynamodb&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;awsRegion&#34;</span>: <span style="color:#f1fa8c">&#34;us-east-1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;dynamodb&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;Keys&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;NewImage&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Message&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;S&#34;</span>: <span style="color:#f1fa8c">&#34;This item has changed&#34;</span>
+</span></span><span style="display:flex;"><span>          },
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;OldImage&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Message&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;S&#34;</span>: <span style="color:#f1fa8c">&#34;New item!&#34;</span>
+</span></span><span style="display:flex;"><span>          },
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;ApproximateCreationDateTime&#34;</span>: <span style="color:#bd93f9">1428537600</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;4421584500000000017450439092&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SizeBytes&#34;</span>: <span style="color:#bd93f9">59</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;StreamViewType&#34;</span>: <span style="color:#f1fa8c">&#34;NEW_AND_OLD_IMAGES&#34;</span>
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSourceARN&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&#34;</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventID&#34;</span>: <span style="color:#f1fa8c">&#34;eccbc87e4b5ce2fe28308fd9f2a7baf3&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventName&#34;</span>: <span style="color:#f1fa8c">&#34;REMOVE&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventVersion&#34;</span>: <span style="color:#f1fa8c">&#34;1.1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSource&#34;</span>: <span style="color:#f1fa8c">&#34;aws:dynamodb&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;awsRegion&#34;</span>: <span style="color:#f1fa8c">&#34;us-east-1&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;dynamodb&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;Keys&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;OldImage&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Message&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;S&#34;</span>: <span style="color:#f1fa8c">&#34;This item has changed&#34;</span>
+</span></span><span style="display:flex;"><span>          },
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Id&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">&#34;N&#34;</span>: <span style="color:#f1fa8c">&#34;101&#34;</span>
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;ApproximateCreationDateTime&#34;</span>: <span style="color:#bd93f9">1428537600</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SequenceNumber&#34;</span>: <span style="color:#f1fa8c">&#34;4421584500000000017450439093&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;SizeBytes&#34;</span>: <span style="color:#bd93f9">38</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;StreamViewType&#34;</span>: <span style="color:#f1fa8c">&#34;NEW_AND_OLD_IMAGES&#34;</span>
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;eventSourceARN&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="addendum-1">Addendum 1:</h3>
+<p>For Node.js, refer to the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#f1fa8c">&#39;use strict&#39;</span>;
+</span></span><span style="display:flex;"><span>console.log(<span style="color:#f1fa8c">&#39;Loading function&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">/* Stock Ticker format parser */</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">const</span> parser <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">/^\{\&#34;TICKER_SYMBOL\&#34;\:\&#34;[A-Z]+\&#34;\,\&#34;SECTOR\&#34;\:&#34;[A-Z]+\&#34;\,\&#34;CHANGE\&#34;\:[-.0-9]+\,\&#34;PRICE\&#34;\:[-.0-9]+\}/</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exports.handler <span style="color:#ff79c6">=</span> (event, context, callback) =&gt; {
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">let</span> success <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>; <span style="color:#6272a4">// Number of valid entries found
+</span></span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">let</span> failure <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>; <span style="color:#6272a4">// Number of invalid entries found
+</span></span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">let</span> dropped <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>; <span style="color:#6272a4">// Number of dropped entries 
+</span></span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">/* Process the list of records and transform them */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">const</span> output <span style="color:#ff79c6">=</span> event.records.map((record) =&gt; {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">const</span> entry <span style="color:#ff79c6">=</span> (<span style="color:#ff79c6">new</span> Buffer(record.data, <span style="color:#f1fa8c">&#39;base64&#39;</span>)).toString(<span style="color:#f1fa8c">&#39;utf8&#39;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">let</span> match <span style="color:#ff79c6">=</span> parser.exec(entry);
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> (match) {
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">let</span> parsed_match <span style="color:#ff79c6">=</span> JSON.parse(match); 
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">var</span> milliseconds <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">new</span> <span style="color:#8be9fd;font-style:italic">Date</span>().getTime();
+</span></span><span style="display:flex;"><span>            <span style="color:#6272a4">/* Add timestamp and convert to CSV */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">const</span> result <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">`</span><span style="color:#f1fa8c">${</span>milliseconds<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">,</span><span style="color:#f1fa8c">${</span>parsed_match.TICKER_SYMBOL<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">,</span><span style="color:#f1fa8c">${</span>parsed_match.SECTOR<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">,</span><span style="color:#f1fa8c">${</span>parsed_match.CHANGE<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">,</span><span style="color:#f1fa8c">${</span>parsed_match.PRICE<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">`</span><span style="color:#ff79c6">+</span><span style="color:#f1fa8c">&#34;\n&#34;</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">const</span> payload <span style="color:#ff79c6">=</span> (<span style="color:#ff79c6">new</span> Buffer(result, <span style="color:#f1fa8c">&#39;utf8&#39;</span>)).toString(<span style="color:#f1fa8c">&#39;base64&#39;</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">if</span> (parsed_match.SECTOR <span style="color:#ff79c6">!=</span> <span style="color:#f1fa8c">&#39;RETAIL&#39;</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#6272a4">/* Dropped event, notify and leave the record intact */</span>
+</span></span><span style="display:flex;"><span>                dropped<span style="color:#ff79c6">++</span>;
+</span></span><span style="display:flex;"><span>                <span style="color:#ff79c6">return</span> {
+</span></span><span style="display:flex;"><span>                    recordId<span style="color:#ff79c6">:</span> record.recordId,
+</span></span><span style="display:flex;"><span>                    result<span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#39;Dropped&#39;</span>,
+</span></span><span style="display:flex;"><span>                    data<span style="color:#ff79c6">:</span> record.data,
+</span></span><span style="display:flex;"><span>                };
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">else</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#6272a4">/* Transformed event */</span>
+</span></span><span style="display:flex;"><span>                success<span style="color:#ff79c6">++</span>;  
+</span></span><span style="display:flex;"><span>                <span style="color:#ff79c6">return</span> {
+</span></span><span style="display:flex;"><span>                    recordId<span style="color:#ff79c6">:</span> record.recordId,
+</span></span><span style="display:flex;"><span>                    result<span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#39;Ok&#39;</span>,
+</span></span><span style="display:flex;"><span>                    data<span style="color:#ff79c6">:</span> payload,
+</span></span><span style="display:flex;"><span>                };
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#6272a4">/* Failed event, notify the error and leave the record intact */</span>
+</span></span><span style="display:flex;"><span>            console.log(<span style="color:#f1fa8c">&#34;Failed event : &#34;</span><span style="color:#ff79c6">+</span> record.data);
+</span></span><span style="display:flex;"><span>            failure<span style="color:#ff79c6">++</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">return</span> {
+</span></span><span style="display:flex;"><span>                recordId<span style="color:#ff79c6">:</span> record.recordId,
+</span></span><span style="display:flex;"><span>                result<span style="color:#ff79c6">:</span> <span style="color:#f1fa8c">&#39;ProcessingFailed&#39;</span>,
+</span></span><span style="display:flex;"><span>                data<span style="color:#ff79c6">:</span> record.data,
+</span></span><span style="display:flex;"><span>            };
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4">/* This transformation is the &#34;identity&#34; transformation, the data is left intact 
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">        return {
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">            recordId: record.recordId,
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">            result: &#39;Ok&#39;,
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">            data: record.data,
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">        } */</span>
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>    console.log(<span style="color:#f1fa8c">`Processing completed.  Successful records </span><span style="color:#f1fa8c">${</span>output.length<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">.`</span>);
+</span></span><span style="display:flex;"><span>    callback(<span style="color:#ff79c6">null</span>, { records<span style="color:#ff79c6">:</span> output });
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>Addendum 2:</p>
+<p>I fully adopted the approach from the following reference. Since it didn&rsquo;t work as-is due to errors, I made some modifications to get it working.</p>
+<blockquote>
+<p>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> json
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> boto3
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> base64
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">from</span> datetime <span style="color:#ff79c6">import</span> datetime
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PAYLOAD_MAX_SIZE <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">6000000</span>
+</span></span><span style="display:flex;"><span>MAX_RECORD_COUNT <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">500</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">transform</span>(data):
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    データ変換関数
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    data[<span style="color:#f1fa8c">&#39;NewColumn&#39;</span>] <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;New Value&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># Change Schema</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">id</span> <span style="color:#ff79c6">=</span> data[<span style="color:#f1fa8c">&#39;dynamodb&#39;</span>][<span style="color:#f1fa8c">&#39;Keys&#39;</span>][<span style="color:#f1fa8c">&#39;id&#39;</span>][<span style="color:#f1fa8c">&#39;S&#39;</span>]
+</span></span><span style="display:flex;"><span>    datetime <span style="color:#ff79c6">=</span> data[<span style="color:#f1fa8c">&#39;dynamodb&#39;</span>][<span style="color:#f1fa8c">&#39;Keys&#39;</span>][<span style="color:#f1fa8c">&#39;datetime&#39;</span>][<span style="color:#f1fa8c">&#39;S&#39;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#34;New Data : &#34;</span> <span style="color:#ff79c6">+</span> <span style="color:#8be9fd;font-style:italic">str</span>(<span style="color:#8be9fd;font-style:italic">id</span>) <span style="color:#ff79c6">+</span> <span style="color:#8be9fd;font-style:italic">str</span>(datetime))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    return_data <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;,&#39;</span><span style="color:#ff79c6">.</span>join([<span style="color:#8be9fd;font-style:italic">id</span>,datetime])
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#34;return_data : &#34;</span>  <span style="color:#ff79c6">+</span>  <span style="color:#8be9fd;font-style:italic">str</span>(return_data))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> return_data
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">proceed_records</span>(records):
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    transform each data and yield each record
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> record <span style="color:#ff79c6">in</span> records:
+</span></span><span style="display:flex;"><span>        record_id <span style="color:#ff79c6">=</span> record<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;recordId&#39;</span>)
+</span></span><span style="display:flex;"><span>        data <span style="color:#ff79c6">=</span> json<span style="color:#ff79c6">.</span>loads(base64<span style="color:#ff79c6">.</span>b64decode(record<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;data&#39;</span>)))
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#34;Raw Data : &#34;</span> <span style="color:#ff79c6">+</span> <span style="color:#8be9fd;font-style:italic">str</span>(data))
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">try</span>:
+</span></span><span style="display:flex;"><span>            transformed_data <span style="color:#ff79c6">=</span> transform(data)
+</span></span><span style="display:flex;"><span>            result <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Ok&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">except</span> Exception <span style="color:#ff79c6">as</span> e:
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">print</span>(e)
+</span></span><span style="display:flex;"><span>            transformed_data <span style="color:#ff79c6">=</span> data
+</span></span><span style="display:flex;"><span>            result <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;ProcessingFailed&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#34;New Data : &#34;</span> <span style="color:#ff79c6">+</span> <span style="color:#8be9fd;font-style:italic">str</span>(transformed_data))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        proceeded_data <span style="color:#ff79c6">=</span> json<span style="color:#ff79c6">.</span>dumps(transformed_data) <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#39;</span>
+</span></span><span style="display:flex;"><span>        proceeded_data <span style="color:#ff79c6">=</span> <span style="color:#8be9fd;font-style:italic">str</span>(transformed_data) <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        return_record <span style="color:#ff79c6">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;recordId&#34;</span>: record_id,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;result&#34;</span>: result,
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;data&#34;</span>: base64<span style="color:#ff79c6">.</span>b64encode(proceeded_data<span style="color:#ff79c6">.</span>encode(<span style="color:#f1fa8c">&#39;utf-8&#39;</span>))
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">yield</span> return_record
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">put_records_to_firehose</span>(streamName, records, client):
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#39;Trying to return record to firehose&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#39;Item count: </span><span style="color:#f1fa8c">{</span><span style="color:#8be9fd;font-style:italic">len</span>(records)<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#39;Record: </span><span style="color:#f1fa8c">{</span><span style="color:#8be9fd;font-style:italic">str</span>(records)<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">try</span>:
+</span></span><span style="display:flex;"><span>        response <span style="color:#ff79c6">=</span> client<span style="color:#ff79c6">.</span>put_record_batch(DeliveryStreamName<span style="color:#ff79c6">=</span>streamName, Records<span style="color:#ff79c6">=</span>records)
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">except</span> Exception <span style="color:#ff79c6">as</span> e:
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4"># failedRecords = records</span>
+</span></span><span style="display:flex;"><span>        errMsg <span style="color:#ff79c6">=</span> <span style="color:#8be9fd;font-style:italic">str</span>(e)
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">print</span>(errMsg)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">lambda_handler</span>(event, context):
+</span></span><span style="display:flex;"><span>    invocation_id <span style="color:#ff79c6">=</span> event<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;invocationId&#39;</span>)
+</span></span><span style="display:flex;"><span>    event_records <span style="color:#ff79c6">=</span> event<span style="color:#ff79c6">.</span>get(<span style="color:#f1fa8c">&#39;records&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># Transform Data</span>
+</span></span><span style="display:flex;"><span>    records <span style="color:#ff79c6">=</span> <span style="color:#8be9fd;font-style:italic">list</span>(proceed_records(event_records))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># Check Data</span>
+</span></span><span style="display:flex;"><span>    projected_size <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span> <span style="color:#6272a4"># Responseサイズが6MBを超えない様制御</span>
+</span></span><span style="display:flex;"><span>    data_by_record_id <span style="color:#ff79c6">=</span> {rec[<span style="color:#f1fa8c">&#39;recordId&#39;</span>]: _create_reingestion_record(rec) <span style="color:#ff79c6">for</span> rec <span style="color:#ff79c6">in</span> event[<span style="color:#f1fa8c">&#39;records&#39;</span>]}
+</span></span><span style="display:flex;"><span>    total_records_to_be_reingested <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>    records_to_reingest <span style="color:#ff79c6">=</span> []
+</span></span><span style="display:flex;"><span>    put_record_batches <span style="color:#ff79c6">=</span> []
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> idx, rec <span style="color:#ff79c6">in</span> <span style="color:#8be9fd;font-style:italic">enumerate</span>(records):
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> rec[<span style="color:#f1fa8c">&#39;result&#39;</span>] <span style="color:#ff79c6">!=</span> <span style="color:#f1fa8c">&#39;Ok&#39;</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">continue</span>
+</span></span><span style="display:flex;"><span>        projected_size <span style="color:#ff79c6">+=</span> <span style="color:#8be9fd;font-style:italic">len</span>(rec[<span style="color:#f1fa8c">&#39;data&#39;</span>]) <span style="color:#ff79c6">+</span> <span style="color:#8be9fd;font-style:italic">len</span>(rec[<span style="color:#f1fa8c">&#39;recordId&#39;</span>])
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> projected_size <span style="color:#ff79c6">&gt;</span> PAYLOAD_MAX_SIZE:
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            Lambda 同期呼び出しモードには、リクエストとレスポンスの両方について、
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            ペイロードサイズに 6 MB の制限があります。
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            https://docs.aws.amazon.com/ja_jp/firehose/latest/dev/data-transformation.html
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;Payload size has been exceeded over </span><span style="color:#f1fa8c">{</span>PAYLOAD_MAX_SIZE<span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span><span style="color:#ff79c6">/</span><span style="color:#bd93f9">1000</span><span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">MB&#34;</span>)
+</span></span><span style="display:flex;"><span>            total_records_to_be_reingested <span style="color:#ff79c6">+=</span> <span style="color:#bd93f9">1</span>
+</span></span><span style="display:flex;"><span>            records_to_reingest<span style="color:#ff79c6">.</span>append(
+</span></span><span style="display:flex;"><span>                _get_reingestion_record(data_by_record_id[rec[<span style="color:#f1fa8c">&#39;recordId&#39;</span>]])
+</span></span><span style="display:flex;"><span>            )
+</span></span><span style="display:flex;"><span>            records[idx][<span style="color:#f1fa8c">&#39;result&#39;</span>] <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;Dropped&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">del</span>(records[idx][<span style="color:#f1fa8c">&#39;data&#39;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">len</span>(records_to_reingest) <span style="color:#ff79c6">==</span> MAX_RECORD_COUNT:
+</span></span><span style="display:flex;"><span>            <span style="color:#f1fa8c">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            Each PutRecordBatch request supports up to 500 records.
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            https://docs.aws.amazon.com/firehose/latest/APIReference/API_PutRecordBatch.html
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">            &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#39;Records count has been exceeded over </span><span style="color:#f1fa8c">{</span>MAX_RECORD_COUNT<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#39;</span>)
+</span></span><span style="display:flex;"><span>            put_record_batches<span style="color:#ff79c6">.</span>append(records_to_reingest)
+</span></span><span style="display:flex;"><span>            records_to_reingest <span style="color:#ff79c6">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">len</span>(records_to_reingest) <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#6272a4"># add the last batch</span>
+</span></span><span style="display:flex;"><span>        put_record_batches<span style="color:#ff79c6">.</span>append(records_to_reingest)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># iterate and call putRecordBatch for each group</span>
+</span></span><span style="display:flex;"><span>    records_reingested_already <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>
+</span></span><span style="display:flex;"><span>    stream_arn <span style="color:#ff79c6">=</span> event[<span style="color:#f1fa8c">&#39;deliveryStreamArn&#39;</span>]
+</span></span><span style="display:flex;"><span>    region <span style="color:#ff79c6">=</span> stream_arn<span style="color:#ff79c6">.</span>split(<span style="color:#f1fa8c">&#39;:&#39;</span>)[<span style="color:#bd93f9">3</span>]
+</span></span><span style="display:flex;"><span>    stream_name <span style="color:#ff79c6">=</span> stream_arn<span style="color:#ff79c6">.</span>split(<span style="color:#f1fa8c">&#39;/&#39;</span>)[<span style="color:#bd93f9">1</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">if</span> <span style="color:#8be9fd;font-style:italic">len</span>(put_record_batches) <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>:
+</span></span><span style="display:flex;"><span>        client <span style="color:#ff79c6">=</span> boto3<span style="color:#ff79c6">.</span>client(<span style="color:#f1fa8c">&#39;firehose&#39;</span>, region_name<span style="color:#ff79c6">=</span>region)
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">for</span> record_batch <span style="color:#ff79c6">in</span> put_record_batches:
+</span></span><span style="display:flex;"><span>            put_records_to_firehose(stream_name, record_batch, client)
+</span></span><span style="display:flex;"><span>            records_reingested_already <span style="color:#ff79c6">+=</span> <span style="color:#8be9fd;font-style:italic">len</span>(record_batch)
+</span></span><span style="display:flex;"><span>            <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#39;Reingested </span><span style="color:#f1fa8c">{</span>records_reingested_already<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">/</span><span style="color:#f1fa8c">{</span>total_records_to_be_reingested<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c"> records out of </span><span style="color:#f1fa8c">{</span><span style="color:#8be9fd;font-style:italic">len</span>(event[<span style="color:#f1fa8c">&#34;records&#34;</span>])<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#f1fa8c">&#39;No records to be reingested&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># Return records to Firehose</span>
+</span></span><span style="display:flex;"><span>    return_records <span style="color:#ff79c6">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#39;records&#39;</span>: records
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#8be9fd;font-style:italic">print</span>(<span style="color:#8be9fd;font-style:italic">str</span>(return_records))
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> return_records
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Transform method for temporary data</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_create_reingestion_record</span>(original_record):
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> {<span style="color:#f1fa8c">&#39;data&#39;</span>: base64<span style="color:#ff79c6">.</span>b64decode(original_record[<span style="color:#f1fa8c">&#39;data&#39;</span>])}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_get_reingestion_record</span>(re_ingestion_record):
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> {<span style="color:#f1fa8c">&#39;Data&#39;</span>: re_ingestion_record[<span style="color:#f1fa8c">&#39;data&#39;</span>]}
+</span></span></code></pre></div><h3 id="references">References</h3>
+<blockquote>
+<ul>
+<li>Amazon Kinesis Firehose Data Transformation with AWS Lambda | AWS Compute Blog <a href="https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/blogs/compute/amazon-kinesis-firehose-data-transformation-with-aws-lambda/</a>
+</li>
+<li>DynamoDB StreamsとKinesis Data Firehoseを使ったサーバーレスリアルタイムETL - Qiita <a href="https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd" target="_blank" rel="noopener noreferrer">https://qiita.com/kzk-maeda/items/6dd02b9b567a6dd063fd</a>
+</li>
+<li>Amazon DynamoDB ストリームを使用して、順序付けされたデータをアプリケーション間でレプリケーションする方法 | Amazon Web Services ブログ <a href="https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/jp/blogs/news/how-to-perform-ordered-data-replication-between-applications-by-using-amazon-dynamodb-streams/</a>
+</li>
+</ul>
+</blockquote>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-05-06-DynamoDB%e3%81%8b%e3%82%89S3%e3%81%abJSON%e5%bd%a2%e5%bc%8f%e3%81%8b%e3%82%89CSV%e5%bd%a2%e5%bc%8f%e3%81%ab%e5%a4%89%e6%8f%9b%e3%81%99%e3%82%8bLamdba%e7%94%a8%e3%81%aePython%e3%82%b9%e3%82%af%e3%83%aa%e3%83%97%e3%83%88/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-dynamodb-to-s3-by-kinesis/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Export DynamoDB Data to S3 via Kinesis Firehose</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-aurora-postgres-pgadmin4-bastin-connect/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Connecting to Aurora PostgreSQL from pgAdmin4 via …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-dynamodb-to-s3-csv-transform-python-lamdba%2f&text=Python&#43;Script&#43;for&#43;Lambda&#43;to&#43;Convert&#43;JSON&#43;to&#43;CSV&#43;When&#43;Outputting&#43;from&#43;DynamoDB&#43;to&#43;S3&#43;via&#43;Kinesis&#43;Firehose" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-dynamodb-to-s3-csv-transform-python-lamdba/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-dynamodb-to-s3-by-kinesis/">Export DynamoDB Data to S3 via Kinesis Firehose</a></li>
+    
+    <li><a href="/en/aws-aurora-postgresql-audit/">Aurora PostgreSQL DB Audit Methods (Database Activity Streams or pgaudit?)</a></li>
+    
+    <li><a href="/en/other-cipher-suite-confirm/">How to Investigate Cipher Suites Used for Server Communication</a></li>
+    
+    <li><a href="/en/aws-s3-public-access-about-message-policy/">The Relationship Between Block Public Access and Bucket Policy for S3 Public Access</a></li>
+    
+    <li><a href="/en/aws-cognito-setting-amplify/">Setting Up a Cognito Test Environment Using Amplify</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#required-configuration">Required Configuration</a></li>
+        <li><a href="#dynamodb-table-structure">DynamoDB Table Structure</a></li>
+        <li><a href="#lambda-python-script">Lambda Python Script</a></li>
+        <li><a href="#addendum-1">Addendum 1:</a></li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

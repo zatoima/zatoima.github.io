@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Redshift Spectrum Concurrency Performance | zatoima</title>
+<meta name="title" content="Redshift Spectrum Concurrency Performance" />
+<meta name="description" content="" />
+<meta name="keywords" content="AWS,Redshift," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/aws-redshift-spectrum-performance-concurrency/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Redshift Spectrum Concurrency Performance">
+  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2022-01-29T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-01-29T00:00:00+00:00">
+    <meta property="article:tag" content="AWS">
+    <meta property="article:tag" content="Redshift">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Redshift Spectrum Concurrency Performance">
+  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Redshift Spectrum Concurrency Performance\"",
+  "description": "\"\"",
+  "datePublished": "\"2022-01-29T00:00:00Z\"",
+  "dateModified": "\"2022-01-29T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/aws-redshift-spectrum-performance-concurrency/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  985 ,
+  "keywords": "[\"AWS\",\"Redshift\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/aws-redshift-spectrum-performance-concurrency/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/aws-redshift-spectrum-performance-concurrency/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/aws-redshift-spectrum-performance-concurrency/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/aws-redshift-spectrum-performance-concurrency/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Redshift Spectrum Concurrency …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/aws.svg" alt="AWS" class="tag-icon" loading="lazy"></div>
+        <h1>Redshift Spectrum Concurrency Performance</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2022-01-29'>
+            Published on 2022/01/29
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 1 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+          
+          <a href="https://zatoima.github.io/en/blog/redshift/" class="tag-badge"><img src="/images/tags/redshift.svg" alt="Redshift" class="tag-badge-icon" loading="lazy">Redshift</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <p>Here are some notes on how the concurrency performance of Redshift Spectrum is determined.</p>
+<h3 id="1-number-of-slices">1. Number of Slices</h3>
+<p>This factor is an important concept not only for Spectrum but also for standard Redshift.</p>
+<p>The number of slices is primarily determined by the instance type (instance size). Each slice is allocated a portion of the node&rsquo;s memory and disk capacity and processes a portion of the workload assigned to the node. The leader node manages the distribution of data to slices and distributes the workload of queries or other database operations to slices, with each slice handling its own portion of the workload. As shown below, each node contains multiple slices.</p>
+<p>Reference: <a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_high_level_system_architecture.html" target="_blank" rel="noopener noreferrer">Data Warehouse System Architecture - Amazon Redshift</a>
+</p>
+<p><img src="/en/aws-redshift-spectrum-performance-concurrency/image-20220125220158344.png" alt="image-20220125220158344"></p>
+<p>The number of slices is predetermined by the node size as the default number of slices per node.</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-clusters.html#rs-node-type-info" target="_blank" rel="noopener noreferrer">Amazon Redshift Clusters - Amazon Redshift - Node Type Details</a>
+</p>
+</blockquote>
+<p>For RA3, ra3.xlplus has &ldquo;2&rdquo;, ra3.4xllarge has &ldquo;4&rdquo;, and ra3.16xlarge has &ldquo;16&rdquo;.</p>
+<p><img src="/en/aws-redshift-spectrum-performance-concurrency/image-20220125220543750.png" alt="image-20220125220543750"></p>
+<p>There is a potential pitfall to be aware of during operations: depending on how you resize the node size, the number of slices may not change.</p>
+<blockquote>
+<p>[Amazon Redshift Clusters - Amazon Redshift - Node Type Details](<a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/mgmt/working-with-clusters.html#rs-node-type-info" target="_blank" rel="noopener noreferrer">Amazon Redshift Clusters - Amazon Redshift</a>
+)</p>
+<ul>
+<li><em>The number of slices per node</em> is the default number of slices into which a compute node is partitioned when you create or resize a cluster using classic resize.</li>
+<li>When you resize a cluster using elastic resize, the number of slices per node might change. However, the total number of slices across all compute nodes in the cluster remains the same after elastic resize.</li>
+<li>When you create a cluster using a restore from snapshot operation, if you change the node type, the number of slices in the resulting cluster may differ from the original cluster.</li>
+</ul>
+</blockquote>
+<h3 id="2-concurrency">2. Concurrency</h3>
+<p>There is a maximum of 10 concurrent requests per query per slice.</p>
+<ul>
+<li>The concurrency varies depending on how many queries are running simultaneously</li>
+<li>The allocated concurrency limits the number of threads scanning S3</li>
+</ul>
+<p>*Note: The word &ldquo;maximum&rdquo; here is likely an important caveat. Also note that, as far as I can tell, there is no documentation in the manual about the concurrency between the Spectrum layer and S3. While this is presumably something that is abstracted away from the user, the exact specification is not explicitly stated.</p>
+<blockquote>
+<p>Reference: <a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/" target="_blank" rel="noopener noreferrer">12 Best Practices for Amazon Redshift Spectrum | Amazon Web Services Blog</a>
+</p>
+</blockquote>
+<h3 id="spectrum-performance">Spectrum Performance</h3>
+<p>Combining the discussions about &ldquo;1. Number of Slices&rdquo; and &ldquo;2. Concurrency,&rdquo; the relationship can be summarized as follows.</p>
+<p><img src="/en/aws-redshift-spectrum-performance-concurrency/image-20220125223220627.png" alt="image-20220125223220627"></p>
+<h3 id="how-to-check-spectrum-concurrency">How to Check Spectrum Concurrency</h3>
+<p>Check the <code>SVL_S3QUERY_SUMMARY</code> table. It contains statistics such as the number of files processed per slice and parallel requests, so you can verify concurrency here.</p>
+<blockquote>
+<p><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/r_SVL_S3QUERY_SUMMARY.html" target="_blank" rel="noopener noreferrer">SVL_S3QUERY_SUMMARY - Amazon Redshift</a>
+</p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>Column Name</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>files</td>
+          <td>The number of files processed by this Redshift Spectrum query. A small number of files limits the benefits of parallel processing.</td>
+      </tr>
+      <tr>
+          <td>files_max</td>
+          <td>The maximum number of files processed by a single slice.</td>
+      </tr>
+      <tr>
+          <td>files_avg</td>
+          <td>The average number of files processed by a single slice.</td>
+      </tr>
+      <tr>
+          <td>splits</td>
+          <td>The number of splits processed in this segment. The number of splits processed by this slice. For example, if a splittable data file is large (such as a data file exceeding approximately 512 MB), Redshift Spectrum splits the file into multiple S3 requests and attempts parallel processing.</td>
+      </tr>
+      <tr>
+          <td>splits_max</td>
+          <td>The maximum number of splits processed by this slice.</td>
+      </tr>
+      <tr>
+          <td>splits_avg</td>
+          <td>The average number of splits processed by this slice.</td>
+      </tr>
+      <tr>
+          <td>total_split_size</td>
+          <td>The total size of all splits processed.</td>
+      </tr>
+      <tr>
+          <td>max_split_size</td>
+          <td>The maximum size of a processed split (in bytes).</td>
+      </tr>
+      <tr>
+          <td>avg_split_size</td>
+          <td>The average size of a processed split (in bytes).</td>
+      </tr>
+      <tr>
+          <td>total_retries</td>
+          <td>The total number of retries for individual processed files.</td>
+      </tr>
+      <tr>
+          <td>max_retries</td>
+          <td>The maximum number of retries for a processed file.</td>
+      </tr>
+      <tr>
+          <td>max_request_duration</td>
+          <td>The longest time for an individual file request (in microseconds). Long-running queries may indicate a bottleneck.</td>
+      </tr>
+      <tr>
+          <td>avg_request_duration</td>
+          <td>The average time for file requests (in microseconds).</td>
+      </tr>
+      <tr>
+          <td>max_request_parallelism</td>
+          <td>The maximum number of parallel requests for a single slice in a Redshift Spectrum query.</td>
+      </tr>
+      <tr>
+          <td>avg_request_parallelism</td>
+          <td>The average number of parallel requests for a single slice in a Redshift Spectrum query.</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="how-to-maximize-spectrum-concurrency-performance">How to Maximize Spectrum Concurrency Performance</h3>
+<p>As described above, you need to verify that the number of split files on S3 and the concurrency are at an optimal balance.</p>
+<blockquote>
+<p><a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/" target="_blank" rel="noopener noreferrer">12 Best Practices for Amazon Redshift Spectrum | Amazon Web Services Blog</a>
+</p>
+<p>A simple calculation would be: total number of files &lt;= concurrency per query (e.g., 10) * number of slices in the cluster. However, increasing the number of nodes in the cluster does not necessarily improve performance. Determine the optimal number of cluster nodes as follows: First, check how many files are contained in the Redshift Spectrum external table. Then, gradually increase the cluster size (meaning increase the number of slices in the cluster) and find the point at which increasing the number of nodes no longer improves performance. The optimal Redshift cluster size for that node type is the point beyond which no further performance improvement occurs.</p>
+</blockquote>
+<p>As a brute-force approach, you can increase the degree of parallelism further by setting up multiple Redshift clusters and running queries across them. I believe this is one of the advantages of Spectrum, where storage and compute are separated. You can set up multiple clusters and query the same S3 files from each cluster.</p>
+<h3 id="supplement-redshift-spectrum-concurrency-scaling">Supplement: Redshift Spectrum Concurrency Scaling</h3>
+<p>Redshift Spectrum itself is also eligible for Concurrency Scaling. Previously, Spectrum was not eligible for Concurrency Scaling. The manual description is somewhat unclear, but there is a mention in the Forums. (*Note: I have not actually tested this.)</p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/concurrency-scaling.html" target="_blank" rel="noopener noreferrer">Using Concurrency Scaling - Amazon Redshift</a>
+
+<ul>
+<li>Queries that access external resources protected by restricted network or virtual private cloud (VPC) configurations are not supported.</li>
+</ul>
+</li>
+<li><a href="https://forums.aws.amazon.com/thread.jspa?start=100&amp;threadID=132076&amp;tstart=0" target="_blank" rel="noopener noreferrer">AWS Developer Forums: Amazon Redshift Announcements ...</a>
+
+<ul>
+<li><strong>Redshift Spectrum</strong>: UNLOAD and queries that use Spectrum to reference external tables are now eligible for Concurrency Scaling</li>
+</ul>
+</li>
+</ul>
+<h3 id="references">References</h3>
+<ul>
+<li><a href="https://aws.amazon.com/jp/blogs/news/10-best-practices-for-amazon-redshift-spectrum/" target="_blank" rel="noopener noreferrer">12 Best Practices for Amazon Redshift Spectrum | Amazon Web Services Blog</a>
+</li>
+<li><a href="https://aws.amazon.com/jp/premiumsupport/knowledge-center/redshift-elastic-resize" target="_blank" rel="noopener noreferrer">Using Elastic Resize in Amazon Redshift</a>
+</li>
+</ul>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2022-01-29-Redshift%20Spectrum%e3%81%ae%e5%90%8c%e6%99%82%e5%ae%9f%e8%a1%8c%e6%80%a7%e8%83%bd%e3%83%91%e3%83%95%e3%82%a9%e3%83%bc%e3%83%9e%e3%83%b3%e3%82%b9%e3%81%ab%e3%81%a4%e3%81%84%e3%81%a6/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/aws-cloudfront-apache-bench-ab-access/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Running Simple Access Tests on CloudFront Using …</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/aws-ec2-on-docker-on-spark-install/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">Setting Up a Spark on Docker on EC2 Environment</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2faws-redshift-spectrum-performance-concurrency%2f&text=Redshift&#43;Spectrum&#43;Concurrency&#43;Performance" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/aws-redshift-spectrum-performance-concurrency/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/aws-redshift-spectrum-select-data-catalog/">Querying Glue Data Catalog Tables from Redshift Spectrum</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-data-prepare-query-execute/">Preparing Test Data and Running Queries for Redshift Spectrum</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-performance-check/">Checking Redshift Spectrum Performance</a></li>
+    
+    <li><a href="/en/aws-redshift-query-cancellation/">Cancelling Queries in Redshift</a></li>
+    
+    <li><a href="/en/aws-redshift-spectrum-data-query-execute/">Redshift Star Schema Benchmark Query Samples</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/aws/" class="tag-badge"><img src="/images/tags/aws.svg" alt="AWS" class="tag-badge-icon" loading="lazy">AWS</a>
+  
+  <a href="https://zatoima.github.io/en/blog/redshift/" class="tag-badge"><img src="/images/tags/redshift.svg" alt="Redshift" class="tag-badge-icon" loading="lazy">Redshift</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#1-number-of-slices">1. Number of Slices</a></li>
+        <li><a href="#2-concurrency">2. Concurrency</a></li>
+        <li><a href="#spectrum-performance">Spectrum Performance</a></li>
+        <li><a href="#how-to-check-spectrum-concurrency">How to Check Spectrum Concurrency</a></li>
+        <li><a href="#how-to-maximize-spectrum-concurrency-performance">How to Maximize Spectrum Concurrency Performance</a></li>
+        <li><a href="#supplement-redshift-spectrum-concurrency-scaling">Supplement: Redshift Spectrum Concurrency Scaling</a></li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
