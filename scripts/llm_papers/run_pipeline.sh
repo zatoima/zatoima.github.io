@@ -15,7 +15,7 @@ echo "Pipeline started at $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
 
 # Ensure PATH includes hugo, git, and claude
-export PATH="/usr/local/bin:${HOME}/.local/bin:${HOME}/.claude/local:${PATH}"
+export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.claude/local:${PATH}"
 
 # Slack channel ID for notifications
 export SLACK_CHANNEL_ID="C07H1E3SF3Q"

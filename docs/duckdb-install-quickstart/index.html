@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>DuckDB インストール入門 | zatoima</title>
+<meta name="title" content="DuckDB インストール入門" />
+<meta name="description" content="DuckDB v1.4.4 を CLI と Python API の両面からゼロから導入するガイド。pip / curl インストール、ドットコマンド、インメモリ・ファイルDB切り替え、CSV直接クエリ、fetchdf / pl 取得メソッドまでをカバーする。" />
+<meta name="keywords" content="DuckDB,インストール,SQL,Python," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/duckdb-install-quickstart/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="DuckDB インストール入門">
+  <meta property="og:description" content="DuckDB v1.4.4 を CLI と Python API の両面からゼロから導入するガイド。pip / curl インストール、ドットコマンド、インメモリ・ファイルDB切り替え、CSV直接クエリ、fetchdf / pl 取得メソッドまでをカバーする。">
+  <meta property="og:locale" content="ja">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-01T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-01T00:00:00+00:00">
+    <meta property="article:tag" content="DuckDB">
+    <meta property="article:tag" content="インストール">
+    <meta property="article:tag" content="SQL">
+    <meta property="article:tag" content="Python">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="DuckDB インストール入門">
+  <meta name="twitter:description" content="DuckDB v1.4.4 を CLI と Python API の両面からゼロから導入するガイド。pip / curl インストール、ドットコマンド、インメモリ・ファイルDB切り替え、CSV直接クエリ、fetchdf / pl 取得メソッドまでをカバーする。">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"DuckDB インストール入門\"",
+  "description": "\"DuckDB v1.4.4 を CLI と Python API の両面からゼロから導入するガイド。pip / curl インストール、ドットコマンド、インメモリ・ファイルDB切り替え、CSV直接クエリ、fetchdf / pl 取得メソッドまでをカバーする。\"",
+  "datePublished": "\"2026-03-01T00:00:00Z\"",
+  "dateModified": "\"2026-03-01T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/duckdb-install-quickstart/\""
+  },
+  "inLanguage": "ja",
+  "wordCount":  1881 ,
+  "keywords": "[\"DuckDB\",\"インストール\",\"SQL\",\"Python\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+</head>
+
+<body>
+  <a href="#main" class="skip-link">メインコンテンツへスキップ</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/duckdb-install-quickstart/" class="lang-dropdown-item active" lang="ja">
+        日本語
+      </a>
+    <a href="/en/" class="lang-dropdown-item" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">DuckDB インストール入門</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>DuckDB インストール入門</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-01'>
+            に公開 2026/03/01
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約3分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/duckdb/" class="tag-badge">DuckDB</a>
+          
+          <a href="https://zatoima.github.io/blog/%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/" class="tag-badge">インストール</a>
+          
+          <a href="https://zatoima.github.io/blog/sql/" class="tag-badge">SQL</a>
+          
+          <a href="https://zatoima.github.io/blog/python/" class="tag-badge"><img src="/images/tags/python.svg" alt="Python" class="tag-badge-icon" loading="lazy">Python</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="はじめに">はじめに</h2>
+<p><a href="https://duckdb.org/" target="_blank" rel="noopener noreferrer">DuckDB</a>
+ をゼロから使い始めるためのガイド。CLI と Python API の両方を使って、インストール・基本操作・CSV ファイルの分析までを一通り体験する。記事中の実行結果はすべて実際の出力を掲載している。</p>
+<h2 id="インストール">インストール</h2>
+<h3 id="python-パッケージ最も簡単">Python パッケージ（最も簡単）</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pip install duckdb
+</span></span></code></pre></div><p>追加の依存関係は不要で、これだけで完結する。インストール後すぐにPythonからSQLを実行できる。</p>
+<h3 id="cli-バイナリ">CLI バイナリ</h3>
+<p>公式からバイナリを直接ダウンロードする方法もある。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># Linux (x86_64)</span>
+</span></span><span style="display:flex;"><span>curl -L https://github.com/duckdb/duckdb/releases/latest/download/duckdb_cli-linux-amd64.zip -o duckdb.zip
+</span></span><span style="display:flex;"><span>unzip duckdb.zip
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Linux (ARM64)</span>
+</span></span><span style="display:flex;"><span>curl -L https://github.com/duckdb/duckdb/releases/latest/download/duckdb_cli-linux-arm64.zip -o duckdb.zip
+</span></span><span style="display:flex;"><span>unzip duckdb.zip <span style="color:#ff79c6">&amp;&amp;</span> chmod +x duckdb <span style="color:#ff79c6">&amp;&amp;</span> sudo mv duckdb /usr/local/bin/
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># macOS (Homebrew)</span>
+</span></span><span style="display:flex;"><span>brew install duckdb
+</span></span></code></pre></div><p>バージョン確認:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ duckdb --version
+</span></span><span style="display:flex;"><span>v1.4.4 <span style="color:#ff79c6">(</span>Andium<span style="color:#ff79c6">)</span> 6ddac802ff
+</span></span></code></pre></div><h2 id="cli-基本操作">CLI 基本操作</h2>
+<p>DuckDB CLI は REPL 形式で動作する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ duckdb              <span style="color:#6272a4"># インメモリモード</span>
+</span></span><span style="display:flex;"><span>$ duckdb mydb.duckdb  <span style="color:#6272a4"># ファイルDBモード（永続化）</span>
+</span></span></code></pre></div><p>起動後は <code>D</code> プロンプトが表示され、SQL を直接入力できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>D <span style="color:#ff79c6">SELECT</span> <span style="color:#f1fa8c">&#39;Hello, DuckDB!&#39;</span> <span style="color:#ff79c6">AS</span> greeting;
+</span></span><span style="display:flex;"><span>┌────────────────┐
+</span></span><span style="display:flex;"><span>│    greeting    │
+</span></span><span style="display:flex;"><span>│    <span style="color:#8be9fd;font-style:italic">varchar</span>     │
+</span></span><span style="display:flex;"><span>├────────────────┤
+</span></span><span style="display:flex;"><span>│ Hello, DuckDB<span style="color:#ff79c6">!</span> │
+</span></span><span style="display:flex;"><span>└────────────────┘
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>D <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">current_date</span> <span style="color:#ff79c6">AS</span> today, <span style="color:#ff79c6">version</span>() <span style="color:#ff79c6">AS</span> ver;
+</span></span><span style="display:flex;"><span>┌────────────┬─────────┐
+</span></span><span style="display:flex;"><span>│   today    │   ver   │
+</span></span><span style="display:flex;"><span>│    <span style="color:#8be9fd;font-style:italic">date</span>    │ <span style="color:#8be9fd;font-style:italic">varchar</span> │
+</span></span><span style="display:flex;"><span>├────────────┼─────────┤
+</span></span><span style="display:flex;"><span>│ <span style="color:#bd93f9">2026</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">03</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">01</span> │ v1.<span style="color:#bd93f9">4</span>.<span style="color:#bd93f9">4</span>  │
+</span></span><span style="display:flex;"><span>└────────────┴─────────┘
+</span></span></code></pre></div><p><code>-c</code> オプションを使えばワンライナーでも実行できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ duckdb -c <span style="color:#f1fa8c">&#34;SELECT &#39;Hello, DuckDB!&#39; AS greeting;&#34;</span>
+</span></span></code></pre></div><h3 id="便利なドットコマンド">便利なドットコマンド</h3>
+<table>
+  <thead>
+      <tr>
+          <th>コマンド</th>
+          <th>説明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>.help</code></td>
+          <td>ヘルプ一覧</td>
+      </tr>
+      <tr>
+          <td><code>.tables</code></td>
+          <td>テーブル一覧</td>
+      </tr>
+      <tr>
+          <td><code>.schema テーブル名</code></td>
+          <td>スキーマ確認</td>
+      </tr>
+      <tr>
+          <td><code>.mode markdown</code></td>
+          <td>出力を Markdown 表形式に変更</td>
+      </tr>
+      <tr>
+          <td><code>.timer on</code></td>
+          <td>クエリ実行時間を表示</td>
+      </tr>
+      <tr>
+          <td><code>.output file.csv</code></td>
+          <td>結果をファイルに書き出す</td>
+      </tr>
+      <tr>
+          <td><code>.quit</code></td>
+          <td>終了</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="インメモリ-db-vs-ファイル-db">インメモリ DB vs ファイル DB</h2>
+<p>DuckDB は2つのモードで動作する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>インメモリモード: duckdb
+</span></span><span style="display:flex;"><span>  → プロセス終了でデータが消える
+</span></span><span style="display:flex;"><span>  → 一時的な分析・実験向け
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ファイルモード: duckdb mydb.duckdb
+</span></span><span style="display:flex;"><span>  → .duckdb ファイルにデータが永続化される
+</span></span><span style="display:flex;"><span>  → 繰り返し使うDBとして利用可能
+</span></span></code></pre></div><p>実際にファイルDBで操作してみた。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ duckdb /tmp/demo.duckdb -c <span style="color:#f1fa8c">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">CREATE TABLE IF NOT EXISTS events (id INTEGER, ts TIMESTAMP, value DOUBLE);
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">INSERT INTO events VALUES (1, NOW(), 3.14), (2, NOW(), 2.71);
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">SELECT * FROM events;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;</span>
+</span></span></code></pre></div><p><strong>実行結果:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>┌───────┬────────────────────────────┬────────┐
+</span></span><span style="display:flex;"><span>│  id   │             ts             │ value  │
+</span></span><span style="display:flex;"><span>│ int32 │         timestamp          │ double │
+</span></span><span style="display:flex;"><span>├───────┼────────────────────────────┼────────┤
+</span></span><span style="display:flex;"><span>│     1 │ 2026-03-01 23:06:08.892993 │   3.14 │
+</span></span><span style="display:flex;"><span>│     2 │ 2026-03-01 23:06:08.892993 │   2.71 │
+</span></span><span style="display:flex;"><span>└───────┴────────────────────────────┴────────┘
+</span></span></code></pre></div><h2 id="テーブル操作の基本">テーブル操作の基本</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- テーブル作成
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">TABLE</span> users (id <span style="color:#8be9fd;font-style:italic">INTEGER</span>, name <span style="color:#8be9fd;font-style:italic">VARCHAR</span>, score DOUBLE);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- データ挿入（複数行を一括）
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">INSERT</span> <span style="color:#ff79c6">INTO</span> users <span style="color:#ff79c6">VALUES</span>
+</span></span><span style="display:flex;"><span>    (<span style="color:#bd93f9">1</span>, <span style="color:#f1fa8c">&#39;Alice&#39;</span>,   <span style="color:#bd93f9">95</span>.<span style="color:#bd93f9">5</span>),
+</span></span><span style="display:flex;"><span>    (<span style="color:#bd93f9">2</span>, <span style="color:#f1fa8c">&#39;Bob&#39;</span>,     <span style="color:#bd93f9">87</span>.<span style="color:#bd93f9">0</span>),
+</span></span><span style="display:flex;"><span>    (<span style="color:#bd93f9">3</span>, <span style="color:#f1fa8c">&#39;Charlie&#39;</span>, <span style="color:#bd93f9">92</span>.<span style="color:#bd93f9">3</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- 並び替えて取得
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> users <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> score <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><p><strong>実行結果:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span>┌───────┬─────────┬────────┐
+</span></span><span style="display:flex;"><span>│  id   │  name   │ score  │
+</span></span><span style="display:flex;"><span>│ int32 │ varchar │ double │
+</span></span><span style="display:flex;"><span>├───────┼─────────┼────────┤
+</span></span><span style="display:flex;"><span>│     <span style="color:#bd93f9">1</span> │ Alice   │   <span style="color:#bd93f9">95.5</span> │
+</span></span><span style="display:flex;"><span>│     <span style="color:#bd93f9">3</span> │ Charlie │   <span style="color:#bd93f9">92.3</span> │
+</span></span><span style="display:flex;"><span>│     <span style="color:#bd93f9">2</span> │ Bob     │   <span style="color:#bd93f9">87.0</span> │
+</span></span><span style="display:flex;"><span>└───────┴─────────┴────────┘
+</span></span></code></pre></div><p>集計も直感的に書ける。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">AVG</span>(score) <span style="color:#ff79c6">AS</span> avg_score <span style="color:#ff79c6">FROM</span> users;
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- 91.6
+</span></span></span></code></pre></div><h2 id="csv-ファイルの読み込み">CSV ファイルの読み込み</h2>
+<p>DuckDB の大きな強みの一つが、CSV をそのままクエリできること。<code>read_csv_auto</code> はヘッダーと型を自動推論する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- テーブルとしてインポートせずに直接クエリ
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> read_csv_auto(<span style="color:#f1fa8c">&#39;sales.csv&#39;</span>);
+</span></span></code></pre></div><p>以下の sales.csv（8行）をカテゴリ別に集計した。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>date,category,amount
+</span></span><span style="display:flex;"><span>2024-01-15,Electronics,12500
+</span></span><span style="display:flex;"><span>2024-01-22,Books,3200
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    category,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">COUNT</span>(<span style="color:#ff79c6">*</span>)            <span style="color:#ff79c6">AS</span> <span style="color:#ff79c6">count</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SUM</span>(amount)         <span style="color:#ff79c6">AS</span> total,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AVG</span>(amount)::<span style="color:#8be9fd;font-style:italic">INTEGER</span> <span style="color:#ff79c6">AS</span> <span style="color:#ff79c6">avg</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> read_csv_auto(<span style="color:#f1fa8c">&#39;sales.csv&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> category
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> total <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><p><strong>実行結果:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span>┌─────────────┬───────┬────────┬───────┐
+</span></span><span style="display:flex;"><span>│  category   │ count │ total  │  avg  │
+</span></span><span style="display:flex;"><span>│   varchar   │ int64 │ int128 │ int32 │
+</span></span><span style="display:flex;"><span>├─────────────┼───────┼────────┼───────┤
+</span></span><span style="display:flex;"><span>│ Electronics │     <span style="color:#bd93f9">3</span> │  <span style="color:#bd93f9">37200</span> │ <span style="color:#bd93f9">12400</span> │
+</span></span><span style="display:flex;"><span>│ Books       │     <span style="color:#bd93f9">3</span> │  <span style="color:#bd93f9">12000</span> │  <span style="color:#bd93f9">4000</span> │
+</span></span><span style="display:flex;"><span>│ Food        │     <span style="color:#bd93f9">2</span> │   <span style="color:#bd93f9">7800</span> │  <span style="color:#bd93f9">3900</span> │
+</span></span><span style="display:flex;"><span>└─────────────┴───────┴────────┴───────┘
+</span></span></code></pre></div><p>Parquet も同様に <code>read_parquet('file.parquet')</code> で直接読める。グロブパターン <code>read_parquet('data/*.parquet')</code> で複数ファイルをまとめてクエリすることもできる。</p>
+<h2 id="python-api">Python API</h2>
+<p>Python から使う場合は <code>duckdb.connect()</code> でインスタンスを作成する。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># インメモリ接続</span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># ファイルDB接続</span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect(<span style="color:#f1fa8c">&#34;mydb.duckdb&#34;</span>)
+</span></span></code></pre></div><p>テーブルを作成してクエリし、Pandas DataFrame として受け取る例。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
+</span></span><span style="display:flex;"><span>con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    CREATE TABLE products AS
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    SELECT * FROM (VALUES
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        (&#39;Apple&#39;,   &#39;Fruit&#39;,     150),
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        (&#39;Banana&#39;,  &#39;Fruit&#39;,      80),
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        (&#39;Carrot&#39;,  &#39;Vegetable&#39;,  90),
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        (&#39;Broccoli&#39;,&#39;Vegetable&#39;, 120),
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">        (&#39;Orange&#39;,  &#39;Fruit&#39;,     200)
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">    ) t(name, category, price)
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>df <span style="color:#ff79c6">=</span> con<span style="color:#ff79c6">.</span>execute(
+</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;SELECT category, AVG(price) AS avg_price, COUNT(*) AS cnt FROM products GROUP BY category&#34;</span>
+</span></span><span style="display:flex;"><span>)<span style="color:#ff79c6">.</span>fetchdf()
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(df)
+</span></span></code></pre></div><p><strong>実行結果:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    category   avg_price  cnt
+</span></span><span style="display:flex;"><span>0  Vegetable  105.000000    2
+</span></span><span style="display:flex;"><span>1      Fruit  143.333333    3
+</span></span></code></pre></div><p><code>.fetchdf()</code> 以外の取得メソッドも使える。</p>
+<table>
+  <thead>
+      <tr>
+          <th>メソッド</th>
+          <th>戻り値</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>.fetchdf()</code></td>
+          <td>Pandas DataFrame</td>
+      </tr>
+      <tr>
+          <td><code>.fetchone()</code></td>
+          <td>タプル（1行）</td>
+      </tr>
+      <tr>
+          <td><code>.fetchall()</code></td>
+          <td>タプルのリスト</td>
+      </tr>
+      <tr>
+          <td><code>.fetch_arrow_table()</code></td>
+          <td>Apache Arrow Table</td>
+      </tr>
+      <tr>
+          <td><code>.pl()</code></td>
+          <td>Polars DataFrame</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="ショートカット-duckdbsql">ショートカット: <code>duckdb.sql()</code></h3>
+<p>インスタンスを作らずに直接クエリを実行できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>result <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>sql(<span style="color:#f1fa8c">&#34;SELECT 42 AS answer, version() AS ver&#34;</span>)<span style="color:#ff79c6">.</span>fetchdf()
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(result)
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># =&gt;    answer     ver</span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># =&gt; 0      42  v1.4.4</span>
+</span></span></code></pre></div><h2 id="まとめ">まとめ</h2>
+<table>
+  <thead>
+      <tr>
+          <th>操作</th>
+          <th>コマンド</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>pip インストール</td>
+          <td><code>pip install duckdb</code></td>
+      </tr>
+      <tr>
+          <td>CLI 起動（インメモリ）</td>
+          <td><code>duckdb</code></td>
+      </tr>
+      <tr>
+          <td>CLI 起動（ファイルDB）</td>
+          <td><code>duckdb mydb.duckdb</code></td>
+      </tr>
+      <tr>
+          <td>Python 接続</td>
+          <td><code>duckdb.connect()</code></td>
+      </tr>
+      <tr>
+          <td>CSV 直接クエリ</td>
+          <td><code>SELECT * FROM read_csv_auto('file.csv')</code></td>
+      </tr>
+      <tr>
+          <td>DataFrame 取得</td>
+          <td><code>con.execute(&quot;...&quot;).fetchdf()</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>DuckDB はインストールから5分で実用的なデータ分析が始められる。次の記事ではアーキテクチャの内部構造を掘り下げ、なぜ速いのかを解説する。</p>
+<h2 id="参考資料">参考資料</h2>
+<div class="link-card">
+    <a href="https://duckdb.org/docs/installation/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Redirecting&amp;hellip;</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://duckdb.org/docs/guides/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Redirecting&amp;hellip;</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://duckdb.org/docs/api/python/overview" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Redirecting&amp;hellip;</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-01-DuckDB%e3%82%a4%e3%83%b3%e3%82%b9%e3%83%88%e3%83%bc%e3%83%ab%e3%81%8b%e3%82%89%e5%88%9d%e3%82%81%e3%81%a6%e3%81%ae%e3%82%af%e3%82%a8%e3%83%aa%e3%81%be%e3%81%a7/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      GitHubで編集を提案
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/what-is-duckdb/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">DuckDB とは何か</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/oci-always-free-arm64-benchmark/" class="prev-next-link next-link">
+        <span class="prev-next-label">次の記事 →</span>
+        <span class="prev-next-title">OCI Always Free ARM64のパフォーマンスをベンチマーク計測する</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fduckdb-install-quickstart%2f&text=DuckDB&#43;%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E5%85%A5%E9%96%80" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/duckdb-install-quickstart/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">関連しているかもしれない記事</h2>
+  <ul class="related-list">
+    
+    <li><a href="/what-is-duckdb/">DuckDB とは何か</a></li>
+    
+    <li><a href="/duckdb-architecture/">DuckDB のアーキテクチャ — なぜ速いのか</a></li>
+    
+    <li><a href="/llm-papers-pipeline-with-claude-code/">Claude CodeでLLM論文の自動収集・要約・公開パイプラインを構築した</a></li>
+    
+    <li><a href="/python-pandas-datareader-data-from-fred/">Pythonのpandas-datareaderで取得できる代表的なデータをまとめる</a></li>
+    
+    <li><a href="/python-dmm-online-eikaiwa-calendar-heatmap/">DMM英会話の受講履歴をCalendar Heatmapで可視化</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/duckdb/" class="tag-badge">DuckDB</a>
+  
+  <a href="https://zatoima.github.io/blog/%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB/" class="tag-badge">インストール</a>
+  
+  <a href="https://zatoima.github.io/blog/sql/" class="tag-badge">SQL</a>
+  
+  <a href="https://zatoima.github.io/blog/python/" class="tag-badge"><img src="/images/tags/python.svg" alt="Python" class="tag-badge-icon" loading="lazy">Python</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#はじめに">はじめに</a></li>
+    <li><a href="#インストール">インストール</a>
+      <ul>
+        <li><a href="#python-パッケージ最も簡単">Python パッケージ（最も簡単）</a></li>
+        <li><a href="#cli-バイナリ">CLI バイナリ</a></li>
+      </ul>
+    </li>
+    <li><a href="#cli-基本操作">CLI 基本操作</a>
+      <ul>
+        <li><a href="#便利なドットコマンド">便利なドットコマンド</a></li>
+      </ul>
+    </li>
+    <li><a href="#インメモリ-db-vs-ファイル-db">インメモリ DB vs ファイル DB</a></li>
+    <li><a href="#テーブル操作の基本">テーブル操作の基本</a></li>
+    <li><a href="#csv-ファイルの読み込み">CSV ファイルの読み込み</a></li>
+    <li><a href="#python-api">Python API</a>
+      <ul>
+        <li><a href="#ショートカット-duckdbsql">ショートカット: <code>duckdb.sql()</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#参考資料">参考資料</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

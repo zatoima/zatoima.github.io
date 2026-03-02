@@ -1,4 +1,3 @@
-from __future__ import annotations
 """Paper fetchers for arXiv, Semantic Scholar, and Hugging Face Daily Papers."""
 
 import logging
