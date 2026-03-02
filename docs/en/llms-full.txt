@@ -1623,15 +1623,131 @@ sudo yum install -y mongodb-org mongo -version Starting MongoDB sudo systemctl s
 
 ---
 
-### Converting CSV to Parquet and Verifying with Python PyArrow
+### Rough Notes on FIWARE
 
-date: 2021-11-03
-url: https://zatoima.github.io/en/python-pyarrow-convert-csv-to-parquet-pandas/
-tags: Python
+date: 2021-12-04
+url: https://zatoima.github.io/en/fiware-about-memo/
+tags: fiware
 
-I learned that pandas can handle Parquet files.
-Creating Test CSV Data cat &lt;&lt; EOF &gt; testdata.csv 1,test1,ゎぶばあちあぬナクバ 2,test2,がマうひバぴじクハぺ 3,test3,スみでてゥあッあけげ EOF Installing pyarrow pip install pyarrow Converting CSV to Parquet import pandas as pd import pyarrow as pa import pyarrow.parquet as pq #csvからparquetへの変換 df = pd.read_csv(&#39;./testdata.csv&#39;) table = pa.Table.from_pandas(df) pq.write_table(table, &#39;./testdata.parquet&#39;) Verifying the Parquet Content #parquetの内容確認 load_df_pq = pd.read_parquet(&#34;./testdata.parquet&#34;) print(load_df_pq.info()) print(load_df_pq) You can also easily view Parquet files using AWS S3 Select, which is very convenient.
+What is FIWARE FIWARE is a data management platform focused on cross-domain data distribution, often referred to as a &ldquo;City OS&rdquo; for smart cities.
+As the term &ldquo;data management platform&rdquo; implies, it is not just infrastructure — it appears capable of building many of the elements needed for data management on a component-by-component basis.
+It seems to support core components, CKAN for handling data catalogs, Grafana for data visualization, and more. It also has the ability to receive and visualize data from IoT devices. The central hub for data exchange is the Context Broker, which enables Pub/Sub-style data communication. The component responsible for this role is called Orion.
+Ultimately, it is a system capable of generating, collecting, publishing, and consuming information about cities. But why the emphasis on cities?
+Significance Not limited to City OS, the lack of unified standards for inter-system integration can be a problem in general. While the US has large platform companies that are increasingly creating data silos, there is a perspective that Europe, Japan, and others are trying to build ecosystems through open source and standards like NGSI in FIWARE. The goal is to unify standards for data collection and accumulation, creating an ecosystem for mutual prosperity.
+The term &ldquo;ecosystem&rdquo; in this context refers to a framework where multiple companies form partnerships in product development and business activities, leveraging each other&rsquo;s technologies and capital to coexist and thrive across industry boundaries and national borders.
+What FIWARE Enables Interoperability Data distribution Extensibility DMBOK is a useful reference when it comes to data utilization and handling. DMBOK describes metadata management, data integration, interoperability, data modeling, data architecture, and other areas related to data governance. FIWARE appears to be partially effective for these areas as well. When integrating with various systems, you normally need to consider data modeling aspects such as how to share data, what formats to use, and what file types to adopt. FIWARE provides a defined framework that handles much of this.
+NGSI data model Open API Common API Data exchange is conducted using the international standard called NGSI (Next Generation Service Interfaces), which was apparently drafted by Japan (though the standardization itself was done by a European organization).
+NGSI defines interfaces for data integration and data models for data storage. The data model consists of &ldquo;entities&rdquo; and their attribute information called context information, enabling data integration between different applications. The data semantics follow FIWARE Data Models.
+How to Learn To be honest, researching this on my own did not give me a clear understanding, so the quickest way to learn seems to be working through the following tutorial:
+https://github.com/FIWARE/tutorials.Getting-Started/blob/master/README.ja.md References Initiatives for Public-Private Data Utilization Common Platforms Open Source Software for Smart Cities: Getting Started with FIWARE NGSI v2 Summary - Qiita SIP Cyber/Architecture Development and Demonstration Research Results 
 
+---
+
+### Installing Docker on EC2 and Running FIWARE
+
+date: 2021-12-02
+url: https://zatoima.github.io/en/aws-ec2-docker-fiware-install/
+tags: AWS, Docker, Fiware
+
+Preparation Installing Docker sudo yum install -y docker sudo systemctl start docker sudo usermod -a -G docker ec2-user Enabling Auto-Start sudo systemctl enable docker Installing FIWARE Refer to the official GitHub repository for the FIWARE setup procedure:
+tutorials.Getting-Started/README.ja.md at master · FIWARE/tutorials.Getting-Started · GitHub Verify That Docker Version 18.03 or Later Is Installed [ec2-user@bastin ~]$ docker version Client: Version: 20.10.7 API version: 1.41 Go version: go1.15.14 Git commit: f0df350 Built: Tue Sep 28 19:55:50 2021 OS/Arch: linux/amd64 Context: default Experimental: true [ec2-user@bastin ~]$ Starting the Containers docker pull mongo:4.4 docker pull fiware/orion docker network create fiware_default Start a Docker container running the MongoDB database and connect it to the network:
+docker run -d --name=mongo-db --network=fiware_default --expose=27017 mongo:4.4 --bind_ip_all Connect fiware-orion to the network:
+docker run -d --name fiware-orion --network=fiware_default -p 1026:1026 fiware/orion -dbhost mongo-db Cleanup configuration (run only if needed):
+docker stop fiware-orion docker rm fiware-orion docker stop mongo-db docker rm mongo-db docker network rm fiware_default Making HTTP Requests Retrieve the version:
+curl -X GET &#39;http://localhost:1026/version&#39; [ec2-user@bastin ~]$ curl -X GET &#39;http://localhost:1026/version&#39; { &#34;orion&#34; : { &#34;version&#34; : &#34;3.1.0-next&#34;, &#34;uptime&#34; : &#34;0 d, 0 h, 1 m, 19 s&#34;, &#34;git_hash&#34; : &#34;7bd1e43514539bd65caeb30d4e3319202e0f115b&#34;, &#34;compile_time&#34; : &#34;Mon Jul 26 08:19:44 UTC 2021&#34;, &#34;compiled_by&#34; : &#34;root&#34;, &#34;compiled_in&#34; : &#34;dae1c5e3a7d9&#34;, &#34;release_date&#34; : &#34;Mon Jul 26 08:19:44 UTC 2021&#34;, &#34;machine&#34; : &#34;x86_64&#34;, &#34;doc&#34; : &#34;https://fiware-orion.rtfd.io/&#34;, &#34;libversions&#34;: { &#34;boost&#34;: &#34;1_66&#34;, &#34;libcurl&#34;: &#34;libcurl/7.61.1 OpenSSL/1.1.1g zlib/1.2.11 nghttp2/1.33.0&#34;, &#34;libmicrohttpd&#34;: &#34;0.9.70&#34;, &#34;openssl&#34;: &#34;1.1&#34;, &#34;rapidjson&#34;: &#34;1.1.0&#34;, &#34;mongoc&#34;: &#34;1.17.4&#34;, &#34;bson&#34;: &#34;1.17.4&#34; } } } Creating an Entity curl -sS http://localhost:1026/v2/entities \ -H &#39;Content-Type: application/json&#39; \ -d @- &lt;&lt;EOF { &#34;id&#34;: &#34;living&#34;, &#34;type&#34;: &#34;Room&#34;, &#34;temperature&#34;: {&#34;value&#34;: 23, &#34;type&#34;: &#34;Float&#34;} } EOF Verifying the Entity [ec2-user@bastin ~]$ curl -sS http://localhost:1026/v2/entities/living?type=Room -H &#39;Accept: application/json&#39; | jq . { &#34;id&#34;: &#34;living&#34;, &#34;type&#34;: &#34;Room&#34;, &#34;temperature&#34;: { &#34;type&#34;: &#34;Float&#34;, &#34;value&#34;: 23, &#34;metadata&#34;: {} } } Updating the Entity
+curl -sS http://localhost:1026/v2/entities/living/attrs \ -H &#39;Content-Type: application/json&#39; \ -X PATCH \ -d @- &lt;&lt;EOF { &#34;temperature&#34;: { &#34;value&#34;: 26.5, &#34;type&#34;: &#34;Float&#34; } } EOF Verifying the Entity
+[ec2-user@bastin ~]$ curl -sS http://localhost:1026/v2/entities/living?type=Room -H &#39;Accept: application/json&#39; | jq . { &#34;id&#34;: &#34;living&#34;, &#34;type&#34;: &#34;Room&#34;, &#34;temperature&#34;: { &#34;type&#34;: &#34;Float&#34;, &#34;value&#34;: 26.5, &#34;metadata&#34;: {} } } [ec2-user@bastin ~]$ Updating an Attribute
+curl -sS http://localhost:1026/v2/entities/living/attrs/temperature/value \ -H &#39;Content-Type: text/plain&#39; \ -X PUT \ -d 28.5 
+
+---
+
+### CloudTrail Data Events Cannot Be Viewed from the Management Console
+
+date: 2021-11-25
+url: https://zatoima.github.io/en/aws-cloudtrail-dataevent-athena/
+tags: AWS
+
+A note about something I got stuck on.
+What Are Data Events? 20210119_AWSBlackbelt_CloudTrail.pdf What I Got Stuck On I knew that data events are not recorded by default, but I didn&rsquo;t know that data events are not displayed in the Management Console, which cost me some time. (I usually search CloudTrail information using Athena, but this time I tried to look at it from the Event History in the Management Console and couldn&rsquo;t find anything, which left me wondering why.)
+According to the official documentation and guides:
+Logging management events with CloudTrail - AWS CloudTrail The CloudTrail Event history feature only supports management events. Not all management events are displayed in Event history.
+About CloudTrail data and management events By default, CloudTrail data events are disabled. You can enable logging for an additional fee. Data events, also known as data plane operations, often involve high-volume processing. Data events cannot be viewed in CloudTrail Event history.
+Using Athena, you can view CloudTrail data and management events older than 90 days from log files stored in Amazon S3 buckets.
+Solution If you want to view data events, search CloudTrail using Athena.
+Analyzing CloudTrail Trails with Athena | my opinion is my own 
+
+---
+
+### Analyzing CloudTrail Trails with Athena
+
+date: 2021-11-18
+url: https://zatoima.github.io/en/aws-cloudtrail-athena-analyze-query/
+tags: AWS, Athena, CloudTrail
+
+The CloudTrail management console has a feature called &ldquo;Create Athena table.&rdquo; It provides a DDL to enable querying with Athena, but there is a pitfall. Although the files on S3 are stored and partitioned by date, this DDL definition does not support partitioning. To avoid unnecessary costs, you need to prepare a separate DDL that supports Partition Projection.
+Creating a Table in Athena 【All Regions】Creating a CloudTrail Log Table with Athena Partition Projection | DevelopersIO Searching CloudTrail Logs Using Athena Partition Projection - Serverworks Engineer Blog drop table cloudtrail_logs; CREATE EXTERNAL TABLE cloudtrail_logs ( eventVersion STRING, userIdentity STRUCT&lt; type: STRING, principalId: STRING, arn: STRING, accountId: STRING, invokedBy: STRING, accessKeyId: STRING, userName: STRING, sessionContext: STRUCT&lt; attributes: STRUCT&lt; mfaAuthenticated: STRING, creationDate: STRING&gt;, sessionIssuer: STRUCT&lt; type: STRING, principalId: STRING, arn: STRING, accountId: STRING, userName: STRING&gt;&gt;&gt;, eventTime STRING, eventSource STRING, eventName STRING, awsRegion STRING, sourceIpAddress STRING, userAgent STRING, errorCode STRING, errorMessage STRING, requestParameters STRING, responseElements STRING, additionalEventData STRING, requestId STRING, eventId STRING, resources ARRAY&lt;STRUCT&lt; arn: STRING, accountId: STRING, type: STRING&gt;&gt;, eventType STRING, apiVersion STRING, readOnly STRING, recipientAccountId STRING, serviceEventDetails STRING, sharedEventID STRING, vpcEndpointId STRING ) COMMENT &#39;CloudTrail table for ${BucketName} bucket&#39; PARTITIONED BY (region string, date string) ROW FORMAT SERDE &#39;com.amazon.emr.hive.serde.CloudTrailSerde&#39; STORED AS INPUTFORMAT &#39;com.amazon.emr.cloudtrail.CloudTrailInputFormat&#39; OUTPUTFORMAT &#39;org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat&#39; LOCATION &#39;s3://z3-cloudtrail/AWSLogs/&lt;Acclout ID&gt;/CloudTrail/&#39; TBLPROPERTIES ( &#39;projection.enabled&#39; = &#39;true&#39;, &#39;projection.date.type&#39; = &#39;date&#39;, &#39;projection.date.range&#39; = &#39;NOW-1YEARS,NOW&#39;, &#39;projection.date.format&#39; = &#39;yyyy/MM/dd&#39;, &#39;projection.date.interval&#39; = &#39;1&#39;, &#39;projection.date.interval.unit&#39; = &#39;DAYS&#39;, &#39;projection.region.type&#39; = &#39;enum&#39;, &#39;projection.region.values&#39;=&#39;us-east-1,us-east-2,us-west-1,us-west-2,af-south-1,ap-east-1,ap-south-1,ap-northeast-2,ap-southeast-1,ap-southeast-2,ap-northeast-1,ca-central-1,eu-central-1,eu-west-1,eu-west-2,eu-south-1,eu-west-3,eu-north-1,me-south-1,sa-east-1&#39;, &#39;storage.location.template&#39; = &#39;s3://z3-cloudtrail/AWSLogs/&lt;Acclout ID&gt;/CloudTrail/${region}/${date}&#39;, &#39;classification&#39;=&#39;cloudtrail&#39;, &#39;compressionType&#39;=&#39;gzip&#39;, &#39;typeOfData&#39;=&#39;file&#39;, &#39;classification&#39;=&#39;cloudtrail&#39; ); Running Analysis Queries Aggregate by eventsource and eventname for APIs issued in the Tokyo region during November 2021.
+SELECT awsregion, eventsource, eventname, COUNT(*) as cnt FROM cloudtrail_logs WHERE date&gt;=&#39;2021/11/01&#39; AND region = &#39;ap-northeast-1&#39; GROUP BY awsregion, eventsource, eventname ORDER BY cnt DESC limit 10; The execution time is faster compared to a full scan. Only a portion of the data was scanned.
+
+
+---
+
+### DMBOK Study Rough Notes (Reference Data and Master Data)
+
+date: 2021-11-15
+url: https://zatoima.github.io/en/dmbok-memo-reference-data-master/
+tags: DMBOK
+
+These are rough notes from studying DMBOK, covering reference data and master data.
+Reference Data and Master Data What is the DAMA Wheel?
+A framework that summarizes the disciplines needed to implement data governance Definitions of master data and reference data
+Reference Data
+Data that characterizes or relates to other data (including master data) Classification Order status: New, Processing, Cancelled External information Country codes: US, JPN, DE Data used to associate with external information Master Data
+Data representing key business entities tied to business operations Organizational information: employees, vendors, customer information, etc. Goods/services: products, finished goods, intermediate goods, etc. Transaction Data
+A type of data handled by enterprise information systems that records the details of events generated through business operations Additions and updates occur daily Updates are performed by individual users Reference data and master data are fundamentally managed by administrators In terms of a star schema, dimension tables correspond to reference data and master data, while fact tables correspond to transaction data. (Diagram source )
+Significance and purpose of master data management
+To meet organizational data requirements Analysis is meaningless without complete, up-to-date, consistent, and trustworthy data Data quality management Avoid data inconsistencies, defects, and gaps Cost management of data integration Integrating data sources without master data is costly Risk reduction and mitigation Simplification of data sharing architecture reduces risk and cost Guidelines for master data management
+Shared data: Reference data and master data should be managed so they can be shared across the entire organization Data ownership: Reference data and master data belong to the organization, not to specific applications or departments Quality: Monitor data quality and enforce governance Stewardship: Data stewards at the source of business data are responsible for managing and ensuring the quality of reference data Change management Changes should go through a defined process, including approval workflows, communication to stakeholders, and distribution What is needed to evaluate MDM requirements
+Which roles, organizations, locations, and things are repeatedly referenced What data is used to describe people, organizations, locations, and things How data is defined and structured, including data granularity Where data is created/collected, stored, made available, and accessed How data changes as it moves through systems within the organization Who uses the data and for what purposes What criteria are used to understand data quality and the reliability of its sources 
+
+---
+
+### Rough Notes from DMBOK Study (Data Governance and Data Management)
+
+date: 2021-11-09
+url: https://zatoima.github.io/en/dmbok-memo-data-governance-data-management/
+tags: DMBOK
+
+These are rough notes from my DMBOK study, focusing on Data Governance and Data Management.
+What is the DAMA Wheel?
+A framework that summarizes the disciplines needed to perform data governance What is Data Governance?
+Definition: Exercising control over data asset management through authority and accountability Proper organizational staffing Building organizational structures Data stewardship system In-house critical areas while outsourcing routine operations, etc. Executive commitment is required Sharing of data management activities Starting small is recommended Regular sharing of activity scope Goal: The organization manages its own data as an asset Define, approve, communicate, and enforce principles, policies, procedures, metrics, tools, and responsibilities related to data management Monitor and guide policy compliance, data usage, and management activities Note that data governance is a means, not an end. Avoid management for the sake of management. Direction Data Governance Should Aim For
+Data should be managed as an enterprise asset Best practices in data management should be promoted across the organization Enterprise data strategy should directly align with overall business strategy Data management processes should be continuously improved ISO 55000/55001
+International standards related to asset management
+To ensure maximum availability and profitability while balancing cost, risk, and performance throughout the lifecycle of organizational assets
+Japan Asset Management Association (JAAM) | What is the ISO 55000 Series? https://www.ja-am.or.jp/iso55000s Asset Management System (AMS) Certification (ISO 55001) | Japan Accreditation Board https://www.jab.or.jp/iso/iso_55001/ Approaches to Data Valuation
+Cost of data acquisition and storage Cost of data recovery if data is lost Clarification of the purpose of selling data Expected revenue from data usage Objectives of Data Management
+To enable effective use of data to add value to the enterprise Risk mitigation Process improvement Regulatory compliance Data quality improvement Metadata management Development project efficiency Vendor management Data Steward
+Role
+A business role appointed to be responsible for the quality and usage of an organization&rsquo;s data assets Examples of Duties
+Creating and managing metadata Documenting rules and standards Managing data quality issues Executing data governance operational activities Various types of data stewards exist
+Chief Data Steward: Executive sponsor
+Executive Data Steward: Senior manager who serves on the data governance council
+Enterprise Data Steward: Covers data domains across business functions
+Business Data Steward: Defines and controls data in cooperation with stakeholders
+Data Owner: Also serves as a business data steward, with authority to approve decisions regarding data within their area of responsibility
+IT Data Steward: IT professional who functions in each knowledge area, such as data integration specialist, database administrator, business intelligence specialist, data quality analyst, and metadata administrator
+Coordinating Data Steward: Represents both business data steward and IT data steward teams, engaging in discussions between teams and with executive data stewards
+What is Data Governance?
+A continuous process for data improvement Various organizational models are possible Exercise of authority and control over data asset management Monitor and verify compliance with regulatory and compliance requirements Who is Responsible for Executing Data Governance?
+Everyone in the data management community Data stewards CEO/CIO/CDO Business stakeholders Data Asset Valuation The process of understanding and measuring the economic value of data in an organization. Value is created when the economic benefits of using data exceed the costs of acquiring and storing data and the costs of managing risks associated with its use.
+Example Approaches for Delivering the Value of Data Governance
+Maintaining an intranet website for data management Publishing regular newsletters Encouraging participation in forums and communities Creating elevator pitches for stakeholders and audiences Content to Include on the Data Management Intranet Website
+Contact information for the data governance organization Executive messages about data management and existing data management issues Profiles of data steward teams Mechanisms and email links for reporting data management issues Data Standards Guidelines
+Regular reviews and updates are required Data Governance Steering Committee
+The primary and highest-level body responsible for overseeing and supporting data governance activities ISO 3166
+Geocoding assigned by the International Organization for Standardization (ISO) for country names, corresponding areas, and regions such as prefectures and states ISO 3166 - Wikipedia https://ja.wikipedia.org/wiki/ISO_3166 Objectives of Data Management
+Acquisition, storage, protection, and ensuring integrity of data assets Ensuring the quality of data and information Ensuring the privacy and confidentiality of stakeholder data Data Governance Strategy
+Must be linked to the overall business strategy, not just the IT strategy Operations framework and accountability Implementation roadmap Operational plan Statement of the significance, vision, mission, and principles of data governance Support for data management projects Involvement and alignment with internal SDLC, service deployment management, ITIL, and PMO processes is required Establishing collaboration points with the organization Consider collaboration structures with organizations that partner on data governance activities Procurement and contracts Budget and funding Regulatory compliance SDLC/development frameworks Data Management Maturity Measure the current data management execution capability and scope Transformation capability Readiness for collaboration Alignment with business 
 
 ---
 
@@ -6362,4 +6478,45 @@ url: https://zatoima.github.io/en/
 
 翻訳・ビルド・デプロイが完了しました。
 記事: content/en/blog/2021-10-31-DELL XPS 8900にて電源が入らない状況からなんとか回復した方法/index.md URL: /en/dell-xps-8900-recovery-lost-power/ 
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+完了しました。
+英語翻訳ファイルを content/en/blog/2021-11-03-PythonのPyArrowを使用してCSVをParquetに変換、及び確認/index.md に作成 画像ファイル3枚をコピー Hugoビルド・プッシュまで完了 
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+--- # Documentation: https://sourcethemes.com/academic/docs/managing-content/ title: &#34;Setting Up Your Favorite Font in VSCode&#34; subtitle: &#34;&#34; summary: &#34; &#34; tags: [&#34;Other&#34;,&#34;VSCode&#34;] categories: [&#34;Other&#34;,&#34;VSCode&#34;] url: vscode-font-favorite date: 2021-11-06 featured: false draft: false # Featured image # To use, add an image named `featured.jpg/png` to your pages folder. # Focal points: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, BottomRight. image: caption: &#34;&#34; focal_point: &#34;&#34; preview_only: fals --- - [mzyy94/RictyDiminished\-for\-Powerline: Ricty Diminished with Powerline patched \-\-\- fonts for programming](https://github.com/mzyy94/RictyDiminished-for-Powerline) - RictyDiminished-Regular.ttf - RictyDiminished-Oblique.ttf Install these fonts, then set &#34;Ricty Diminished&#34; in the font settings of VSCode. ![image-20211029224735480](image-20211029224735480.png) 
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+--- # Documentation: https://sourcethemes.com/academic/docs/managing-content/ title: &#34;Setting the Default Syntax Highlighting in VSCode&#34; subtitle: &#34;&#34; summary: &#34; &#34; tags: [&#34;VSCode&#34;] categories: [&#34;VSCode&#34;] url: other-vscode-syntax-default date: 2021-11-22 featured: false draft: false # Featured image # To use, add an image named `featured.jpg/png` to your pages folder. # Focal points: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, Bott --- I wanted to automatically set the syntax highlighting for plain text files or files without extensions, like the image below. (As mentioned in the article below, an automatic language detection feature has been implemented, so the need for this has decreased somewhat.) - [Automatic Language Detection Added to VS Code \| DevelopersIO](https://dev.classmethod.jp/articles/vscode-automatic-language-detection/) ![image-20211109115640510](image-20211109115640510.png) Go to &#34;User Settings&#34; - &#34;Settings&#34; and search for &#34;Default Language&#34;. Set the language mode here. ![image-20211109115655252](image-20211109115655252.png) Now, when you create a new file, the selected language will be automatically highlighted. ![image-20211109115708976](image-20211109115708976.png) 
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+--- # Documentation: https://sourcethemes.com/academic/docs/managing-content/ title: &#34;How to Deal with High CloudTrail Costs&#34; subtitle: &#34;&#34; summary: &#34; &#34; tags: [&#34;AWS&#34;] categories: [&#34;AWS&#34;] url: aws-cloudtrail-cost-high date: 2021-11-26 featured: false draft: false # Featured image # To use, add an image named `featured.jpg/png` to your pages folder. # Focal points: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, Bott --- ### Step 1: Identify API Recording Trends in CloudTrail Using Athena Identify the event sources and check if any specific service has an unusually high number of events. [Analyzing CloudTrail Trails with Athena \| my opinion is my own](https://zatoima.github.io/aws-cloudtrail-athena-analyze-query/) ```sql SELECT awsregion, eventsource, eventname, COUNT(*) as cnt FROM cloudtrail_logs WHERE date&gt;=&#39;2021/11/24&#39; AND region = &#39;ap-northeast-1&#39; GROUP BY awsregion, eventsource, eventname ORDER BY cnt DESC limit 10; Next, drill down into the prominent event sources and event names. The UserIdentity element contains requester information, which helps identify the cause.
+Step 2: Reconsider and Narrow Down Data Event Delivery and CloudTrail Insights Delivery The first copy of management events is free, but data event and Insights delivery are charged, so be careful. Data events in particular tend to generate a high number of API calls.
+Feature Pricing Management events delivered to S3 The first copy of management events is delivered free of charge. Additional copies: 2.00 USD per 100,000 management events delivered Data events delivered to S3 0.10 USD per 100,000 data events delivered CloudTrail Insights 0.35 USD per 100,000 events analyzed Pricing - AWS CloudTrail | AWS You can also use the event selector feature to filter which data events to record, so design your configuration to exclude unnecessary data events.
+Logging data events for trails - AWS CloudTrail Step 3: Identify and Remove Duplicate CloudTrail Management Events by Region Refer to the following:
+Why is there an unexpected increase in CloudTrail cost and usage? References 20210119_AWSBlackbelt_CloudTrail.pdf 
 
