@@ -1623,17 +1623,15 @@ sudo yum install -y mongodb-org mongo -version Starting MongoDB sudo systemctl s
 
 ---
 
-### Running the postgres_fdw Extension in PostgreSQL
+### Loading Data into Buffer Cache in PostgreSQL
 
-date: 2021-12-21
-url: https://zatoima.github.io/en/postgres-extension-fdw-install/
+date: 2021-12-29
+url: https://zatoima.github.io/en/postgres-extension-pg-prewarm-buffer-cache/
 tags: PostgreSQL
 
-Running postgres_fdw Enabling the Extension CREATE EXTENSION postgres_fdw; Defining a Foreign Server Create a foreign server for the test1 database.
-CREATE SERVER fdw_app FOREIGN DATA WRAPPER postgres_fdw OPTIONS (dbname &#39;test1&#39;); Defining a User Mapping for the Foreign Server CREATE USER MAPPING FOR public SERVER fdw_app OPTIONS (user &#39;postgres&#39;, password &#39;postgres&#39;); Creating a Foreign Table Create the t2 table as a foreign table using the fdw_app foreign server.
-CREATE FOREIGN TABLE t2 (a integer, b text,c text, d timestamp with time zone) SERVER fdw_app; For foreign tables, the type appears as foreign table.
-postgres=&gt; \d List of relations Schema | Name | Type | Owner --------+-------------+---------------+---------- public | t1 | table | postgres public | t2 | foreign table | postgres public | v_dblink_t1 | view | postgres You can also create foreign tables using IMPORT FOREIGN SCHEMA .
-Querying postgres=&gt; select count(*) from t2; count ----------- 100000000 (1 row) Characteristics of postgres_fdw Pushdown functionality WHERE clauses (filtering) and ORDER BY clauses (sorting) in SQL statements are executed on the remote side A clear advantage over dblink Supports updates Does not support INSERT statements with ON CONFLICT DO UPDATE clause Considerations for postgres_fdw Transaction control Care must be taken regarding the timing of COMMIT on the remote side and the transaction isolation level (see reference links for details) Performance Tends to become slower depending on the amount of data transferred The remote execution option has a default fetch_size of 100, so tuning may be necessary depending on the use case References F.33. postgres_fdw https://www.postgresql.jp/document/13/html/postgres-fdw.html PostgreSQL 9.6 の postgres_fdw について検証してみた | SIOS Tech. Lab https://tech-lab.sios.jp/archives/8641#i 外部データとの連携 ～FDWで様々なデータソースとつなぐ～｜PostgreSQLインサイド : 富士通 https://www.fujitsu.com/jp/products/software/resources/feature-stories/postgres/article-index/fdw-overview/ 
+Verifying with pg_prewarm and pg_buffercache
+pg_prewarm It&rsquo;s easy to forget, but indexes can also be targeted, not just tables.
+create extension pg_prewarm; SELECT pg_prewarm(&#39;t1&#39;, &#39;buffer&#39;, &#39;main&#39;) ,pg_prewarm(&#39;t2_delta&#39;, &#39;buffer&#39;, &#39;main&#39;) ,pg_prewarm(&#39;t1_PKEY&#39;, &#39;buffer&#39;, &#39;main&#39;) ; pg_buffercache create extension pg_buffercache; select c.relname, count(*) as buffers from pg_buffercache as b inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database())) group by c.relname order by 2 desc LIMIT 30; Execution Log postgres=&gt; SELECT postgres-&gt; pg_prewarm(&#39;t1&#39;, &#39;buffer&#39;, &#39;main&#39;) postgres-&gt; ,pg_prewarm(&#39;t2_delta&#39;, &#39;buffer&#39;, &#39;main&#39;) postgres-&gt; ,pg_prewarm(&#39;t1_PKEY&#39;, &#39;buffer&#39;, &#39;main&#39;) postgres-&gt; ; pg_prewarm | pg_prewarm | pg_prewarm ------------+------------+------------ 1818182 | 909091 | 54840 (1 row) postgres=&gt; select c.relname, count(*) as buffers postgres-&gt; from pg_buffercache as b postgres-&gt; inner join pg_class as c on b.relfilenode = pg_relation_filenode(c.oid) and b.reldatabase in (0, (select oid from pg_database where datname = current_database())) postgres-&gt; group by c.relname postgres-&gt; order by 2 desc postgres-&gt; LIMIT 30; relname | buffers -----------------------------------+--------- t1 | 1818687 t2_delta | 909091 t1_idx | 426172 t1_pkey | 54840 pg_attribute | 60 pg_toast_2619 | 36 pg_class | 13 pg_proc | 12 pg_statistic | 11 pg_attribute_relid_attnum_index | 9 pg_proc_oid_index | 8 pg_proc_proname_args_nsp_index | 6 pg_amop | 6 pg_class_relname_nsp_index | 5 pg_amproc | 4 pg_operator | 4 pg_class_oid_index | 4 pg_statistic_relid_att_inh_index | 4 pg_index | 4 pg_amop_opr_fam_index | 4 pg_operator_oid_index | 4 pg_type | 3 pg_amop_fam_strat_index | 3 pg_type_oid_index | 3 pg_operator_oprname_l_r_n_index | 3 pg_amproc_fam_proc_index | 3 pg_depend_reference_index | 3 pg_type_typname_nsp_index | 3 pg_auth_members_member_role_index | 2 pg_cast_source_target_index | 2 (30 rows) postgres=&gt; 
 
 ---
 
@@ -6570,4 +6568,34 @@ url: https://zatoima.github.io/en/
 
 完了しました。PostgreSQLのdblink拡張機能の記事を英語に翻訳し、コミット・ビルド・デプロイまで実行しました。
 
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+完了しました。PostgreSQL postgres_fdw拡張機能の記事を英語に翻訳し、デプロイまで実行しました。
+
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+翻訳完了しました。content/en/blog/2021-12-24-AuroraのIO料金をCost Explolerから確認する/index.md に英語記事を作成し、画像ファイル4点もコピーしました。
+デプロイワークフローに従ってコミット・ビルド・プッシュを実行しますか？
+
+
+---
+
+### 
+
+date: 0001-01-01
+url: https://zatoima.github.io/en/
+
+--- # Documentation: https://sourcethemes.com/academic/docs/managing-content/ title: &#34;Checking Inter-Region Outbound Communication Costs from Tokyo to Osaka Region in AWS&#34; subtitle: &#34;&#34; summary: &#34; &#34; tags: [&#34;AWS&#34;,&#34;Aurora&#34;] categories: [&#34;AWS&#34;,&#34;Aurora&#34;] url: aws-tokyo-to-osaka-network-outbound-cost date: 2021-12-26 featured: false draft: false # Featured image # To use, add an image named `featured.jpg/png` to your pages folder. # Focal points: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, Bott --- You can check this in the Cost Explorer report. In the filter on the right side, specify `APN1-APN3-AWS-Out-Bytes` under `Usage Type`. By specifying `Service` as the grouping condition, you can see which service has the highest data transfer volume. ![image-20211219152740457](image-20211219152740457.png) I want to make better use of Cost Explorer. References &gt; [【AWS CLI】Cost Explorer Edition - Server Works Engineer Blog](https://blog.serverworks.co.jp/aws-cli-cost-explorer) &gt; &gt; https://d1.awsstatic.com/webinars/jp/pdf/services/20200129_BlackBelt_CostExplorer.pdf 
 
