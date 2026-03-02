@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Benchmarking OCI Always Free ARM64 Instance Performance | zatoima</title>
+<meta name="title" content="Benchmarking OCI Always Free ARM64 Instance Performance" />
+<meta name="description" content="Measured CPU, cryptographic processing, memory, disk I/O, and network speed of an OCI Always Free ARM64 (Ampere A1 Neoverse-N1) instance using stress-ng, fio, openssl speed, and speedtest-cli, averaging 3 runs each. The 4-core scaling efficiency is nearly 100%, and AES-256-CBC achieves 1.71 GB/s cryptographic throughput." />
+<meta name="keywords" content="Oracle,Linux,Cloud," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/oci-always-free-arm64-benchmark/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Benchmarking OCI Always Free ARM64 Instance Performance">
+  <meta property="og:description" content="Measured CPU, cryptographic processing, memory, disk I/O, and network speed of an OCI Always Free ARM64 (Ampere A1 Neoverse-N1) instance using stress-ng, fio, openssl speed, and speedtest-cli, averaging 3 runs each. The 4-core scaling efficiency is nearly 100%, and AES-256-CBC achieves 1.71 GB/s cryptographic throughput.">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-02T00:00:00+00:00">
+    <meta property="article:tag" content="Oracle">
+    <meta property="article:tag" content="Linux">
+    <meta property="article:tag" content="Cloud">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Benchmarking OCI Always Free ARM64 Instance Performance">
+  <meta name="twitter:description" content="Measured CPU, cryptographic processing, memory, disk I/O, and network speed of an OCI Always Free ARM64 (Ampere A1 Neoverse-N1) instance using stress-ng, fio, openssl speed, and speedtest-cli, averaging 3 runs each. The 4-core scaling efficiency is nearly 100%, and AES-256-CBC achieves 1.71 GB/s cryptographic throughput.">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Benchmarking OCI Always Free ARM64 Instance Performance\"",
+  "description": "\"Measured CPU, cryptographic processing, memory, disk I/O, and network speed of an OCI Always Free ARM64 (Ampere A1 Neoverse-N1) instance using stress-ng, fio, …\"",
+  "datePublished": "\"2026-03-02T00:00:00Z\"",
+  "dateModified": "\"2026-03-02T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/oci-always-free-arm64-benchmark/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1207 ,
+  "keywords": "[\"Oracle\",\"Linux\",\"Cloud\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/oci-always-free-arm64-benchmark/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/oci-always-free-arm64-benchmark/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/oci-always-free-arm64-benchmark/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/oci-always-free-arm64-benchmark/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Benchmarking OCI Always Free ARM64 …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-icon" loading="lazy"></div>
+        <h1>Benchmarking OCI Always Free ARM64 Instance Performance</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-02'>
+            Published on 2026/03/02
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+          
+          <a href="https://zatoima.github.io/en/blog/linux/" class="tag-badge"><img src="/images/tags/linux.svg" alt="Linux" class="tag-badge-icon" loading="lazy">Linux</a>
+          
+          <a href="https://zatoima.github.io/en/blog/cloud/" class="tag-badge">Cloud</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="introduction">Introduction</h2>
+<p><a href="https://www.oracle.com/jp/cloud/free/" target="_blank" rel="noopener noreferrer">Oracle Cloud Always Free</a>
+ offers ARM64 architecture <a href="https://www.oracle.com/jp/cloud/compute/arm/" target="_blank" rel="noopener noreferrer">Ampere A1 Compute</a>
+ instances at no cost. Since CPU cores and memory are available permanently free up to a certain limit, many people use them for personal projects or as CI/CD execution platforms.</p>
+<p>In this article, I measure the CPU, cryptographic processing, memory, disk I/O, and network speed of this ARM64 instance using <code>stress-ng</code>, <code>fio</code>, <code>openssl speed</code>, and <code>speedtest</code>, running each test 3 times and summarizing the averages.</p>
+<h2 id="test-environment-and-tools">Test Environment and Tools</h2>
+<p>The OS is Oracle Linux 9.6 with an aarch64 (ARM64) kernel.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ uname -a
+</span></span><span style="display:flex;"><span>Linux oci-free 6.12.0-1.23.3.2.el9uek.aarch64 <span style="color:#6272a4">#1 SMP ... aarch64 GNU/Linux</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ lscpu | grep -E <span style="color:#f1fa8c">&#39;Model name|CPU\(s\)&#39;</span>
+</span></span><span style="display:flex;"><span>CPU<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span>:   <span style="color:#bd93f9">4</span>
+</span></span><span style="display:flex;"><span>Model name: Neoverse-N1
+</span></span></code></pre></div><p>The tools used and their purposes are as follows.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Tool</th>
+          <th>Purpose</th>
+          <th>Installation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>stress-ng</td>
+          <td>CPU and memory stress testing</td>
+          <td><code>dnf install stress-ng</code></td>
+      </tr>
+      <tr>
+          <td>fio</td>
+          <td>Disk I/O measurement</td>
+          <td><code>dnf install fio</code></td>
+      </tr>
+      <tr>
+          <td>openssl speed</td>
+          <td>Cryptographic throughput</td>
+          <td>Pre-installed</td>
+      </tr>
+      <tr>
+          <td>speedtest</td>
+          <td>Network speed measurement</td>
+          <td>Ookla official binary</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>stress-ng</code> and <code>fio</code> can be obtained via the EPEL repository.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo dnf install -y epel-release
+</span></span><span style="display:flex;"><span>sudo dnf install -y stress-ng fio
+</span></span></code></pre></div><p>Each item was measured 3 times, and the average values are used.</p>
+<h2 id="cpu-performance">CPU Performance</h2>
+<p>Using the <code>matrixprod</code> (matrix multiplication) stressor in <code>stress-ng</code>, I applied load for 30 seconds and measured bogo ops/s.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># Single core</span>
+</span></span><span style="display:flex;"><span>stress-ng --cpu <span style="color:#bd93f9">1</span> --cpu-method matrixprod --metrics-brief --timeout 30s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># All cores (4)</span>
+</span></span><span style="display:flex;"><span>stress-ng --cpu <span style="color:#bd93f9">4</span> --cpu-method matrixprod --metrics-brief --timeout 30s
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>stress-ng: metrc: cpu  1609  30.09  30.06  0.00  53.48  53.53
+</span></span><span style="display:flex;"><span>stress-ng: metrc: cpu  6401  30.07  119.64  0.04  212.90  53.49
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Test Type</th>
+          <th>bogo ops/s (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Single core</td>
+          <td>53.08</td>
+      </tr>
+      <tr>
+          <td>All cores (4)</td>
+          <td>211.79</td>
+      </tr>
+      <tr>
+          <td>Scaling ratio</td>
+          <td>3.99x</td>
+      </tr>
+  </tbody>
+</table>
+<p><img src="/en/oci-always-free-arm64-benchmark/cpu-benchmark.png" alt="CPU Performance Comparison Graph">
+<em>CPU benchmark results using stress-ng matrixprod (3-run average)</em></p>
+<p>The scaling efficiency from single core to all cores is nearly 4x, indicating almost no inter-core interference. Since Neoverse-N1 is designed to scale core count without sacrificing single-thread performance, this result is expected.</p>
+<p>Note that bogo ops/s is a pseudo-metric specific to stress-ng and cannot be compared across different stressors. Here, the purpose is to verify relative scaling efficiency using the same stressor (matrixprod).</p>
+<h2 id="cryptographic-performance">Cryptographic Performance</h2>
+<p>I measured AES-256-CBC and SHA-256 throughput using <code>openssl speed</code>. Neoverse-N1 includes hardware AES instructions (ARMv8 Cryptography Extensions), which significantly accelerate performance compared to software implementations.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openssl speed aes-256-cbc sha256
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>sha256           72255.22k   261173.17k   740627.88k  1369694.87k  1817938.60k  1869770.57k
+</span></span><span style="display:flex;"><span>aes-256-cbc     834545.80k  1378167.23k  1615928.85k  1677753.69k  1700137.64k  1702980.27k
+</span></span></code></pre></div><p>Each column in the output corresponds to a block size (16B / 64B / 256B / 1KB / 8KB / 16KB).</p>
+<table>
+  <thead>
+      <tr>
+          <th>Algorithm</th>
+          <th>16KB block (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>AES-256-CBC</td>
+          <td>1,705,589 KB/s (≈ 1.71 GB/s)</td>
+      </tr>
+      <tr>
+          <td>SHA-256</td>
+          <td>1,870,470 KB/s (≈ 1.87 GB/s)</td>
+      </tr>
+  </tbody>
+</table>
+<p>AES-256-CBC at approximately <strong>1.71 GB/s</strong> for 16KB blocks represents a throughput level where encryption processing for HTTPS or VPN can be performed at virtually no cost.</p>
+<h2 id="memory-performance">Memory Performance</h2>
+<p>Using the <code>--vm</code> stressor in <code>stress-ng</code>, I repeatedly read and wrote to a 4GB working set and measured throughput.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>stress-ng --vm <span style="color:#bd93f9">1</span> --vm-bytes 4G --metrics-brief --timeout 30s
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>stress-ng: metrc: vm  1324315  30.23  26.54  3.65  43810.44  43868.81
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Test</th>
+          <th>bogo ops/s (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Memory read/write (4GB working set)</td>
+          <td>42,896</td>
+      </tr>
+  </tbody>
+</table>
+<p>One of the 3 runs produced a lower value (38,748 bogo ops/s), likely due to contention with other processes, but the remaining 2 runs were stable in the 44,000–46,000 range.</p>
+<h2 id="disk-io-performance">Disk I/O Performance</h2>
+<p>I measured sequential and random I/O on the <code>/home</code> volume (100GB) using <code>fio</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># Sequential write</span>
+</span></span><span style="display:flex;"><span>fio --name<span style="color:#ff79c6">=</span>seq_write --directory<span style="color:#ff79c6">=</span>/home/opc/fio_test <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --rw<span style="color:#ff79c6">=</span>write --bs<span style="color:#ff79c6">=</span>1M --size<span style="color:#ff79c6">=</span>2G --numjobs<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --time_based --runtime<span style="color:#ff79c6">=</span><span style="color:#bd93f9">30</span> --iodepth<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span> --ioengine<span style="color:#ff79c6">=</span>libaio --direct<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> --group_reporting
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Sequential read</span>
+</span></span><span style="display:flex;"><span>fio --name<span style="color:#ff79c6">=</span>seq_read --directory<span style="color:#ff79c6">=</span>/home/opc/fio_test <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --rw<span style="color:#ff79c6">=</span><span style="color:#8be9fd;font-style:italic">read</span> --bs<span style="color:#ff79c6">=</span>1M --size<span style="color:#ff79c6">=</span>2G --numjobs<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --time_based --runtime<span style="color:#ff79c6">=</span><span style="color:#bd93f9">30</span> --iodepth<span style="color:#ff79c6">=</span><span style="color:#bd93f9">16</span> --ioengine<span style="color:#ff79c6">=</span>libaio --direct<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> --group_reporting
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Random 4K read/write</span>
+</span></span><span style="display:flex;"><span>fio --name<span style="color:#ff79c6">=</span>rand_rw --directory<span style="color:#ff79c6">=</span>/home/opc/fio_test <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --rw<span style="color:#ff79c6">=</span>randrw --bs<span style="color:#ff79c6">=</span>4k --size<span style="color:#ff79c6">=</span>1G --numjobs<span style="color:#ff79c6">=</span><span style="color:#bd93f9">4</span> <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>    --time_based --runtime<span style="color:#ff79c6">=</span><span style="color:#bd93f9">30</span> --iodepth<span style="color:#ff79c6">=</span><span style="color:#bd93f9">32</span> --ioengine<span style="color:#ff79c6">=</span>libaio --direct<span style="color:#ff79c6">=</span><span style="color:#bd93f9">1</span> --group_reporting
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span># Sequential write
+</span></span><span style="display:flex;"><span>WRITE: bw=51.0MiB/s (53.5MB/s), io=2049MiB, run=40179msec
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Sequential read
+</span></span><span style="display:flex;"><span>READ: bw=46.9MiB/s (49.2MB/s), io=1411MiB, run=30059msec
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Random 4K
+</span></span><span style="display:flex;"><span>read: IOPS=4071, BW=15.9MiB/s
+</span></span><span style="display:flex;"><span>write: IOPS=4094, BW=16.0MiB/s
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Test Type</th>
+          <th>Result (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Sequential write</td>
+          <td>49.7 MiB/s</td>
+      </tr>
+      <tr>
+          <td>Sequential read</td>
+          <td>46.9 MiB/s</td>
+      </tr>
+      <tr>
+          <td>Random 4K Read IOPS</td>
+          <td>3,977</td>
+      </tr>
+      <tr>
+          <td>Random 4K Write IOPS</td>
+          <td>3,999</td>
+      </tr>
+  </tbody>
+</table>
+<p><img src="/en/oci-always-free-arm64-benchmark/disk-benchmark.png" alt="Disk I/O Performance Graph">
+<em>Disk I/O benchmark results using fio (3-run average)</em></p>
+<p>Sequential throughput was approximately 50 MiB/s, and random 4K IOPS was approximately 4,000.</p>
+<h3 id="why-these-numbers">Why These Numbers</h3>
+<p>OCI Block Volume performance on the &ldquo;Balanced&rdquo; tier (default) scales proportionally with volume size.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Balanced Tier Formula</th>
+          <th>Limit for 100GB</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Throughput</td>
+          <td>480 KB/s × GB</td>
+          <td><strong>47.0 MiB/s</strong></td>
+      </tr>
+      <tr>
+          <td>IOPS</td>
+          <td>60 IOPS × GB</td>
+          <td><strong>6,000 IOPS</strong></td>
+      </tr>
+  </tbody>
+</table>
+<p>Comparing our measured values against the limits:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Measured Result</th>
+          <th>OCI Limit</th>
+          <th>Ratio</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Seq Read: 46.9 MiB/s</td>
+          <td>47.0 MiB/s</td>
+          <td>99.8% (hitting the limit)</td>
+      </tr>
+      <tr>
+          <td>Seq Write: 49.7 MiB/s</td>
+          <td>47.0 MiB/s</td>
+          <td>Near limit (write buffer effect)</td>
+      </tr>
+      <tr>
+          <td>4K Read IOPS: 3,977</td>
+          <td>6,000 IOPS</td>
+          <td>66%</td>
+      </tr>
+  </tbody>
+</table>
+<p>This is not a &ldquo;slow environment&rdquo; but rather a state where the Balanced storage performance limit is being fully utilized. For reference, here is a comparison with block storage from other cloud providers:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Service</th>
+          <th>Sequential</th>
+          <th>IOPS</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>OCI Always Free (Balanced, 100GB)</td>
+          <td>~47 MiB/s</td>
+          <td>~6,000</td>
+      </tr>
+      <tr>
+          <td>AWS gp3 EBS (default)</td>
+          <td>125 MiB/s</td>
+          <td>3,000</td>
+      </tr>
+      <tr>
+          <td>AWS gp2 EBS (100GB)</td>
+          <td>128 MiB/s</td>
+          <td>300 (burst 3,000)</td>
+      </tr>
+  </tbody>
+</table>
+<p>Throughput is about 1/3 of AWS gp3, but this may not be an issue depending on the use case.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Use Case</th>
+          <th>Assessment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Log aggregation, scheduled batch jobs</td>
+          <td>No issues</td>
+      </tr>
+      <tr>
+          <td>Lightweight web server / API server</td>
+          <td>No issues</td>
+      </tr>
+      <tr>
+          <td>Large-scale ETL (GB-level data)</td>
+          <td>Can become a bottleneck</td>
+      </tr>
+      <tr>
+          <td>Heavy random I/O database workloads</td>
+          <td>Challenging</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="network-speed">Network Speed</h2>
+<p>I used Ookla&rsquo;s official <code>speedtest</code> CLI, connecting to a fixed server in Tokyo (IPA CyberLab 400G, id: 48463). Using a fixed target server eliminates result variability caused by server selection.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>speedtest --server-id<span style="color:#ff79c6">=</span><span style="color:#bd93f9">48463</span> --accept-license --accept-gdpr
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Server: IPA CyberLab 400G - Tokyo (id: 48463)
+</span></span><span style="display:flex;"><span>   ISP: Oracle Cloud
+</span></span><span style="display:flex;"><span>Idle Latency:  1.76 ms
+</span></span><span style="display:flex;"><span>    Download:  3829.18 Mbps
+</span></span><span style="display:flex;"><span>      Upload:  3977.41 Mbps
+</span></span><span style="display:flex;"><span> Packet Loss:  0.0%
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Test</th>
+          <th>Result (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Idle Latency</td>
+          <td>1.88 ms</td>
+      </tr>
+      <tr>
+          <td>Download</td>
+          <td>3,838 Mbps</td>
+      </tr>
+      <tr>
+          <td>Upload</td>
+          <td>3,513 Mbps</td>
+      </tr>
+  </tbody>
+</table>
+<p><img src="/en/oci-always-free-arm64-benchmark/network-benchmark.png" alt="Network Speed Graph">
+<em>Network speed measurement results using speedtest (IPA CyberLab 400G Tokyo) (3-run average)</em></p>
+<p>Download was stable across all 3 runs at 3,790–3,860 Mbps, confirming that OCI&rsquo;s network bandwidth delivers approximately <strong>3.8 Gbps</strong>. Upload showed some variation between measurements but averaged over 3.5 Gbps.</p>
+<h2 id="results-summary">Results Summary</h2>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Measured Value (3-run average)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>CPU Single Core</td>
+          <td>53.08 bogo ops/s</td>
+      </tr>
+      <tr>
+          <td>CPU All Cores (4)</td>
+          <td>211.79 bogo ops/s (scaling efficiency 3.99x)</td>
+      </tr>
+      <tr>
+          <td>AES-256-CBC 16KB</td>
+          <td>1,705,589 KB/s (≈ 1.71 GB/s)</td>
+      </tr>
+      <tr>
+          <td>SHA-256 16KB</td>
+          <td>1,870,470 KB/s (≈ 1.87 GB/s)</td>
+      </tr>
+      <tr>
+          <td>Memory (4GB WS)</td>
+          <td>42,896 bogo ops/s</td>
+      </tr>
+      <tr>
+          <td>Disk Seq Write</td>
+          <td>49.7 MiB/s</td>
+      </tr>
+      <tr>
+          <td>Disk Seq Read</td>
+          <td>46.9 MiB/s</td>
+      </tr>
+      <tr>
+          <td>Disk 4K Read IOPS</td>
+          <td>3,977</td>
+      </tr>
+      <tr>
+          <td>Disk 4K Write IOPS</td>
+          <td>3,999</td>
+      </tr>
+      <tr>
+          <td>Network DL</td>
+          <td>3,838 Mbps</td>
+      </tr>
+      <tr>
+          <td>Network UL</td>
+          <td>3,513 Mbps</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="conclusion">Conclusion</h2>
+<p>Here is a summary of the OCI Always Free ARM64 instance benchmark results:</p>
+<ul>
+<li><strong>CPU</strong>: Per-core throughput is modest, but the 4-core scaling efficiency is nearly 100%, making it well-suited for parallel processing</li>
+<li><strong>Cryptographic processing</strong>: Hardware AES instructions deliver 1.71 GB/s for AES-256-CBC, making it suitable for TLS termination and encrypted storage use cases</li>
+<li><strong>Disk</strong>: Sequential ~50 MiB/s and random 4K ~4,000 IOPS represent the Balanced tier limits, which is a standard level for cloud block storage</li>
+<li><strong>Network</strong>: Fixed-server testing recorded <strong>3.8 Gbps</strong> download speed — an impressive bandwidth for a free tier, more than sufficient for large data transfers and high-traffic web services</li>
+</ul>
+<p>For a completely free environment, the performance is more than adequate, and it can be utilized for a wide range of purposes including lightweight web servers, scheduled batch processing, and data analysis platforms.</p>
+<h2 id="references">References</h2>
+<div class="link-card">
+    <a href="https://www.oracle.com/jp/cloud/free/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">クラウド・サービスに無料でアクセス</div><div class="link-card-description">Oracle Cloud Free Tierは無期限で使用できるAlways Freeクラウド・サービスを企業に提供します。</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=www.oracle.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">www.oracle.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://www.oracle.com/a/ocom/img/social-og-oci-logo-1200x628.jpg" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://www.oracle.com/jp/cloud/compute/arm/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Oracle Cloud Infrastructure Arm Compute</div><div class="link-card-description">Oracle Cloud Infrastructure Arm Computeでコンピューティング集約型のワークロードを移行、構築、実行します。</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=www.oracle.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">www.oracle.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://www.oracle.com/a/ocom/img/social-og-oracle-badge.jpg" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://fio.readthedocs.io/en/latest/fio_doc.html" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">1. fio - Flexible I/O tester rev. 3.41 &amp;#8212; fio 3.41-49-gde3d documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=fio.readthedocs.io" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">fio.readthedocs.io</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-02-OCI%20Always%20Free%20ARM64%e3%83%99%e3%83%b3%e3%83%81%e3%83%9e%e3%83%bc%e3%82%af/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/llm-papers-2026-03-02/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">LLM Paper Survey (2026-03-02)</span>
+      </a>
+      
+      
+      <div class="prev-next-link next-link empty"></div>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2foci-always-free-arm64-benchmark%2f&text=Benchmarking&#43;OCI&#43;Always&#43;Free&#43;ARM64&#43;Instance&#43;Performance" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/oci-always-free-arm64-benchmark/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/oracle-postgresql-dbms-stats-analyze-sampling/">Differences in Sampling Count for Statistics Collection Between Oracle and PostgreSQL</a></li>
+    
+    <li><a href="/en/oracle-rds-jdbcrunner/">Running JDBCRunner Against RDS Oracle</a></li>
+    
+    <li><a href="/en/oracle-rds-for-oracle-extended-varchar2-setting.html">Configuring Extended VARCHAR Type in RDS Oracle</a></li>
+    
+    <li><a href="/en/oracle-rds-for-oracle-kill-session.html">Killing Sessions for Locked Tables in RDS Oracle</a></li>
+    
+    <li><a href="/en/oracle-postgresql-sequence-cache-incompatible.html">Behavioral Differences in Sequence Cache Between Oracle and PostgreSQL</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/oracle/" class="tag-badge"><img src="/images/tags/oracle.svg" alt="Oracle" class="tag-badge-icon" loading="lazy">Oracle</a>
+  
+  <a href="https://zatoima.github.io/en/blog/linux/" class="tag-badge"><img src="/images/tags/linux.svg" alt="Linux" class="tag-badge-icon" loading="lazy">Linux</a>
+  
+  <a href="https://zatoima.github.io/en/blog/cloud/" class="tag-badge">Cloud</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#test-environment-and-tools">Test Environment and Tools</a></li>
+    <li><a href="#cpu-performance">CPU Performance</a></li>
+    <li><a href="#cryptographic-performance">Cryptographic Performance</a></li>
+    <li><a href="#memory-performance">Memory Performance</a></li>
+    <li><a href="#disk-io-performance">Disk I/O Performance</a>
+      <ul>
+        <li><a href="#why-these-numbers">Why These Numbers</a></li>
+      </ul>
+    </li>
+    <li><a href="#network-speed">Network Speed</a></li>
+    <li><a href="#results-summary">Results Summary</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

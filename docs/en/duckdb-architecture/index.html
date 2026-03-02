@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>DuckDB Architecture — Why It&#39;s So Fast | zatoima</title>
+<meta name="title" content="DuckDB Architecture — Why It&#39;s So Fast" />
+<meta name="description" content="Explains why DuckDB is fast from four perspectives: columnar storage, vectorized execution (2048-row batches), Predicate Pushdown, and parallel execution. Includes actual TPC-H benchmark results (SF=0.1–20, up to 120M rows)." />
+<meta name="keywords" content="DuckDB,Architecture,Columnar Storage,Vectorized Execution," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/duckdb-architecture/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="DuckDB Architecture — Why It&#39;s So Fast">
+  <meta property="og:description" content="Explains why DuckDB is fast from four perspectives: columnar storage, vectorized execution (2048-row batches), Predicate Pushdown, and parallel execution. Includes actual TPC-H benchmark results (SF=0.1–20, up to 120M rows).">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-01T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-01T00:00:00+00:00">
+    <meta property="article:tag" content="DuckDB">
+    <meta property="article:tag" content="Architecture">
+    <meta property="article:tag" content="Columnar Storage">
+    <meta property="article:tag" content="Vectorized Execution">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="DuckDB Architecture — Why It&#39;s So Fast">
+  <meta name="twitter:description" content="Explains why DuckDB is fast from four perspectives: columnar storage, vectorized execution (2048-row batches), Predicate Pushdown, and parallel execution. Includes actual TPC-H benchmark results (SF=0.1–20, up to 120M rows).">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"DuckDB Architecture — Why It's So Fast\"",
+  "description": "\"Explains why DuckDB is fast from four perspectives: columnar storage, vectorized execution (2048-row batches), Predicate Pushdown, and parallel execution. …\"",
+  "datePublished": "\"2026-03-01T00:00:00Z\"",
+  "dateModified": "\"2026-03-01T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/duckdb-architecture/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1234 ,
+  "keywords": "[\"DuckDB\",\"Architecture\",\"Columnar Storage\",\"Vectorized Execution\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/duckdb-architecture/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/duckdb-architecture/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/duckdb-architecture/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/duckdb-architecture/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">DuckDB Architecture — Why It&#39;s So Fast</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>DuckDB Architecture — Why It&#39;s So Fast</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-01'>
+            Published on 2026/03/01
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/duckdb/" class="tag-badge">DuckDB</a>
+          
+          <a href="https://zatoima.github.io/en/blog/architecture/" class="tag-badge">Architecture</a>
+          
+          <a href="https://zatoima.github.io/en/blog/columnar-storage/" class="tag-badge">Columnar Storage</a>
+          
+          <a href="https://zatoima.github.io/en/blog/vectorized-execution/" class="tag-badge">Vectorized Execution</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="introduction">Introduction</h2>
+<p>Why is DuckDB so fast? Despite being usable with just <code>pip install</code>, how can it process large-scale data aggregations at high speed? This article explains its internal architecture.</p>
+<p>DuckDB&rsquo;s design is based on the 2020 paper <a href="https://duckdb.org/pdf/CIDR2020-raasveldt-muehleisen-duckdb.pdf" target="_blank" rel="noopener noreferrer">Data Management for Data Science — Towards Embedded Analytics</a>
+ (CIDR 2020). The core of its speed comes down to three key elements:</p>
+<ol>
+<li><strong>Columnar Storage</strong> — Read only the columns you need</li>
+<li><strong>Vectorized Execution</strong> — Batch processing in units of 2048 rows</li>
+<li><strong>Query Optimizer</strong> — Eliminate unnecessary operations in advance</li>
+</ol>
+<h2 id="what-is-columnar-storage">What Is Columnar Storage?</h2>
+<h3 id="row-oriented-vs-column-oriented">Row-Oriented vs. Column-Oriented</h3>
+<p>Traditional databases (MySQL, PostgreSQL, etc.) use row-oriented storage, where each row&rsquo;s data is stored contiguously on disk.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Row Store
+</span></span><span style="display:flex;"><span>┌──────────────────────────────────────┐
+</span></span><span style="display:flex;"><span>│ id=1, name=&#34;Alice&#34;,  score=95.5, ... │  ← Row 1
+</span></span><span style="display:flex;"><span>│ id=2, name=&#34;Bob&#34;,    score=87.0, ... │  ← Row 2
+</span></span><span style="display:flex;"><span>│ id=3, name=&#34;Charlie&#34;,score=92.3, ... │  ← Row 3
+</span></span><span style="display:flex;"><span>└──────────────────────────────────────┘
+</span></span></code></pre></div><p>DuckDB uses columnar storage, where data from the same column is stored contiguously.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Column Store
+</span></span><span style="display:flex;"><span>┌────────────────────────┐
+</span></span><span style="display:flex;"><span>│ id:    1,  2,  3, ...  │  ← id column
+</span></span><span style="display:flex;"><span>│ name:  Alice, Bob, ... │  ← name column
+</span></span><span style="display:flex;"><span>│ score: 95.5, 87.0, ... │  ← score column
+</span></span><span style="display:flex;"><span>└────────────────────────┘
+</span></span></code></pre></div><h3 id="why-analytical-queries-become-faster">Why Analytical Queries Become Faster</h3>
+<p>Consider an aggregation query like <code>SELECT AVG(score) FROM users</code>.</p>
+<ul>
+<li><strong>Row-oriented</strong>: All rows must be read to extract only <code>score</code>. <code>id</code> and <code>name</code> are read unnecessarily</li>
+<li><strong>Column-oriented</strong>: Only the <code>score</code> column is read sequentially. I/O is minimized</li>
+</ul>
+<p>Furthermore, since data of the same type is stored contiguously, compression efficiency improves dramatically.</p>
+<h2 id="vectorized-execution">Vectorized Execution</h2>
+<h3 id="row-at-a-time-vs-batch-processing">Row-at-a-Time vs. Batch Processing</h3>
+<p>Traditional databases primarily used &ldquo;row-at-a-time&rdquo; processing (the Volcano Model).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Traditional Model (Volcano Model)
+</span></span><span style="display:flex;"><span>  Query Execution Engine
+</span></span><span style="display:flex;"><span>    ↓ Request 1 row
+</span></span><span style="display:flex;"><span>  Filter Node
+</span></span><span style="display:flex;"><span>    ↓ Request 1 row
+</span></span><span style="display:flex;"><span>  Scan Node
+</span></span><span style="display:flex;"><span>    → Returns 1 row at a time
+</span></span></code></pre></div><p>DuckDB uses &ldquo;vectorized execution,&rdquo; processing 2048 rows at once.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Vectorized Execution
+</span></span><span style="display:flex;"><span>  Query Execution Engine
+</span></span><span style="display:flex;"><span>    ↓ Request 2048 rows at once
+</span></span><span style="display:flex;"><span>  Filter Node (evaluate 2048 rows in bulk with SIMD)
+</span></span><span style="display:flex;"><span>    ↓ Resulting 2048 rows
+</span></span><span style="display:flex;"><span>  Scan Node
+</span></span><span style="display:flex;"><span>    → Returns 2048 rows in bulk
+</span></span></code></pre></div><p>The advantages of this approach are as follows:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Comparison</th>
+          <th>Volcano Model</th>
+          <th>Vectorized</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Function call count</td>
+          <td>Per row</td>
+          <td>Rows / 2048</td>
+      </tr>
+      <tr>
+          <td>CPU cache efficiency</td>
+          <td>Low</td>
+          <td>High</td>
+      </tr>
+      <tr>
+          <td>SIMD instruction utilization</td>
+          <td>Difficult</td>
+          <td>Actively used</td>
+      </tr>
+      <tr>
+          <td>CPU pipeline</td>
+          <td>Frequently interrupted</td>
+          <td>Runs continuously</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="simd-single-instruction-multiple-data">SIMD (Single Instruction, Multiple Data)</h3>
+<p>Modern CPUs can process multiple data elements simultaneously with a single instruction (SIMD). Vectorized execution leverages this to the fullest.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>SIMD Operation Example (128-bit SIMD adding 4 int32 values simultaneously)
+</span></span><span style="display:flex;"><span>[1, 2, 3, 4]
+</span></span><span style="display:flex;"><span>[5, 6, 7, 8]
+</span></span><span style="display:flex;"><span>     ↓ SIMD addition (1 instruction)
+</span></span><span style="display:flex;"><span>[6, 8, 10, 12]
+</span></span></code></pre></div><h2 id="query-optimizer">Query Optimizer</h2>
+<p>DuckDB optimizes queries before execution, removing unnecessary operations.</p>
+<h3 id="predicate-pushdown">Predicate Pushdown</h3>
+<p>Filter conditions are applied as early as possible.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> name <span style="color:#ff79c6">FROM</span> users <span style="color:#ff79c6">WHERE</span> score <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">90</span>;
+</span></span></code></pre></div><p>Before optimization:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Full table scan → JOIN/aggregation → Filter (score &gt; 90) → Retrieve name
+</span></span></code></pre></div><p>After optimization:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Filter (score &gt; 90) during scan → Process only matching rows → Retrieve name
+</span></span></code></pre></div><p>The amount of data read is significantly reduced.</p>
+<h3 id="projection-pushdown">Projection Pushdown</h3>
+<p>Columns not used in the query are never read in the first place.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> name, score <span style="color:#ff79c6">FROM</span> users;  <span style="color:#6272a4">-- id is not needed
+</span></span></span></code></pre></div><p>The <code>id</code> column is not read from disk. This is especially effective when combined with columnar storage.</p>
+<h2 id="parallel-query-execution">Parallel Query Execution</h2>
+<p>DuckDB automatically utilizes multiple cores. By default, it uses as many threads as logical cores to execute queries in parallel.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Check the number of threads</span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#34;SELECT current_setting(&#39;threads&#39;)&#34;</span>)<span style="color:#ff79c6">.</span>fetchone())
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># → (&#39;4&#39;,)</span>
+</span></span></code></pre></div><p>Scans and aggregations on large tables are automatically partitioned and processed in parallel across cores.</p>
+<h2 id="memory-management-and-out-of-core-processing">Memory Management and Out-of-Core Processing</h2>
+<p>DuckDB can process large-scale data that doesn&rsquo;t fit in memory.</p>
+<ul>
+<li><strong>Buffer Pool</strong>: Caches frequently accessed data in memory</li>
+<li><strong>Out-of-Core Processing</strong>: Spills to disk and continues execution when memory is insufficient</li>
+<li><strong>Memory Limit Configuration</strong>: Can be explicitly limited with <code>SET memory_limit='4GB'</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> memory_limit <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;4GB&#39;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> threads <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">2</span>;
+</span></span></code></pre></div><h2 id="tpc-h-benchmark-results">TPC-H Benchmark Results</h2>
+<p>TPC-H is an industry-standard benchmark for OLAP performance. Using DuckDB&rsquo;s <code>tpch</code> extension, everything from data generation to query execution can be done in one place.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb<span style="color:#ff79c6">,</span> time
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
+</span></span><span style="display:flex;"><span>con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#39;INSTALL tpch; LOAD tpch;&#39;</span>)
+</span></span><span style="display:flex;"><span>con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#39;CALL dbgen(sf=1);&#39;</span>)  <span style="color:#6272a4"># Specify Scale Factor with sf=N</span>
+</span></span></code></pre></div><p>The Scale Factor (SF) is a multiplier for the amount of data generated. SF=1 generates approximately 6 million rows in the lineitem table.</p>
+<h3 id="benchmark-queries">Benchmark Queries</h3>
+<p>Execution time was measured with three types of queries.</p>
+<p><strong>Q1: Full Table Scan + Aggregation</strong> (reads all rows of lineitem and performs group aggregation)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> l_returnflag, l_linestatus,
+</span></span><span style="display:flex;"><span>       <span style="color:#ff79c6">COUNT</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">AS</span> count_order, <span style="color:#ff79c6">SUM</span>(l_quantity) <span style="color:#ff79c6">AS</span> sum_qty
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> lineitem
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> l_shipdate <span style="color:#ff79c6">&lt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1998-09-02&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> l_returnflag, l_linestatus
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> l_returnflag, l_linestatus;
+</span></span></code></pre></div><p><strong>Q6: Filtered Aggregation</strong> (single aggregation after applying filter conditions)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SUM</span>(l_extendedprice <span style="color:#ff79c6">*</span> l_discount) <span style="color:#ff79c6">AS</span> revenue
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> lineitem
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> l_shipdate <span style="color:#ff79c6">&gt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1994-01-01&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_shipdate <span style="color:#ff79c6">&lt;</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1995-01-01&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_discount <span style="color:#ff79c6">BETWEEN</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">05</span> <span style="color:#ff79c6">AND</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">07</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_quantity <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">24</span>;
+</span></span></code></pre></div><p><strong>Q5: 6-Table JOIN + Aggregation</strong> (the most complex query)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> n_name, <span style="color:#ff79c6">SUM</span>(l_extendedprice <span style="color:#ff79c6">*</span> (<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">-</span> l_discount)) <span style="color:#ff79c6">AS</span> revenue
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> customer, orders, lineitem, supplier, nation, region
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> c_custkey <span style="color:#ff79c6">=</span> o_custkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_orderkey <span style="color:#ff79c6">=</span> o_orderkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_suppkey <span style="color:#ff79c6">=</span> s_suppkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> c_nationkey <span style="color:#ff79c6">=</span> s_nationkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> s_nationkey <span style="color:#ff79c6">=</span> n_nationkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> n_regionkey <span style="color:#ff79c6">=</span> r_regionkey
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> r_name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;ASIA&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> o_orderdate <span style="color:#ff79c6">&gt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1994-01-01&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> o_orderdate <span style="color:#ff79c6">&lt;</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1995-01-01&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> n_name <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> revenue <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><h3 id="measured-results-sf01-to-sf20">Measured Results (SF=0.1 to SF=20)</h3>
+<p>Average values from three measurements at each SF are recorded below.</p>
+<table>
+  <thead>
+      <tr>
+          <th>SF</th>
+          <th>lineitem Rows</th>
+          <th>Q1 (ms)</th>
+          <th>Q6 (ms)</th>
+          <th>Q5 (ms)</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0.1</td>
+          <td>600,572</td>
+          <td>10.7</td>
+          <td>2.8</td>
+          <td>11.4</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>6,001,215</td>
+          <td>31.0</td>
+          <td>13.3</td>
+          <td>41.5</td>
+      </tr>
+      <tr>
+          <td>5</td>
+          <td>29,999,795</td>
+          <td>121.4</td>
+          <td>58.6</td>
+          <td>194.2</td>
+      </tr>
+      <tr>
+          <td>10</td>
+          <td>59,986,052</td>
+          <td>330.4</td>
+          <td>124.9</td>
+          <td>438.3</td>
+      </tr>
+      <tr>
+          <td>20</td>
+          <td>119,994,608</td>
+          <td>491.6</td>
+          <td>240.4</td>
+          <td>934.3</td>
+      </tr>
+  </tbody>
+</table>
+<p><img src="/en/duckdb-architecture/tpch-benchmark.png" alt="TPC-H Benchmark Results Graph">
+<em>Execution time comparison of Q1/Q6/Q5 for TPC-H SF=0.1–20 (DuckDB v1.4.4)</em></p>
+<p>When SF increases by 10x, execution time increases by roughly 10–20x. Q5 (6-table JOIN) is most affected by data volume growth, reaching 934ms at SF=20. Meanwhile, Q6 (simple filtered aggregation) remains relatively contained at 240ms.</p>
+<p>Thanks to I/O reduction from columnar storage and SIMD vectorization, Q1 aggregation on 120 million rows completes within 500ms.</p>
+<h2 id="relationship-with-apache-arrow">Relationship with Apache Arrow</h2>
+<p>DuckDB internally leverages Apache Arrow&rsquo;s columnar format.</p>
+<ul>
+<li><strong>Zero-Copy Transfer</strong>: Data can be transferred to and from Pandas or Polars without copying</li>
+<li><strong>Interoperability</strong>: High-speed integration with other tools via the Arrow format</li>
+<li><strong>Memory Efficiency</strong>: Directly utilizes Arrow&rsquo;s efficient memory layout</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
+</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Retrieve as Arrow Table (zero-copy)</span>
+</span></span><span style="display:flex;"><span>arrow_table <span style="color:#ff79c6">=</span> con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#34;SELECT * FROM range(1000000) t(i)&#34;</span>)<span style="color:#ff79c6">.</span>fetch_arrow_table()
+</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(arrow_table<span style="color:#ff79c6">.</span>schema)
+</span></span></code></pre></div><h2 id="summary">Summary</h2>
+<p>DuckDB&rsquo;s speed comes from the combination of the following technologies:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Technology</th>
+          <th>Effect</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Columnar Storage</td>
+          <td>Read only needed columns → Minimize I/O</td>
+      </tr>
+      <tr>
+          <td>Vectorized Execution</td>
+          <td>2048-row batches → Maximize CPU efficiency</td>
+      </tr>
+      <tr>
+          <td>Predicate Pushdown</td>
+          <td>Apply filters early → Reduce rows processed</td>
+      </tr>
+      <tr>
+          <td>Projection Pushdown</td>
+          <td>Skip unneeded columns → Reduce I/O</td>
+      </tr>
+      <tr>
+          <td>Parallel Execution</td>
+          <td>Automatically utilize multiple cores</td>
+      </tr>
+      <tr>
+          <td>Apache Arrow</td>
+          <td>Zero-copy integration between tools</td>
+      </tr>
+  </tbody>
+</table>
+<p>Aggregating 600K rows takes around 10ms, and even over 100 million rows completes within a few hundred milliseconds. The fact that this performance is available without a server and with a single-line install is what makes DuckDB so compelling.</p>
+<h2 id="references">References</h2>
+<div class="link-card">
+    <a href="https://duckdb.org/why_duckdb#fast" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Why DuckDB</div><div class="link-card-description">Why DuckDB There are many database management systems (DBMS) out there. But there is no one-size-fits-all database system. All take different trade-offs to better adjust to specific use cases. DuckDB is no different. Here, we try to explain what goals DuckDB has and why and how we try to achieve those goals through technical means. To start with, DuckDB is a relational (table-oriented) DBMS that supports the Structured Query Language (SQL). Key Characteristics of DuckDB Simple SQLite is the world&amp;#39;s most widely deployed DBMS. Simplicity in installation, and embedded in-process operation are central to its success. DuckDB adopts these ideas…</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://duckdb.org/images/sharingduckdb.jpg" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://duckdb.org/pdf/CIDR2020-raasveldt-muehleisen-duckdb.pdf" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">https://duckdb.org/pdf/CIDR2020-raasveldt-muehleisen-duckdb.pdf</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://duckdb.org/docs/internals/overview" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Redirecting&amp;hellip;</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=duckdb.org" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">duckdb.org</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-01-DuckDB%e3%82%a2%e3%83%bc%e3%82%ad%e3%83%86%e3%82%af%e3%83%81%e3%83%a3%e8%a7%a3%e8%aa%ac/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/duckdb-install-quickstart/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Getting Started with DuckDB Installation</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/llm-papers-2026-03-02/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">LLM Paper Survey (2026-03-02)</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fduckdb-architecture%2f&text=DuckDB&#43;Architecture&#43;%E2%80%94&#43;Why&#43;It%27s&#43;So&#43;Fast" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/duckdb-architecture/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/duckdb-install-quickstart/">Getting Started with DuckDB Installation</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/duckdb/" class="tag-badge">DuckDB</a>
+  
+  <a href="https://zatoima.github.io/en/blog/architecture/" class="tag-badge">Architecture</a>
+  
+  <a href="https://zatoima.github.io/en/blog/columnar-storage/" class="tag-badge">Columnar Storage</a>
+  
+  <a href="https://zatoima.github.io/en/blog/vectorized-execution/" class="tag-badge">Vectorized Execution</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#what-is-columnar-storage">What Is Columnar Storage?</a>
+      <ul>
+        <li><a href="#row-oriented-vs-column-oriented">Row-Oriented vs. Column-Oriented</a></li>
+        <li><a href="#why-analytical-queries-become-faster">Why Analytical Queries Become Faster</a></li>
+      </ul>
+    </li>
+    <li><a href="#vectorized-execution">Vectorized Execution</a>
+      <ul>
+        <li><a href="#row-at-a-time-vs-batch-processing">Row-at-a-Time vs. Batch Processing</a></li>
+        <li><a href="#simd-single-instruction-multiple-data">SIMD (Single Instruction, Multiple Data)</a></li>
+      </ul>
+    </li>
+    <li><a href="#query-optimizer">Query Optimizer</a>
+      <ul>
+        <li><a href="#predicate-pushdown">Predicate Pushdown</a></li>
+        <li><a href="#projection-pushdown">Projection Pushdown</a></li>
+      </ul>
+    </li>
+    <li><a href="#parallel-query-execution">Parallel Query Execution</a></li>
+    <li><a href="#memory-management-and-out-of-core-processing">Memory Management and Out-of-Core Processing</a></li>
+    <li><a href="#tpc-h-benchmark-results">TPC-H Benchmark Results</a>
+      <ul>
+        <li><a href="#benchmark-queries">Benchmark Queries</a></li>
+        <li><a href="#measured-results-sf01-to-sf20">Measured Results (SF=0.1 to SF=20)</a></li>
+      </ul>
+    </li>
+    <li><a href="#relationship-with-apache-arrow">Relationship with Apache Arrow</a></li>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+      </div>
+    </footer>
+  </div>
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
