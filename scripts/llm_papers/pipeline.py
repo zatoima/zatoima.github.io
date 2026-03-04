@@ -41,9 +41,10 @@ def git_commit_and_push(post_dir: Path) -> None:
     logger = logging.getLogger(__name__)
 
     try:
-        # Add the content directory
+        # Add the content directory and state file
+        from config import STATE_FILE
         subprocess.run(
-            ["git", "add", str(post_dir)],
+            ["git", "add", str(post_dir), str(STATE_FILE)],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=True,
@@ -74,6 +75,15 @@ def git_commit_and_push(post_dir: Path) -> None:
         )
         subprocess.run(
             ["git", "commit", "-m", "Build website"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Sync with remote before pushing to avoid rejection
+        logger.info("Pulling latest changes from remote...")
+        subprocess.run(
+            ["git", "pull", "--rebase", "origin", "main"],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=True,
