@@ -7,14 +7,14 @@
 <link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
 <title>Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する | zatoima</title>
 <meta name="title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する" />
-<meta name="description" content="" />
+<meta name="description" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN という2つのエージェント関数の違いをSQL検証で明らかにする。エージェントオブジェクトの有無による設計思想の差異、入力トークン数の違い、CI/CD対応の観点での使い分けポイントを整理する。" />
 <meta name="keywords" content="Snowflake,Cortex,AI," />
 
 
 <meta property="og:url" content="https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/">
   <meta property="og:site_name" content="zatoima">
   <meta property="og:title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する">
-  <meta property="og:description" content="memo blog. Hugo on GitHub Pages">
+  <meta property="og:description" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN という2つのエージェント関数の違いをSQL検証で明らかにする。エージェントオブジェクトの有無による設計思想の差異、入力トークン数の違い、CI/CD対応の観点での使い分けポイントを整理する。">
   <meta property="og:locale" content="ja">
   <meta property="og:type" content="article">
     <meta property="article:section" content="blog">
@@ -31,7 +31,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
   <meta name="twitter:title" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する">
-  <meta name="twitter:description" content="memo blog. Hugo on GitHub Pages">
+  <meta name="twitter:description" content="Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN という2つのエージェント関数の違いをSQL検証で明らかにする。エージェントオブジェクトの有無による設計思想の差異、入力トークン数の違い、CI/CD対応の観点での使い分けポイントを整理する。">
 
 
 
@@ -41,7 +41,7 @@
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   "headline": "\"Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する\"",
-  "description": "\"\"",
+  "description": "\"Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN という2つのエージェント関数の違いをSQL検証で明らかにする。エージェントオブジェクトの有無による設計思想の差異、入力トークン数の違い、CI/CD対応の観点での使い分けポイントを整理する。\"",
   "datePublished": "\"2026-03-02T00:00:00Z\"",
   "dateModified": "\"2026-03-02T00:00:00Z\"",
   "author": {
@@ -58,7 +58,7 @@
     "@id": "\"https://zatoima.github.io/snowflake-cortex-agent-run-vs-data-agent-run/\""
   },
   "inLanguage": "ja",
-  "wordCount":  2559 ,
+  "wordCount":  3143 ,
   "keywords": "[\"Snowflake\",\"Cortex\",\"AI\"]"
 }
 </script>
@@ -163,7 +163,7 @@
     
     <div class="article-card">
       <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-icon" loading="lazy"></div>
+        <div class="article-emoji">❄️</div>
         <h1>Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する</h1>
         
         <div class="article-meta">
@@ -173,15 +173,15 @@
           
           
           
-          <span class="reading-time">📖 約5分</span>
+          <span class="reading-time">📖 約6分</span>
         </div>
         <div class="article-tags">
           
-          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
           
-          <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge">Cortex</a>
+          <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Cortex</a>
           
-          <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><img src="/images/tags/ai.svg" alt="AI" class="tag-badge-icon" loading="lazy">AI</a>
+          <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><span class="tag-badge-icon">🤖</span>AI</a>
           
         </div>
         
@@ -255,7 +255,7 @@
       </tr>
       <tr>
           <td>request_body で指定できる設定</td>
-          <td>model, instructions, orchestration, tools など全項目</td>
+          <td>models, instructions, orchestration, tools など全項目</td>
           <td>messages, stream, tool_choice など実行時パラメータのみ</td>
       </tr>
       <tr>
@@ -429,6 +429,68 @@
 </span></span><span style="display:flex;"><span>| v2             | assistant | Snowflake Cortex Agentsは、Snowflake... | claude-sonnet-4-5 | 82           | 76            |
 </span></span><span style="display:flex;"><span>+----------------+-----------+---------------------------------------+------------------+--------------+---------------+
 </span></span></code></pre></div><p><code>DATA_AGENT_RUN</code> でも全く同じパス記法でアクセスできる。レスポンスのスキーマは両関数で共通している。</p>
+<h2 id="ai_complete-との違い">AI_COMPLETE との違い</h2>
+<p><code>AGENT_RUN</code> と混同しやすい関数に <a href="https://docs.snowflake.com/en/sql-reference/functions/ai_complete" target="_blank" rel="noopener noreferrer"><code>AI_COMPLETE</code></a>
+ がある。両者の本質的な違いは「LLM を1回呼ぶだけか、ツールを使って複数ステップを実行するか」にある。</p>
+<table>
+  <thead>
+      <tr>
+          <th>項目</th>
+          <th><code>AI_COMPLETE</code></th>
+          <th><code>AGENT_RUN</code> / <code>DATA_AGENT_RUN</code></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>役割</td>
+          <td>LLM に1回プロンプトを投げてテキストを返す</td>
+          <td>複数ステップを計画・実行するエージェントを動かす</td>
+      </tr>
+      <tr>
+          <td>ツール利用</td>
+          <td>なし</td>
+          <td>Cortex Analyst / Cortex Search / カスタムツールを使える</td>
+      </tr>
+      <tr>
+          <td>Snowflake データへのアクセス</td>
+          <td>できない</td>
+          <td>テーブルのクエリや文書検索が可能</td>
+      </tr>
+      <tr>
+          <td>マルチターン</td>
+          <td>自前でコンテキストを管理</td>
+          <td><code>thread_id</code> でセッションを保持できる</td>
+      </tr>
+      <tr>
+          <td>用途</td>
+          <td>テキスト要約・分類・翻訳・抽出など定型タスク</td>
+          <td>データ Q&amp;A・自然言語でのデータ分析・ワークフロー自動化</td>
+      </tr>
+      <tr>
+          <td>複雑さ</td>
+          <td>シンプル（モデル名＋プロンプトのみ）</td>
+          <td>設定が多い（ツール定義・オーケストレーション設定など）</td>
+      </tr>
+  </tbody>
+</table>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- AI_COMPLETE: LLM にそのまま聞くだけ
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> AI_COMPLETE(<span style="color:#f1fa8c">&#39;claude-sonnet-4-5&#39;</span>, <span style="color:#f1fa8c">&#39;先月の売上を要約して&#39;</span>) <span style="color:#ff79c6">AS</span> answer;
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- → LLM が知識として持っている範囲での回答のみ（Snowflake のデータは参照できない）
+</span></span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- AGENT_RUN: Cortex Analyst ツールを介して実際のデータを取得して回答
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> SNOWFLAKE.CORTEX.AGENT_RUN(<span style="color:#f1fa8c">&#39;{
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  &#34;messages&#34;: [{&#34;role&#34;: &#34;user&#34;, &#34;content&#34;: [{&#34;type&#34;: &#34;text&#34;, &#34;text&#34;: &#34;先月の売上を要約して&#34;}]}],
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  &#34;tools&#34;: [{&#34;tool_spec&#34;: {&#34;type&#34;: &#34;cortex_analyst_text_to_sql&#34;, &#34;name&#34;: &#34;analyst&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">             &#34;description&#34;: &#34;売上データを分析するツール&#34;}}],
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  &#34;tool_resources&#34;: {&#34;analyst&#34;: {&#34;semantic_model_file&#34;: &#34;@db.schema.stage/model.yaml&#34;}},
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">  &#34;stream&#34;: false
+</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">}&#39;</span>) <span style="color:#ff79c6">AS</span> answer;
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- → セマンティックモデル経由で実際のテーブルをクエリして回答
+</span></span></span></code></pre></div><div class="callout callout-tip">
+  <span class="callout-icon"></span>
+  <div class="callout-content">テキストの加工・変換・分類など LLM の知識だけで解ける問題は <code>AI_COMPLETE</code>、Snowflake 上の実データに基づいて回答させたい場合は <code>AGENT_RUN</code> を使う。</div>
+</div>
+
 <h2 id="使い分けのポイント">使い分けのポイント</h2>
 <table>
   <thead>
@@ -480,7 +542,7 @@
 <ul>
 <li><code>AGENT_RUN</code> はエージェントオブジェクト不要。モデル、指示、ツールを request_body に直接渡して即時実行できる。試験・プロトタイピングに向いている</li>
 <li><code>DATA_AGENT_RUN</code> は <code>CREATE AGENT</code> で作成したオブジェクトを名前で呼び出す。設定の再利用・CI/CD 対応が必要な本番運用向けの選択肢</li>
-<li>どちらも内部的には Cortex Agents Run REST API のラッパーで、レスポンスのスキーマは共通（<code>schema_version</code>, <code>role</code>, <code>content</code>, <code>metadata</code> を含む JSON）</li>
+<li>どちらも内部的には Cortex Agents Run REST API のラッパーで、レスポンスのスキーマは共通（<code>role</code>, <code>content</code>, <code>metadata</code> を含む JSON）</li>
 <li><code>DATA_AGENT_RUN</code> はエージェントオブジェクトの設定がシステムプロンプトに付加されるため、同じ質問でも入力トークン数が <code>AGENT_RUN</code> より多くなる</li>
 </ul>
 <h2 id="参考資料">参考資料</h2>
@@ -593,11 +655,11 @@
 
 <div class="post-tags">
   
-  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
   
-  <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge">Cortex</a>
+  <a href="https://zatoima.github.io/blog/cortex/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Cortex</a>
   
-  <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><img src="/images/tags/ai.svg" alt="AI" class="tag-badge-icon" loading="lazy">AI</a>
+  <a href="https://zatoima.github.io/blog/ai/" class="tag-badge"><span class="tag-badge-icon">🤖</span>AI</a>
   
 </div>
 
@@ -628,6 +690,7 @@
       </ul>
     </li>
     <li><a href="#レスポンスのパース">レスポンスのパース</a></li>
+    <li><a href="#ai_complete-との違い">AI_COMPLETE との違い</a></li>
     <li><a href="#使い分けのポイント">使い分けのポイント</a></li>
     <li><a href="#まとめ">まとめ</a></li>
     <li><a href="#参考資料">参考資料</a></li>
@@ -643,6 +706,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -663,9 +727,11 @@
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
       </div>
     </footer>
   </div>
+  
   <script src="/js/lightbox.js" defer></script>
   <script src="/js/toc-highlight.js" defer></script>
   <script src="/js/code-copy.js" defer></script>

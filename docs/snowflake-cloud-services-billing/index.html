@@ -57,7 +57,7 @@
     "@id": "\"https://zatoima.github.io/snowflake-cloud-services-billing/\""
   },
   "inLanguage": "ja",
-  "wordCount":  3035 ,
+  "wordCount":  4472 ,
   "keywords": "[\"Snowflake\",\"コスト管理\"]"
 }
 </script>
@@ -162,7 +162,7 @@
     
     <div class="article-card">
       <div class="article-header">
-        <div class="article-emoji"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-icon" loading="lazy"></div>
+        <div class="article-emoji">❄️</div>
         <h1>Snowflake クラウドサービス利用料の仕組みと最適化</h1>
         
         <div class="article-meta">
@@ -172,13 +172,13 @@
           
           
           
-          <span class="reading-time">📖 約6分</span>
+          <span class="reading-time">📖 約8分</span>
         </div>
         <div class="article-tags">
           
-          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+          <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
           
-          <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><img src="/images/tags/%e3%82%b3%e3%82%b9%e3%83%88%e7%ae%a1%e7%90%86.svg" alt="コスト管理" class="tag-badge-icon" loading="lazy">コスト管理</a>
+          <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><span class="tag-badge-icon">💰</span>コスト管理</a>
           
         </div>
         
@@ -347,6 +347,190 @@
   </tbody>
 </table>
 <hr>
+<h2 id="操作別クラウドサービス消費量の実測">操作別クラウドサービス消費量の実測</h2>
+<p>実際に各種操作を実行し、<code>INFORMATION_SCHEMA.QUERY_HISTORY</code> でCS消費量を計測した。以下はその結果だ。</p>
+<h3 id="cs-のみで完結する操作ウェアハウス不使用">CS のみで完結する操作（ウェアハウス不使用）</h3>
+<p><code>bytes_scanned = 0</code> となり、仮想ウェアハウスを起動せずにCS単独で処理される操作の一覧。</p>
+<table>
+  <thead>
+      <tr>
+          <th>カテゴリ</th>
+          <th>操作例</th>
+          <th>CS消費量（実測）</th>
+          <th>備考</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>セッション関数</td>
+          <td><code>SELECT 1</code></td>
+          <td>0.000006〜0.000014</td>
+          <td>最小コストのCS操作</td>
+      </tr>
+      <tr>
+          <td>コンテキスト関数</td>
+          <td><code>SELECT CURRENT_SESSION()</code>, <code>CURRENT_USER()</code></td>
+          <td>0.000007〜0.000009</td>
+          <td>セッション情報の参照</td>
+      </tr>
+      <tr>
+          <td>SHOW コマンド（軽量）</td>
+          <td><code>SHOW TABLES</code>, <code>SHOW SCHEMAS</code></td>
+          <td>0.000005〜0.000018</td>
+          <td>オブジェクト数に比例</td>
+      </tr>
+      <tr>
+          <td>SHOW コマンド（重量）</td>
+          <td><code>SHOW GRANTS TO ROLE SYSADMIN</code></td>
+          <td><strong>0.001902</strong></td>
+          <td>権限エントリ数が多いと増加</td>
+      </tr>
+      <tr>
+          <td>DESC / DESCRIBE</td>
+          <td><code>DESC TABLE</code>, <code>DESC STREAM</code></td>
+          <td>0.000006〜0.000028</td>
+          <td>オブジェクト構造の参照</td>
+      </tr>
+      <tr>
+          <td>USE 文</td>
+          <td><code>USE DATABASE</code>, <code>USE SCHEMA</code></td>
+          <td>0.000005〜0.000013</td>
+          <td>コンテキスト切り替え</td>
+      </tr>
+      <tr>
+          <td>ALTER SESSION</td>
+          <td><code>ALTER SESSION SET/UNSET</code></td>
+          <td>0.000007〜0.000008</td>
+          <td>セッションパラメータ変更</td>
+      </tr>
+      <tr>
+          <td>CREATE TABLE</td>
+          <td><code>CREATE OR REPLACE TABLE</code></td>
+          <td>0.000020〜0.000031</td>
+          <td>DDL はすべてCS操作</td>
+      </tr>
+      <tr>
+          <td>CREATE SEQUENCE</td>
+          <td><code>CREATE SEQUENCE</code></td>
+          <td>0.000012</td>
+          <td>シーケンスのメタデータ登録</td>
+      </tr>
+      <tr>
+          <td>CREATE STREAM</td>
+          <td><code>CREATE STREAM ... ON TABLE</code></td>
+          <td><strong>0.000069</strong></td>
+          <td>Streamオブジェクト作成</td>
+      </tr>
+      <tr>
+          <td>CLONE（テーブル）</td>
+          <td><code>CREATE TABLE ... CLONE</code></td>
+          <td><strong>0.000164</strong></td>
+          <td>メタデータのコピーのみ</td>
+      </tr>
+      <tr>
+          <td>CLONE（スキーマ）</td>
+          <td><code>CREATE SCHEMA ... CLONE</code></td>
+          <td><strong>0.000458</strong></td>
+          <td>テーブルクローンの3倍近く</td>
+      </tr>
+      <tr>
+          <td>ALTER TABLE（カラム操作）</td>
+          <td><code>ADD COLUMN / DROP COLUMN</code></td>
+          <td>0.000010〜0.000018</td>
+          <td>スキーマ変更のみ</td>
+      </tr>
+      <tr>
+          <td>Stream メタデータ参照</td>
+          <td><code>SELECT metadata$action FROM stream</code></td>
+          <td>0.000026</td>
+          <td>Stream変更追跡メタデータ</td>
+      </tr>
+      <tr>
+          <td>SYSTEM$ 関数</td>
+          <td><code>SYSTEM$STREAM_HAS_DATA(...)</code></td>
+          <td>0.000009</td>
+          <td>Streamの変更有無チェック</td>
+      </tr>
+      <tr>
+          <td>シーケンス NEXTVAL</td>
+          <td><code>SELECT seq.NEXTVAL</code></td>
+          <td>0.000008〜0.000009</td>
+          <td>採番のたびにCS消費</td>
+      </tr>
+      <tr>
+          <td>Time Travel（メタデータのみ）</td>
+          <td><code>SELECT COUNT(*) ... AT(OFFSET =&gt; -60)</code></td>
+          <td>0.000007</td>
+          <td>過去スナップショットのカウント</td>
+      </tr>
+      <tr>
+          <td>INFORMATION_SCHEMA（軽量）</td>
+          <td><code>SELECT ... FROM I_S.TABLES</code></td>
+          <td>0.000026〜0.000034</td>
+          <td>テーブル・カラム定義の参照</td>
+      </tr>
+      <tr>
+          <td>INFORMATION_SCHEMA（重量）</td>
+          <td>結果件数が多いクエリ</td>
+          <td><strong>0.000614</strong></td>
+          <td>返却行数に比例して増加</td>
+      </tr>
+  </tbody>
+</table>
+<div class="callout callout-info">
+  <span class="callout-icon"></span>
+  <div class="callout-content">CLONE のCS消費はスキーマ全体 &gt; テーブル単体の順に大きくなる。スキーマクローン（0.000458）はテーブルクローン（0.000164）の約3倍のCS消費となった。バックアップ用途でスキーマクローンを頻繁に実行するパターンは注意が必要となる。</div>
+</div>
+
+<h3 id="結果キャッシュの挙動">結果キャッシュの挙動</h3>
+<p>同一クエリを2回実行した際の比較。</p>
+<table>
+  <thead>
+      <tr>
+          <th>実行回</th>
+          <th>bytes_scanned</th>
+          <th>CS消費量</th>
+          <th>実行時間</th>
+          <th>判定</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1回目（ウェアハウス計算）</td>
+          <td>4,096 bytes</td>
+          <td>0.000009</td>
+          <td>83ms</td>
+          <td>WAREHOUSE_COMPUTE</td>
+      </tr>
+      <tr>
+          <td>2回目（結果キャッシュ）</td>
+          <td>0 bytes</td>
+          <td>0.000007</td>
+          <td><strong>44ms</strong></td>
+          <td>RESULT_CACHE_HIT</td>
+      </tr>
+  </tbody>
+</table>
+<p>結果キャッシュヒット時もCS消費はゼロにはならない。これはCSがキャッシュを管理・提供する処理自体にCSリソースを使うためだ。消費量は初回の約78%程度で、完全に消えるわけではない点に留意する。キャッシュヒットの特徴は <code>bytes_scanned = 0</code> かつ <code>rows_produced &gt; 0</code> の組み合わせで判別できる。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- 結果キャッシュヒットかどうかを判別するクエリ
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
+</span></span><span style="display:flex;"><span>    query_type,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">LEFT</span>(query_text, <span style="color:#bd93f9">80</span>)                  <span style="color:#ff79c6">AS</span> query_snippet,
+</span></span><span style="display:flex;"><span>    ROUND(credits_used_cloud_services, <span style="color:#bd93f9">8</span>) <span style="color:#ff79c6">AS</span> cs_credits,
+</span></span><span style="display:flex;"><span>    bytes_scanned,
+</span></span><span style="display:flex;"><span>    rows_produced,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">CASE</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">WHEN</span> bytes_scanned <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">AND</span> rows_produced <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">THEN</span> <span style="color:#f1fa8c">&#39;RESULT_CACHE_HIT&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">WHEN</span> bytes_scanned <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">AND</span> rows_produced <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">THEN</span> <span style="color:#f1fa8c">&#39;WAREHOUSE_COMPUTE&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">ELSE</span> <span style="color:#f1fa8c">&#39;CS_ONLY_METADATA&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">END</span> <span style="color:#ff79c6">AS</span> access_type
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> <span style="color:#ff79c6">TABLE</span>(INFORMATION_SCHEMA.QUERY_HISTORY(
+</span></span><span style="display:flex;"><span>    DATEADD(<span style="color:#f1fa8c">&#39;minute&#39;</span>, <span style="color:#ff79c6">-</span><span style="color:#bd93f9">30</span>, <span style="color:#ff79c6">CURRENT_TIMESTAMP</span>),
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">NULL</span>, <span style="color:#bd93f9">200</span>
+</span></span><span style="display:flex;"><span>))
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> query_type <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;SELECT&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> start_time <span style="color:#ff79c6">DESC</span>;
+</span></span></code></pre></div><hr>
 <h2 id="クラウドサービス費用の追跡方法">クラウドサービス費用の追跡方法</h2>
 <h3 id="1-日次課金サマリーmetering_daily_history">1. 日次課金サマリー（METERING_DAILY_HISTORY）</h3>
 <p><code>SNOWFLAKE.ACCOUNT_USAGE.METERING_DAILY_HISTORY</code> ビューで、日ごとのCS使用量と調整後の実課金量を確認できる。</p>
@@ -360,7 +544,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> usage_date <span style="color:#ff79c6">&gt;=</span> DATEADD(<span style="color:#ff79c6">month</span>, <span style="color:#ff79c6">-</span><span style="color:#bd93f9">1</span>, <span style="color:#ff79c6">CURRENT_TIMESTAMP</span>())
 </span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> credits_used_cloud_services <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><p>実行結果のイメージ：</p>
+</span></span></code></pre></div><p>実行結果：</p>
 <table>
   <thead>
       <tr>
@@ -372,26 +556,38 @@
   </thead>
   <tbody>
       <tr>
-          <td>2026-03-01</td>
-          <td>15.234</td>
-          <td>-10.000</td>
-          <td>5.234</td>
+          <td>2026-02-21</td>
+          <td>0.010796945</td>
+          <td>-0.0107969450</td>
+          <td>0</td>
       </tr>
       <tr>
-          <td>2026-02-28</td>
-          <td>8.120</td>
-          <td>-8.120</td>
-          <td>0.000</td>
+          <td>2026-02-17</td>
+          <td>0.009336666</td>
+          <td>-0.0093366660</td>
+          <td>0</td>
       </tr>
       <tr>
           <td>2026-02-27</td>
-          <td>12.500</td>
-          <td>-10.000</td>
-          <td>2.500</td>
+          <td>0.006565000</td>
+          <td>-0.0065650000</td>
+          <td>0</td>
+      </tr>
+      <tr>
+          <td>2026-02-23</td>
+          <td>0.006603055</td>
+          <td>-0.0066030550</td>
+          <td>0</td>
+      </tr>
+      <tr>
+          <td>2026-02-04</td>
+          <td>0.012600552</td>
+          <td>-0.0126005520</td>
+          <td>0</td>
       </tr>
   </tbody>
 </table>
-<p><code>billed_cloud_services</code> が 0 の行は、その日のCS消費がVWの10%以内に収まっており課金されていないことを意味する。</p>
+<p>すべての行で <code>billed_cloud_services = 0</code> になっている。CS消費量と調整額が完全に一致しており、VWの10%以内に収まっているため追加課金が発生していない状態だ。調整の仕組みが正常に機能している例として読み取れる。</p>
 <p>主要列の意味：</p>
 <table>
   <thead>
@@ -431,7 +627,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> credits_used_cloud_services <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">1</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><p>実行結果のイメージ：</p>
+</span></span></code></pre></div><p>実行結果：</p>
 <table>
   <thead>
       <tr>
@@ -443,26 +639,27 @@
   </thead>
   <tbody>
       <tr>
-          <td>ANALYTICS_WH</td>
-          <td>45.200</td>
-          <td>9.800</td>
-          <td>21.68</td>
+          <td>CLOUD_SERVICES_ONLY</td>
+          <td>0.008040553</td>
+          <td>0.008040553</td>
+          <td>100.00</td>
       </tr>
       <tr>
-          <td>ETL_WH</td>
-          <td>120.500</td>
-          <td>18.200</td>
-          <td>15.10</td>
+          <td>COMPUTE_WH</td>
+          <td>6.615521114</td>
+          <td>0.273854438</td>
+          <td>4.14</td>
       </tr>
       <tr>
-          <td>ADHOC_WH</td>
-          <td>30.100</td>
-          <td>2.500</td>
-          <td>8.31</td>
+          <td>RETAIL_WH</td>
+          <td>0.046300557</td>
+          <td>0.001300557</td>
+          <td>2.81</td>
       </tr>
   </tbody>
 </table>
-<p><code>PCT_CLOUD_SERVICES</code> が 10% を大きく超えているウェアハウスは、前節のパターンに該当する処理が動いている可能性が高い。</p>
+<p><code>CLOUD_SERVICES_ONLY</code> は Snowflake が仮想ウェアハウスを介さずに実行する処理（DDL、メタデータ操作等）を計上する擬似ウェアハウスで、CS割合が必ず100%になる。<code>COMPUTE_WH</code> は 4.14%、<code>RETAIL_WH</code> は 2.81% とともに10%未満に収まっており、追加課金は発生していない。</p>
+<p><code>PCT_CLOUD_SERVICES</code> が 10% を大きく超えているウェアハウスが出た場合、前節のパターンに該当する処理が動いている可能性が高い。</p>
 <h3 id="3-クエリタイプ別の分析query_history">3. クエリタイプ別の分析（QUERY_HISTORY）</h3>
 <p>どの種類の操作がCSを多く消費しているか確認する。</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- 過去7日間のクエリタイプ別CS消費量
@@ -475,7 +672,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">1</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">DESC</span>
 </span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">10</span>;
-</span></span></code></pre></div><p>実行結果のイメージ：</p>
+</span></span></code></pre></div><p>実行結果：</p>
 <table>
   <thead>
       <tr>
@@ -487,32 +684,57 @@
   <tbody>
       <tr>
           <td>SELECT</td>
-          <td>0.024500</td>
-          <td>15823</td>
+          <td>0.062068</td>
+          <td>1205</td>
       </tr>
       <tr>
-          <td>COPY</td>
-          <td>0.018200</td>
-          <td>342</td>
+          <td>DROP</td>
+          <td>0.002595</td>
+          <td>115</td>
       </tr>
       <tr>
-          <td>INSERT</td>
-          <td>0.009100</td>
-          <td>5621</td>
+          <td>CALL</td>
+          <td>0.000925</td>
+          <td>577</td>
       </tr>
       <tr>
           <td>SHOW</td>
-          <td>0.005800</td>
-          <td>12045</td>
+          <td>0.000596</td>
+          <td>281</td>
+      </tr>
+      <tr>
+          <td>INSERT</td>
+          <td>0.000555</td>
+          <td>18</td>
       </tr>
       <tr>
           <td>CREATE_TABLE</td>
-          <td>0.001200</td>
-          <td>87</td>
+          <td>0.000434</td>
+          <td>11</td>
+      </tr>
+      <tr>
+          <td>DROP_ROLE</td>
+          <td>0.000376</td>
+          <td>15</td>
+      </tr>
+      <tr>
+          <td>CREATE</td>
+          <td>0.000319</td>
+          <td>46</td>
+      </tr>
+      <tr>
+          <td>USE</td>
+          <td>0.000169</td>
+          <td>20</td>
+      </tr>
+      <tr>
+          <td>UPDATE</td>
+          <td>0.000089</td>
+          <td>22</td>
       </tr>
   </tbody>
 </table>
-<p><code>SHOW</code> クエリの件数が多く CS 消費が高い場合、サードパーティツールが頻繁にメタデータを取得していると考えられる。</p>
+<p>SELECT が CS消費の大半を占めており、DROP（テーブル削除等のDDL）と SHOW がそれに続く。281件の SHOW に対してクレジット消費は 0.000596 と軽微だが、アプリが頻繁にメタデータを取得する構成では件数がこの数十倍規模になることもある。</p>
 <h3 id="4-snowsight-での確認">4. Snowsight での確認</h3>
 <p>Snowsight の <strong>Admin &gt; Cost Management</strong> からグラフィカルに確認できる。サービスタイプや期間でフィルタリングでき、クエリを書かずに傾向を把握するのに適している。</p>
 <hr>
@@ -684,9 +906,9 @@
 
 <div class="post-tags">
   
-  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><img src="/images/tags/snowflake.svg" alt="Snowflake" class="tag-badge-icon" loading="lazy">Snowflake</a>
+  <a href="https://zatoima.github.io/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
   
-  <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><img src="/images/tags/%e3%82%b3%e3%82%b9%e3%83%88%e7%ae%a1%e7%90%86.svg" alt="コスト管理" class="tag-badge-icon" loading="lazy">コスト管理</a>
+  <a href="https://zatoima.github.io/blog/%E3%82%B3%E3%82%B9%E3%83%88%E7%AE%A1%E7%90%86/" class="tag-badge"><span class="tag-badge-icon">💰</span>コスト管理</a>
   
 </div>
 
@@ -708,6 +930,12 @@
       </ul>
     </li>
     <li><a href="#クラウドサービス費用が発生するユースケース">クラウドサービス費用が発生するユースケース</a></li>
+    <li><a href="#操作別クラウドサービス消費量の実測">操作別クラウドサービス消費量の実測</a>
+      <ul>
+        <li><a href="#cs-のみで完結する操作ウェアハウス不使用">CS のみで完結する操作（ウェアハウス不使用）</a></li>
+        <li><a href="#結果キャッシュの挙動">結果キャッシュの挙動</a></li>
+      </ul>
+    </li>
     <li><a href="#クラウドサービス費用の追跡方法">クラウドサービス費用の追跡方法</a>
       <ul>
         <li><a href="#1-日次課金サマリーmetering_daily_history">1. 日次課金サマリー（METERING_DAILY_HISTORY）</a></li>
@@ -737,6 +965,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -757,9 +986,11 @@
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
       </div>
     </footer>
   </div>
+  
   <script src="/js/lightbox.js" defer></script>
   <script src="/js/toc-highlight.js" defer></script>
   <script src="/js/code-copy.js" defer></script>
