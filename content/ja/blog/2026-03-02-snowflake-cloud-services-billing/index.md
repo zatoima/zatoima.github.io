@@ -104,6 +104,74 @@ Snowflake のアーキテクチャは大きく3層に分かれる。
 
 ---
 
+## 操作別クラウドサービス消費量の実測
+
+実際に各種操作を実行し、`INFORMATION_SCHEMA.QUERY_HISTORY` でCS消費量を計測した。以下はその結果だ。
+
+### CS のみで完結する操作（ウェアハウス不使用）
+
+`bytes_scanned = 0` となり、仮想ウェアハウスを起動せずにCS単独で処理される操作の一覧。
+
+| カテゴリ | 操作例 | CS消費量（実測） | 備考 |
+|--------|-------|--------------|------|
+| セッション関数 | `SELECT 1` | 0.000006〜0.000014 | 最小コストのCS操作 |
+| コンテキスト関数 | `SELECT CURRENT_SESSION()`, `CURRENT_USER()` | 0.000007〜0.000009 | セッション情報の参照 |
+| SHOW コマンド（軽量） | `SHOW TABLES`, `SHOW SCHEMAS` | 0.000005〜0.000018 | オブジェクト数に比例 |
+| SHOW コマンド（重量） | `SHOW GRANTS TO ROLE SYSADMIN` | **0.001902** | 権限エントリ数が多いと増加 |
+| DESC / DESCRIBE | `DESC TABLE`, `DESC STREAM` | 0.000006〜0.000028 | オブジェクト構造の参照 |
+| USE 文 | `USE DATABASE`, `USE SCHEMA` | 0.000005〜0.000013 | コンテキスト切り替え |
+| ALTER SESSION | `ALTER SESSION SET/UNSET` | 0.000007〜0.000008 | セッションパラメータ変更 |
+| CREATE TABLE | `CREATE OR REPLACE TABLE` | 0.000020〜0.000031 | DDL はすべてCS操作 |
+| CREATE SEQUENCE | `CREATE SEQUENCE` | 0.000012 | シーケンスのメタデータ登録 |
+| CREATE STREAM | `CREATE STREAM ... ON TABLE` | **0.000069** | Streamオブジェクト作成 |
+| CLONE（テーブル） | `CREATE TABLE ... CLONE` | **0.000164** | メタデータのコピーのみ |
+| CLONE（スキーマ） | `CREATE SCHEMA ... CLONE` | **0.000458** | テーブルクローンの3倍近く |
+| ALTER TABLE（カラム操作） | `ADD COLUMN / DROP COLUMN` | 0.000010〜0.000018 | スキーマ変更のみ |
+| Stream メタデータ参照 | `SELECT metadata$action FROM stream` | 0.000026 | Stream変更追跡メタデータ |
+| SYSTEM$ 関数 | `SYSTEM$STREAM_HAS_DATA(...)` | 0.000009 | Streamの変更有無チェック |
+| シーケンス NEXTVAL | `SELECT seq.NEXTVAL` | 0.000008〜0.000009 | 採番のたびにCS消費 |
+| Time Travel（メタデータのみ） | `SELECT COUNT(*) ... AT(OFFSET => -60)` | 0.000007 | 過去スナップショットのカウント |
+| INFORMATION_SCHEMA（軽量） | `SELECT ... FROM I_S.TABLES` | 0.000026〜0.000034 | テーブル・カラム定義の参照 |
+| INFORMATION_SCHEMA（重量） | 結果件数が多いクエリ | **0.000614** | 返却行数に比例して増加 |
+
+{{< callout "info" >}}
+CLONE のCS消費はスキーマ全体 > テーブル単体の順に大きくなる。スキーマクローン（0.000458）はテーブルクローン（0.000164）の約3倍のCS消費となった。バックアップ用途でスキーマクローンを頻繁に実行するパターンは注意が必要となる。
+{{< /callout >}}
+
+### 結果キャッシュの挙動
+
+同一クエリを2回実行した際の比較。
+
+| 実行回 | bytes_scanned | CS消費量 | 実行時間 | 判定 |
+|------|-------------|---------|---------|------|
+| 1回目（ウェアハウス計算） | 4,096 bytes | 0.000009 | 83ms | WAREHOUSE_COMPUTE |
+| 2回目（結果キャッシュ） | 0 bytes | 0.000007 | **44ms** | RESULT_CACHE_HIT |
+
+結果キャッシュヒット時もCS消費はゼロにはならない。これはCSがキャッシュを管理・提供する処理自体にCSリソースを使うためだ。消費量は初回の約78%程度で、完全に消えるわけではない点に留意する。キャッシュヒットの特徴は `bytes_scanned = 0` かつ `rows_produced > 0` の組み合わせで判別できる。
+
+```sql
+-- 結果キャッシュヒットかどうかを判別するクエリ
+SELECT
+    query_type,
+    LEFT(query_text, 80)                  AS query_snippet,
+    ROUND(credits_used_cloud_services, 8) AS cs_credits,
+    bytes_scanned,
+    rows_produced,
+    CASE
+        WHEN bytes_scanned = 0 AND rows_produced > 0 THEN 'RESULT_CACHE_HIT'
+        WHEN bytes_scanned > 0 AND rows_produced > 0 THEN 'WAREHOUSE_COMPUTE'
+        ELSE 'CS_ONLY_METADATA'
+    END AS access_type
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(
+    DATEADD('minute', -30, CURRENT_TIMESTAMP),
+    NULL, 200
+))
+WHERE query_type = 'SELECT'
+ORDER BY start_time DESC;
+```
+
+---
+
 ## クラウドサービス費用の追跡方法
 
 ### 1. 日次課金サマリー（METERING_DAILY_HISTORY）
@@ -123,15 +191,17 @@ WHERE usage_date >= DATEADD(month, -1, CURRENT_TIMESTAMP())
 ORDER BY 4 DESC;
 ```
 
-実行結果のイメージ：
+実行結果：
 
 | USAGE_DATE | CREDITS_USED_CLOUD_SERVICES | CREDITS_ADJUSTMENT_CLOUD_SERVICES | BILLED_CLOUD_SERVICES |
 |------------|---------------------------|-----------------------------------|-----------------------|
-| 2026-03-01 | 15.234 | -10.000 | 5.234 |
-| 2026-02-28 | 8.120 | -8.120 | 0.000 |
-| 2026-02-27 | 12.500 | -10.000 | 2.500 |
+| 2026-02-21 | 0.010796945 | -0.0107969450 | 0 |
+| 2026-02-17 | 0.009336666 | -0.0093366660 | 0 |
+| 2026-02-27 | 0.006565000 | -0.0065650000 | 0 |
+| 2026-02-23 | 0.006603055 | -0.0066030550 | 0 |
+| 2026-02-04 | 0.012600552 | -0.0126005520 | 0 |
 
-`billed_cloud_services` が 0 の行は、その日のCS消費がVWの10%以内に収まっており課金されていないことを意味する。
+すべての行で `billed_cloud_services = 0` になっている。CS消費量と調整額が完全に一致しており、VWの10%以内に収まっているため追加課金が発生していない状態だ。調整の仕組みが正常に機能している例として読み取れる。
 
 主要列の意味：
 
@@ -162,15 +232,17 @@ GROUP BY 1
 ORDER BY 4 DESC;
 ```
 
-実行結果のイメージ：
+実行結果：
 
 | WAREHOUSE_NAME | CREDITS_USED | CREDITS_USED_CLOUD_SERVICES | PCT_CLOUD_SERVICES |
 |---------------|-------------|----------------------------|-------------------|
-| ANALYTICS_WH | 45.200 | 9.800 | 21.68 |
-| ETL_WH | 120.500 | 18.200 | 15.10 |
-| ADHOC_WH | 30.100 | 2.500 | 8.31 |
+| CLOUD_SERVICES_ONLY | 0.008040553 | 0.008040553 | 100.00 |
+| COMPUTE_WH | 6.615521114 | 0.273854438 | 4.14 |
+| RETAIL_WH | 0.046300557 | 0.001300557 | 2.81 |
 
-`PCT_CLOUD_SERVICES` が 10% を大きく超えているウェアハウスは、前節のパターンに該当する処理が動いている可能性が高い。
+`CLOUD_SERVICES_ONLY` は Snowflake が仮想ウェアハウスを介さずに実行する処理（DDL、メタデータ操作等）を計上する擬似ウェアハウスで、CS割合が必ず100%になる。`COMPUTE_WH` は 4.14%、`RETAIL_WH` は 2.81% とともに10%未満に収まっており、追加課金は発生していない。
+
+`PCT_CLOUD_SERVICES` が 10% を大きく超えているウェアハウスが出た場合、前節のパターンに該当する処理が動いている可能性が高い。
 
 ### 3. クエリタイプ別の分析（QUERY_HISTORY）
 
@@ -189,17 +261,22 @@ ORDER BY 2 DESC
 LIMIT 10;
 ```
 
-実行結果のイメージ：
+実行結果：
 
 | QUERY_TYPE | CS_CREDITS | NUM_QUERIES |
 |-----------|-----------|-------------|
-| SELECT | 0.024500 | 15823 |
-| COPY | 0.018200 | 342 |
-| INSERT | 0.009100 | 5621 |
-| SHOW | 0.005800 | 12045 |
-| CREATE_TABLE | 0.001200 | 87 |
+| SELECT | 0.062068 | 1205 |
+| DROP | 0.002595 | 115 |
+| CALL | 0.000925 | 577 |
+| SHOW | 0.000596 | 281 |
+| INSERT | 0.000555 | 18 |
+| CREATE_TABLE | 0.000434 | 11 |
+| DROP_ROLE | 0.000376 | 15 |
+| CREATE | 0.000319 | 46 |
+| USE | 0.000169 | 20 |
+| UPDATE | 0.000089 | 22 |
 
-`SHOW` クエリの件数が多く CS 消費が高い場合、サードパーティツールが頻繁にメタデータを取得していると考えられる。
+SELECT が CS消費の大半を占めており、DROP（テーブル削除等のDDL）と SHOW がそれに続く。281件の SHOW に対してクレジット消費は 0.000596 と軽微だが、アプリが頻繁にメタデータを取得する構成では件数がこの数十倍規模になることもある。
 
 ### 4. Snowsight での確認
 

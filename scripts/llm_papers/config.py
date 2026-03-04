@@ -42,13 +42,12 @@ HF_DAILY_PAPERS_URL = "https://huggingface.co/papers"
 
 # LLM keyword filter (applied to HF papers title/abstract)
 LLM_FILTER_KEYWORDS = [
-    "language model", "LLM", "transformer", "GPT", "BERT",
+    "language model", "LLM", "large language model", "transformer", "GPT",
     "instruction tuning", "RLHF", "prompt", "chain of thought",
     "retrieval augmented", "RAG", "fine-tuning", "alignment",
-    "reasoning", "tokeniz", "attention mechanism", "in-context learning",
-    "few-shot", "zero-shot", "text generation", "natural language",
-    "chatbot", "dialogue", "summarization", "translation",
-    "question answering", "NLP", "embedding",
+    "reasoning", "attention mechanism", "in-context learning",
+    "few-shot", "zero-shot", "AI agent", "autonomous agent",
+    "hallucination", "safety", "emergent", "capability", "evaluation",
 ]
 
 # Fetch window (days to look back for papers)
@@ -66,6 +65,10 @@ MULTI_SOURCE_BONUS = 5.0  # Bonus for appearing in multiple sources
 HF_UPVOTE_WEIGHT = 1.0  # Weight for HuggingFace upvotes
 CITATION_WEIGHT = 2.0  # Weight for citation count
 MIN_PAPERS_TO_POST = 1  # Minimum popular papers required to publish a blog post
+
+# AIDB-style relevance filter
+AIDB_RELEVANCE_THRESHOLD = 6  # 0-10 scale; papers below this are excluded
+AIDB_FILTER_ENABLED = True    # Set to False to disable the filter
 
 # Hugo settings
 HUGO_TAGS = ["LLM", "AI", "論文"]

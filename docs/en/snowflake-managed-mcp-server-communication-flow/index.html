@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Understanding the Communication Flow of Snowflake Managed MCP Server | zatoima</title>
+<meta name="title" content="Understanding the Communication Flow of Snowflake Managed MCP Server" />
+<meta name="description" content="Document the architecture and communication flow of Snowflake Managed MCP Server. Covers OAuth 2.0 authentication, connection setup for Cursor, VSCode, and Claude Code, and access control with RBAC." />
+<meta name="keywords" content="Snowflake,MCP,Claude Code,Cursor,AI,Cortex," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/snowflake-managed-mcp-server-communication-flow/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Understanding the Communication Flow of Snowflake Managed MCP Server">
+  <meta property="og:description" content="Document the architecture and communication flow of Snowflake Managed MCP Server. Covers OAuth 2.0 authentication, connection setup for Cursor, VSCode, and Claude Code, and access control with RBAC.">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-03T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-03T00:00:00+00:00">
+    <meta property="article:tag" content="Snowflake">
+    <meta property="article:tag" content="MCP">
+    <meta property="article:tag" content="Claude Code">
+    <meta property="article:tag" content="Cursor">
+    <meta property="article:tag" content="AI">
+    <meta property="article:tag" content="Cortex">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Understanding the Communication Flow of Snowflake Managed MCP Server">
+  <meta name="twitter:description" content="Document the architecture and communication flow of Snowflake Managed MCP Server. Covers OAuth 2.0 authentication, connection setup for Cursor, VSCode, and Claude Code, and access control with RBAC.">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Understanding the Communication Flow of Snowflake Managed MCP Server\"",
+  "description": "\"Document the architecture and communication flow of Snowflake Managed MCP Server. Covers OAuth 2.0 authentication, connection setup for Cursor, VSCode, and …\"",
+  "datePublished": "\"2026-03-03T00:00:00Z\"",
+  "dateModified": "\"2026-03-03T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/snowflake-managed-mcp-server-communication-flow/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1429 ,
+  "keywords": "[\"Snowflake\",\"MCP\",\"Claude Code\",\"Cursor\",\"AI\",\"Cortex\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/snowflake-managed-mcp-server-communication-flow/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/snowflake-managed-mcp-server-communication-flow/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/snowflake-managed-mcp-server-communication-flow/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/snowflake-managed-mcp-server-communication-flow/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Understanding the Communication Flow of …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">❄️</div>
+        <h1>Understanding the Communication Flow of Snowflake Managed MCP Server</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-03'>
+            2026/03/03Published on
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
+          
+          <a href="https://zatoima.github.io/en/blog/mcp/" class="tag-badge"><span class="tag-badge-icon">🔌</span>MCP</a>
+          
+          <a href="https://zatoima.github.io/en/blog/claude-code/" class="tag-badge"><span class="tag-badge-icon">✨</span>Claude Code</a>
+          
+          <a href="https://zatoima.github.io/en/blog/cursor/" class="tag-badge"><span class="tag-badge-icon">🖱️</span>Cursor</a>
+          
+          <a href="https://zatoima.github.io/en/blog/ai/" class="tag-badge"><span class="tag-badge-icon">🤖</span>AI</a>
+          
+          <a href="https://zatoima.github.io/en/blog/cortex/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Cortex</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="introduction">Introduction</h2>
+<p><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp" target="_blank" rel="noopener noreferrer">Snowflake Managed MCP Server</a>
+ is an MCP (Model Context Protocol) server hosted by Snowflake, allowing AI agents to securely access data in a Snowflake account without provisioning separate infrastructure.</p>
+<p>Preview availability began in October 2025, and it reached GA in November of the same year. AI development tools such as Cursor, VSCode, and Claude Code can now connect directly to Snowflake, changing the landscape of data access patterns.</p>
+<p>This article covers the architecture of Snowflake Managed MCP Server, along with the communication flow and setup for each client tool.</p>
+<hr>
+<h2 id="mcp-fundamentals">MCP Fundamentals</h2>
+<p>Model Context Protocol (MCP) is an open protocol that connects AI agents with external data sources in a standardized way.</p>
+<p>The architecture consists of three layers.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Layer</th>
+          <th>Role</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>MCP Client</td>
+          <td>AI tools such as Cursor, VSCode, Claude Code</td>
+      </tr>
+      <tr>
+          <td>MCP Server</td>
+          <td>Exposes tools and handles calls from clients</td>
+      </tr>
+      <tr>
+          <td>Backend</td>
+          <td>Actual resources like Snowflake data, Cortex services, etc.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The communication protocol uses <strong>JSON-RPC 2.0 over HTTP/SSE (or Streamable HTTP)</strong>. The client operates in two steps: first retrieving the tool list with <code>tools/list</code>, then invoking tools with <code>tools/call</code>.</p>
+<div class="mermaid-wrapper">
+  <div class="mermaid">flowchart LR
+    A[MCP Client\nCursor / VSCode / Claude Code] --&gt;|JSON-RPC 2.0\nHTTP/SSE| B[Snowflake\nManaged MCP Server]
+    B --&gt; C[Cortex Search]
+    B --&gt; D[Cortex Analyst]
+    B --&gt; E[SQL Execution]
+    B --&gt; F[Cortex Agent]
+    B --&gt; G[Custom Tools\nUDF / SP]</div>
+</div>
+
+<hr>
+<h2 id="overall-architecture-of-snowflake-managed-mcp">Overall Architecture of Snowflake Managed MCP</h2>
+<p>It is called &ldquo;Managed&rdquo; because Snowflake manages the server infrastructure. Previously, you had to deploy your own MCP server, but with Managed MCP, you can create a server object with a single SQL command.</p>
+<p>Snowflake currently supports five tool types.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Tool Type</th>
+          <th>Constant</th>
+          <th>Purpose</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Cortex Search</td>
+          <td><code>CORTEX_SEARCH_SERVICE_QUERY</code></td>
+          <td>Semantic search over unstructured data</td>
+      </tr>
+      <tr>
+          <td>Cortex Analyst</td>
+          <td><code>CORTEX_ANALYST_MESSAGE</code></td>
+          <td>Text-to-SQL conversion using semantic views</td>
+      </tr>
+      <tr>
+          <td>SQL Execution</td>
+          <td><code>SYSTEM_EXECUTE_SQL</code></td>
+          <td>Execute arbitrary SQL queries</td>
+      </tr>
+      <tr>
+          <td>Cortex Agent</td>
+          <td><code>CORTEX_AGENT_RUN</code></td>
+          <td>Delegate processing to Cortex Agent</td>
+      </tr>
+      <tr>
+          <td>Custom Tools</td>
+          <td><code>GENERIC</code></td>
+          <td>UDFs and stored procedures</td>
+      </tr>
+  </tbody>
+</table>
+<div class="mermaid-wrapper">
+  <div class="mermaid">graph TD
+    MCP[MCP Server Object] --&gt; CS[Cortex Search Service\nCORTEX_SEARCH_SERVICE_QUERY]
+    MCP --&gt; CA[Cortex Analyst\nCORTEX_ANALYST_MESSAGE]
+    MCP --&gt; SQL[SQL Execution\nSYSTEM_EXECUTE_SQL]
+    MCP --&gt; AG[Cortex Agent\nCORTEX_AGENT_RUN]
+    MCP --&gt; GN[Custom Tools\nGENERIC: UDF / SP]</div>
+</div>
+
+<h3 id="creating-an-mcp-server-object">Creating an MCP Server Object</h3>
+<p>Define the server using the <code>CREATE MCP SERVER</code> DDL. Tool definitions are written in YAML format within the SPECIFICATION.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> MCP SERVER my_mcp_server
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">FROM</span> SPECIFICATION $$
+</span></span><span style="display:flex;"><span>    tools:
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">-</span> name: <span style="color:#f1fa8c">&#34;product-search&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">type</span>: <span style="color:#f1fa8c">&#34;CORTEX_SEARCH_SERVICE_QUERY&#34;</span>
+</span></span><span style="display:flex;"><span>        identifier: <span style="color:#f1fa8c">&#34;mydb.myschema.product_search_service&#34;</span>
+</span></span><span style="display:flex;"><span>        description: <span style="color:#f1fa8c">&#34;Semantic search for products&#34;</span>
+</span></span><span style="display:flex;"><span>        title: <span style="color:#f1fa8c">&#34;Product Search&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">-</span> name: <span style="color:#f1fa8c">&#34;revenue-analyst&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">type</span>: <span style="color:#f1fa8c">&#34;CORTEX_ANALYST_MESSAGE&#34;</span>
+</span></span><span style="display:flex;"><span>        identifier: <span style="color:#f1fa8c">&#34;mydb.myschema.revenue_semantic_view&#34;</span>
+</span></span><span style="display:flex;"><span>        description: <span style="color:#f1fa8c">&#34;Natural language queries on revenue data&#34;</span>
+</span></span><span style="display:flex;"><span>        title: <span style="color:#f1fa8c">&#34;Revenue Analyst&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">-</span> title: <span style="color:#f1fa8c">&#34;SQL Execution Tool&#34;</span>
+</span></span><span style="display:flex;"><span>        name: <span style="color:#f1fa8c">&#34;sql_exec&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">type</span>: <span style="color:#f1fa8c">&#34;SYSTEM_EXECUTE_SQL&#34;</span>
+</span></span><span style="display:flex;"><span>        description: <span style="color:#f1fa8c">&#34;Execute SQL queries against Snowflake&#34;</span>
+</span></span><span style="display:flex;"><span>  $$;
+</span></span></code></pre></div><p>After creation, you can verify the list with <code>SHOW MCP SERVERS IN ACCOUNT</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SHOW</span> MCP SERVERS <span style="color:#ff79c6">IN</span> ACCOUNT;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Example output
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- | created_on                             | name           | database_name | schema_name | owner        | comment |
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- |----------------------------------------|----------------|---------------|-------------|--------------|---------|
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- | 2025-11-05 10:00:00.000 +0000          | MY_MCP_SERVER  | MYDB          | MYSCHEMA    | ACCOUNTADMIN | [NULL]  |
+</span></span></span></code></pre></div><hr>
+<h2 id="communication-flow-in-detail">Communication Flow in Detail</h2>
+<h3 id="endpoint-url">Endpoint URL</h3>
+<p>The endpoint URL format that clients connect to is as follows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://&lt;account_URL&gt;/api/v2/databases/{database}/schemas/{schema}/mcp-servers/{name}
+</span></span></code></pre></div><div class="callout callout-warning">
+  <span class="callout-icon"></span>
+  <div class="callout-content">Including underscores (<code>_</code>) in the hostname will cause connection errors. Use hyphens (<code>-</code>) instead.</div>
+</div>
+
+<h3 id="toolslist-tool-discovery">tools/list (Tool Discovery)</h3>
+<p>First, retrieve the list of tools provided by the server.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>POST /api/v<span style="color:#bd93f9">2</span>/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;jsonrpc&#34;</span>: <span style="color:#f1fa8c">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;id&#34;</span>: <span style="color:#bd93f9">1</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;method&#34;</span>: <span style="color:#f1fa8c">&#34;tools/list&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;params&#34;</span>: {}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The response includes tool names, descriptions, and input schemas.</p>
+<h3 id="toolscall-tool-invocation">tools/call (Tool Invocation)</h3>
+<p>Here is an example of calling the Cortex Analyst tool.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>POST /api/v<span style="color:#bd93f9">2</span>/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;jsonrpc&#34;</span>: <span style="color:#f1fa8c">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;id&#34;</span>: <span style="color:#bd93f9">2</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;method&#34;</span>: <span style="color:#f1fa8c">&#34;tools/call&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;params&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;name&#34;</span>: <span style="color:#f1fa8c">&#34;revenue-analyst&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;arguments&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;message&#34;</span>: <span style="color:#f1fa8c">&#34;Show me the top 10 products by revenue last month&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Here is an example response.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;jsonrpc&#34;</span>: <span style="color:#f1fa8c">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;id&#34;</span>: <span style="color:#bd93f9">2</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;result&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;content&#34;</span>: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;text&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;text&#34;</span>: <span style="color:#f1fa8c">&#34;SELECT product_name, SUM(revenue) AS total_revenue FROM sales WHERE month = &#39;2025-10&#39; GROUP BY product_name ORDER BY total_revenue DESC LIMIT 10&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="communication-sequence">Communication Sequence</h3>
+<div class="mermaid-wrapper">
+  <div class="mermaid">sequenceDiagram
+    participant Client as MCP Client&lt;br&gt;(Cursor / VSCode / Claude Code)
+    participant Auth as Snowflake OAuth&lt;br&gt;Authorization Server
+    participant MCP as Snowflake&lt;br&gt;MCP Server
+    participant Backend as Cortex / SQL&lt;br&gt;Backend
+
+    Client-&gt;&gt;Auth: Authorization Request (OAuth 2.0)
+    Auth--&gt;&gt;Client: Access Token
+    Client-&gt;&gt;MCP: tools/list (Bearer Token)
+    MCP--&gt;&gt;Client: Tool List (names, descriptions, input schemas)
+    Client-&gt;&gt;MCP: tools/call (tool name &#43; arguments)
+    MCP-&gt;&gt;Backend: Cortex Search / Analyst / SQL Execution
+    Backend--&gt;&gt;MCP: Result Data
+    MCP--&gt;&gt;Client: JSON-RPC Response</div>
+</div>
+
+<hr>
+<h2 id="authentication-flow-oauth-20">Authentication Flow (OAuth 2.0)</h2>
+<p>Snowflake Managed MCP Server recommends OAuth 2.0 for authentication. While PAT-based connections are possible, OAuth should be used in production environments.</p>
+<h3 id="creating-a-security-integration">Creating a Security Integration</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">SECURITY</span> INTEGRATION mcp_oauth_integration
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">TYPE</span> <span style="color:#ff79c6">=</span> OAUTH
+</span></span><span style="display:flex;"><span>  OAUTH_CLIENT <span style="color:#ff79c6">=</span> CUSTOM
+</span></span><span style="display:flex;"><span>  ENABLED <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">TRUE</span>
+</span></span><span style="display:flex;"><span>  OAUTH_CLIENT_TYPE <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;CONFIDENTIAL&#39;</span>
+</span></span><span style="display:flex;"><span>  OAUTH_REDIRECT_URI <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;http://localhost:8080/callback&#39;</span>;
+</span></span></code></pre></div><p>After creation, retrieve the client ID and secret. Specify the integration name in uppercase.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SYSTEM</span>$SHOW_OAUTH_CLIENT_SECRETS(<span style="color:#f1fa8c">&#39;MCP_OAUTH_INTEGRATION&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Example output (JSON)
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- {
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">--   &#34;OAUTH_CLIENT_ID&#34;: &#34;abcdefg1234567&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">--   &#34;OAUTH_CLIENT_SECRET&#34;: &#34;xxxxxxxxxxxxxxxxxxxxxxxx&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">--   &#34;OAUTH_CLIENT_SECRET_2&#34;: null
+</span></span></span><span style="display:flex;"><span><span style="color:#6272a4">-- }
+</span></span></span></code></pre></div><h3 id="oauth-flow">OAuth Flow</h3>
+<div class="mermaid-wrapper">
+  <div class="mermaid">sequenceDiagram
+    participant Client as MCP Client
+    participant Browser as Browser
+    participant SF_Auth as Snowflake Authorization Endpoint
+    participant MCP as MCP Server API
+
+    Client-&gt;&gt;Browser: Open Authorization URL
+    Browser-&gt;&gt;SF_Auth: Authorization Request&lt;br&gt;(client_id, redirect_uri, scope)
+    SF_Auth--&gt;&gt;Browser: Authorization Code (code)
+    Browser--&gt;&gt;Client: Redirect (receive code)
+    Client-&gt;&gt;SF_Auth: Token Request&lt;br&gt;(code, client_secret)
+    SF_Auth--&gt;&gt;Client: Access Token
+    Client-&gt;&gt;MCP: API Request&lt;br&gt;(Authorization: Bearer &lt;token&gt;)
+    MCP--&gt;&gt;Client: Response</div>
+</div>
+
+<h3 id="using-pat-programmatic-access-token">Using PAT (Programmatic Access Token)</h3>
+<p>For development and testing purposes, a PAT can be used directly as a Bearer token. Configure it with a least-privilege role, and switch to OAuth in production to mitigate token leakage risks.</p>
+<hr>
+<h2 id="client-specific-setup">Client-Specific Setup</h2>
+<h3 id="cursor">Cursor</h3>
+<p>Cursor&rsquo;s global MCP settings are defined in <code>~/.cursor/mcp.json</code>. Starting from Cursor 1.0, native support for Streamable HTTP and OAuth was added.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;mcpServers&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;snowflake&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;url&#34;</span>: <span style="color:#f1fa8c">&#34;https://&lt;account_URL&gt;/api/v2/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;Authorization&#34;</span>: <span style="color:#f1fa8c">&#34;Bearer &lt;PAT_or_access_token&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>You can also configure this from Cursor&rsquo;s Settings → Tools &amp; MCP → &ldquo;Add Custom MCP&rdquo;.</p>
+<h3 id="vscode-github-copilot">VSCode (GitHub Copilot)</h3>
+<p>In VSCode, define MCP server settings in <code>.vscode/mcp.json</code> or <code>settings.json</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;mcp&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;servers&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;snowflake&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;http&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;url&#34;</span>: <span style="color:#f1fa8c">&#34;https://&lt;account_URL&gt;/api/v2/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#ff79c6">&#34;Authorization&#34;</span>: <span style="color:#f1fa8c">&#34;Bearer &lt;PAT_or_access_token&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="claude-code">Claude Code</h3>
+<p>In Claude Code, use the <code>/mcp</code> command to add a remote server and execute the OAuth 2.0 authentication flow.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># Add MCP server</span>
+</span></span><span style="display:flex;"><span>claude mcp add --transport http snowflake <span style="color:#f1fa8c">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#34;https://&lt;account_URL&gt;/api/v2/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server&#34;</span>
+</span></span></code></pre></div><p>To define it directly in <code>.claude/settings.json</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;mcpServers&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;snowflake&#34;</span>: {
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;type&#34;</span>: <span style="color:#f1fa8c">&#34;http&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;url&#34;</span>: <span style="color:#f1fa8c">&#34;https://&lt;account_URL&gt;/api/v2/databases/mydb/schemas/myschema/mcp-servers/my_mcp_server&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&#34;Authorization&#34;</span>: <span style="color:#f1fa8c">&#34;Bearer &lt;PAT_or_access_token&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>When using OAuth, open the URL displayed after running the <code>/mcp</code> command in your browser to complete the authorization flow.</p>
+<hr>
+<h2 id="access-control-rbac">Access Control (RBAC)</h2>
+<p>Access to MCP Server objects and tool invocations are managed by independent permissions.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Permission</th>
+          <th>Object</th>
+          <th>Purpose</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>CREATE</code></td>
+          <td>MCP SERVER</td>
+          <td>Create MCP servers</td>
+      </tr>
+      <tr>
+          <td><code>OWNERSHIP</code></td>
+          <td>MCP SERVER</td>
+          <td>Update object settings</td>
+      </tr>
+      <tr>
+          <td><code>MODIFY</code></td>
+          <td>MCP SERVER</td>
+          <td>Update, delete, describe, show, use</td>
+      </tr>
+      <tr>
+          <td><code>USAGE</code></td>
+          <td>MCP SERVER</td>
+          <td>Connect to the server and discover tools</td>
+      </tr>
+      <tr>
+          <td><code>USAGE</code></td>
+          <td>Cortex Search Service</td>
+          <td>Invoke Cortex Search tools</td>
+      </tr>
+      <tr>
+          <td><code>SELECT</code></td>
+          <td>Semantic View</td>
+          <td>Invoke Cortex Analyst tools</td>
+      </tr>
+      <tr>
+          <td><code>USAGE</code></td>
+          <td>Cortex Agent</td>
+          <td>Invoke Cortex Agent tools</td>
+      </tr>
+      <tr>
+          <td><code>USAGE</code></td>
+          <td>UDF / Stored Procedure</td>
+          <td>Invoke custom tools</td>
+      </tr>
+  </tbody>
+</table>
+<div class="callout callout-info">
+  <span class="callout-icon"></span>
+  <div class="callout-content">Having USAGE permission on the MCP Server does not automatically grant access to individual tools. Follow the principle of least privilege and grant permissions only for the tools that are needed.</div>
+</div>
+
+<p>Here is an example of granting permissions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#6272a4">-- Grant USAGE on the MCP Server to the user&#39;s role
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> <span style="color:#ff79c6">USAGE</span> <span style="color:#ff79c6">ON</span> MCP SERVER mydb.myschema.my_mcp_server <span style="color:#ff79c6">TO</span> <span style="color:#ff79c6">ROLE</span> analyst_role;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Grant access to the Cortex Search service
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> <span style="color:#ff79c6">USAGE</span> <span style="color:#ff79c6">ON</span> CORTEX <span style="color:#ff79c6">SEARCH</span> SERVICE mydb.myschema.product_search_service <span style="color:#ff79c6">TO</span> <span style="color:#ff79c6">ROLE</span> analyst_role;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6272a4">-- Grant access to the semantic view for Cortex Analyst
+</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">GRANT</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">ON</span> SEMANTIC <span style="color:#ff79c6">VIEW</span> mydb.myschema.revenue_semantic_view <span style="color:#ff79c6">TO</span> <span style="color:#ff79c6">ROLE</span> analyst_role;
+</span></span></code></pre></div><hr>
+<h2 id="limitations">Limitations</h2>
+<p>Here are the key limitations at this time.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Item</th>
+          <th>Details</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Unsupported constructs</td>
+          <td>resources, prompts, roots, notifications, version negotiations, life cycle phases, sampling</td>
+      </tr>
+      <tr>
+          <td>Response format</td>
+          <td>Streaming responses not supported (non-streaming only)</td>
+      </tr>
+      <tr>
+          <td>Cortex Analyst</td>
+          <td>Only Semantic Views supported (Semantic Models not supported)</td>
+      </tr>
+      <tr>
+          <td>Hostname</td>
+          <td>Underscores (<code>_</code>) cause connection errors → use hyphens (<code>-</code>)</td>
+      </tr>
+      <tr>
+          <td>Dynamic client registration</td>
+          <td>Not supported</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="summary">Summary</h2>
+<ul>
+<li>A server can be launched with just the <code>CREATE MCP SERVER</code> DDL. No infrastructure provisioning required</li>
+<li>Five tool types are available: Cortex Search / Analyst / SQL / Agent / Custom Tools (UDF/SP)</li>
+<li>Communication is standardized via JSON-RPC 2.0 over HTTP/SSE (or Streamable HTTP). Retrieve the list with <code>tools/list</code>, then execute with <code>tools/call</code></li>
+<li>OAuth 2.0 is recommended for authentication. PAT should be limited to development and testing; use OAuth in production</li>
+<li>Cursor, VSCode, and Claude Code all connect by specifying the endpoint URL and token in their JSON configuration files</li>
+<li>Access control is managed independently at two levels: the MCP Server object and the individual tools</li>
+</ul>
+<h2 id="references">References</h2>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Snowflake-managed MCP server | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://docs.snowflake.com/en/release-notes/2025/other/2025-11-04-cortex-agents-mcp" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Nov 04, 2025: Snowflake-managed MCP server (General availability) | Snowflake Documentation</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=docs.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">docs.snowflake.com</span>
+          </div>
+        </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://www.snowflake.com/en/blog/managed-mcp-servers-secure-data-agents/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Introducing Snowflake Managed MCP Servers for Secure, Governed Data Agents</div><div class="link-card-description">Snowflake Managed MCP Servers, an open-standards interface for AI agents to access your governed data without custom integrations or separate infrastructure.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=www.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">www.snowflake.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://www.snowflake.com/content/dam/snowflake-site/blog/2025/10/Introducing%20Snowflake%20Managed%20MCP%20Servers%20for%20Secure%20Governed%20Data%20Agents-Blog.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://www.snowflake.com/en/developers/guides/getting-started-with-snowflake-mcp-server/" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Getting Started with Managed Snowflake MCP Server</div><div class="link-card-description">This guide outlines the process for getting started with Managed Snowflake MCP Server.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=www.snowflake.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">www.snowflake.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://www.snowflake.com/content/dam/snowflake-site/general/technical/default-og-image/snowflake-social-share.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-03-Snowflake-Managed-MCP-Server%e3%81%ae%e9%80%9a%e4%bf%a1%e3%83%95%e3%83%ad%e3%83%bc%e3%82%92%e7%90%86%e8%a7%a3%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/duckdb-apache-iceberg-extension/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">Using Apache Iceberg with DuckDB</span>
+      </a>
+      
+      
+      <a href="https://zatoima.github.io/en/personal-tech-blog-traffic-ai-search-impact/" class="prev-next-link next-link">
+        <span class="prev-next-label">Next article →</span>
+        <span class="prev-next-title">How AI Search Has Changed Traffic to a Personal …</span>
+      </a>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fsnowflake-managed-mcp-server-communication-flow%2f&text=Understanding&#43;the&#43;Communication&#43;Flow&#43;of&#43;Snowflake&#43;Managed&#43;MCP&#43;Server" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/snowflake-managed-mcp-server-communication-flow/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+<div class="related-articles">
+  <h2 class="related-articles-title">Related articles</h2>
+  <ul class="related-list">
+    
+    <li><a href="/en/snowflake-cortex-agent-run-vs-data-agent-run/">Verifying the Differences Between Snowflake Cortex AGENT_RUN and DATA_AGENT_RUN</a></li>
+    
+    <li><a href="/en/snowflake-docs-mcp-server-architecture/">Creating a Snowflake Documentation Search MCP Server</a></li>
+    
+    <li><a href="/en/snowflake-mcp-documentation-server-benchmark/">Benchmark Comparison of Two Snowflake MCP Documentation Servers</a></li>
+    
+    <li><a href="/en/claude-code-agent-teams-parallel-collaboration/">Claude Code Agent Teams - Parallel Collaborative Work with Multiple Agents</a></li>
+    
+    <li><a href="/en/mcp-server-context-usage-optimization/">Measuring and Improving Context Usage of Document MCP Servers</a></li>
+    
+  </ul>
+</div>
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/snowflake/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Snowflake</a>
+  
+  <a href="https://zatoima.github.io/en/blog/mcp/" class="tag-badge"><span class="tag-badge-icon">🔌</span>MCP</a>
+  
+  <a href="https://zatoima.github.io/en/blog/claude-code/" class="tag-badge"><span class="tag-badge-icon">✨</span>Claude Code</a>
+  
+  <a href="https://zatoima.github.io/en/blog/cursor/" class="tag-badge"><span class="tag-badge-icon">🖱️</span>Cursor</a>
+  
+  <a href="https://zatoima.github.io/en/blog/ai/" class="tag-badge"><span class="tag-badge-icon">🤖</span>AI</a>
+  
+  <a href="https://zatoima.github.io/en/blog/cortex/" class="tag-badge"><span class="tag-badge-icon">❄️</span>Cortex</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#mcp-fundamentals">MCP Fundamentals</a></li>
+    <li><a href="#overall-architecture-of-snowflake-managed-mcp">Overall Architecture of Snowflake Managed MCP</a>
+      <ul>
+        <li><a href="#creating-an-mcp-server-object">Creating an MCP Server Object</a></li>
+      </ul>
+    </li>
+    <li><a href="#communication-flow-in-detail">Communication Flow in Detail</a>
+      <ul>
+        <li><a href="#endpoint-url">Endpoint URL</a></li>
+        <li><a href="#toolslist-tool-discovery">tools/list (Tool Discovery)</a></li>
+        <li><a href="#toolscall-tool-invocation">tools/call (Tool Invocation)</a></li>
+        <li><a href="#communication-sequence">Communication Sequence</a></li>
+      </ul>
+    </li>
+    <li><a href="#authentication-flow-oauth-20">Authentication Flow (OAuth 2.0)</a>
+      <ul>
+        <li><a href="#creating-a-security-integration">Creating a Security Integration</a></li>
+        <li><a href="#oauth-flow">OAuth Flow</a></li>
+        <li><a href="#using-pat-programmatic-access-token">Using PAT (Programmatic Access Token)</a></li>
+      </ul>
+    </li>
+    <li><a href="#client-specific-setup">Client-Specific Setup</a>
+      <ul>
+        <li><a href="#cursor">Cursor</a></li>
+        <li><a href="#vscode-github-copilot">VSCode (GitHub Copilot)</a></li>
+        <li><a href="#claude-code">Claude Code</a></li>
+      </ul>
+    </li>
+    <li><a href="#access-control-rbac">Access Control (RBAC)</a></li>
+    <li><a href="#limitations">Limitations</a></li>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+      </div>
+    </footer>
+  </div>
+  
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: isDark ? 'dark' : 'neutral',
+      themeVariables: {
+        fontSize: '14px',
+      }
+    });
+  </script>
+  
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

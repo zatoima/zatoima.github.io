@@ -3,7 +3,7 @@
 
 title: "Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN の違いを検証する"
 subtitle: ""
-summary: " "
+summary: "Snowflake Cortex の AGENT_RUN と DATA_AGENT_RUN という2つのエージェント関数の違いをSQL検証で明らかにする。エージェントオブジェクトの有無による設計思想の差異、入力トークン数の違い、CI/CD対応の観点での使い分けポイントを整理する。"
 tags: ["Snowflake", "Cortex", "AI"]
 categories: ["Snowflake"]
 url: snowflake-cortex-agent-run-vs-data-agent-run
@@ -52,7 +52,7 @@ Cortex Agents は、構造化データと非構造化データを横断してオ
 | エージェントオブジェクト | 不要 | 必須（`CREATE AGENT` で事前作成） |
 | 第1引数 | なし（request_body のみ） | エージェントの完全修飾名 |
 | 設定の渡し方 | request_body に直接記述 | エージェントオブジェクトに定義済み |
-| request_body で指定できる設定 | model, instructions, orchestration, tools など全項目 | messages, stream, tool_choice など実行時パラメータのみ |
+| request_body で指定できる設定 | models, instructions, orchestration, tools など全項目 | messages, stream, tool_choice など実行時パラメータのみ |
 | CI/CD 対応 | △（設定がコードに分散） | ○（`ALTER AGENT` で設定を集中管理） |
 | 主なユースケース | 試験・プロトタイピング | 本番運用・エンタープライズ向け |
 
@@ -254,6 +254,39 @@ FROM agent_response;
 
 `DATA_AGENT_RUN` でも全く同じパス記法でアクセスできる。レスポンスのスキーマは両関数で共通している。
 
+## AI_COMPLETE との違い
+
+`AGENT_RUN` と混同しやすい関数に [`AI_COMPLETE`](https://docs.snowflake.com/en/sql-reference/functions/ai_complete) がある。両者の本質的な違いは「LLM を1回呼ぶだけか、ツールを使って複数ステップを実行するか」にある。
+
+| 項目 | `AI_COMPLETE` | `AGENT_RUN` / `DATA_AGENT_RUN` |
+| ---- | ------------ | ----------------------------- |
+| 役割 | LLM に1回プロンプトを投げてテキストを返す | 複数ステップを計画・実行するエージェントを動かす |
+| ツール利用 | なし | Cortex Analyst / Cortex Search / カスタムツールを使える |
+| Snowflake データへのアクセス | できない | テーブルのクエリや文書検索が可能 |
+| マルチターン | 自前でコンテキストを管理 | `thread_id` でセッションを保持できる |
+| 用途 | テキスト要約・分類・翻訳・抽出など定型タスク | データ Q&A・自然言語でのデータ分析・ワークフロー自動化 |
+| 複雑さ | シンプル（モデル名＋プロンプトのみ） | 設定が多い（ツール定義・オーケストレーション設定など） |
+
+```sql
+-- AI_COMPLETE: LLM にそのまま聞くだけ
+SELECT AI_COMPLETE('claude-sonnet-4-5', '先月の売上を要約して') AS answer;
+-- → LLM が知識として持っている範囲での回答のみ（Snowflake のデータは参照できない）
+
+-- AGENT_RUN: Cortex Analyst ツールを介して実際のデータを取得して回答
+SELECT SNOWFLAKE.CORTEX.AGENT_RUN('{
+  "messages": [{"role": "user", "content": [{"type": "text", "text": "先月の売上を要約して"}]}],
+  "tools": [{"tool_spec": {"type": "cortex_analyst_text_to_sql", "name": "analyst",
+             "description": "売上データを分析するツール"}}],
+  "tool_resources": {"analyst": {"semantic_model_file": "@db.schema.stage/model.yaml"}},
+  "stream": false
+}') AS answer;
+-- → セマンティックモデル経由で実際のテーブルをクエリして回答
+```
+
+{{< callout "tip" >}}
+テキストの加工・変換・分類など LLM の知識だけで解ける問題は `AI_COMPLETE`、Snowflake 上の実データに基づいて回答させたい場合は `AGENT_RUN` を使う。
+{{< /callout >}}
+
 ## 使い分けのポイント
 
 | 観点 | AGENT_RUN を選ぶ | DATA_AGENT_RUN を選ぶ |
@@ -274,7 +307,7 @@ FROM agent_response;
 
 - `AGENT_RUN` はエージェントオブジェクト不要。モデル、指示、ツールを request_body に直接渡して即時実行できる。試験・プロトタイピングに向いている
 - `DATA_AGENT_RUN` は `CREATE AGENT` で作成したオブジェクトを名前で呼び出す。設定の再利用・CI/CD 対応が必要な本番運用向けの選択肢
-- どちらも内部的には Cortex Agents Run REST API のラッパーで、レスポンスのスキーマは共通（`schema_version`, `role`, `content`, `metadata` を含む JSON）
+- どちらも内部的には Cortex Agents Run REST API のラッパーで、レスポンスのスキーマは共通（`role`, `content`, `metadata` を含む JSON）
 - `DATA_AGENT_RUN` はエージェントオブジェクトの設定がシステムプロンプトに付加されるため、同じ質問でも入力トークン数が `AGENT_RUN` より多くなる
 
 ## 参考資料

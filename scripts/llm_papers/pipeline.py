@@ -15,6 +15,7 @@ from pathlib import Path
 
 from config import LOG_FILE, MIN_PAPERS_TO_POST, POPULARITY_THRESHOLD, PROJECT_ROOT, TOP_N_PAPERS
 from fetchers import fetch_all_papers
+from filter import filter_by_aidb_relevance
 from notifier import notify_slack
 from publisher import generate_hugo_content
 from screenshot import capture_screenshots
@@ -151,10 +152,22 @@ def run_pipeline(
         save_state(state)
         return
 
+    # 5b. Filter by AIDB editorial relevance
+    logger.info("--- Step 1b: AIDB relevance filtering ---")
+    aidb_papers = filter_by_aidb_relevance(popular_papers)
+
     # 6. Limit number of papers
     limit = max_papers or TOP_N_PAPERS
-    featured_papers = popular_papers[:limit]
-    logger.info("Featuring top %d popular papers", len(featured_papers))
+    if len(aidb_papers) >= MIN_PAPERS_TO_POST:
+        featured_papers = aidb_papers[:limit]
+        logger.info("Featuring top %d AIDB-relevant papers", len(featured_papers))
+    else:
+        logger.info(
+            "Not enough AIDB-relevant papers (%d); falling back to popularity ranking",
+            len(aidb_papers),
+        )
+        featured_papers = popular_papers[:limit]
+        logger.info("Featuring top %d popular papers (fallback)", len(featured_papers))
 
     if dry_run:
         logger.info("--- DRY RUN: Showing papers that would be processed ---")
