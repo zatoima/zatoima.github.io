@@ -74,6 +74,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -186,33 +187,33 @@
         <h3 id="introduction">Introduction</h3>
 <p>Summarizing the MySQL buffer pool preloading feature. (This feature doesn&rsquo;t exist in Oracle, so I was curious about it)</p>
 <h3 id="related-system-variables">Related System Variables</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">version</span>();
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#ff79c6">version</span>()  <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> <span style="color:#bd93f9">5</span>.<span style="color:#bd93f9">7</span>.<span style="color:#bd93f9">26</span><span style="color:#ff79c6">-</span>log <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">show</span> variables <span style="color:#ff79c6">like</span> <span style="color:#f1fa8c">&#39;innodb_buffer_pool%&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> Variable_name                       <span style="color:#ff79c6">|</span> Value          <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_chunk_size       <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">134217728</span>      <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_dump_at_shutdown <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">ON</span>             <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_dump_now         <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">OFF</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_dump_pct         <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">25</span>             <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_filename         <span style="color:#ff79c6">|</span> ib_buffer_pool <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_instances        <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1</span>              <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_load_abort       <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">OFF</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_load_at_startup  <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">ON</span>             <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_load_now         <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">OFF</span>            <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">|</span> innodb_buffer_pool_size             <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">134217728</span>      <span style="color:#ff79c6">|</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">+</span><span style="color:#6272a4">-------------------------------------+----------------+
-</span></span></span><span style="display:flex;"><span><span style="color:#bd93f9">10</span> <span style="color:#ff79c6">rows</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">00</span> sec)
-</span></span></code></pre></div><h5 id="innodb_buffer_pool_dump_at_shutdown">innodb_buffer_pool_dump_at_shutdown</h5>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="k">version</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">------------+
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="k">version</span><span class="p">()</span><span class="w">  </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">------------+
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="mi">5</span><span class="p">.</span><span class="mi">7</span><span class="p">.</span><span class="mi">26</span><span class="o">-</span><span class="n">log</span><span class="w"> </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">------------+
+</span></span></span><span class="line"><span class="cl"><span class="mi">1</span><span class="w"> </span><span class="k">row</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">00</span><span class="w"> </span><span class="n">sec</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">mysql</span><span class="o">&gt;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">show</span><span class="w"> </span><span class="n">variables</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;innodb_buffer_pool%&#39;</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">-------------------------------------+----------------+
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">Variable_name</span><span class="w">                       </span><span class="o">|</span><span class="w"> </span><span class="n">Value</span><span class="w">          </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">-------------------------------------+----------------+
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_chunk_size</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="mi">134217728</span><span class="w">      </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_dump_at_shutdown</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">ON</span><span class="w">             </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_dump_now</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="k">OFF</span><span class="w">            </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_dump_pct</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="mi">25</span><span class="w">             </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_filename</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="n">ib_buffer_pool</span><span class="w"> </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_instances</span><span class="w">        </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w">              </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_load_abort</span><span class="w">       </span><span class="o">|</span><span class="w"> </span><span class="k">OFF</span><span class="w">            </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_load_at_startup</span><span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="k">ON</span><span class="w">             </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_load_now</span><span class="w">         </span><span class="o">|</span><span class="w"> </span><span class="k">OFF</span><span class="w">            </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">|</span><span class="w"> </span><span class="n">innodb_buffer_pool_size</span><span class="w">             </span><span class="o">|</span><span class="w"> </span><span class="mi">134217728</span><span class="w">      </span><span class="o">|</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">+</span><span class="c1">-------------------------------------+----------------+
+</span></span></span><span class="line"><span class="cl"><span class="mi">10</span><span class="w"> </span><span class="k">rows</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">00</span><span class="w"> </span><span class="n">sec</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></div><h5 id="innodb_buffer_pool_dump_at_shutdown">innodb_buffer_pool_dump_at_shutdown</h5>
 <p>Whether to retain the cache in the buffer pool at shutdown.</p>
 <blockquote>
 <p><a href="https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_dump_at_shutdown" target="_blank" rel="noopener noreferrer">https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_dump_at_shutdown</a>
@@ -220,15 +221,15 @@
 Specifies whether to record the pages cached in the InnoDB buffer pool when the MySQL server is shut down, to shorten the warmup process at the next restart. Generally used together with innodb_buffer_pool_load_at_startup.</p>
 </blockquote>
 <p>After shutdown, <code>ib_buffer_pool</code> is created.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>[mysql<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 mysql]$ ls <span style="color:#ff79c6">-</span>l ib_buffer_pool
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span>rw<span style="color:#ff79c6">-</span>r<span style="color:#6272a4">----- 1 mysql mysql 3206 Jun 29 15:07 ib_buffer_pool
-</span></span></span><span style="display:flex;"><span>[mysql<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 mysql]$
-</span></span></code></pre></div><p>Setting this parameter causes the following log to be output to the error log during the shutdown sequence:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">06</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span>T07:<span style="color:#bd93f9">59</span>:<span style="color:#bd93f9">52</span>.<span style="color:#bd93f9">431613</span>Z <span style="color:#bd93f9">0</span> [Note] InnoDB: Starting shutdown...
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">06</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span>T07:<span style="color:#bd93f9">59</span>:<span style="color:#bd93f9">52</span>.<span style="color:#bd93f9">531945</span>Z <span style="color:#bd93f9">0</span> [Note] InnoDB: Dumping buffer pool(s) <span style="color:#ff79c6">to</span> <span style="color:#ff79c6">/</span>var<span style="color:#ff79c6">/</span>lib<span style="color:#ff79c6">/</span>mysql<span style="color:#ff79c6">/</span>ib_buffer_pool
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">06</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span>T07:<span style="color:#bd93f9">59</span>:<span style="color:#bd93f9">52</span>.<span style="color:#bd93f9">532242</span>Z <span style="color:#bd93f9">0</span> [Note] InnoDB: Buffer pool(s) dump completed <span style="color:#ff79c6">at</span> <span style="color:#bd93f9">190627</span>  <span style="color:#bd93f9">7</span>:<span style="color:#bd93f9">59</span>:<span style="color:#bd93f9">52</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">2019</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">06</span><span style="color:#ff79c6">-</span><span style="color:#bd93f9">27</span>T07:<span style="color:#bd93f9">59</span>:<span style="color:#bd93f9">54</span>.<span style="color:#bd93f9">242932</span>Z <span style="color:#bd93f9">0</span> [Note] InnoDB: Shutdown completed; log sequence <span style="color:#8be9fd;font-style:italic">number</span> <span style="color:#bd93f9">616413821</span>
-</span></span></code></pre></div><h5 id="innodb_buffer_pool_load_at_startup">innodb_buffer_pool_load_at_startup</h5>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="p">[</span><span class="n">mysql</span><span class="o">@</span><span class="n">awsstg</span><span class="o">-</span><span class="n">db001</span><span class="w"> </span><span class="n">mysql</span><span class="p">]</span><span class="err">$</span><span class="w"> </span><span class="n">ls</span><span class="w"> </span><span class="o">-</span><span class="n">l</span><span class="w"> </span><span class="n">ib_buffer_pool</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">-</span><span class="n">rw</span><span class="o">-</span><span class="n">r</span><span class="c1">----- 1 mysql mysql 3206 Jun 29 15:07 ib_buffer_pool
+</span></span></span><span class="line"><span class="cl"><span class="p">[</span><span class="n">mysql</span><span class="o">@</span><span class="n">awsstg</span><span class="o">-</span><span class="n">db001</span><span class="w"> </span><span class="n">mysql</span><span class="p">]</span><span class="err">$</span><span class="w">
+</span></span></span></code></pre></div><p>Setting this parameter causes the following log to be output to the error log during the shutdown sequence:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="mi">2019</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">27</span><span class="n">T07</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="mi">52</span><span class="p">.</span><span class="mi">431613</span><span class="n">Z</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">[</span><span class="n">Note</span><span class="p">]</span><span class="w"> </span><span class="n">InnoDB</span><span class="p">:</span><span class="w"> </span><span class="n">Starting</span><span class="w"> </span><span class="n">shutdown</span><span class="p">...</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">2019</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">27</span><span class="n">T07</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="mi">52</span><span class="p">.</span><span class="mi">531945</span><span class="n">Z</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">[</span><span class="n">Note</span><span class="p">]</span><span class="w"> </span><span class="n">InnoDB</span><span class="p">:</span><span class="w"> </span><span class="n">Dumping</span><span class="w"> </span><span class="n">buffer</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="o">/</span><span class="n">var</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">mysql</span><span class="o">/</span><span class="n">ib_buffer_pool</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">2019</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">27</span><span class="n">T07</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="mi">52</span><span class="p">.</span><span class="mi">532242</span><span class="n">Z</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">[</span><span class="n">Note</span><span class="p">]</span><span class="w"> </span><span class="n">InnoDB</span><span class="p">:</span><span class="w"> </span><span class="n">Buffer</span><span class="w"> </span><span class="n">pool</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="n">dump</span><span class="w"> </span><span class="n">completed</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="mi">190627</span><span class="w">  </span><span class="mi">7</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="mi">52</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">2019</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">27</span><span class="n">T07</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="mi">54</span><span class="p">.</span><span class="mi">242932</span><span class="n">Z</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">[</span><span class="n">Note</span><span class="p">]</span><span class="w"> </span><span class="n">InnoDB</span><span class="p">:</span><span class="w"> </span><span class="n">Shutdown</span><span class="w"> </span><span class="n">completed</span><span class="p">;</span><span class="w"> </span><span class="n">log</span><span class="w"> </span><span class="n">sequence</span><span class="w"> </span><span class="nb">number</span><span class="w"> </span><span class="mi">616413821</span><span class="w">
+</span></span></span></code></pre></div><h5 id="innodb_buffer_pool_load_at_startup">innodb_buffer_pool_load_at_startup</h5>
 <p>At startup, reads <code>ib_buffer_pool</code> and preloads the buffer pool.</p>
 <blockquote>
 <p><a href="https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_load_at_startup" target="_blank" rel="noopener noreferrer">https://dev.mysql.com/doc/refman/5.6/ja/innodb-parameters.html#sysvar_innodb_buffer_pool_load_at_startup</a>
@@ -241,45 +242,45 @@ Specifies that, on MySQL server startup, the InnoDB buffer pool is automatically
 <p>Performs immediate write and immediate read at any time while MySQL is online, rather than at shutdown or startup.</p>
 <h3 id="information-stored-in-ib_buffer_pool">Information Stored in ib_buffer_pool</h3>
 <p><code>Required tablespace ID</code> and <code>page ID</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>[mysql<span style="color:#ff79c6">@</span>awsstg<span style="color:#ff79c6">-</span>db001 mysql]$ head ib_buffer_pool
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">890</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">889</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">888</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">887</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">886</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">885</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">884</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">883</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">882</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">0</span>,<span style="color:#bd93f9">881</span>
-</span></span></code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="p">[</span><span class="n">mysql</span><span class="o">@</span><span class="n">awsstg</span><span class="o">-</span><span class="n">db001</span><span class="w"> </span><span class="n">mysql</span><span class="p">]</span><span class="err">$</span><span class="w"> </span><span class="n">head</span><span class="w"> </span><span class="n">ib_buffer_pool</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">890</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">889</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">888</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">887</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">886</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">885</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">884</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">883</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">882</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">0</span><span class="p">,</span><span class="mi">881</span><span class="w">
+</span></span></span></code></pre></div><blockquote>
 <p>Only the tablespace ID and page ID needed to find the relevant pages are saved to disk. This information is retrieved from the <code>INNODB_BUFFER_PAGE_LRU</code> <code>INFORMATION_SCHEMA</code> table. By default, the tablespace ID and page ID data is stored in a file named <code>ib_buffer_pool</code> in the <code>InnoDB</code> data directory. The file name can be changed using the <code>innodb_buffer_pool_filename</code> configuration parameter.</p>
 </blockquote>
 <p>This information appears to be retrieved from <code>INFORMATION_SCHEMA.INNODB_BUFFER_PAGE_LRU</code>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>mysql<span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">*</span> <span style="color:#ff79c6">FROM</span> INFORMATION_SCHEMA.INNODB_BUFFER_PAGE_LRU <span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">1</span>\<span style="color:#ff79c6">G</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">***************************</span> <span style="color:#bd93f9">1</span>. <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">***************************</span>
-</span></span><span style="display:flex;"><span>            POOL_ID: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>       LRU_POSITION: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>              <span style="color:#ff79c6">SPACE</span>: <span style="color:#bd93f9">30</span>
-</span></span><span style="display:flex;"><span>        PAGE_NUMBER: <span style="color:#bd93f9">11063</span>
-</span></span><span style="display:flex;"><span>          PAGE_TYPE: <span style="color:#ff79c6">INDEX</span>
-</span></span><span style="display:flex;"><span>         FLUSH_TYPE: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>          FIX_COUNT: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>          IS_HASHED: <span style="color:#ff79c6">NO</span>
-</span></span><span style="display:flex;"><span>NEWEST_MODIFICATION: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>OLDEST_MODIFICATION: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>        ACCESS_TIME: <span style="color:#bd93f9">2747830684</span>
-</span></span><span style="display:flex;"><span>         <span style="color:#ff79c6">TABLE_NAME</span>: <span style="color:#ff79c6">`</span>mydb<span style="color:#ff79c6">`</span>.<span style="color:#ff79c6">`</span>t1<span style="color:#ff79c6">`</span>
-</span></span><span style="display:flex;"><span>         INDEX_NAME: <span style="color:#ff79c6">PRIMARY</span>
-</span></span><span style="display:flex;"><span>     NUMBER_RECORDS: <span style="color:#bd93f9">648</span>
-</span></span><span style="display:flex;"><span>          DATA_SIZE: <span style="color:#bd93f9">14904</span>
-</span></span><span style="display:flex;"><span>    COMPRESSED_SIZE: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>         COMPRESSED: <span style="color:#ff79c6">NO</span>
-</span></span><span style="display:flex;"><span>             IO_FIX: IO_NONE
-</span></span><span style="display:flex;"><span>             IS_OLD: YES
-</span></span><span style="display:flex;"><span>    FREE_PAGE_CLOCK: <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span> <span style="color:#ff79c6">in</span> <span style="color:#ff79c6">set</span> (<span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">01</span> sec)
-</span></span></code></pre></div>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">INFORMATION_SCHEMA</span><span class="p">.</span><span class="n">INNODB_BUFFER_PAGE_LRU</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">1</span><span class="err">\</span><span class="k">G</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="o">***************************</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="w"> </span><span class="k">row</span><span class="w"> </span><span class="o">***************************</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="n">POOL_ID</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="n">LRU_POSITION</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="k">SPACE</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">PAGE_NUMBER</span><span class="p">:</span><span class="w"> </span><span class="mi">11063</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">PAGE_TYPE</span><span class="p">:</span><span class="w"> </span><span class="k">INDEX</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">FLUSH_TYPE</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">FIX_COUNT</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">IS_HASHED</span><span class="p">:</span><span class="w"> </span><span class="k">NO</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">NEWEST_MODIFICATION</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">OLDEST_MODIFICATION</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">ACCESS_TIME</span><span class="p">:</span><span class="w"> </span><span class="mi">2747830684</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="k">TABLE_NAME</span><span class="p">:</span><span class="w"> </span><span class="o">`</span><span class="n">mydb</span><span class="o">`</span><span class="p">.</span><span class="o">`</span><span class="n">t1</span><span class="o">`</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">INDEX_NAME</span><span class="p">:</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="n">NUMBER_RECORDS</span><span class="p">:</span><span class="w"> </span><span class="mi">648</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">          </span><span class="n">DATA_SIZE</span><span class="p">:</span><span class="w"> </span><span class="mi">14904</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">COMPRESSED_SIZE</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">         </span><span class="n">COMPRESSED</span><span class="p">:</span><span class="w"> </span><span class="k">NO</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">             </span><span class="n">IO_FIX</span><span class="p">:</span><span class="w"> </span><span class="n">IO_NONE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">             </span><span class="n">IS_OLD</span><span class="p">:</span><span class="w"> </span><span class="n">YES</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">FREE_PAGE_CLOCK</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="mi">1</span><span class="w"> </span><span class="k">row</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">01</span><span class="w"> </span><span class="n">sec</span><span class="p">)</span><span class="w">
+</span></span></span></code></pre></div>
       </div>
     </div>
 
@@ -380,7 +381,7 @@ Specifies that, on MySQL server startup, the InnoDB buffer pool is automatically
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/en/">Home</a>
           <a href="/en/blog/">Articles</a>
@@ -401,7 +402,7 @@ Specifies that, on MySQL server startup, the InnoDB buffer pool is automatically
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

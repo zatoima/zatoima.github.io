@@ -74,6 +74,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -184,94 +185,94 @@
       </div>
       <div class="article-content">
         <h3 id="finding-duplicate-indexes">Finding Duplicate Indexes</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
-</span></span><span style="display:flex;"><span>    indrelid::regclass <span style="color:#ff79c6">AS</span> TableName
-</span></span><span style="display:flex;"><span>    ,array_agg(indexrelid::regclass) <span style="color:#ff79c6">AS</span> Indexes
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> pg_index
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span>
-</span></span><span style="display:flex;"><span>    indrelid
-</span></span><span style="display:flex;"><span>    ,indkey
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">HAVING</span> <span style="color:#ff79c6">COUNT</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">1</span>;
-</span></span></code></pre></div><h3 id="finding-unused-indexes">Finding Unused Indexes</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WITH</span> table_scans <span style="color:#ff79c6">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span> relid,
-</span></span><span style="display:flex;"><span>        tables.idx_scan <span style="color:#ff79c6">+</span> tables.seq_scan <span style="color:#ff79c6">as</span> all_scans,
-</span></span><span style="display:flex;"><span>        ( tables.n_tup_ins <span style="color:#ff79c6">+</span> tables.n_tup_upd <span style="color:#ff79c6">+</span> tables.n_tup_del ) <span style="color:#ff79c6">as</span> writes,
-</span></span><span style="display:flex;"><span>                pg_relation_size(relid) <span style="color:#ff79c6">as</span> table_size
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">FROM</span> pg_stat_user_tables <span style="color:#ff79c6">as</span> tables
-</span></span><span style="display:flex;"><span>),
-</span></span><span style="display:flex;"><span>all_writes <span style="color:#ff79c6">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">sum</span>(writes) <span style="color:#ff79c6">as</span> total_writes
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span> table_scans
-</span></span><span style="display:flex;"><span>),
-</span></span><span style="display:flex;"><span>indexes <span style="color:#ff79c6">as</span> (
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">SELECT</span> idx_stat.relid, idx_stat.indexrelid,
-</span></span><span style="display:flex;"><span>        idx_stat.schemaname, idx_stat.relname <span style="color:#ff79c6">as</span> tablename,
-</span></span><span style="display:flex;"><span>        idx_stat.indexrelname <span style="color:#ff79c6">as</span> indexname,
-</span></span><span style="display:flex;"><span>        idx_stat.idx_scan,
-</span></span><span style="display:flex;"><span>        pg_relation_size(idx_stat.indexrelid) <span style="color:#ff79c6">as</span> index_bytes,
-</span></span><span style="display:flex;"><span>        indexdef <span style="color:#ff79c6">~*</span> <span style="color:#f1fa8c">&#39;USING btree&#39;</span> <span style="color:#ff79c6">AS</span> idx_is_btree
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span> pg_stat_user_indexes <span style="color:#ff79c6">as</span> idx_stat
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">JOIN</span> pg_index
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">USING</span> (indexrelid)
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">JOIN</span> pg_indexes <span style="color:#ff79c6">as</span> indexes
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">ON</span> idx_stat.schemaname <span style="color:#ff79c6">=</span> indexes.schemaname
-</span></span><span style="display:flex;"><span>                <span style="color:#ff79c6">AND</span> idx_stat.relname <span style="color:#ff79c6">=</span> indexes.tablename
-</span></span><span style="display:flex;"><span>                <span style="color:#ff79c6">AND</span> idx_stat.indexrelname <span style="color:#ff79c6">=</span> indexes.indexname
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">WHERE</span> pg_index.indisunique <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">FALSE</span>
-</span></span><span style="display:flex;"><span>),
-</span></span><span style="display:flex;"><span>index_ratios <span style="color:#ff79c6">AS</span> (
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> schemaname, tablename, indexname,
-</span></span><span style="display:flex;"><span>    idx_scan, all_scans,
-</span></span><span style="display:flex;"><span>    round(( <span style="color:#ff79c6">CASE</span> <span style="color:#ff79c6">WHEN</span> all_scans <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">THEN</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">0</span>::<span style="color:#8be9fd;font-style:italic">NUMERIC</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">ELSE</span> idx_scan::<span style="color:#8be9fd;font-style:italic">NUMERIC</span><span style="color:#ff79c6">/</span>all_scans <span style="color:#ff79c6">*</span> <span style="color:#bd93f9">100</span> <span style="color:#ff79c6">END</span>),<span style="color:#bd93f9">2</span>) <span style="color:#ff79c6">as</span> index_scan_pct,
-</span></span><span style="display:flex;"><span>    writes,
-</span></span><span style="display:flex;"><span>    round((<span style="color:#ff79c6">CASE</span> <span style="color:#ff79c6">WHEN</span> writes <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span> <span style="color:#ff79c6">THEN</span> idx_scan::<span style="color:#8be9fd;font-style:italic">NUMERIC</span> <span style="color:#ff79c6">ELSE</span> idx_scan::<span style="color:#8be9fd;font-style:italic">NUMERIC</span><span style="color:#ff79c6">/</span>writes <span style="color:#ff79c6">END</span>),<span style="color:#bd93f9">2</span>)
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">as</span> scans_per_write,
-</span></span><span style="display:flex;"><span>    pg_size_pretty(index_bytes) <span style="color:#ff79c6">as</span> index_size,
-</span></span><span style="display:flex;"><span>    pg_size_pretty(table_size) <span style="color:#ff79c6">as</span> table_size,
-</span></span><span style="display:flex;"><span>    idx_is_btree, index_bytes
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">FROM</span> indexes
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">JOIN</span> table_scans
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">USING</span> (relid)
-</span></span><span style="display:flex;"><span>),
-</span></span><span style="display:flex;"><span>index_groups <span style="color:#ff79c6">AS</span> (
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#f1fa8c">&#39;Never Used Indexes&#39;</span> <span style="color:#ff79c6">as</span> reason, <span style="color:#ff79c6">*</span>, <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">as</span> grp
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> index_ratios
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span>
-</span></span><span style="display:flex;"><span>    idx_scan <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> idx_is_btree
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">UNION</span> <span style="color:#ff79c6">ALL</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#f1fa8c">&#39;Low Scans, High Writes&#39;</span> <span style="color:#ff79c6">as</span> reason, <span style="color:#ff79c6">*</span>, <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">as</span> grp
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> index_ratios
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span>
-</span></span><span style="display:flex;"><span>    scans_per_write <span style="color:#ff79c6">&lt;=</span> <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> index_scan_pct <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">10</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> idx_scan <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> writes <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">100</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> idx_is_btree
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">UNION</span> <span style="color:#ff79c6">ALL</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#f1fa8c">&#39;Seldom Used Large Indexes&#39;</span> <span style="color:#ff79c6">as</span> reason, <span style="color:#ff79c6">*</span>, <span style="color:#bd93f9">3</span> <span style="color:#ff79c6">as</span> grp
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> index_ratios
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span>
-</span></span><span style="display:flex;"><span>    index_scan_pct <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">5</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> scans_per_write <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> idx_scan <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> idx_is_btree
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">and</span> index_bytes <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">100000000</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">UNION</span> <span style="color:#ff79c6">ALL</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#f1fa8c">&#39;High-Write Large Non-Btree&#39;</span> <span style="color:#ff79c6">as</span> reason, index_ratios.<span style="color:#ff79c6">*</span>, <span style="color:#bd93f9">4</span> <span style="color:#ff79c6">as</span> grp
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> index_ratios, all_writes
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span>
-</span></span><span style="display:flex;"><span>    ( writes::<span style="color:#8be9fd;font-style:italic">NUMERIC</span> <span style="color:#ff79c6">/</span> ( total_writes <span style="color:#ff79c6">+</span> <span style="color:#bd93f9">1</span> ) ) <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">02</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> <span style="color:#ff79c6">NOT</span> idx_is_btree
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">AND</span> index_bytes <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">100000000</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> grp, index_bytes <span style="color:#ff79c6">DESC</span> )
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> reason, schemaname, tablename, indexname,
-</span></span><span style="display:flex;"><span>    index_scan_pct, scans_per_write, index_size, table_size
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> index_groups;
-</span></span></code></pre></div>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">indrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">TableName</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="n">array_agg</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">Indexes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">pg_index</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">indrelid</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="n">indkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">HAVING</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h3 id="finding-unused-indexes">Finding Unused Indexes</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WITH</span><span class="w"> </span><span class="n">table_scans</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">relid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">tables</span><span class="p">.</span><span class="n">idx_scan</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tables</span><span class="p">.</span><span class="n">seq_scan</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">all_scans</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="p">(</span><span class="w"> </span><span class="n">tables</span><span class="p">.</span><span class="n">n_tup_ins</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tables</span><span class="p">.</span><span class="n">n_tup_upd</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tables</span><span class="p">.</span><span class="n">n_tup_del</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">writes</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">relid</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">table_size</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_tables</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">tables</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">all_writes</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">writes</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">total_writes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">table_scans</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">indexes</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">relid</span><span class="p">,</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">schemaname</span><span class="p">,</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">tablename</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">indexrelname</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">indexname</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">idx_scan</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">idx_stat</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">index_bytes</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="n">indexdef</span><span class="w"> </span><span class="o">~*</span><span class="w"> </span><span class="s1">&#39;USING btree&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">idx_is_btree</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">idx_stat</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">JOIN</span><span class="w"> </span><span class="n">pg_index</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">USING</span><span class="w"> </span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">JOIN</span><span class="w"> </span><span class="n">pg_indexes</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">indexes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">            </span><span class="k">ON</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">schemaname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indexes</span><span class="p">.</span><span class="n">schemaname</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">AND</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indexes</span><span class="p">.</span><span class="n">tablename</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">                </span><span class="k">AND</span><span class="w"> </span><span class="n">idx_stat</span><span class="p">.</span><span class="n">indexrelname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indexes</span><span class="p">.</span><span class="n">indexname</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">pg_index</span><span class="p">.</span><span class="n">indisunique</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">FALSE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">index_ratios</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">schemaname</span><span class="p">,</span><span class="w"> </span><span class="n">tablename</span><span class="p">,</span><span class="w"> </span><span class="n">indexname</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">idx_scan</span><span class="p">,</span><span class="w"> </span><span class="n">all_scans</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">round</span><span class="p">((</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">all_scans</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">::</span><span class="nb">NUMERIC</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">ELSE</span><span class="w"> </span><span class="n">idx_scan</span><span class="p">::</span><span class="nb">NUMERIC</span><span class="o">/</span><span class="n">all_scans</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">END</span><span class="p">),</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">index_scan_pct</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">writes</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">round</span><span class="p">((</span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">writes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">idx_scan</span><span class="p">::</span><span class="nb">NUMERIC</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="n">idx_scan</span><span class="p">::</span><span class="nb">NUMERIC</span><span class="o">/</span><span class="n">writes</span><span class="w"> </span><span class="k">END</span><span class="p">),</span><span class="mi">2</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="k">as</span><span class="w"> </span><span class="n">scans_per_write</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">index_bytes</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">index_size</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">table_size</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">table_size</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">idx_is_btree</span><span class="p">,</span><span class="w"> </span><span class="n">index_bytes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">indexes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">JOIN</span><span class="w"> </span><span class="n">table_scans</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="p">(</span><span class="n">relid</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">index_groups</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;Never Used Indexes&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">reason</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">grp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">index_ratios</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">idx_is_btree</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;Low Scans, High Writes&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">reason</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">grp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">index_ratios</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">scans_per_write</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">index_scan_pct</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">writes</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">idx_is_btree</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;Seldom Used Large Indexes&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">reason</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">grp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">index_ratios</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">index_scan_pct</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">scans_per_write</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">idx_is_btree</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">and</span><span class="w"> </span><span class="n">index_bytes</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100000000</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;High-Write Large Non-Btree&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">reason</span><span class="p">,</span><span class="w"> </span><span class="n">index_ratios</span><span class="p">.</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">grp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">index_ratios</span><span class="p">,</span><span class="w"> </span><span class="n">all_writes</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">(</span><span class="w"> </span><span class="n">writes</span><span class="p">::</span><span class="nb">NUMERIC</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">total_writes</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">02</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">AND</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">idx_is_btree</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">AND</span><span class="w"> </span><span class="n">index_bytes</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100000000</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">grp</span><span class="p">,</span><span class="w"> </span><span class="n">index_bytes</span><span class="w"> </span><span class="k">DESC</span><span class="w"> </span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">reason</span><span class="p">,</span><span class="w"> </span><span class="n">schemaname</span><span class="p">,</span><span class="w"> </span><span class="n">tablename</span><span class="p">,</span><span class="w"> </span><span class="n">indexname</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">index_scan_pct</span><span class="p">,</span><span class="w"> </span><span class="n">scans_per_write</span><span class="p">,</span><span class="w"> </span><span class="n">index_size</span><span class="p">,</span><span class="w"> </span><span class="n">table_size</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">index_groups</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div>
       </div>
     </div>
 
@@ -367,7 +368,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/en/">Home</a>
           <a href="/en/blog/">Articles</a>
@@ -388,7 +389,7 @@
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

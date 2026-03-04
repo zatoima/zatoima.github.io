@@ -75,6 +75,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -195,25 +196,25 @@
 <h2 id="mcp-serverの実装">MCP Serverの実装</h2>
 <h3 id="データ取得方式">データ取得方式</h3>
 <p>当初はリポジトリをクローンしてローカルのMarkdownファイルを直接読む方式だったが、利用者にクローンを強いるのは不便なため、<strong>サイトが公開している<code>llms-full.txt</code>をHTTPで取得する方式</strong>に変更した。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>┌──────────────┐     HTTP GET      ┌──────────────────────┐
-</span></span><span style="display:flex;"><span>│  MCP Server  │ ───────────────── │ zatoima.github.io    │
-</span></span><span style="display:flex;"><span>│  (Node.js)   │  /llms-full.txt   │ (GitHub Pages)       │
-</span></span><span style="display:flex;"><span>└──────────────┘                   └──────────────────────┘
-</span></span><span style="display:flex;"><span>       │
-</span></span><span style="display:flex;"><span>       │ stdio
-</span></span><span style="display:flex;"><span>       ▼
-</span></span><span style="display:flex;"><span>┌──────────────┐
-</span></span><span style="display:flex;"><span>│  Claude Code │
-</span></span><span style="display:flex;"><span>└──────────────┘
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">┌──────────────┐     HTTP GET      ┌──────────────────────┐
+</span></span><span class="line"><span class="cl">│  MCP Server  │ ───────────────── │ zatoima.github.io    │
+</span></span><span class="line"><span class="cl">│  (Node.js)   │  /llms-full.txt   │ (GitHub Pages)       │
+</span></span><span class="line"><span class="cl">└──────────────┘                   └──────────────────────┘
+</span></span><span class="line"><span class="cl">       │
+</span></span><span class="line"><span class="cl">       │ stdio
+</span></span><span class="line"><span class="cl">       ▼
+</span></span><span class="line"><span class="cl">┌──────────────┐
+</span></span><span class="line"><span class="cl">│  Claude Code │
+</span></span><span class="line"><span class="cl">└──────────────┘
 </span></span></code></pre></div><p>これにより、リポジトリのクローンは不要になった。MCP Serverのソースコードだけ取得してビルドすればよい。データは10分間キャッシュされ、キャッシュ期限後は自動で再取得される。</p>
 <h3 id="構成">構成</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>mcp-server/
-</span></span><span style="display:flex;"><span>├── package.json
-</span></span><span style="display:flex;"><span>├── tsconfig.json
-</span></span><span style="display:flex;"><span>├── src/
-</span></span><span style="display:flex;"><span>│   └── index.ts
-</span></span><span style="display:flex;"><span>└── dist/
-</span></span><span style="display:flex;"><span>    └── index.js
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mcp-server/
+</span></span><span class="line"><span class="cl">├── package.json
+</span></span><span class="line"><span class="cl">├── tsconfig.json
+</span></span><span class="line"><span class="cl">├── src/
+</span></span><span class="line"><span class="cl">│   └── index.ts
+</span></span><span class="line"><span class="cl">└── dist/
+</span></span><span class="line"><span class="cl">    └── index.js
 </span></span></code></pre></div><p>依存ライブラリは <code>@modelcontextprotocol/sdk</code> のみ。Node.js標準の<code>fetch</code>で<code>llms-full.txt</code>を取得し、テキストパースで記事データを抽出する。</p>
 <h3 id="提供ツール">提供ツール</h3>
 <p>MCP Serverでは5つのツールを実装した。</p>
@@ -249,56 +250,56 @@
 </table>
 <h3 id="実装のポイント">実装のポイント</h3>
 <p><code>llms-full.txt</code>は<code>---</code>で区切られた記事の連続テキストであるため、これをパースして構造化データに変換する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> { McpServer } <span style="color:#ff79c6">from</span> <span style="color:#f1fa8c">&#34;@modelcontextprotocol/sdk/server/mcp.js&#34;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> { StdioServerTransport } <span style="color:#ff79c6">from</span> <span style="color:#f1fa8c">&#34;@modelcontextprotocol/sdk/server/stdio.js&#34;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">import</span> { z } <span style="color:#ff79c6">from</span> <span style="color:#f1fa8c">&#34;zod&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">const</span> SITE_URL <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34;https://zatoima.github.io&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">// llms-full.txtからデータを取得・パース
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">async</span> <span style="color:#8be9fd;font-style:italic">function</span> getPosts()<span style="color:#ff79c6">:</span> Promise&lt;<span style="color:#ff79c6">BlogPost</span>[]&gt; {
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">const</span> res <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">await</span> fetch(<span style="color:#f1fa8c">`</span><span style="color:#f1fa8c">${</span>SITE_URL<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">/llms-full.txt`</span>);
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">const</span> text <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">await</span> res.text();
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">return</span> parseLlmsFullTxt(text); <span style="color:#6272a4">// テキストを記事データに変換
-</span></span></span><span style="display:flex;"><span>}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">// ツール登録の例: 記事検索
-</span></span></span><span style="display:flex;"><span>server.tool(
-</span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#34;search_posts&#34;</span>,
-</span></span><span style="display:flex;"><span>  <span style="color:#f1fa8c">&#34;ブログ記事をキーワードで検索する&#34;</span>,
-</span></span><span style="display:flex;"><span>  {
-</span></span><span style="display:flex;"><span>    query: <span style="color:#8be9fd">z.string</span>().describe(<span style="color:#f1fa8c">&#34;検索キーワード&#34;</span>),
-</span></span><span style="display:flex;"><span>    limit: <span style="color:#8be9fd">z.number</span>().optional().<span style="color:#ff79c6">default</span>(<span style="color:#bd93f9">10</span>),
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">async</span> ({ query, limit }) <span style="color:#ff79c6">=&gt;</span> {
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">const</span> posts <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">await</span> getPosts();
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">const</span> q <span style="color:#ff79c6">=</span> query.toLowerCase();
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">const</span> results <span style="color:#ff79c6">=</span> posts
-</span></span><span style="display:flex;"><span>      .filter(
-</span></span><span style="display:flex;"><span>        (p) <span style="color:#ff79c6">=&gt;</span>
-</span></span><span style="display:flex;"><span>          p.title.toLowerCase().includes(q) <span style="color:#ff79c6">||</span>
-</span></span><span style="display:flex;"><span>          p.content.toLowerCase().includes(q) <span style="color:#ff79c6">||</span>
-</span></span><span style="display:flex;"><span>          p.tags.some((t) <span style="color:#ff79c6">=&gt;</span> t.toLowerCase().includes(q))
-</span></span><span style="display:flex;"><span>      )
-</span></span><span style="display:flex;"><span>      .slice(<span style="color:#bd93f9">0</span>, limit);
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4">// ... 結果を返す
-</span></span></span><span style="display:flex;"><span>  }
-</span></span><span style="display:flex;"><span>);
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-typescript" data-lang="typescript"><span class="line"><span class="cl"><span class="kr">import</span> <span class="p">{</span> <span class="nx">McpServer</span> <span class="p">}</span> <span class="kr">from</span> <span class="s2">&#34;@modelcontextprotocol/sdk/server/mcp.js&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">import</span> <span class="p">{</span> <span class="nx">StdioServerTransport</span> <span class="p">}</span> <span class="kr">from</span> <span class="s2">&#34;@modelcontextprotocol/sdk/server/stdio.js&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kr">import</span> <span class="p">{</span> <span class="nx">z</span> <span class="p">}</span> <span class="kr">from</span> <span class="s2">&#34;zod&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kr">const</span> <span class="nx">SITE_URL</span> <span class="o">=</span> <span class="s2">&#34;https://zatoima.github.io&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// llms-full.txtからデータを取得・パース
+</span></span></span><span class="line"><span class="cl"><span class="kr">async</span> <span class="kd">function</span> <span class="nx">getPosts</span><span class="p">()</span><span class="o">:</span> <span class="nx">Promise</span><span class="p">&lt;</span><span class="nt">BlogPost</span><span class="err">[]</span><span class="p">&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">SITE_URL</span><span class="si">}</span><span class="sb">/llms-full.txt`</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">const</span> <span class="nx">text</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">res</span><span class="p">.</span><span class="nx">text</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="nx">parseLlmsFullTxt</span><span class="p">(</span><span class="nx">text</span><span class="p">);</span> <span class="c1">// テキストを記事データに変換
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// ツール登録の例: 記事検索
+</span></span></span><span class="line"><span class="cl"><span class="nx">server</span><span class="p">.</span><span class="nx">tool</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;search_posts&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;ブログ記事をキーワードで検索する&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">query</span>: <span class="kt">z.string</span><span class="p">().</span><span class="nx">describe</span><span class="p">(</span><span class="s2">&#34;検索キーワード&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">limit</span>: <span class="kt">z.number</span><span class="p">().</span><span class="nx">optional</span><span class="p">().</span><span class="k">default</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="kr">async</span> <span class="p">({</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">limit</span> <span class="p">})</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">posts</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">getPosts</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">q</span> <span class="o">=</span> <span class="nx">query</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kr">const</span> <span class="nx">results</span> <span class="o">=</span> <span class="nx">posts</span>
+</span></span><span class="line"><span class="cl">      <span class="p">.</span><span class="nx">filter</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="p">(</span><span class="nx">p</span><span class="p">)</span> <span class="o">=&gt;</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">p</span><span class="p">.</span><span class="nx">title</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">().</span><span class="nx">includes</span><span class="p">(</span><span class="nx">q</span><span class="p">)</span> <span class="o">||</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">p</span><span class="p">.</span><span class="nx">content</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">().</span><span class="nx">includes</span><span class="p">(</span><span class="nx">q</span><span class="p">)</span> <span class="o">||</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">p</span><span class="p">.</span><span class="nx">tags</span><span class="p">.</span><span class="nx">some</span><span class="p">((</span><span class="nx">t</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">t</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">().</span><span class="nx">includes</span><span class="p">(</span><span class="nx">q</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">limit</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// ... 結果を返す
+</span></span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">);</span>
 </span></span></code></pre></div><h3 id="セットアップ">セットアップ</h3>
 <p>リポジトリ全体のクローンは不要。MCP Serverのソースコードだけ取得してビルドする。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># MCP Serverのソースを取得してビルド</span>
-</span></span><span style="display:flex;"><span>git clone --depth <span style="color:#bd93f9">1</span> --filter<span style="color:#ff79c6">=</span>blob:none --sparse https://github.com/zatoima/zatoima.github.io.git
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">cd</span> zatoima.github.io <span style="color:#ff79c6">&amp;&amp;</span> git sparse-checkout <span style="color:#8be9fd;font-style:italic">set</span> mcp-server
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">cd</span> mcp-server <span style="color:#ff79c6">&amp;&amp;</span> npm install <span style="color:#ff79c6">&amp;&amp;</span> npx tsc
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Claude Codeに登録</span>
-</span></span><span style="display:flex;"><span>claude mcp add zatoima-blog node <span style="color:#ff79c6">$(</span><span style="color:#8be9fd;font-style:italic">pwd</span><span style="color:#ff79c6">)</span>/dist/index.js
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># MCP Serverのソースを取得してビルド</span>
+</span></span><span class="line"><span class="cl">git clone --depth <span class="m">1</span> --filter<span class="o">=</span>blob:none --sparse https://github.com/zatoima/zatoima.github.io.git
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> zatoima.github.io <span class="o">&amp;&amp;</span> git sparse-checkout <span class="nb">set</span> mcp-server
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> mcp-server <span class="o">&amp;&amp;</span> npm install <span class="o">&amp;&amp;</span> npx tsc
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Claude Codeに登録</span>
+</span></span><span class="line"><span class="cl">claude mcp add zatoima-blog node <span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/dist/index.js
 </span></span></code></pre></div><p>登録後、Claude Codeのセッション内で以下のように使用できる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># 記事検索
-</span></span><span style="display:flex;"><span>mcp__zatoima-blog__search_posts(query=&#34;Aurora&#34;)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span># 統計情報
-</span></span><span style="display:flex;"><span>mcp__zatoima-blog__blog_stats()
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 記事検索
+</span></span><span class="line"><span class="cl">mcp__zatoima-blog__search_posts(query=&#34;Aurora&#34;)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 統計情報
+</span></span><span class="line"><span class="cl">mcp__zatoima-blog__blog_stats()
 </span></span></code></pre></div><h2 id="llmstxtの実装">llms.txtの実装</h2>
 <h3 id="llmstxtとは">llms.txtとは</h3>
 <p><code>llms.txt</code>はWebサイトの内容をLLMに理解させるためのフォーマットである。<code>robots.txt</code>のAI版のようなもので、サイトの概要と記事一覧をプレーンテキストで提供する。</p>
@@ -308,56 +309,56 @@
 </ul>
 <h3 id="hugoでの生成方法">Hugoでの生成方法</h3>
 <h4 id="1-hugotomlにカスタム出力フォーマットを定義">1. hugo.tomlにカスタム出力フォーマットを定義</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-toml" data-lang="toml"><span style="display:flex;"><span>[mediaTypes]
-</span></span><span style="display:flex;"><span>  [mediaTypes.<span style="color:#f1fa8c">&#34;text/llms&#34;</span>]
-</span></span><span style="display:flex;"><span>    suffixes = [<span style="color:#f1fa8c">&#34;txt&#34;</span>]
-</span></span><span style="display:flex;"><span>  [mediaTypes.<span style="color:#f1fa8c">&#34;text/llms-full&#34;</span>]
-</span></span><span style="display:flex;"><span>    suffixes = [<span style="color:#f1fa8c">&#34;txt&#34;</span>]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>[outputFormats]
-</span></span><span style="display:flex;"><span>  [outputFormats.llms]
-</span></span><span style="display:flex;"><span>    mediaType = <span style="color:#f1fa8c">&#34;text/llms&#34;</span>
-</span></span><span style="display:flex;"><span>    baseName = <span style="color:#f1fa8c">&#34;llms&#34;</span>
-</span></span><span style="display:flex;"><span>    isPlainText = <span style="color:#ff79c6">true</span>
-</span></span><span style="display:flex;"><span>    notAlternative = <span style="color:#ff79c6">true</span>
-</span></span><span style="display:flex;"><span>  [outputFormats.llms-full]
-</span></span><span style="display:flex;"><span>    mediaType = <span style="color:#f1fa8c">&#34;text/llms-full&#34;</span>
-</span></span><span style="display:flex;"><span>    baseName = <span style="color:#f1fa8c">&#34;llms-full&#34;</span>
-</span></span><span style="display:flex;"><span>    isPlainText = <span style="color:#ff79c6">true</span>
-</span></span><span style="display:flex;"><span>    notAlternative = <span style="color:#ff79c6">true</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>[outputs]
-</span></span><span style="display:flex;"><span>  home = [<span style="color:#f1fa8c">&#34;HTML&#34;</span>, <span style="color:#f1fa8c">&#34;RSS&#34;</span>, <span style="color:#f1fa8c">&#34;JSON&#34;</span>, <span style="color:#f1fa8c">&#34;llms&#34;</span>, <span style="color:#f1fa8c">&#34;llms-full&#34;</span>]
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-toml" data-lang="toml"><span class="line"><span class="cl"><span class="p">[</span><span class="nx">mediaTypes</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="p">[</span><span class="nx">mediaTypes</span><span class="p">.</span><span class="s2">&#34;text/llms&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">suffixes</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;txt&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="p">[</span><span class="nx">mediaTypes</span><span class="p">.</span><span class="s2">&#34;text/llms-full&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">suffixes</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;txt&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="nx">outputFormats</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="p">[</span><span class="nx">outputFormats</span><span class="p">.</span><span class="nx">llms</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mediaType</span> <span class="p">=</span> <span class="s2">&#34;text/llms&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">baseName</span> <span class="p">=</span> <span class="s2">&#34;llms&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">isPlainText</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">notAlternative</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">  <span class="p">[</span><span class="nx">outputFormats</span><span class="p">.</span><span class="nx">llms-full</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">mediaType</span> <span class="p">=</span> <span class="s2">&#34;text/llms-full&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">baseName</span> <span class="p">=</span> <span class="s2">&#34;llms-full&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">isPlainText</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">notAlternative</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="nx">outputs</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  <span class="nx">home</span> <span class="p">=</span> <span class="p">[</span><span class="s2">&#34;HTML&#34;</span><span class="p">,</span> <span class="s2">&#34;RSS&#34;</span><span class="p">,</span> <span class="s2">&#34;JSON&#34;</span><span class="p">,</span> <span class="s2">&#34;llms&#34;</span><span class="p">,</span> <span class="s2">&#34;llms-full&#34;</span><span class="p">]</span>
 </span></span></code></pre></div><h4 id="2-テンプレートファイルの作成">2. テンプレートファイルの作成</h4>
 <p><code>layouts/_default/index.llms.txt</code>（軽量版）:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># {{ .Site.Title }}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>&gt; {{ .Site.Params.description }}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>author: zatoima
-</span></span><span style="display:flex;"><span>url: {{ .Site.BaseURL }}
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>## Blog Posts
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>{{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }}
-</span></span><span style="display:flex;"><span>{{ range $pages }}
-</span></span><span style="display:flex;"><span>- [{{ .Title }}]({{ .Permalink }}) ({{ .Date.Format &#34;2006-01-02&#34; }}){{ with .Params.tags }} [{{ delimit . &#34;, &#34; }}]{{ end }}
-</span></span><span style="display:flex;"><span>{{- end }}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># {{ .Site.Title }}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&gt; {{ .Site.Params.description }}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">author: zatoima
+</span></span><span class="line"><span class="cl">url: {{ .Site.BaseURL }}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">## Blog Posts
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">{{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }}
+</span></span><span class="line"><span class="cl">{{ range $pages }}
+</span></span><span class="line"><span class="cl">- [{{ .Title }}]({{ .Permalink }}) ({{ .Date.Format &#34;2006-01-02&#34; }}){{ with .Params.tags }} [{{ delimit . &#34;, &#34; }}]{{ end }}
+</span></span><span class="line"><span class="cl">{{- end }}
 </span></span></code></pre></div><p><code>layouts/_default/index.llms-full.txt</code>（完全版）:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>{{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }}
-</span></span><span style="display:flex;"><span>{{ range $pages }}
-</span></span><span style="display:flex;"><span>---
-</span></span><span style="display:flex;"><span>### {{ .Title }}
-</span></span><span style="display:flex;"><span>date: {{ .Date.Format &#34;2006-01-02&#34; }}
-</span></span><span style="display:flex;"><span>url: {{ .Permalink }}
-</span></span><span style="display:flex;"><span>{{ .Plain }}
-</span></span><span style="display:flex;"><span>{{ end }}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">{{- $pages := where .Site.RegularPages &#34;Section&#34; &#34;blog&#34; }}
+</span></span><span class="line"><span class="cl">{{ range $pages }}
+</span></span><span class="line"><span class="cl">---
+</span></span><span class="line"><span class="cl">### {{ .Title }}
+</span></span><span class="line"><span class="cl">date: {{ .Date.Format &#34;2006-01-02&#34; }}
+</span></span><span class="line"><span class="cl">url: {{ .Permalink }}
+</span></span><span class="line"><span class="cl">{{ .Plain }}
+</span></span><span class="line"><span class="cl">{{ end }}
 </span></span></code></pre></div><h4 id="3-htmlヘッダーへのリンク追加">3. HTMLヘッダーへのリンク追加</h4>
 <p><code>layouts/_default/baseof.html</code>の<code>&lt;head&gt;</code>内に以下を追加する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#ff79c6">link</span> <span style="color:#50fa7b">rel</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;alternate&#34;</span> <span style="color:#50fa7b">type</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;text/plain&#34;</span> <span style="color:#50fa7b">href</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;/llms.txt&#34;</span> <span style="color:#50fa7b">title</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;LLMs.txt&#34;</span> /&gt;
-</span></span><span style="display:flex;"><span>&lt;<span style="color:#ff79c6">link</span> <span style="color:#50fa7b">rel</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;alternate&#34;</span> <span style="color:#50fa7b">type</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;text/plain&#34;</span> <span style="color:#50fa7b">href</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;/llms-full.txt&#34;</span> <span style="color:#50fa7b">title</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;LLMs-full.txt&#34;</span> /&gt;
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-html" data-lang="html"><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;alternate&#34;</span> <span class="na">type</span><span class="o">=</span><span class="s">&#34;text/plain&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/llms.txt&#34;</span> <span class="na">title</span><span class="o">=</span><span class="s">&#34;LLMs.txt&#34;</span> <span class="p">/&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;alternate&#34;</span> <span class="na">type</span><span class="o">=</span><span class="s">&#34;text/plain&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/llms-full.txt&#34;</span> <span class="na">title</span><span class="o">=</span><span class="s">&#34;LLMs-full.txt&#34;</span> <span class="p">/&gt;</span>
 </span></span></code></pre></div><p>ナビゲーションにもリンクを追加した。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#ff79c6">a</span> <span style="color:#50fa7b">href</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;/llms.txt&#34;</span> <span style="color:#50fa7b">title</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#34;LLMs.txt - AI/LLM向けサイト情報&#34;</span>&gt;llms.txt&lt;/<span style="color:#ff79c6">a</span>&gt;
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-html" data-lang="html"><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/llms.txt&#34;</span> <span class="na">title</span><span class="o">=</span><span class="s">&#34;LLMs.txt - AI/LLM向けサイト情報&#34;</span><span class="p">&gt;</span>llms.txt<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;</span>
 </span></span></code></pre></div><h3 id="生成結果">生成結果</h3>
 <table>
   <thead>
@@ -603,8 +604,8 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -624,8 +625,8 @@
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

@@ -77,6 +77,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -202,19 +203,19 @@
 <h2 id="列指向ストレージとは">列指向ストレージとは</h2>
 <h3 id="行指向と列指向の違い">行指向と列指向の違い</h3>
 <p>一般的なデータベース（MySQL, PostgreSQL 等）は行指向ストレージを採用している。1行のデータが連続してディスクに並ぶ。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>行指向（Row Store）
-</span></span><span style="display:flex;"><span>┌──────────────────────────────────────┐
-</span></span><span style="display:flex;"><span>│ id=1, name=&#34;Alice&#34;,  score=95.5, ... │  ← 1行目
-</span></span><span style="display:flex;"><span>│ id=2, name=&#34;Bob&#34;,    score=87.0, ... │  ← 2行目
-</span></span><span style="display:flex;"><span>│ id=3, name=&#34;Charlie&#34;,score=92.3, ... │  ← 3行目
-</span></span><span style="display:flex;"><span>└──────────────────────────────────────┘
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">行指向（Row Store）
+</span></span><span class="line"><span class="cl">┌──────────────────────────────────────┐
+</span></span><span class="line"><span class="cl">│ id=1, name=&#34;Alice&#34;,  score=95.5, ... │  ← 1行目
+</span></span><span class="line"><span class="cl">│ id=2, name=&#34;Bob&#34;,    score=87.0, ... │  ← 2行目
+</span></span><span class="line"><span class="cl">│ id=3, name=&#34;Charlie&#34;,score=92.3, ... │  ← 3行目
+</span></span><span class="line"><span class="cl">└──────────────────────────────────────┘
 </span></span></code></pre></div><p>DuckDB は列指向ストレージを採用している。同じ列のデータが連続して並ぶ。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>列指向（Column Store）
-</span></span><span style="display:flex;"><span>┌────────────────────────┐
-</span></span><span style="display:flex;"><span>│ id:    1,  2,  3, ...  │  ← id 列
-</span></span><span style="display:flex;"><span>│ name:  Alice, Bob, ... │  ← name 列
-</span></span><span style="display:flex;"><span>│ score: 95.5, 87.0, ... │  ← score 列
-</span></span><span style="display:flex;"><span>└────────────────────────┘
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">列指向（Column Store）
+</span></span><span class="line"><span class="cl">┌────────────────────────┐
+</span></span><span class="line"><span class="cl">│ id:    1,  2,  3, ...  │  ← id 列
+</span></span><span class="line"><span class="cl">│ name:  Alice, Bob, ... │  ← name 列
+</span></span><span class="line"><span class="cl">│ score: 95.5, 87.0, ... │  ← score 列
+</span></span><span class="line"><span class="cl">└────────────────────────┘
 </span></span></code></pre></div><h3 id="なぜ分析クエリが速くなるか">なぜ分析クエリが速くなるか</h3>
 <p><code>SELECT AVG(score) FROM users</code> という集計クエリを考える。</p>
 <ul>
@@ -225,21 +226,21 @@
 <h2 id="ベクトル化実行">ベクトル化実行</h2>
 <h3 id="1行ずつ-vs-バッチ処理">1行ずつ vs バッチ処理</h3>
 <p>従来のデータベースは「行ごと処理」（Volcano Model）が主流だった。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>従来モデル（Volcano Model）
-</span></span><span style="display:flex;"><span>  クエリ実行エンジン
-</span></span><span style="display:flex;"><span>    ↓ 1行リクエスト
-</span></span><span style="display:flex;"><span>  フィルタノード
-</span></span><span style="display:flex;"><span>    ↓ 1行リクエスト
-</span></span><span style="display:flex;"><span>  スキャンノード
-</span></span><span style="display:flex;"><span>    → 1行ずつ返す
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">従来モデル（Volcano Model）
+</span></span><span class="line"><span class="cl">  クエリ実行エンジン
+</span></span><span class="line"><span class="cl">    ↓ 1行リクエスト
+</span></span><span class="line"><span class="cl">  フィルタノード
+</span></span><span class="line"><span class="cl">    ↓ 1行リクエスト
+</span></span><span class="line"><span class="cl">  スキャンノード
+</span></span><span class="line"><span class="cl">    → 1行ずつ返す
 </span></span></code></pre></div><p>DuckDB は「ベクトル化実行」で、一度に 2048 行をまとめて処理する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ベクトル化実行（Vectorized Execution）
-</span></span><span style="display:flex;"><span>  クエリ実行エンジン
-</span></span><span style="display:flex;"><span>    ↓ 2048行まとめてリクエスト
-</span></span><span style="display:flex;"><span>  フィルタノード（2048行をSIMDで一括評価）
-</span></span><span style="display:flex;"><span>    ↓ 結果の2048行
-</span></span><span style="display:flex;"><span>  スキャンノード
-</span></span><span style="display:flex;"><span>    → 2048行を一括で返す
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ベクトル化実行（Vectorized Execution）
+</span></span><span class="line"><span class="cl">  クエリ実行エンジン
+</span></span><span class="line"><span class="cl">    ↓ 2048行まとめてリクエスト
+</span></span><span class="line"><span class="cl">  フィルタノード（2048行をSIMDで一括評価）
+</span></span><span class="line"><span class="cl">    ↓ 結果の2048行
+</span></span><span class="line"><span class="cl">  スキャンノード
+</span></span><span class="line"><span class="cl">    → 2048行を一括で返す
 </span></span></code></pre></div><p>このアプローチの利点は以下の通り。</p>
 <table>
   <thead>
@@ -274,33 +275,33 @@
 </table>
 <h3 id="simdsingle-instruction-multiple-data">SIMD（Single Instruction, Multiple Data）</h3>
 <p>現代の CPU は一命令で複数のデータを同時に処理できる（SIMD）。ベクトル化実行はこれを最大限に活用する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>SIMD 演算の例（128ビット SIMD で 4つの int32 を同時加算）
-</span></span><span style="display:flex;"><span>[1, 2, 3, 4]
-</span></span><span style="display:flex;"><span>[5, 6, 7, 8]
-</span></span><span style="display:flex;"><span>     ↓ SIMD 加算（1命令）
-</span></span><span style="display:flex;"><span>[6, 8, 10, 12]
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">SIMD 演算の例（128ビット SIMD で 4つの int32 を同時加算）
+</span></span><span class="line"><span class="cl">[1, 2, 3, 4]
+</span></span><span class="line"><span class="cl">[5, 6, 7, 8]
+</span></span><span class="line"><span class="cl">     ↓ SIMD 加算（1命令）
+</span></span><span class="line"><span class="cl">[6, 8, 10, 12]
 </span></span></code></pre></div><h2 id="クエリオプティマイザ">クエリオプティマイザ</h2>
 <p>DuckDB は実行前にクエリを最適化し、不要な処理を取り除く。</p>
 <h3 id="predicate-pushdown述語プッシュダウン">Predicate Pushdown（述語プッシュダウン）</h3>
 <p>フィルタ条件をできる限り早い段階で適用する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> name <span style="color:#ff79c6">FROM</span> users <span style="color:#ff79c6">WHERE</span> score <span style="color:#ff79c6">&gt;</span> <span style="color:#bd93f9">90</span>;
-</span></span></code></pre></div><p>最適化前:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>全行スキャン → JOIN/集計 → フィルタ(score &gt; 90) → name を取得
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>最適化前:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">全行スキャン → JOIN/集計 → フィルタ(score &gt; 90) → name を取得
 </span></span></code></pre></div><p>最適化後:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>スキャン時にフィルタ(score &gt; 90) → 該当行のみ処理 → name を取得
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">スキャン時にフィルタ(score &gt; 90) → 該当行のみ処理 → name を取得
 </span></span></code></pre></div><p>読み込むデータ量が大幅に減る。</p>
 <h3 id="projection-pushdown射影プッシュダウン">Projection Pushdown（射影プッシュダウン）</h3>
 <p>クエリで使わない列は最初から読まない。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> name, score <span style="color:#ff79c6">FROM</span> users;  <span style="color:#6272a4">-- id は不要
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span><span class="w">  </span><span class="c1">-- id は不要
 </span></span></span></code></pre></div><p><code>id</code> 列はディスクから読み込まれない。列指向ストレージと組み合わさることで効果が高い。</p>
 <h2 id="並列クエリ実行">並列クエリ実行</h2>
 <p>DuckDB はマルチコアを自動的に活用する。デフォルトで論理コア数のスレッドを使ってクエリを並列実行する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># スレッド数を確認</span>
-</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#34;SELECT current_setting(&#39;threads&#39;)&#34;</span>)<span style="color:#ff79c6">.</span>fetchone())
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># → (&#39;4&#39;,)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># スレッド数を確認</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;SELECT current_setting(&#39;threads&#39;)&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># → (&#39;4&#39;,)</span>
 </span></span></code></pre></div><p>大きなテーブルのスキャンや集計は自動的に分割され、各コアで並列処理される。</p>
 <h2 id="メモリ管理と-out-of-core-処理">メモリ管理と out-of-core 処理</h2>
 <p>DuckDB はメモリに収まらない大規模データも処理できる。</p>
@@ -309,46 +310,46 @@
 <li><strong>out-of-core 処理</strong>: メモリ不足時はディスクにスピルして継続実行</li>
 <li><strong>メモリ上限の設定</strong>: <code>SET memory_limit='4GB'</code> で明示的に制限も可能</li>
 </ul>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> memory_limit <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;4GB&#39;</span>;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SET</span> threads <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">2</span>;
-</span></span></code></pre></div><h2 id="tpc-h-ベンチマーク実測">TPC-H ベンチマーク実測</h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SET</span><span class="w"> </span><span class="n">memory_limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;4GB&#39;</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SET</span><span class="w"> </span><span class="n">threads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h2 id="tpc-h-ベンチマーク実測">TPC-H ベンチマーク実測</h2>
 <p>TPC-H は OLAP 性能の業界標準ベンチマーク。DuckDB の <code>tpch</code> 拡張を使えば、データ生成からクエリ実行まで完結する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb<span style="color:#ff79c6">,</span> time
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
-</span></span><span style="display:flex;"><span>con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#39;INSTALL tpch; LOAD tpch;&#39;</span>)
-</span></span><span style="display:flex;"><span>con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#39;CALL dbgen(sf=1);&#39;</span>)  <span style="color:#6272a4"># sf=N で Scale Factor を指定</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span><span class="o">,</span> <span class="nn">time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;INSTALL tpch; LOAD tpch;&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;CALL dbgen(sf=1);&#39;</span><span class="p">)</span>  <span class="c1"># sf=N で Scale Factor を指定</span>
 </span></span></code></pre></div><p>Scale Factor（SF）は生成するデータ量の倍率で、SF=1 で約 600 万行の lineitem テーブルが生成される。</p>
 <h3 id="計測クエリ">計測クエリ</h3>
 <p>3種類のクエリで実行時間を計測した。</p>
 <p><strong>Q1: 全行スキャン + 集計</strong>（lineitem の全行を読んでグループ集計）</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> l_returnflag, l_linestatus,
-</span></span><span style="display:flex;"><span>       <span style="color:#ff79c6">COUNT</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">AS</span> count_order, <span style="color:#ff79c6">SUM</span>(l_quantity) <span style="color:#ff79c6">AS</span> sum_qty
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> lineitem
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> l_shipdate <span style="color:#ff79c6">&lt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1998-09-02&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> l_returnflag, l_linestatus
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> l_returnflag, l_linestatus;
-</span></span></code></pre></div><p><strong>Q6: フィルタ集計</strong>（条件絞り込み後に単一集計）</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> <span style="color:#ff79c6">SUM</span>(l_extendedprice <span style="color:#ff79c6">*</span> l_discount) <span style="color:#ff79c6">AS</span> revenue
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> lineitem
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> l_shipdate <span style="color:#ff79c6">&gt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1994-01-01&#39;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_shipdate <span style="color:#ff79c6">&lt;</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1995-01-01&#39;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_discount <span style="color:#ff79c6">BETWEEN</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">05</span> <span style="color:#ff79c6">AND</span> <span style="color:#bd93f9">0</span>.<span style="color:#bd93f9">07</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_quantity <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">24</span>;
-</span></span></code></pre></div><p><strong>Q5: 6テーブル JOIN + 集計</strong>（最も複雑なクエリ）</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span> n_name, <span style="color:#ff79c6">SUM</span>(l_extendedprice <span style="color:#ff79c6">*</span> (<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">-</span> l_discount)) <span style="color:#ff79c6">AS</span> revenue
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">FROM</span> customer, orders, lineitem, supplier, nation, region
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">WHERE</span> c_custkey <span style="color:#ff79c6">=</span> o_custkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_orderkey <span style="color:#ff79c6">=</span> o_orderkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> l_suppkey <span style="color:#ff79c6">=</span> s_suppkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> c_nationkey <span style="color:#ff79c6">=</span> s_nationkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> s_nationkey <span style="color:#ff79c6">=</span> n_nationkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> n_regionkey <span style="color:#ff79c6">=</span> r_regionkey
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> r_name <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;ASIA&#39;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> o_orderdate <span style="color:#ff79c6">&gt;=</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1994-01-01&#39;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">AND</span> o_orderdate <span style="color:#ff79c6">&lt;</span> <span style="color:#8be9fd;font-style:italic">DATE</span> <span style="color:#f1fa8c">&#39;1995-01-01&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">GROUP</span> <span style="color:#ff79c6">BY</span> n_name <span style="color:#ff79c6">ORDER</span> <span style="color:#ff79c6">BY</span> revenue <span style="color:#ff79c6">DESC</span>;
-</span></span></code></pre></div><h3 id="実測結果sf01--sf20">実測結果（SF=0.1 〜 SF=20）</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">l_returnflag</span><span class="p">,</span><span class="w"> </span><span class="n">l_linestatus</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">       </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">count_order</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">l_quantity</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sum_qty</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">lineitem</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w"> </span><span class="n">l_shipdate</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;1998-09-02&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">l_returnflag</span><span class="p">,</span><span class="w"> </span><span class="n">l_linestatus</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">l_returnflag</span><span class="p">,</span><span class="w"> </span><span class="n">l_linestatus</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>Q6: フィルタ集計</strong>（条件絞り込み後に単一集計）</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">l_extendedprice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">l_discount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">revenue</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">lineitem</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w"> </span><span class="n">l_shipdate</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;1994-01-01&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">l_shipdate</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;1995-01-01&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">l_discount</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">05</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">07</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">l_quantity</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">24</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p><strong>Q5: 6テーブル JOIN + 集計</strong>（最も複雑なクエリ）</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w"> </span><span class="n">n_name</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">l_extendedprice</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">l_discount</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">revenue</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">,</span><span class="w"> </span><span class="n">orders</span><span class="p">,</span><span class="w"> </span><span class="n">lineitem</span><span class="p">,</span><span class="w"> </span><span class="n">supplier</span><span class="p">,</span><span class="w"> </span><span class="n">nation</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">WHERE</span><span class="w"> </span><span class="n">c_custkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o_custkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">l_orderkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o_orderkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">l_suppkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s_suppkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">c_nationkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s_nationkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">s_nationkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n_nationkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">n_regionkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r_regionkey</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">r_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ASIA&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">o_orderdate</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;1994-01-01&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">o_orderdate</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;1995-01-01&#39;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">n_name</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">revenue</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h3 id="実測結果sf01--sf20">実測結果（SF=0.1 〜 SF=20）</h3>
 <p>各 SF で3回計測した平均値を記録した。</p>
 <table>
   <thead>
@@ -409,12 +410,12 @@
 <li><strong>相互運用性</strong>: Arrow フォーマットを介して他のツールと高速連携</li>
 <li><strong>メモリ効率</strong>: Arrow の効率的なメモリレイアウトをそのまま利用</li>
 </ul>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">import</span> duckdb
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>con <span style="color:#ff79c6">=</span> duckdb<span style="color:#ff79c6">.</span>connect()
-</span></span><span style="display:flex;"><span><span style="color:#6272a4"># Arrow Table として取得（ゼロコピー）</span>
-</span></span><span style="display:flex;"><span>arrow_table <span style="color:#ff79c6">=</span> con<span style="color:#ff79c6">.</span>execute(<span style="color:#f1fa8c">&#34;SELECT * FROM range(1000000) t(i)&#34;</span>)<span style="color:#ff79c6">.</span>fetch_arrow_table()
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">print</span>(arrow_table<span style="color:#ff79c6">.</span>schema)
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Arrow Table として取得（ゼロコピー）</span>
+</span></span><span class="line"><span class="cl"><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;SELECT * FROM range(1000000) t(i)&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="n">arrow_table</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
 </span></span></code></pre></div><h2 id="まとめ">まとめ</h2>
 <p>DuckDB の速さは以下の組み合わせによる。</p>
 <table>
@@ -607,8 +608,8 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -628,8 +629,8 @@
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

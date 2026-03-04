@@ -77,6 +77,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -198,58 +199,58 @@
 <p><img src="/llm-papers-pipeline-with-claude-code/llm-papers-sample.png" alt="LLM論文サーベイ記事のサンプル"></p>
 <h2 id="アーキテクチャ概要">アーキテクチャ概要</h2>
 <p>パイプライン全体の処理フローは以下の通りである。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[launchd: 毎日7:00]
-</span></span><span style="display:flex;"><span>       |
-</span></span><span style="display:flex;"><span>       v
-</span></span><span style="display:flex;"><span>[run_pipeline.sh]
-</span></span><span style="display:flex;"><span>       |
-</span></span><span style="display:flex;"><span>       v
-</span></span><span style="display:flex;"><span>[pipeline.py]
-</span></span><span style="display:flex;"><span>  |
-</span></span><span style="display:flex;"><span>  |-- 1. 状態ファイル読み込み (state.py)
-</span></span><span style="display:flex;"><span>  |-- 2. 論文収集 (fetchers.py)
-</span></span><span style="display:flex;"><span>  |       |-- arXiv API
-</span></span><span style="display:flex;"><span>  |       |-- Semantic Scholar API
-</span></span><span style="display:flex;"><span>  |       |-- HuggingFace Daily Papers API
-</span></span><span style="display:flex;"><span>  |       |-- 重複排除 + 人気度ソート
-</span></span><span style="display:flex;"><span>  |-- 3. 処理済み論文の除外
-</span></span><span style="display:flex;"><span>  |-- 4. 日本語要約生成 (summarizer.py) ... claude -p
-</span></span><span style="display:flex;"><span>  |-- 5. スクリーンショット取得 (screenshot.py) ... Playwright
-</span></span><span style="display:flex;"><span>  |-- 6. Hugo記事生成 (publisher.py)
-</span></span><span style="display:flex;"><span>  |-- 7. 状態ファイル保存
-</span></span><span style="display:flex;"><span>  |-- 8. git commit → hugo build → git push
-</span></span><span style="display:flex;"><span>  |-- 9. Slack通知 (notifier.py) ... claude -p + Slack MCP
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[launchd: 毎日7:00]
+</span></span><span class="line"><span class="cl">       |
+</span></span><span class="line"><span class="cl">       v
+</span></span><span class="line"><span class="cl">[run_pipeline.sh]
+</span></span><span class="line"><span class="cl">       |
+</span></span><span class="line"><span class="cl">       v
+</span></span><span class="line"><span class="cl">[pipeline.py]
+</span></span><span class="line"><span class="cl">  |
+</span></span><span class="line"><span class="cl">  |-- 1. 状態ファイル読み込み (state.py)
+</span></span><span class="line"><span class="cl">  |-- 2. 論文収集 (fetchers.py)
+</span></span><span class="line"><span class="cl">  |       |-- arXiv API
+</span></span><span class="line"><span class="cl">  |       |-- Semantic Scholar API
+</span></span><span class="line"><span class="cl">  |       |-- HuggingFace Daily Papers API
+</span></span><span class="line"><span class="cl">  |       |-- 重複排除 + 人気度ソート
+</span></span><span class="line"><span class="cl">  |-- 3. 処理済み論文の除外
+</span></span><span class="line"><span class="cl">  |-- 4. 日本語要約生成 (summarizer.py) ... claude -p
+</span></span><span class="line"><span class="cl">  |-- 5. スクリーンショット取得 (screenshot.py) ... Playwright
+</span></span><span class="line"><span class="cl">  |-- 6. Hugo記事生成 (publisher.py)
+</span></span><span class="line"><span class="cl">  |-- 7. 状態ファイル保存
+</span></span><span class="line"><span class="cl">  |-- 8. git commit → hugo build → git push
+</span></span><span class="line"><span class="cl">  |-- 9. Slack通知 (notifier.py) ... claude -p + Slack MCP
 </span></span></code></pre></div><h3 id="ディレクトリ構成">ディレクトリ構成</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>scripts/llm_papers/
-</span></span><span style="display:flex;"><span>├── config.py               # 設定値の一元管理
-</span></span><span style="display:flex;"><span>├── fetchers.py             # 3ソースからの論文取得
-</span></span><span style="display:flex;"><span>├── summarizer.py           # Claude CLIによる要約生成
-</span></span><span style="display:flex;"><span>├── screenshot.py           # Playwrightによるスクリーンショット
-</span></span><span style="display:flex;"><span>├── publisher.py            # Hugo記事の生成
-</span></span><span style="display:flex;"><span>├── notifier.py             # Slack通知
-</span></span><span style="display:flex;"><span>├── state.py                # 冪等性の状態管理
-</span></span><span style="display:flex;"><span>├── pipeline.py             # メインオーケストレーター
-</span></span><span style="display:flex;"><span>├── run_pipeline.sh         # launchdから呼ばれるシェルラッパー
-</span></span><span style="display:flex;"><span>├── requirements.txt        # Python依存パッケージ
-</span></span><span style="display:flex;"><span>├── processed_papers.json   # 処理済み論文のID記録
-</span></span><span style="display:flex;"><span>├── pipeline.log            # アプリケーションログ
-</span></span><span style="display:flex;"><span>└── venv/                   # Python仮想環境
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">scripts/llm_papers/
+</span></span><span class="line"><span class="cl">├── config.py               # 設定値の一元管理
+</span></span><span class="line"><span class="cl">├── fetchers.py             # 3ソースからの論文取得
+</span></span><span class="line"><span class="cl">├── summarizer.py           # Claude CLIによる要約生成
+</span></span><span class="line"><span class="cl">├── screenshot.py           # Playwrightによるスクリーンショット
+</span></span><span class="line"><span class="cl">├── publisher.py            # Hugo記事の生成
+</span></span><span class="line"><span class="cl">├── notifier.py             # Slack通知
+</span></span><span class="line"><span class="cl">├── state.py                # 冪等性の状態管理
+</span></span><span class="line"><span class="cl">├── pipeline.py             # メインオーケストレーター
+</span></span><span class="line"><span class="cl">├── run_pipeline.sh         # launchdから呼ばれるシェルラッパー
+</span></span><span class="line"><span class="cl">├── requirements.txt        # Python依存パッケージ
+</span></span><span class="line"><span class="cl">├── processed_papers.json   # 処理済み論文のID記録
+</span></span><span class="line"><span class="cl">├── pipeline.log            # アプリケーションログ
+</span></span><span class="line"><span class="cl">└── venv/                   # Python仮想環境
 </span></span></code></pre></div><h2 id="論文収集fetcherspy">論文収集（fetchers.py）</h2>
 <p>3つのソースからLLM関連論文を収集し、統一的な<code>Paper</code>データクラスに変換する。</p>
 <h3 id="データモデル">データモデル</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>@dataclass
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">class</span> <span style="color:#50fa7b">Paper</span>:
-</span></span><span style="display:flex;"><span>    paper_id: <span style="color:#8be9fd;font-style:italic">str</span>
-</span></span><span style="display:flex;"><span>    title: <span style="color:#8be9fd;font-style:italic">str</span>
-</span></span><span style="display:flex;"><span>    authors: <span style="color:#8be9fd;font-style:italic">list</span>[<span style="color:#8be9fd;font-style:italic">str</span>]
-</span></span><span style="display:flex;"><span>    abstract: <span style="color:#8be9fd;font-style:italic">str</span>
-</span></span><span style="display:flex;"><span>    published: <span style="color:#8be9fd;font-style:italic">str</span>          <span style="color:#6272a4"># ISO date string</span>
-</span></span><span style="display:flex;"><span>    url: <span style="color:#8be9fd;font-style:italic">str</span>
-</span></span><span style="display:flex;"><span>    source: <span style="color:#8be9fd;font-style:italic">str</span>             <span style="color:#6272a4"># &#34;arxiv&#34;, &#34;semantic_scholar&#34;, &#34;huggingface&#34;</span>
-</span></span><span style="display:flex;"><span>    arxiv_id: <span style="color:#8be9fd;font-style:italic">str</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">None</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">None</span>
-</span></span><span style="display:flex;"><span>    doi: <span style="color:#8be9fd;font-style:italic">str</span> <span style="color:#ff79c6">|</span> <span style="color:#ff79c6">None</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">None</span>
-</span></span><span style="display:flex;"><span>    categories: <span style="color:#8be9fd;font-style:italic">list</span>[<span style="color:#8be9fd;font-style:italic">str</span>] <span style="color:#ff79c6">=</span> field(default_factory<span style="color:#ff79c6">=</span><span style="color:#8be9fd;font-style:italic">list</span>)
-</span></span><span style="display:flex;"><span>    popularity_score: <span style="color:#8be9fd;font-style:italic">float</span> <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">0.0</span>  <span style="color:#6272a4"># 人気度スコア</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="nd">@dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Paper</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">paper_id</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">authors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">abstract</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">published</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># ISO date string</span>
+</span></span><span class="line"><span class="cl">    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>             <span class="c1"># &#34;arxiv&#34;, &#34;semantic_scholar&#34;, &#34;huggingface&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">arxiv_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">    <span class="n">doi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">    <span class="n">categories</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">popularity_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># 人気度スコア</span>
 </span></span></code></pre></div><h3 id="各ソースの取得戦略">各ソースの取得戦略</h3>
 <table>
   <thead>
@@ -287,162 +288,162 @@
 </table>
 <h3 id="arxiv">arXiv</h3>
 <p><code>cs.CL</code>（計算言語学）と<code>cs.AI</code>（人工知能）カテゴリから、LLM関連キーワードでフィルタリングする。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cat_query <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34; OR &#34;</span><span style="color:#ff79c6">.</span>join(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;cat:</span><span style="color:#f1fa8c">{</span>cat<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#34;</span> <span style="color:#ff79c6">for</span> cat <span style="color:#ff79c6">in</span> [<span style="color:#f1fa8c">&#34;cs.CL&#34;</span>, <span style="color:#f1fa8c">&#34;cs.AI&#34;</span>])
-</span></span><span style="display:flex;"><span>keyword_query <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#34; OR &#34;</span><span style="color:#ff79c6">.</span>join(<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#39;abs:&#34;</span><span style="color:#f1fa8c">{</span>kw<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#34;&#39;</span> <span style="color:#ff79c6">for</span> kw <span style="color:#ff79c6">in</span> ARXIV_KEYWORDS[:<span style="color:#bd93f9">5</span>])
-</span></span><span style="display:flex;"><span>query <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;(</span><span style="color:#f1fa8c">{</span>cat_query<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">) AND (</span><span style="color:#f1fa8c">{</span>keyword_query<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">)&#34;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">cat_query</span> <span class="o">=</span> <span class="s2">&#34; OR &#34;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;cat:</span><span class="si">{</span><span class="n">cat</span><span class="si">}</span><span class="s2">&#34;</span> <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&#34;cs.CL&#34;</span><span class="p">,</span> <span class="s2">&#34;cs.AI&#34;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl"><span class="n">keyword_query</span> <span class="o">=</span> <span class="s2">&#34; OR &#34;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;abs:&#34;</span><span class="si">{</span><span class="n">kw</span><span class="si">}</span><span class="s1">&#34;&#39;</span> <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">ARXIV_KEYWORDS</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl"><span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&#34;(</span><span class="si">{</span><span class="n">cat_query</span><span class="si">}</span><span class="s2">) AND (</span><span class="si">{</span><span class="n">keyword_query</span><span class="si">}</span><span class="s2">)&#34;</span>
 </span></span></code></pre></div><p>arXiv APIはレート制限が厳しいため、<code>delay_seconds=5.0</code>、<code>num_retries=5</code>を設定している。</p>
 <h3 id="semantic-scholar">Semantic Scholar</h3>
 <p>Graph API v1の<code>/paper/search</code>エンドポイントを使い、<code>publicationDateOrYear</code>パラメータで直近3日間に絞り込む。<code>citationCount</code>フィールドをそのまま人気度スコアとして利用する。</p>
 <h3 id="huggingface-daily-papers">HuggingFace Daily Papers</h3>
 <p><code>https://huggingface.co/api/daily_papers</code>から当日のキュレーション済み論文を取得する。HuggingFaceはLLM以外の論文も含まれるため、キーワードフィルタを適用している。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>LLM_FILTER_KEYWORDS <span style="color:#ff79c6">=</span> [
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;language model&#34;</span>, <span style="color:#f1fa8c">&#34;LLM&#34;</span>, <span style="color:#f1fa8c">&#34;transformer&#34;</span>, <span style="color:#f1fa8c">&#34;GPT&#34;</span>, <span style="color:#f1fa8c">&#34;BERT&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;instruction tuning&#34;</span>, <span style="color:#f1fa8c">&#34;RLHF&#34;</span>, <span style="color:#f1fa8c">&#34;prompt&#34;</span>, <span style="color:#f1fa8c">&#34;chain of thought&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;retrieval augmented&#34;</span>, <span style="color:#f1fa8c">&#34;RAG&#34;</span>, <span style="color:#f1fa8c">&#34;fine-tuning&#34;</span>, <span style="color:#f1fa8c">&#34;alignment&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;reasoning&#34;</span>, <span style="color:#f1fa8c">&#34;tokeniz&#34;</span>, <span style="color:#f1fa8c">&#34;attention mechanism&#34;</span>, <span style="color:#ff79c6">...</span>
-</span></span><span style="display:flex;"><span>]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_is_llm_related</span>(title: <span style="color:#8be9fd;font-style:italic">str</span>, abstract: <span style="color:#8be9fd;font-style:italic">str</span>) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">bool</span>:
-</span></span><span style="display:flex;"><span>    text <span style="color:#ff79c6">=</span> (title <span style="color:#ff79c6">+</span> <span style="color:#f1fa8c">&#34; &#34;</span> <span style="color:#ff79c6">+</span> abstract)<span style="color:#ff79c6">.</span>lower()
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> <span style="color:#8be9fd;font-style:italic">any</span>(kw<span style="color:#ff79c6">.</span>lower() <span style="color:#ff79c6">in</span> text <span style="color:#ff79c6">for</span> kw <span style="color:#ff79c6">in</span> LLM_FILTER_KEYWORDS)
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">LLM_FILTER_KEYWORDS</span> <span class="o">=</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;language model&#34;</span><span class="p">,</span> <span class="s2">&#34;LLM&#34;</span><span class="p">,</span> <span class="s2">&#34;transformer&#34;</span><span class="p">,</span> <span class="s2">&#34;GPT&#34;</span><span class="p">,</span> <span class="s2">&#34;BERT&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;instruction tuning&#34;</span><span class="p">,</span> <span class="s2">&#34;RLHF&#34;</span><span class="p">,</span> <span class="s2">&#34;prompt&#34;</span><span class="p">,</span> <span class="s2">&#34;chain of thought&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;retrieval augmented&#34;</span><span class="p">,</span> <span class="s2">&#34;RAG&#34;</span><span class="p">,</span> <span class="s2">&#34;fine-tuning&#34;</span><span class="p">,</span> <span class="s2">&#34;alignment&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;reasoning&#34;</span><span class="p">,</span> <span class="s2">&#34;tokeniz&#34;</span><span class="p">,</span> <span class="s2">&#34;attention mechanism&#34;</span><span class="p">,</span> <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_is_llm_related</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">abstract</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">text</span> <span class="o">=</span> <span class="p">(</span><span class="n">title</span> <span class="o">+</span> <span class="s2">&#34; &#34;</span> <span class="o">+</span> <span class="n">abstract</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">kw</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">text</span> <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">LLM_FILTER_KEYWORDS</span><span class="p">)</span>
 </span></span></code></pre></div><p><code>upvotes</code>フィールドを人気度スコアとして利用する。</p>
 <h3 id="人気度ベースのソート">人気度ベースのソート</h3>
 <p>arXivから取得した論文は人気度情報を持たないため、Semantic Scholar Batch APIで被引用数を補完する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_enrich_popularity_from_s2</span>(papers: <span style="color:#8be9fd;font-style:italic">list</span>[Paper]) <span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">None</span>:
-</span></span><span style="display:flex;"><span>    papers_to_enrich <span style="color:#ff79c6">=</span> [p <span style="color:#ff79c6">for</span> p <span style="color:#ff79c6">in</span> papers <span style="color:#ff79c6">if</span> p<span style="color:#ff79c6">.</span>popularity_score <span style="color:#ff79c6">&lt;</span> <span style="color:#bd93f9">0.1</span> <span style="color:#ff79c6">and</span> p<span style="color:#ff79c6">.</span>arxiv_id]
-</span></span><span style="display:flex;"><span>    arxiv_ids <span style="color:#ff79c6">=</span> [<span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;ArXiv:</span><span style="color:#f1fa8c">{</span>p<span style="color:#ff79c6">.</span>arxiv_id<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#34;</span> <span style="color:#ff79c6">for</span> p <span style="color:#ff79c6">in</span> papers_to_enrich]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    resp <span style="color:#ff79c6">=</span> requests<span style="color:#ff79c6">.</span>post(
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;https://api.semanticscholar.org/graph/v1/paper/batch&#34;</span>,
-</span></span><span style="display:flex;"><span>        json<span style="color:#ff79c6">=</span>{<span style="color:#f1fa8c">&#34;ids&#34;</span>: arxiv_ids[:<span style="color:#bd93f9">500</span>]},
-</span></span><span style="display:flex;"><span>        params<span style="color:#ff79c6">=</span>{<span style="color:#f1fa8c">&#34;fields&#34;</span>: <span style="color:#f1fa8c">&#34;citationCount,externalIds&#34;</span>},
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>    <span style="color:#6272a4"># 結果をpopularity_scoreに反映</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_enrich_popularity_from_s2</span><span class="p">(</span><span class="n">papers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Paper</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">papers_to_enrich</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">papers</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">popularity_score</span> <span class="o">&lt;</span> <span class="mf">0.1</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">arxiv_id</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">arxiv_ids</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&#34;ArXiv:</span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">arxiv_id</span><span class="si">}</span><span class="s2">&#34;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">papers_to_enrich</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;https://api.semanticscholar.org/graph/v1/paper/batch&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&#34;ids&#34;</span><span class="p">:</span> <span class="n">arxiv_ids</span><span class="p">[:</span><span class="mi">500</span><span class="p">]},</span>
+</span></span><span class="line"><span class="cl">        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&#34;fields&#34;</span><span class="p">:</span> <span class="s2">&#34;citationCount,externalIds&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 結果をpopularity_scoreに反映</span>
 </span></span></code></pre></div><p>最終的に<code>(popularity_score, published)</code>のタプルで降順ソートし、人気の高い新しい論文を優先的に選出する。</p>
 <h3 id="重複排除">重複排除</h3>
 <p>複数ソースからの重複は、paper_idベースの排除（arXivソースを優先）と、正規化タイトルベースの排除の2段階で処理する。</p>
 <h2 id="日本語要約生成summarizerpy">日本語要約生成（summarizer.py）</h2>
 <p>Anthropic SDKではなく、Claude Code CLI（<code>claude -p</code>）を直接呼び出して要約を生成する。これにより<code>ANTHROPIC_API_KEY</code>の管理が不要になる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">generate_summary</span>(paper: Paper) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">str</span>:
-</span></span><span style="display:flex;"><span>    prompt <span style="color:#ff79c6">=</span> (
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;以下の論文のAbstractを日本語で要約してください。要約は3〜5文程度で、&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;技術的な内容を正確に伝えてください。要約のテキストのみを出力し、&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;前置きや説明は不要です。</span><span style="color:#f1fa8c">\n\n</span><span style="color:#f1fa8c">&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;タイトル: </span><span style="color:#f1fa8c">{</span>paper<span style="color:#ff79c6">.</span>title<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;Abstract:</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">{</span>paper<span style="color:#ff79c6">.</span>abstract<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#34;</span>
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    result <span style="color:#ff79c6">=</span> subprocess<span style="color:#ff79c6">.</span>run(
-</span></span><span style="display:flex;"><span>        [<span style="color:#f1fa8c">&#34;claude&#34;</span>, <span style="color:#f1fa8c">&#34;-p&#34;</span>, prompt],
-</span></span><span style="display:flex;"><span>        capture_output<span style="color:#ff79c6">=</span><span style="color:#ff79c6">True</span>, text<span style="color:#ff79c6">=</span><span style="color:#ff79c6">True</span>, timeout<span style="color:#ff79c6">=</span><span style="color:#bd93f9">120</span>,
-</span></span><span style="display:flex;"><span>        env<span style="color:#ff79c6">=</span>_get_claude_env(),
-</span></span><span style="display:flex;"><span>    )
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">generate_summary</span><span class="p">(</span><span class="n">paper</span><span class="p">:</span> <span class="n">Paper</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">prompt</span> <span class="o">=</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;以下の論文のAbstractを日本語で要約してください。要約は3〜5文程度で、&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;技術的な内容を正確に伝えてください。要約のテキストのみを出力し、&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;前置きや説明は不要です。</span><span class="se">\n\n</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;タイトル: </span><span class="si">{</span><span class="n">paper</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="se">\n</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;Abstract:</span><span class="se">\n</span><span class="si">{</span><span class="n">paper</span><span class="o">.</span><span class="n">abstract</span><span class="si">}</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span><span class="s2">&#34;claude&#34;</span><span class="p">,</span> <span class="s2">&#34;-p&#34;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">=</span><span class="n">_get_claude_env</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
 </span></span></code></pre></div><h3 id="claudecode環境変数の除去">CLAUDECODE環境変数の除去</h3>
 <p>パイプラインがClaude Codeセッション内から実行される場合、ネストされたClaude CLIの起動が拒否される。これを回避するため、<code>CLAUDECODE</code>環境変数を除去してからsubprocessを実行する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_get_claude_env</span>() <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">dict</span>:
-</span></span><span style="display:flex;"><span>    env <span style="color:#ff79c6">=</span> os<span style="color:#ff79c6">.</span>environ<span style="color:#ff79c6">.</span>copy()
-</span></span><span style="display:flex;"><span>    env<span style="color:#ff79c6">.</span>pop(<span style="color:#f1fa8c">&#34;CLAUDECODE&#34;</span>, <span style="color:#ff79c6">None</span>)
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">return</span> env
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_get_claude_env</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">env</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&#34;CLAUDECODE&#34;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">env</span>
 </span></span></code></pre></div><h2 id="slack通知notifierpy">Slack通知（notifier.py）</h2>
 <p>処理完了後、Slackの<code>#notify</code>チャンネルに論文サマリーを投稿する。Slack APIを直接叩くのではなく、Claude Code CLI経由でSlack MCPツールを呼び出す方式を採用した。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">notify_slack</span>(papers, summaries, date) <span style="color:#ff79c6">-&gt;</span> <span style="color:#8be9fd;font-style:italic">bool</span>:
-</span></span><span style="display:flex;"><span>    message <span style="color:#ff79c6">=</span> _format_slack_message(papers, summaries, date, blog_url)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    prompt <span style="color:#ff79c6">=</span> (
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;以下のメッセージをSlackのnotifyチャンネル(ID: </span><span style="color:#f1fa8c">{</span>SLACK_CHANNEL_ID<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">)に&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;mcp__slack__slack_post_messageツールを使って投稿してください。&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;メッセージの内容をそのまま投稿し、それ以外の出力は不要です。</span><span style="color:#f1fa8c">\n\n</span><span style="color:#f1fa8c">&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;メッセージ:</span><span style="color:#f1fa8c">\n</span><span style="color:#f1fa8c">{</span>message<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">&#34;</span>
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    result <span style="color:#ff79c6">=</span> subprocess<span style="color:#ff79c6">.</span>run(
-</span></span><span style="display:flex;"><span>        [<span style="color:#f1fa8c">&#34;claude&#34;</span>, <span style="color:#f1fa8c">&#34;-p&#34;</span>, <span style="color:#f1fa8c">&#34;--allowedTools&#34;</span>, <span style="color:#f1fa8c">&#34;mcp__slack__slack_post_message&#34;</span>],
-</span></span><span style="display:flex;"><span>        <span style="color:#8be9fd;font-style:italic">input</span><span style="color:#ff79c6">=</span>prompt,
-</span></span><span style="display:flex;"><span>        capture_output<span style="color:#ff79c6">=</span><span style="color:#ff79c6">True</span>, text<span style="color:#ff79c6">=</span><span style="color:#ff79c6">True</span>, timeout<span style="color:#ff79c6">=</span><span style="color:#bd93f9">60</span>,
-</span></span><span style="display:flex;"><span>        env<span style="color:#ff79c6">=</span>_get_claude_env(),
-</span></span><span style="display:flex;"><span>    )
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">notify_slack</span><span class="p">(</span><span class="n">papers</span><span class="p">,</span> <span class="n">summaries</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">message</span> <span class="o">=</span> <span class="n">_format_slack_message</span><span class="p">(</span><span class="n">papers</span><span class="p">,</span> <span class="n">summaries</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">blog_url</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">prompt</span> <span class="o">=</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;以下のメッセージをSlackのnotifyチャンネル(ID: </span><span class="si">{</span><span class="n">SLACK_CHANNEL_ID</span><span class="si">}</span><span class="s2">)に&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;mcp__slack__slack_post_messageツールを使って投稿してください。&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;メッセージの内容をそのまま投稿し、それ以外の出力は不要です。</span><span class="se">\n\n</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="sa">f</span><span class="s2">&#34;メッセージ:</span><span class="se">\n</span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="p">[</span><span class="s2">&#34;claude&#34;</span><span class="p">,</span> <span class="s2">&#34;-p&#34;</span><span class="p">,</span> <span class="s2">&#34;--allowedTools&#34;</span><span class="p">,</span> <span class="s2">&#34;mcp__slack__slack_post_message&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">input</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">=</span><span class="n">_get_claude_env</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
 </span></span></code></pre></div><p><code>--allowedTools</code>でSlack投稿ツールのみを許可し、意図しないツール呼び出しを防いでいる。</p>
 <h2 id="冪等性の担保statepy">冪等性の担保（state.py）</h2>
 <p><code>processed_papers.json</code>にて処理済み論文のIDを管理し、同一論文の重複処理を防ぐ。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;processed_ids&#34;</span>: {
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;arxiv:2602.10693&#34;</span>: {
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;title&#34;</span>: <span style="color:#f1fa8c">&#34;VESPO: Variational Sequence-Level Soft Policy Optimization...&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;processed_at&#34;</span>: <span style="color:#f1fa8c">&#34;2026-02-23T21:52:36.202101&#34;</span>
-</span></span><span style="display:flex;"><span>    },
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&#34;arxiv:2602.08354&#34;</span>: {
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;title&#34;</span>: <span style="color:#f1fa8c">&#34;Does Your Reasoning Model Implicitly Know When to Stop Thinking?&#34;</span>,
-</span></span><span style="display:flex;"><span>      <span style="color:#ff79c6">&#34;processed_at&#34;</span>: <span style="color:#f1fa8c">&#34;2026-02-23T21:52:36.202114&#34;</span>
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>  },
-</span></span><span style="display:flex;"><span>  <span style="color:#ff79c6">&#34;last_run&#34;</span>: <span style="color:#f1fa8c">&#34;2026-02-24T09:16:33.952783&#34;</span>
-</span></span><span style="display:flex;"><span>}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;processed_ids&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;arxiv:2602.10693&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;title&#34;</span><span class="p">:</span> <span class="s2">&#34;VESPO: Variational Sequence-Level Soft Policy Optimization...&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;processed_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-02-23T21:52:36.202101&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;arxiv:2602.08354&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;title&#34;</span><span class="p">:</span> <span class="s2">&#34;Does Your Reasoning Model Implicitly Know When to Stop Thinking?&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;processed_at&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-02-23T21:52:36.202114&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;last_run&#34;</span><span class="p">:</span> <span class="s2">&#34;2026-02-24T09:16:33.952783&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>パイプラインの各実行で、取得した論文リストから処理済みIDを除外した上で、上位N件（デフォルト5件）を選出する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>new_papers <span style="color:#ff79c6">=</span> [p <span style="color:#ff79c6">for</span> p <span style="color:#ff79c6">in</span> all_papers <span style="color:#ff79c6">if</span> <span style="color:#ff79c6">not</span> is_processed(state, p<span style="color:#ff79c6">.</span>paper_id)]
-</span></span><span style="display:flex;"><span>featured_papers <span style="color:#ff79c6">=</span> new_papers[:TOP_N_PAPERS]
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">new_papers</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_papers</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">is_processed</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">paper_id</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl"><span class="n">featured_papers</span> <span class="o">=</span> <span class="n">new_papers</span><span class="p">[:</span><span class="n">TOP_N_PAPERS</span><span class="p">]</span>
 </span></span></code></pre></div><h2 id="hugo記事生成publisherpy">Hugo記事生成（publisher.py）</h2>
 <p>選出された論文をYAMLフロントマター付きのMarkdownとして出力する。各論文について、日本語要約と折りたたみ式の原文Abstractを含む。</p>
 <p>生成される記事の構造：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-markdown" data-lang="markdown"><span style="display:flex;"><span>---
-</span></span><span style="display:flex;"><span>title: &#34;LLM論文サーベイ（2026-02-24）&#34;
-</span></span><span style="display:flex;"><span>tags: [&#34;LLM&#34;, &#34;AI&#34;, &#34;論文&#34;]
-</span></span><span style="display:flex;"><span>url: llm-papers-2026-02-24
-</span></span><span style="display:flex;"><span>date: 2026-02-24
-</span></span><span style="display:flex;"><span>---
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">## 1. 論文タイトル
-</span></span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span> **著者**: ...
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">-</span> **ソース**: [<span style="color:#ff79c6">huggingface</span>](<span style="color:#50fa7b">https://arxiv.org/abs/...</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="font-weight:bold">### 要約
-</span></span></span><span style="display:flex;"><span>（Claude CLIが生成した日本語要約）
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>{{&lt; details &#34;原文Abstract&#34; &gt;}}
-</span></span><span style="display:flex;"><span>（英語の原文）
-</span></span><span style="display:flex;"><span>{{&lt; /details &gt;}}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-markdown" data-lang="markdown"><span class="line"><span class="cl">---
+</span></span><span class="line"><span class="cl">title: &#34;LLM論文サーベイ（2026-02-24）&#34;
+</span></span><span class="line"><span class="cl">tags: [&#34;LLM&#34;, &#34;AI&#34;, &#34;論文&#34;]
+</span></span><span class="line"><span class="cl">url: llm-papers-2026-02-24
+</span></span><span class="line"><span class="cl">date: 2026-02-24
+</span></span><span class="line"><span class="cl">---
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">## 1. 論文タイトル
+</span></span></span><span class="line"><span class="cl"><span class="k">-</span> **著者**: ...
+</span></span><span class="line"><span class="cl"><span class="k">-</span> **ソース**: [<span class="nt">huggingface</span>](<span class="na">https://arxiv.org/abs/...</span>)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="gu">### 要約
+</span></span></span><span class="line"><span class="cl">（Claude CLIが生成した日本語要約）
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">{{&lt; details &#34;原文Abstract&#34; &gt;}}
+</span></span><span class="line"><span class="cl">（英語の原文）
+</span></span><span class="line"><span class="cl">{{&lt; /details &gt;}}
 </span></span></code></pre></div><h2 id="自動デプロイ">自動デプロイ</h2>
 <p>記事生成後、以下のgit操作を自動実行する。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">git_commit_and_push</span>(post_dir: Path) <span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">None</span>:
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;git&#34;</span>, <span style="color:#f1fa8c">&#34;add&#34;</span>, <span style="color:#8be9fd;font-style:italic">str</span>(post_dir)], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;git&#34;</span>, <span style="color:#f1fa8c">&#34;commit&#34;</span>, <span style="color:#f1fa8c">&#34;-m&#34;</span>, <span style="color:#f1fa8c">f</span><span style="color:#f1fa8c">&#34;Add LLM papers survey (</span><span style="color:#f1fa8c">{</span>date<span style="color:#f1fa8c">}</span><span style="color:#f1fa8c">)&#34;</span>], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;hugo&#34;</span>, <span style="color:#f1fa8c">&#34;--config&#34;</span>, <span style="color:#f1fa8c">&#34;hugo.toml&#34;</span>, <span style="color:#f1fa8c">&#34;-d&#34;</span>, <span style="color:#f1fa8c">&#34;docs&#34;</span>], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;git&#34;</span>, <span style="color:#f1fa8c">&#34;add&#34;</span>, <span style="color:#f1fa8c">&#34;docs/&#34;</span>], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;git&#34;</span>, <span style="color:#f1fa8c">&#34;commit&#34;</span>, <span style="color:#f1fa8c">&#34;-m&#34;</span>, <span style="color:#f1fa8c">&#34;Build website&#34;</span>], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
-</span></span><span style="display:flex;"><span>    subprocess<span style="color:#ff79c6">.</span>run([<span style="color:#f1fa8c">&#34;git&#34;</span>, <span style="color:#f1fa8c">&#34;push&#34;</span>, <span style="color:#f1fa8c">&#34;origin&#34;</span>, <span style="color:#f1fa8c">&#34;main&#34;</span>], cwd<span style="color:#ff79c6">=</span>PROJECT_ROOT)
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">git_commit_and_push</span><span class="p">(</span><span class="n">post_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;git&#34;</span><span class="p">,</span> <span class="s2">&#34;add&#34;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">post_dir</span><span class="p">)],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;git&#34;</span><span class="p">,</span> <span class="s2">&#34;commit&#34;</span><span class="p">,</span> <span class="s2">&#34;-m&#34;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&#34;Add LLM papers survey (</span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s2">)&#34;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;hugo&#34;</span><span class="p">,</span> <span class="s2">&#34;--config&#34;</span><span class="p">,</span> <span class="s2">&#34;hugo.toml&#34;</span><span class="p">,</span> <span class="s2">&#34;-d&#34;</span><span class="p">,</span> <span class="s2">&#34;docs&#34;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;git&#34;</span><span class="p">,</span> <span class="s2">&#34;add&#34;</span><span class="p">,</span> <span class="s2">&#34;docs/&#34;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;git&#34;</span><span class="p">,</span> <span class="s2">&#34;commit&#34;</span><span class="p">,</span> <span class="s2">&#34;-m&#34;</span><span class="p">,</span> <span class="s2">&#34;Build website&#34;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&#34;git&#34;</span><span class="p">,</span> <span class="s2">&#34;push&#34;</span><span class="p">,</span> <span class="s2">&#34;origin&#34;</span><span class="p">,</span> <span class="s2">&#34;main&#34;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">PROJECT_ROOT</span><span class="p">)</span>
 </span></span></code></pre></div><h2 id="定期実行launchd">定期実行（launchd）</h2>
 <p>macOSのlaunchdを使い、毎日朝7時に自動実行される。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-xml" data-lang="xml"><span style="display:flex;"><span><span style="color:#6272a4">&lt;!-- ~/Library/LaunchAgents/com.zatoima.llm-papers-pipeline.plist --&gt;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">&lt;dict&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;key&gt;</span>Label<span style="color:#ff79c6">&lt;/key&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;string&gt;</span>com.zatoima.llm-papers-pipeline<span style="color:#ff79c6">&lt;/string&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;key&gt;</span>ProgramArguments<span style="color:#ff79c6">&lt;/key&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;array&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;string&gt;</span>/bin/bash<span style="color:#ff79c6">&lt;/string&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;string&gt;</span>/.../scripts/llm_papers/run_pipeline.sh<span style="color:#ff79c6">&lt;/string&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;/array&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;key&gt;</span>StartCalendarInterval<span style="color:#ff79c6">&lt;/key&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;dict&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;key&gt;</span>Hour<span style="color:#ff79c6">&lt;/key&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;integer&gt;</span>7<span style="color:#ff79c6">&lt;/integer&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;key&gt;</span>Minute<span style="color:#ff79c6">&lt;/key&gt;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">&lt;integer&gt;</span>0<span style="color:#ff79c6">&lt;/integer&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">&lt;/dict&gt;</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">&lt;/dict&gt;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-xml" data-lang="xml"><span class="line"><span class="cl"><span class="c">&lt;!-- ~/Library/LaunchAgents/com.zatoima.llm-papers-pipeline.plist --&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="nt">&lt;dict&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;key&gt;</span>Label<span class="nt">&lt;/key&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;string&gt;</span>com.zatoima.llm-papers-pipeline<span class="nt">&lt;/string&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;key&gt;</span>ProgramArguments<span class="nt">&lt;/key&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;array&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;string&gt;</span>/bin/bash<span class="nt">&lt;/string&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;string&gt;</span>/.../scripts/llm_papers/run_pipeline.sh<span class="nt">&lt;/string&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;/array&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;key&gt;</span>StartCalendarInterval<span class="nt">&lt;/key&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;dict&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;key&gt;</span>Hour<span class="nt">&lt;/key&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;integer&gt;</span>7<span class="nt">&lt;/integer&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;key&gt;</span>Minute<span class="nt">&lt;/key&gt;</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&lt;integer&gt;</span>0<span class="nt">&lt;/integer&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&lt;/dict&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="nt">&lt;/dict&gt;</span>
 </span></span></code></pre></div><p>シェルラッパー（<code>run_pipeline.sh</code>）では、venvの<code>activate</code>ではなくvenvのPythonバイナリを直接指定する。launchd環境では<code>source activate</code>が失敗するケースがあるためである。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6272a4"># activate ではなく直接パス指定（launchdとの互換性のため）</span>
-</span></span><span style="display:flex;"><span>./venv/bin/python3 pipeline.py --verbose
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># activate ではなく直接パス指定（launchdとの互換性のため）</span>
+</span></span><span class="line"><span class="cl">./venv/bin/python3 pipeline.py --verbose
 </span></span></code></pre></div><h2 id="エラーハンドリング">エラーハンドリング</h2>
 <p>各APIコールには指数バックオフ付きのリトライ機構を組み込んでいる。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ff79c6">def</span> <span style="color:#50fa7b">_retry_request</span>(func, <span style="color:#ff79c6">*</span>args, <span style="color:#ff79c6">**</span>kwargs):
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">for</span> attempt <span style="color:#ff79c6">in</span> <span style="color:#8be9fd;font-style:italic">range</span>(MAX_RETRIES):
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">try</span>:
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">return</span> func(<span style="color:#ff79c6">*</span>args, <span style="color:#ff79c6">**</span>kwargs)
-</span></span><span style="display:flex;"><span>        <span style="color:#ff79c6">except</span> Exception <span style="color:#ff79c6">as</span> e:
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">if</span> attempt <span style="color:#ff79c6">&lt;</span> MAX_RETRIES <span style="color:#ff79c6">-</span> <span style="color:#bd93f9">1</span>:
-</span></span><span style="display:flex;"><span>                wait <span style="color:#ff79c6">=</span> RETRY_DELAY <span style="color:#ff79c6">*</span> (<span style="color:#bd93f9">2</span> <span style="color:#ff79c6">**</span> attempt)  <span style="color:#6272a4"># 2s, 4s, 8s</span>
-</span></span><span style="display:flex;"><span>                time<span style="color:#ff79c6">.</span>sleep(wait)
-</span></span><span style="display:flex;"><span>            <span style="color:#ff79c6">else</span>:
-</span></span><span style="display:flex;"><span>                <span style="color:#ff79c6">raise</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_retry_request</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MAX_RETRIES</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">try</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">MAX_RETRIES</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">                <span class="n">wait</span> <span class="o">=</span> <span class="n">RETRY_DELAY</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">attempt</span><span class="p">)</span>  <span class="c1"># 2s, 4s, 8s</span>
+</span></span><span class="line"><span class="cl">                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">else</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">                <span class="k">raise</span>
 </span></span></code></pre></div><p>一部ソースの取得に失敗しても他のソースで処理を継続するため、パイプライン全体が停止することはない。要約生成の失敗時はAbstractの先頭300文字を代替テキストとして使用する。</p>
 <h2 id="cliオプション">CLIオプション</h2>
 <p>開発・デバッグ用に以下のオプションを用意した。</p>
@@ -617,8 +618,8 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -638,8 +639,8 @@
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

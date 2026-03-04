@@ -74,6 +74,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -179,75 +180,75 @@
         <p>pg_prewarmとpg_buffercacheで確認</p>
 <h3 id="pg_prewarm">pg_prewarm</h3>
 <p>忘れがちだが、テーブルだけではなくインデックスも対象に出来る</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> extension pg_prewarm;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">SELECT</span>
-</span></span><span style="display:flex;"><span>     pg_prewarm(<span style="color:#f1fa8c">&#39;t1&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#f1fa8c">&#39;t2_delta&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>    ,pg_prewarm(<span style="color:#f1fa8c">&#39;t1_PKEY&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>    ; 
-</span></span></code></pre></div><h3 id="pg_buffercache">pg_buffercache</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">create</span> extension pg_buffercache;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">select</span> <span style="color:#ff79c6">c</span>.relname, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> buffers
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">from</span> pg_buffercache <span style="color:#ff79c6">as</span> b
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">inner</span> <span style="color:#ff79c6">join</span> pg_class <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">on</span> b.relfilenode <span style="color:#ff79c6">=</span> pg_relation_filenode(<span style="color:#ff79c6">c</span>.oid) <span style="color:#ff79c6">and</span> b.reldatabase <span style="color:#ff79c6">in</span> (<span style="color:#bd93f9">0</span>, (<span style="color:#ff79c6">select</span> oid <span style="color:#ff79c6">from</span> pg_database <span style="color:#ff79c6">where</span> datname <span style="color:#ff79c6">=</span> current_database()))
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">group</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">c</span>.relname
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">order</span> <span style="color:#ff79c6">by</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">desc</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">30</span>;
-</span></span></code></pre></div><h3 id="実行ログ">実行ログ</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">SELECT</span>
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>      pg_prewarm(<span style="color:#f1fa8c">&#39;t1&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     ,pg_prewarm(<span style="color:#f1fa8c">&#39;t2_delta&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     ,pg_prewarm(<span style="color:#f1fa8c">&#39;t1_PKEY&#39;</span>, <span style="color:#f1fa8c">&#39;buffer&#39;</span>, <span style="color:#f1fa8c">&#39;main&#39;</span>)
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span>     ; 
-</span></span><span style="display:flex;"><span> pg_prewarm <span style="color:#ff79c6">|</span> pg_prewarm <span style="color:#ff79c6">|</span> pg_prewarm 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">------------+------------+------------
-</span></span></span><span style="display:flex;"><span>    <span style="color:#bd93f9">1818182</span> <span style="color:#ff79c6">|</span>     <span style="color:#bd93f9">909091</span> <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">54840</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">1</span> <span style="color:#ff79c6">row</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> <span style="color:#ff79c6">select</span> <span style="color:#ff79c6">c</span>.relname, <span style="color:#ff79c6">count</span>(<span style="color:#ff79c6">*</span>) <span style="color:#ff79c6">as</span> buffers
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">from</span> pg_buffercache <span style="color:#ff79c6">as</span> b
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">inner</span> <span style="color:#ff79c6">join</span> pg_class <span style="color:#ff79c6">as</span> <span style="color:#ff79c6">c</span> <span style="color:#ff79c6">on</span> b.relfilenode <span style="color:#ff79c6">=</span> pg_relation_filenode(<span style="color:#ff79c6">c</span>.oid) <span style="color:#ff79c6">and</span> b.reldatabase <span style="color:#ff79c6">in</span> (<span style="color:#bd93f9">0</span>, (<span style="color:#ff79c6">select</span> oid <span style="color:#ff79c6">from</span> pg_database <span style="color:#ff79c6">where</span> datname <span style="color:#ff79c6">=</span> current_database()))
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">group</span> <span style="color:#ff79c6">by</span> <span style="color:#ff79c6">c</span>.relname
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">order</span> <span style="color:#ff79c6">by</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">desc</span>
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">-&gt;</span> <span style="color:#ff79c6">LIMIT</span> <span style="color:#bd93f9">30</span>;
-</span></span><span style="display:flex;"><span>              relname              <span style="color:#ff79c6">|</span> buffers 
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------------------------------+---------
-</span></span></span><span style="display:flex;"><span> t1                                <span style="color:#ff79c6">|</span> <span style="color:#bd93f9">1818687</span>
-</span></span><span style="display:flex;"><span> t2_delta                          <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">909091</span>
-</span></span><span style="display:flex;"><span> t1_idx                            <span style="color:#ff79c6">|</span>  <span style="color:#bd93f9">426172</span>
-</span></span><span style="display:flex;"><span> t1_pkey                           <span style="color:#ff79c6">|</span>   <span style="color:#bd93f9">54840</span>
-</span></span><span style="display:flex;"><span> pg_attribute                      <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">60</span>
-</span></span><span style="display:flex;"><span> pg_toast_2619                     <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">36</span>
-</span></span><span style="display:flex;"><span> pg_class                          <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">13</span>
-</span></span><span style="display:flex;"><span> pg_proc                           <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">12</span>
-</span></span><span style="display:flex;"><span> pg_statistic                      <span style="color:#ff79c6">|</span>      <span style="color:#bd93f9">11</span>
-</span></span><span style="display:flex;"><span> pg_attribute_relid_attnum_index   <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">9</span>
-</span></span><span style="display:flex;"><span> pg_proc_oid_index                 <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">8</span>
-</span></span><span style="display:flex;"><span> pg_proc_proname_args_nsp_index    <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">6</span>
-</span></span><span style="display:flex;"><span> pg_amop                           <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">6</span>
-</span></span><span style="display:flex;"><span> pg_class_relname_nsp_index        <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">5</span>
-</span></span><span style="display:flex;"><span> pg_amproc                         <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_operator                       <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_class_oid_index                <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_statistic_relid_att_inh_index  <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_index                          <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_amop_opr_fam_index             <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_operator_oid_index             <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">4</span>
-</span></span><span style="display:flex;"><span> pg_type                           <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_amop_fam_strat_index           <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_type_oid_index                 <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_operator_oprname_l_r_n_index   <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_amproc_fam_proc_index          <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_depend_reference_index         <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_type_typname_nsp_index         <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">3</span>
-</span></span><span style="display:flex;"><span> pg_auth_members_member_role_index <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">2</span>
-</span></span><span style="display:flex;"><span> pg_cast_source_target_index       <span style="color:#ff79c6">|</span>       <span style="color:#bd93f9">2</span>
-</span></span><span style="display:flex;"><span>(<span style="color:#bd93f9">30</span> <span style="color:#ff79c6">rows</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>postgres<span style="color:#ff79c6">=&gt;</span> 
-</span></span></code></pre></div>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="n">pg_prewarm</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">SELECT</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">     </span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t1&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t2_delta&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">,</span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t1_PKEY&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">;</span><span class="w"> 
+</span></span></span></code></pre></div><h3 id="pg_buffercache">pg_buffercache</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="n">pg_buffercache</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">select</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">relname</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">buffers</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">from</span><span class="w"> </span><span class="n">pg_buffercache</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">b</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">relfilenode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pg_relation_filenode</span><span class="p">(</span><span class="k">c</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">reldatabase</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">oid</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pg_database</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">datname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">current_database</span><span class="p">()))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">relname</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="k">desc</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">LIMIT</span><span class="w"> </span><span class="mi">30</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h3 id="実行ログ">実行ログ</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">=&gt;</span><span class="w"> </span><span class="k">SELECT</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w">      </span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t1&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w">     </span><span class="p">,</span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t2_delta&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w">     </span><span class="p">,</span><span class="n">pg_prewarm</span><span class="p">(</span><span class="s1">&#39;t1_PKEY&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;buffer&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w">     </span><span class="p">;</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_prewarm</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">pg_prewarm</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">pg_prewarm</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="c1">------------+------------+------------
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="mi">1818182</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="mi">909091</span><span class="w"> </span><span class="o">|</span><span class="w">      </span><span class="mi">54840</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="k">row</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">=&gt;</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">relname</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">buffers</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pg_buffercache</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">b</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w"> </span><span class="k">inner</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">relfilenode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pg_relation_filenode</span><span class="p">(</span><span class="k">c</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">reldatabase</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">oid</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pg_database</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">datname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">current_database</span><span class="p">()))</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w"> </span><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">relname</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="k">desc</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">-&gt;</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">30</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="n">relname</span><span class="w">              </span><span class="o">|</span><span class="w"> </span><span class="n">buffers</span><span class="w"> 
+</span></span></span><span class="line"><span class="cl"><span class="c1">-----------------------------------+---------
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">t1</span><span class="w">                                </span><span class="o">|</span><span class="w"> </span><span class="mi">1818687</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">t2_delta</span><span class="w">                          </span><span class="o">|</span><span class="w">  </span><span class="mi">909091</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">t1_idx</span><span class="w">                            </span><span class="o">|</span><span class="w">  </span><span class="mi">426172</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">t1_pkey</span><span class="w">                           </span><span class="o">|</span><span class="w">   </span><span class="mi">54840</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_attribute</span><span class="w">                      </span><span class="o">|</span><span class="w">      </span><span class="mi">60</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_toast_2619</span><span class="w">                     </span><span class="o">|</span><span class="w">      </span><span class="mi">36</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_class</span><span class="w">                          </span><span class="o">|</span><span class="w">      </span><span class="mi">13</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_proc</span><span class="w">                           </span><span class="o">|</span><span class="w">      </span><span class="mi">12</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_statistic</span><span class="w">                      </span><span class="o">|</span><span class="w">      </span><span class="mi">11</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_attribute_relid_attnum_index</span><span class="w">   </span><span class="o">|</span><span class="w">       </span><span class="mi">9</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_proc_oid_index</span><span class="w">                 </span><span class="o">|</span><span class="w">       </span><span class="mi">8</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_proc_proname_args_nsp_index</span><span class="w">    </span><span class="o">|</span><span class="w">       </span><span class="mi">6</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_amop</span><span class="w">                           </span><span class="o">|</span><span class="w">       </span><span class="mi">6</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_class_relname_nsp_index</span><span class="w">        </span><span class="o">|</span><span class="w">       </span><span class="mi">5</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_amproc</span><span class="w">                         </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_operator</span><span class="w">                       </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_class_oid_index</span><span class="w">                </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_statistic_relid_att_inh_index</span><span class="w">  </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_index</span><span class="w">                          </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_amop_opr_fam_index</span><span class="w">             </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_operator_oid_index</span><span class="w">             </span><span class="o">|</span><span class="w">       </span><span class="mi">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_type</span><span class="w">                           </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_amop_fam_strat_index</span><span class="w">           </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_type_oid_index</span><span class="w">                 </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_operator_oprname_l_r_n_index</span><span class="w">   </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_amproc_fam_proc_index</span><span class="w">          </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_depend_reference_index</span><span class="w">         </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_type_typname_nsp_index</span><span class="w">         </span><span class="o">|</span><span class="w">       </span><span class="mi">3</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_auth_members_member_role_index</span><span class="w"> </span><span class="o">|</span><span class="w">       </span><span class="mi">2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"> </span><span class="n">pg_cast_source_target_index</span><span class="w">       </span><span class="o">|</span><span class="w">       </span><span class="mi">2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="p">(</span><span class="mi">30</span><span class="w"> </span><span class="k">rows</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">postgres</span><span class="o">=&gt;</span><span class="w"> 
+</span></span></span></code></pre></div>
       </div>
     </div>
 
@@ -343,8 +344,8 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -364,8 +365,8 @@
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

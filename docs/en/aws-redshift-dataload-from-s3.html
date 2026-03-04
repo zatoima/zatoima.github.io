@@ -75,6 +75,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -188,25 +189,25 @@
       <div class="article-content">
         <p>Assumes that IAM roles and the required IAM role attachments to the cluster are already complete.</p>
 <h3 id="upload-the-load-file-to-s3">Upload the Load File to S3</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws s3 cp aozora_data.csv s3://xxxx/load/
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">aws s3 cp aozora_data.csv s3://xxxx/load/
 </span></span></code></pre></div><p>The load file is about 6GB, approximately 87 million rows (Aozora Bunko text data).</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[ec2-user@bastin ~]$ ls -lh aozora_data.csv
-</span></span><span style="display:flex;"><span>-rw-rw-r-- 1 ec2-user ec2-user 6.1G Dec 16  2012 aozora_data.csv
-</span></span><span style="display:flex;"><span>[ec2-user@bastin ~]$ wc -l aozora_data.csv
-</span></span><span style="display:flex;"><span>87701673 aozora_data.csv
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[ec2-user@bastin ~]$ ls -lh aozora_data.csv
+</span></span><span class="line"><span class="cl">-rw-rw-r-- 1 ec2-user ec2-user 6.1G Dec 16  2012 aozora_data.csv
+</span></span><span class="line"><span class="cl">[ec2-user@bastin ~]$ wc -l aozora_data.csv
+</span></span><span class="line"><span class="cl">87701673 aozora_data.csv
 </span></span></code></pre></div><h3 id="create-the-destination-table-in-redshift">Create the Destination Table in Redshift</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>CREATE TABLE aozora_data<span style="color:#ff79c6">(</span>file VARCHAR<span style="color:#ff79c6">(</span>100<span style="color:#ff79c6">)</span>,num INT,row INT,word TEXT,subtype1 VARCHAR<span style="color:#ff79c6">(</span>100<span style="color:#ff79c6">)</span>,subtype2 VARCHAR<span style="color:#ff79c6">(</span>100<span style="color:#ff79c6">)</span>,subtype3 VARCHAR<span style="color:#ff79c6">(</span>100<span style="color:#ff79c6">)</span>,subtype4 VARCHAR<span style="color:#ff79c6">(</span>100<span style="color:#ff79c6">)</span>,conjtype VARCHAR<span style="color:#ff79c6">(</span>30<span style="color:#ff79c6">)</span>,conjugation VARCHAR<span style="color:#ff79c6">(</span>30<span style="color:#ff79c6">)</span>,basic TEXT,ruby TEXT,pronunce TEXT <span style="color:#ff79c6">)</span>;
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">CREATE TABLE aozora_data<span class="o">(</span>file VARCHAR<span class="o">(</span>100<span class="o">)</span>,num INT,row INT,word TEXT,subtype1 VARCHAR<span class="o">(</span>100<span class="o">)</span>,subtype2 VARCHAR<span class="o">(</span>100<span class="o">)</span>,subtype3 VARCHAR<span class="o">(</span>100<span class="o">)</span>,subtype4 VARCHAR<span class="o">(</span>100<span class="o">)</span>,conjtype VARCHAR<span class="o">(</span>30<span class="o">)</span>,conjugation VARCHAR<span class="o">(</span>30<span class="o">)</span>,basic TEXT,ruby TEXT,pronunce TEXT <span class="o">)</span><span class="p">;</span>
 </span></span></code></pre></div><h3 id="execute-data-load">Execute Data Load</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>copy aozorabunko_data from <span style="color:#f1fa8c">&#39;s3://xxxxx/load/aozora_data.csv&#39;</span>
-</span></span><span style="display:flex;"><span>iam_role <span style="color:#f1fa8c">&#39;arn:aws:iam::xxxxx:role/myRedshiftRole&#39;</span>
-</span></span><span style="display:flex;"><span>csv;
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">copy aozorabunko_data from <span class="s1">&#39;s3://xxxxx/load/aozora_data.csv&#39;</span>
+</span></span><span class="line"><span class="cl">iam_role <span class="s1">&#39;arn:aws:iam::xxxxx:role/myRedshiftRole&#39;</span>
+</span></span><span class="line"><span class="cl">csv<span class="p">;</span>
 </span></span></code></pre></div><p>The above method is an anti-pattern and runs only on a single slice, failing to effectively utilize resources in Redshift&rsquo;s MPP architecture. As per the best practices below, it is preferable to split files and compress them before loading.</p>
 <blockquote>
 <p>Amazon Redshift Data Loading Best Practices - Amazon Redshift <a href="https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/redshift/latest/dg/c_loading-data-best-practices.html</a>
 </p>
 </blockquote>
 <h3 id="data-splitting">Data Splitting</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>split -n 8 -d aozora_data.csv part-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">split -n 8 -d aozora_data.csv part-
 </span></span></code></pre></div>
       </div>
     </div>
@@ -307,7 +308,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/en/">Home</a>
           <a href="/en/blog/">Articles</a>
@@ -328,7 +329,7 @@
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

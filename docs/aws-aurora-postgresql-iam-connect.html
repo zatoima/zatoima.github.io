@@ -76,6 +76,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -189,52 +190,52 @@
       <div class="article-content">
         <h3 id="iamデータベース認証の有効化">IAMデータベース認証の有効化</h3>
 <p>マネージメントコンソール、もしくは下記コマンドで有効化する</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws rds modify-db-cluster --db-cluster-identifier aurorapgsqlv1 --apply-immediately --enable-iam-database-authentication
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">aws rds modify-db-cluster --db-cluster-identifier aurorapgsqlv1 --apply-immediately --enable-iam-database-authentication
 </span></span></code></pre></div><h3 id="iamデータベース認証が有効になっているか確認">IAMデータベース認証が有効になっているか確認</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query <span style="color:#f1fa8c">&#39;DBClusters[].[IAMDatabaseAuthenticationEnabled]&#39;</span> --output table
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query <span class="s1">&#39;DBClusters[].[IAMDatabaseAuthenticationEnabled]&#39;</span> --output table
 </span></span></code></pre></div><h3 id="iamデータベース認証用のpostgresqlユーザを作成">IAMデータベース認証用のPostgreSQLユーザを作成</h3>
 <p><code>rds_iam</code>は固定。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">CREATE</span> <span style="color:#ff79c6">USER</span> iam_user <span style="color:#ff79c6">WITH</span> LOGIN;
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">grant</span> rds_iam <span style="color:#ff79c6">to</span> iam_user;
-</span></span></code></pre></div><h3 id="iamポリシーを作成">IAMポリシーを作成</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">USER</span><span class="w"> </span><span class="n">iam_user</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="n">LOGIN</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="k">grant</span><span class="w"> </span><span class="n">rds_iam</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">iam_user</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h3 id="iamポリシーを作成">IAMポリシーを作成</h3>
 <p>AWS CLIから作成するので<code>iam_rds_connect.json</code>を作成</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat <span style="color:#f1fa8c">&lt;&lt; EOF &gt; iam_rds_connect.json  
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">{
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">   &#34;Version&#34;: &#34;2012-10-17&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">   &#34;Statement&#34;: [
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      {
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">         &#34;Effect&#34;: &#34;Allow&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">         &#34;Action&#34;: [
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">             &#34;rds-db:connect&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">         ],
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">         &#34;Resource&#34;: [
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">             &#34;arn:aws:rds-db:ap-northeast-1:xxxxxxxxxxx:dbuser:cluster-ALPQLYUXTQZEQ7M7F5UBRC7WTU/iam_user&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">         ]
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">      }
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">   ]
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">}
-</span></span></span><span style="display:flex;"><span><span style="color:#f1fa8c">EOF</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">cat <span class="s">&lt;&lt; EOF &gt; iam_rds_connect.json  
+</span></span></span><span class="line"><span class="cl"><span class="s">{
+</span></span></span><span class="line"><span class="cl"><span class="s">   &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s">   &#34;Statement&#34;: [
+</span></span></span><span class="line"><span class="cl"><span class="s">      {
+</span></span></span><span class="line"><span class="cl"><span class="s">         &#34;Effect&#34;: &#34;Allow&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s">         &#34;Action&#34;: [
+</span></span></span><span class="line"><span class="cl"><span class="s">             &#34;rds-db:connect&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s">         ],
+</span></span></span><span class="line"><span class="cl"><span class="s">         &#34;Resource&#34;: [
+</span></span></span><span class="line"><span class="cl"><span class="s">             &#34;arn:aws:rds-db:ap-northeast-1:xxxxxxxxxxx:dbuser:cluster-ALPQLYUXTQZEQ7M7F5UBRC7WTU/iam_user&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s">         ]
+</span></span></span><span class="line"><span class="cl"><span class="s">      }
+</span></span></span><span class="line"><span class="cl"><span class="s">   ]
+</span></span></span><span class="line"><span class="cl"><span class="s">}
+</span></span></span><span class="line"><span class="cl"><span class="s">EOF</span>
 </span></span></code></pre></div><p><code>Resource</code>箇所でリージョン、アカウントID、クラスタID、PostgreSQLのユーザ名を指定。</p>
 <p>クラスタIDは下記CLIで確認が可能。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query <span style="color:#f1fa8c">&#34;DBClusters[0].[DbClusterResourceId]&#34;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">aws rds describe-db-clusters --db-cluster-identifier aurorapgsqlv1 --query <span class="s2">&#34;DBClusters[0].[DbClusterResourceId]&#34;</span>
 </span></span></code></pre></div><h4 id="iamポリシーを作成-1">IAMポリシーを作成</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">{</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#f1fa8c">&#34;Policy&#34;</span>: <span style="color:#ff79c6">{</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;PolicyName&#34;</span>: <span style="color:#f1fa8c">&#34;iam_rds_connect&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;PermissionsBoundaryUsageCount&#34;</span>: 0, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;CreateDate&#34;</span>: <span style="color:#f1fa8c">&#34;2020-06-21T10:50:56Z&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;AttachmentCount&#34;</span>: 0, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;IsAttachable&#34;</span>: true, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;PolicyId&#34;</span>: <span style="color:#f1fa8c">&#34;ANPAR23YLZYEHAKGAXPDT&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;DefaultVersionId&#34;</span>: <span style="color:#f1fa8c">&#34;v1&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;Path&#34;</span>: <span style="color:#f1fa8c">&#34;/&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;Arn&#34;</span>: <span style="color:#f1fa8c">&#34;arn:aws:iam::xxxxxxxxxxx:policy/iam_rds_connect&#34;</span>, 
-</span></span><span style="display:flex;"><span>        <span style="color:#f1fa8c">&#34;UpdateDate&#34;</span>: <span style="color:#f1fa8c">&#34;2020-06-21T10:50:56Z&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ 
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="o">[</span>ec2-user@bastin ~<span class="o">]</span>$ aws iam create-policy --policy-name iam_rds_connect --policy-document file://iam_rds_connect.json 
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;Policy&#34;</span>: <span class="o">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;PolicyName&#34;</span>: <span class="s2">&#34;iam_rds_connect&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;PermissionsBoundaryUsageCount&#34;</span>: 0, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;CreateDate&#34;</span>: <span class="s2">&#34;2020-06-21T10:50:56Z&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;AttachmentCount&#34;</span>: 0, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;IsAttachable&#34;</span>: true, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;PolicyId&#34;</span>: <span class="s2">&#34;ANPAR23YLZYEHAKGAXPDT&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;DefaultVersionId&#34;</span>: <span class="s2">&#34;v1&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;Path&#34;</span>: <span class="s2">&#34;/&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;Arn&#34;</span>: <span class="s2">&#34;arn:aws:iam::xxxxxxxxxxx:policy/iam_rds_connect&#34;</span>, 
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;UpdateDate&#34;</span>: <span class="s2">&#34;2020-06-21T10:50:56Z&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>ec2-user@bastin ~<span class="o">]</span>$ 
 </span></span></code></pre></div><p>IAMユーザが<code>AdministratorAccess</code>のように強い権限を所持していたらここまででOKで、権限を絞っているのであれば<code>IAM ユーザーまたはロールへの IAM ポリシーのアタッチ</code>が必要となる。</p>
 <blockquote>
 <p>IAM データベースアクセス用の IAM ポリシーの作成と使用 - Amazon Aurora <a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html</a>
@@ -242,30 +243,30 @@
 </blockquote>
 <h3 id="iamデータベースを使用したaurora-postgresqlへの接続">IAMデータベースを使用したAurora PostgreSQLへの接続</h3>
 <p>認証情報は <code>aws rds generate-db-auth-token</code>で取得可能。PostgreSQLへの接続時には環境変数のPGPASSWORDに変数として入れる。認証トークンは数百の文字で構成されて長いので、コピペしてログインよりもこちらの方法の方がスマート。</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PGPASSWORD</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">`</span>aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port <span style="color:#bd93f9">5432</span> --username iam_user<span style="color:#f1fa8c">`</span>
-</span></span><span style="display:flex;"><span>psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="nb">export</span> <span class="nv">PGPASSWORD</span><span class="o">=</span><span class="sb">`</span>aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port <span class="m">5432</span> --username iam_user<span class="sb">`</span>
+</span></span><span class="line"><span class="cl">psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
 </span></span></code></pre></div><h5 id="成功パターン">成功パターン</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ <span style="color:#8be9fd;font-style:italic">export</span> <span style="color:#8be9fd;font-style:italic">PGPASSWORD</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">`</span>aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port <span style="color:#bd93f9">5432</span> --username iam_user<span style="color:#f1fa8c">`</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
-</span></span><span style="display:flex;"><span>psql <span style="color:#ff79c6">(</span>11.5, server 11.7<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>SSL connection <span style="color:#ff79c6">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>Type <span style="color:#f1fa8c">&#34;help&#34;</span> <span style="color:#ff79c6">for</span> help.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span>&gt; <span style="color:#ff79c6">select</span> version<span style="color:#ff79c6">()</span>;
-</span></span><span style="display:flex;"><span>                                   version                                   
-</span></span><span style="display:flex;"><span>-----------------------------------------------------------------------------
-</span></span><span style="display:flex;"><span> PostgreSQL 11.7 on x86_64-pc-linux-gnu, compiled by gcc <span style="color:#ff79c6">(</span>GCC<span style="color:#ff79c6">)</span> 4.9.3, 64-bit
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span><span style="color:#bd93f9">1</span> row<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8be9fd;font-style:italic">postgres</span><span style="color:#ff79c6">=</span>&gt; <span style="color:#ff79c6">select</span> aurora_version<span style="color:#ff79c6">()</span>;
-</span></span><span style="display:flex;"><span> aurora_version 
-</span></span><span style="display:flex;"><span>----------------
-</span></span><span style="display:flex;"><span> 3.2.1
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">(</span><span style="color:#bd93f9">1</span> row<span style="color:#ff79c6">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="o">[</span>ec2-user@bastin ~<span class="o">]</span>$ <span class="nb">export</span> <span class="nv">PGPASSWORD</span><span class="o">=</span><span class="sb">`</span>aws --region ap-northeast-1 rds generate-db-auth-token --hostname aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com --port <span class="m">5432</span> --username iam_user<span class="sb">`</span>
+</span></span><span class="line"><span class="cl"><span class="o">[</span>ec2-user@bastin ~<span class="o">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+</span></span><span class="line"><span class="cl">psql <span class="o">(</span>11.5, server 11.7<span class="o">)</span>
+</span></span><span class="line"><span class="cl">SSL connection <span class="o">(</span>protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Type <span class="s2">&#34;help&#34;</span> <span class="k">for</span> help.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">postgres</span><span class="o">=</span>&gt; <span class="k">select</span> version<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                                   version                                   
+</span></span><span class="line"><span class="cl">-----------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl"> PostgreSQL 11.7 on x86_64-pc-linux-gnu, compiled by gcc <span class="o">(</span>GCC<span class="o">)</span> 4.9.3, 64-bit
+</span></span><span class="line"><span class="cl"><span class="o">(</span><span class="m">1</span> row<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">postgres</span><span class="o">=</span>&gt; <span class="k">select</span> aurora_version<span class="o">()</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"> aurora_version 
+</span></span><span class="line"><span class="cl">----------------
+</span></span><span class="line"><span class="cl"> 3.2.1
+</span></span><span class="line"><span class="cl"><span class="o">(</span><span class="m">1</span> row<span class="o">)</span>
 </span></span></code></pre></div><h5 id="失敗パターン">失敗パターン</h5>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>ec2-user@bastin ~<span style="color:#ff79c6">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
-</span></span><span style="display:flex;"><span>psql: FATAL:  password authentication failed <span style="color:#ff79c6">for</span> user <span style="color:#f1fa8c">&#34;iam_user&#34;</span>
-</span></span><span style="display:flex;"><span>FATAL:  password authentication failed <span style="color:#ff79c6">for</span> user <span style="color:#f1fa8c">&#34;iam_user&#34;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="o">[</span>ec2-user@bastin ~<span class="o">]</span>$ psql -h aurorapgsqlv1.cluster-xxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -U iam_user -d postgres
+</span></span><span class="line"><span class="cl">psql: FATAL:  password authentication failed <span class="k">for</span> user <span class="s2">&#34;iam_user&#34;</span>
+</span></span><span class="line"><span class="cl">FATAL:  password authentication failed <span class="k">for</span> user <span class="s2">&#34;iam_user&#34;</span>
 </span></span></code></pre></div><h3 id="最後に">最後に</h3>
 <p>RDS(Aurora含む)への接続時の認証は他にもSystems Manager パラメータストアやSecrets Manager等、色々あってどれを使うべきか迷う、、。IAM認証に関してその他の注意事項等はマニュアルを参照。<code>データベースクラスターの 1 秒あたりの最大接続数は、クラスタータイプとワークロードに応じて制限される場合があります。</code>と記載あるのが個人的には気になるところ。</p>
 <p><a href="https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html</a>
@@ -387,8 +388,8 @@ IAM データベース認証の PostgreSQL の制限事項</p>
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -408,8 +409,8 @@ IAM データベース認証の PostgreSQL の制限事項</p>
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

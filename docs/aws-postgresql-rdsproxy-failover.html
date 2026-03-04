@@ -76,6 +76,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -194,17 +195,17 @@
 <p>適当に下記スクリプトを実行してタイムスタンプをテーブルに記録してスクリプト実行中に手動フェイルオーバーを実行する。</p>
 <h4 id="テストスクリプト">テストスクリプト</h4>
 <p>1秒ごとにINSERTを実施</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">#! /bin/bash
-</span></span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">while</span> <span style="color:#8be9fd;font-style:italic">true</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">do</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4">#truncate table record;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4">#create table record(id serial,create_at timestamp);</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">DATETIME</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>date -u <span style="color:#f1fa8c">&#34;+%Y-%m-%d %T.%N&#34;</span><span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">echo</span> <span style="color:#8be9fd;font-style:italic">$DATETIME</span>
-</span></span><span style="display:flex;"><span>  psql -q -h a-pgsql.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style="color:#f1fa8c">&#34;insert into record(create_at) VALUES (current_timestamp)&#34;</span> &amp;
-</span></span><span style="display:flex;"><span>  sleep <span style="color:#bd93f9">1</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">done</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="cp">#! /bin/bash
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">while</span> <span class="nb">true</span>
+</span></span><span class="line"><span class="cl"><span class="k">do</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#truncate table record;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#create table record(id serial,create_at timestamp);</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">DATETIME</span><span class="o">=</span><span class="k">$(</span>date -u <span class="s2">&#34;+%Y-%m-%d %T.%N&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="nv">$DATETIME</span>
+</span></span><span class="line"><span class="cl">  psql -q -h a-pgsql.cluster-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span class="s2">&#34;insert into record(create_at) VALUES (current_timestamp)&#34;</span> <span class="p">&amp;</span>
+</span></span><span class="line"><span class="cl">  sleep <span class="m">1</span>
+</span></span><span class="line"><span class="cl"><span class="k">done</span>
 </span></span></code></pre></div><h3 id="フェイルオーバー自体に掛かった時間">フェイルオーバー自体に掛かった時間</h3>
 <p>約30秒弱でフェイルオーバー自体は完了</p>
 <table>
@@ -227,83 +228,83 @@
 </table>
 <h4 id="bashの実行ログ">bashの実行ログ</h4>
 <p>フェイルオーバーの開始から完了までデータベースが使えなくなるというわけではなく、<code>11:44:29</code>から<code>11:44:40</code> の約11秒間でフェイルオーバーに伴いエラーが出ている</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>2020-08-29 11:44:27.964959626
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:28.966971425
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:29.968957489
-</span></span><span style="display:flex;"><span>WARNING:  terminating connection because of crash of another server process
-</span></span><span style="display:flex;"><span>DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
-</span></span><span style="display:flex;"><span>HINT:  In a moment you should be able to reconnect to the database and repeat your command.
-</span></span><span style="display:flex;"><span>psql: SSL SYSCALL error: EOF detected
-</span></span><span style="display:flex;"><span>SSL SYSCALL error: EOF detected
-</span></span><span style="display:flex;"><span>connection to server was lost
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:30.971007776
-</span></span><span style="display:flex;"><span>psql: could not connect to server: Connection refused
-</span></span><span style="display:flex;"><span>	Is the server running on host <span style="color:#f1fa8c">&#34;a-pgsql.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34;</span> <span style="color:#ff79c6">(</span>10.0.3.43<span style="color:#ff79c6">)</span> and accepting
-</span></span><span style="display:flex;"><span>	TCP/IP connections on port 5432?
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:31.972952018
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:32.974997039
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:33.977032145
-</span></span><span style="display:flex;"><span>psql: FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>psql: FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>psql: FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>FATAL:  the database system is starting up
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:34.979111133
-</span></span><span style="display:flex;"><span>ERROR:  cannot execute INSERT in a read-only transaction
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:35.981149831
-</span></span><span style="display:flex;"><span>ERROR:  cannot execute INSERT in a read-only transaction
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:36.983173817
-</span></span><span style="display:flex;"><span>ERROR:  cannot execute INSERT in a read-only transaction
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:37.985163358
-</span></span><span style="display:flex;"><span>ERROR:  cannot execute INSERT in a read-only transaction
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:38.987178155
-</span></span><span style="display:flex;"><span>ERROR:  cannot execute INSERT in a read-only transaction
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:39.989168920
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:40.991212531
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:41.993185159
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:42.995173285
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:43.997177503
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:44.999206797
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:46.001261962
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:47.003287661
-</span></span><span style="display:flex;"><span>2020-08-29 11:44:48.005291195
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">2020-08-29 11:44:27.964959626
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:28.966971425
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:29.968957489
+</span></span><span class="line"><span class="cl">WARNING:  terminating connection because of crash of another server process
+</span></span><span class="line"><span class="cl">DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+</span></span><span class="line"><span class="cl">HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+</span></span><span class="line"><span class="cl">psql: SSL SYSCALL error: EOF detected
+</span></span><span class="line"><span class="cl">SSL SYSCALL error: EOF detected
+</span></span><span class="line"><span class="cl">connection to server was lost
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:30.971007776
+</span></span><span class="line"><span class="cl">psql: could not connect to server: Connection refused
+</span></span><span class="line"><span class="cl">	Is the server running on host <span class="s2">&#34;a-pgsql.cluster-xxxxxx.ap-northeast-1.rds.amazonaws.com&#34;</span> <span class="o">(</span>10.0.3.43<span class="o">)</span> and accepting
+</span></span><span class="line"><span class="cl">	TCP/IP connections on port 5432?
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:31.972952018
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:32.974997039
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:33.977032145
+</span></span><span class="line"><span class="cl">psql: FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">psql: FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">psql: FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">FATAL:  the database system is starting up
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:34.979111133
+</span></span><span class="line"><span class="cl">ERROR:  cannot execute INSERT in a read-only transaction
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:35.981149831
+</span></span><span class="line"><span class="cl">ERROR:  cannot execute INSERT in a read-only transaction
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:36.983173817
+</span></span><span class="line"><span class="cl">ERROR:  cannot execute INSERT in a read-only transaction
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:37.985163358
+</span></span><span class="line"><span class="cl">ERROR:  cannot execute INSERT in a read-only transaction
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:38.987178155
+</span></span><span class="line"><span class="cl">ERROR:  cannot execute INSERT in a read-only transaction
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:39.989168920
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:40.991212531
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:41.993185159
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:42.995173285
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:43.997177503
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:44.999206797
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:46.001261962
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:47.003287661
+</span></span><span class="line"><span class="cl">2020-08-29 11:44:48.005291195
 </span></span></code></pre></div><h4 id="データベース側に記録された時間">データベース側に記録された時間</h4>
 <p>bashで接続エラーがあった<code>11:44:29</code>から<code>11:44:40</code> あたりのINSERT分が抜けている。十分短いが、、、</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>| 1065 | 2020-08-29 11:44:19.974279 |
-</span></span><span style="display:flex;"><span>| 1066 | 2020-08-29 11:44:20.976299 |
-</span></span><span style="display:flex;"><span>| 1067 | 2020-08-29 11:44:21.984021 |
-</span></span><span style="display:flex;"><span>| 1068 | 2020-08-29 11:44:22.981434 |
-</span></span><span style="display:flex;"><span>| 1069 | 2020-08-29 11:44:23.982408 |
-</span></span><span style="display:flex;"><span>| 1070 | 2020-08-29 11:44:24.984163 |
-</span></span><span style="display:flex;"><span>| 1071 | 2020-08-29 11:44:25.986223 |
-</span></span><span style="display:flex;"><span>| 1072 | 2020-08-29 11:44:26.991738 |
-</span></span><span style="display:flex;"><span>| 1073 | 2020-08-29 11:44:28.024189 |
-</span></span><span style="display:flex;"><span>| 1090 | 2020-08-29 11:44:40.040502 |
-</span></span><span style="display:flex;"><span>| 1091 | 2020-08-29 11:44:41.006773 |
-</span></span><span style="display:flex;"><span>| 1092 | 2020-08-29 11:44:42.012005 |
-</span></span><span style="display:flex;"><span>| 1093 | 2020-08-29 11:44:43.010699 |
-</span></span><span style="display:flex;"><span>| 1094 | 2020-08-29 11:44:44.014737 |
-</span></span><span style="display:flex;"><span>| 1095 | 2020-08-29 11:44:45.089499 |
-</span></span><span style="display:flex;"><span>| 1096 | 2020-08-29 11:44:46.020322 |
-</span></span><span style="display:flex;"><span>| 1097 | 2020-08-29 11:44:47.01858  |
-</span></span><span style="display:flex;"><span>| 1098 | 2020-08-29 11:44:48.024825 |
-</span></span><span style="display:flex;"><span>| 1099 | 2020-08-29 11:44:49.028113 |
-</span></span><span style="display:flex;"><span>| 1100 | 2020-08-29 11:44:50.026786 |
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">| 1065 | 2020-08-29 11:44:19.974279 |
+</span></span><span class="line"><span class="cl">| 1066 | 2020-08-29 11:44:20.976299 |
+</span></span><span class="line"><span class="cl">| 1067 | 2020-08-29 11:44:21.984021 |
+</span></span><span class="line"><span class="cl">| 1068 | 2020-08-29 11:44:22.981434 |
+</span></span><span class="line"><span class="cl">| 1069 | 2020-08-29 11:44:23.982408 |
+</span></span><span class="line"><span class="cl">| 1070 | 2020-08-29 11:44:24.984163 |
+</span></span><span class="line"><span class="cl">| 1071 | 2020-08-29 11:44:25.986223 |
+</span></span><span class="line"><span class="cl">| 1072 | 2020-08-29 11:44:26.991738 |
+</span></span><span class="line"><span class="cl">| 1073 | 2020-08-29 11:44:28.024189 |
+</span></span><span class="line"><span class="cl">| 1090 | 2020-08-29 11:44:40.040502 |
+</span></span><span class="line"><span class="cl">| 1091 | 2020-08-29 11:44:41.006773 |
+</span></span><span class="line"><span class="cl">| 1092 | 2020-08-29 11:44:42.012005 |
+</span></span><span class="line"><span class="cl">| 1093 | 2020-08-29 11:44:43.010699 |
+</span></span><span class="line"><span class="cl">| 1094 | 2020-08-29 11:44:44.014737 |
+</span></span><span class="line"><span class="cl">| 1095 | 2020-08-29 11:44:45.089499 |
+</span></span><span class="line"><span class="cl">| 1096 | 2020-08-29 11:44:46.020322 |
+</span></span><span class="line"><span class="cl">| 1097 | 2020-08-29 11:44:47.01858  |
+</span></span><span class="line"><span class="cl">| 1098 | 2020-08-29 11:44:48.024825 |
+</span></span><span class="line"><span class="cl">| 1099 | 2020-08-29 11:44:49.028113 |
+</span></span><span class="line"><span class="cl">| 1100 | 2020-08-29 11:44:50.026786 |
 </span></span></code></pre></div><h3 id="パターン２rds-proxyで実施パターン">パターン２：RDS Proxyで実施パターン</h3>
 <p>パターン1と同じ手順でスクリプトを実行してフェイルオーバーに掛かる時間やDBへの接続状況などを見てみる。RDS Proxyのエンドポイントを接続先に指定。</p>
 <h4 id="スクリプト">スクリプト</h4>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">#! /bin/bash
-</span></span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">while</span> <span style="color:#8be9fd;font-style:italic">true</span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">do</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4">#truncate table record;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6272a4">#create table record(id serial,create_at timestamp);</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">DATETIME</span><span style="color:#ff79c6">=</span><span style="color:#ff79c6">$(</span>date -u <span style="color:#f1fa8c">&#34;+%Y-%m-%d %T.%N&#34;</span><span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#8be9fd;font-style:italic">echo</span> <span style="color:#8be9fd;font-style:italic">$DATETIME</span>
-</span></span><span style="display:flex;"><span>  psql -q -h proxy-aurora.proxy-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span style="color:#f1fa8c">&#34;insert into record(create_at) VALUES (current_timestamp)&#34;</span> &amp;
-</span></span><span style="display:flex;"><span>  sleep 0.5
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">done</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="cp">#! /bin/bash
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">while</span> <span class="nb">true</span>
+</span></span><span class="line"><span class="cl"><span class="k">do</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#truncate table record;</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">#create table record(id serial,create_at timestamp);</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">DATETIME</span><span class="o">=</span><span class="k">$(</span>date -u <span class="s2">&#34;+%Y-%m-%d %T.%N&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="nv">$DATETIME</span>
+</span></span><span class="line"><span class="cl">  psql -q -h proxy-aurora.proxy-xxxxx.ap-northeast-1.rds.amazonaws.com -d postgres -U postgres -c <span class="s2">&#34;insert into record(create_at) VALUES (current_timestamp)&#34;</span> <span class="p">&amp;</span>
+</span></span><span class="line"><span class="cl">  sleep 0.5
+</span></span><span class="line"><span class="cl"><span class="k">done</span>
 </span></span></code></pre></div><h3 id="フェイルオーバー自体に掛かった時間-1">フェイルオーバー自体に掛かった時間</h3>
 <p>約36秒でフェイルオーバーは完了</p>
 <table>
@@ -326,94 +327,94 @@
 </table>
 <h4 id="bashの実行ログ-1">bashの実行ログ</h4>
 <p>フェイルオーバーに伴い<code>12:04:48</code>あたりでエラーが出ているが、クラスタエンドポイントを使用したパターン①の検証と異なりエラー自体の傾向が異なる</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>2020-08-29 12:04:30.095671574
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:31.097629856
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:32.099684736
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:33.101745645
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:34.103755036
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:35.105731120
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:36.107736230
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:37.109709993
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:38.111698832
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:39.113675005
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:40.115698907
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:41.117673464
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:42.119682149
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:43.121650566
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:44.123618407
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:45.125820156
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:46.127808056
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:47.129771043
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:48.131772090
-</span></span><span style="display:flex;"><span>WARNING:  terminating connection because of crash of another server process
-</span></span><span style="display:flex;"><span>DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
-</span></span><span style="display:flex;"><span>HINT:  In a moment you should be able to reconnect to the database and repeat your command.
-</span></span><span style="display:flex;"><span>SSL connection has been closed unexpectedly
-</span></span><span style="display:flex;"><span>connection to server was lost
-</span></span><span style="display:flex;"><span>WARNING:  terminating connection because of crash of another server process
-</span></span><span style="display:flex;"><span>DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
-</span></span><span style="display:flex;"><span>HINT:  In a moment you should be able to reconnect to the database and repeat your command.
-</span></span><span style="display:flex;"><span>SSL connection has been closed unexpectedly
-</span></span><span style="display:flex;"><span>connection to server was lost
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:49.133763120
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:50.135776827
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:51.137775212
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:52.139811209
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:53.141852628
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:54.143861363
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:55.145887875
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:56.147877446
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:57.149851817
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:58.151858291
-</span></span><span style="display:flex;"><span>2020-08-29 12:04:59.153685252
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:00.155651975
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:01.157824634
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:02.159847039
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:03.161849475
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:04.163848675
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:05.165860863
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:06.167913253
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:07.169922306
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:08.171957895
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:09.173986169
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:10.175984477
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:11.177993763
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:12.180028575
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:13.182031977
-</span></span><span style="display:flex;"><span>2020-08-29 12:05:14.184081473
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">2020-08-29 12:04:30.095671574
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:31.097629856
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:32.099684736
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:33.101745645
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:34.103755036
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:35.105731120
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:36.107736230
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:37.109709993
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:38.111698832
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:39.113675005
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:40.115698907
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:41.117673464
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:42.119682149
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:43.121650566
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:44.123618407
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:45.125820156
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:46.127808056
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:47.129771043
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:48.131772090
+</span></span><span class="line"><span class="cl">WARNING:  terminating connection because of crash of another server process
+</span></span><span class="line"><span class="cl">DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+</span></span><span class="line"><span class="cl">HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+</span></span><span class="line"><span class="cl">SSL connection has been closed unexpectedly
+</span></span><span class="line"><span class="cl">connection to server was lost
+</span></span><span class="line"><span class="cl">WARNING:  terminating connection because of crash of another server process
+</span></span><span class="line"><span class="cl">DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+</span></span><span class="line"><span class="cl">HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+</span></span><span class="line"><span class="cl">SSL connection has been closed unexpectedly
+</span></span><span class="line"><span class="cl">connection to server was lost
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:49.133763120
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:50.135776827
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:51.137775212
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:52.139811209
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:53.141852628
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:54.143861363
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:55.145887875
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:56.147877446
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:57.149851817
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:58.151858291
+</span></span><span class="line"><span class="cl">2020-08-29 12:04:59.153685252
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:00.155651975
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:01.157824634
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:02.159847039
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:03.161849475
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:04.163848675
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:05.165860863
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:06.167913253
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:07.169922306
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:08.171957895
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:09.173986169
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:10.175984477
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:11.177993763
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:12.180028575
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:13.182031977
+</span></span><span class="line"><span class="cl">2020-08-29 12:05:14.184081473
 </span></span></code></pre></div><h4 id="データベース側に記録された時間-1">データベース側に記録された時間</h4>
 <p><code>12:04:46</code>から<code>12:04:53</code>の間で更新が止まっていますが、約7秒で切り替わったことが分かる</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>| 1170 | 2020-08-29 12:04:39.156067 |
-</span></span><span style="display:flex;"><span>| 1171 | 2020-08-29 12:04:40.240195 |
-</span></span><span style="display:flex;"><span>| 1172 | 2020-08-29 12:04:41.161005 |
-</span></span><span style="display:flex;"><span>| 1173 | 2020-08-29 12:04:42.189308 |
-</span></span><span style="display:flex;"><span>| 1174 | 2020-08-29 12:04:43.318342 |
-</span></span><span style="display:flex;"><span>| 1175 | 2020-08-29 12:04:44.227378 |
-</span></span><span style="display:flex;"><span>| 1176 | 2020-08-29 12:04:45.167466 |
-</span></span><span style="display:flex;"><span>| 1177 | 2020-08-29 12:04:46.247739 |
-</span></span><span style="display:flex;"><span>| 1189 | 2020-08-29 12:04:53.329366 |
-</span></span><span style="display:flex;"><span>| 1190 | 2020-08-29 12:04:53.339468 |
-</span></span><span style="display:flex;"><span>| 1191 | 2020-08-29 12:04:53.353239 |
-</span></span><span style="display:flex;"><span>| 1192 | 2020-08-29 12:04:53.380346 |
-</span></span><span style="display:flex;"><span>| 1193 | 2020-08-29 12:04:53.391141 |
-</span></span><span style="display:flex;"><span>| 1194 | 2020-08-29 12:04:54.204525 |
-</span></span><span style="display:flex;"><span>| 1195 | 2020-08-29 12:04:55.284926 |
-</span></span><span style="display:flex;"><span>| 1196 | 2020-08-29 12:04:56.199496 |
-</span></span><span style="display:flex;"><span>| 1197 | 2020-08-29 12:04:57.222213 |
-</span></span><span style="display:flex;"><span>| 1198 | 2020-08-29 12:04:58.297598 |
-</span></span><span style="display:flex;"><span>| 1199 | 2020-08-29 12:04:59.192773 |
-</span></span><span style="display:flex;"><span>| 1200 | 2020-08-29 12:05:00.26938  |
-</span></span><span style="display:flex;"><span>| 1201 | 2020-08-29 12:05:01.217964 |
-</span></span><span style="display:flex;"><span>| 1202 | 2020-08-29 12:05:02.418454 |
-</span></span><span style="display:flex;"><span>| 1203 | 2020-08-29 12:05:03.212937 |
-</span></span><span style="display:flex;"><span>| 1204 | 2020-08-29 12:05:04.231207 |
-</span></span><span style="display:flex;"><span>| 1205 | 2020-08-29 12:05:05.202887 |
-</span></span><span style="display:flex;"><span>| 1206 | 2020-08-29 12:05:06.243436 |
-</span></span><span style="display:flex;"><span>| 1207 | 2020-08-29 12:05:07.221574 |
-</span></span><span style="display:flex;"><span>| 1208 | 2020-08-29 12:05:08.230837 |
-</span></span><span style="display:flex;"><span>| 1209 | 2020-08-29 12:05:09.218686 |
-</span></span><span style="display:flex;"><span>| 1210 | 2020-08-29 12:05:10.228458 |
-</span></span><span style="display:flex;"><span>| 1211 | 2020-08-29 12:05:11.28525  |
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">| 1170 | 2020-08-29 12:04:39.156067 |
+</span></span><span class="line"><span class="cl">| 1171 | 2020-08-29 12:04:40.240195 |
+</span></span><span class="line"><span class="cl">| 1172 | 2020-08-29 12:04:41.161005 |
+</span></span><span class="line"><span class="cl">| 1173 | 2020-08-29 12:04:42.189308 |
+</span></span><span class="line"><span class="cl">| 1174 | 2020-08-29 12:04:43.318342 |
+</span></span><span class="line"><span class="cl">| 1175 | 2020-08-29 12:04:44.227378 |
+</span></span><span class="line"><span class="cl">| 1176 | 2020-08-29 12:04:45.167466 |
+</span></span><span class="line"><span class="cl">| 1177 | 2020-08-29 12:04:46.247739 |
+</span></span><span class="line"><span class="cl">| 1189 | 2020-08-29 12:04:53.329366 |
+</span></span><span class="line"><span class="cl">| 1190 | 2020-08-29 12:04:53.339468 |
+</span></span><span class="line"><span class="cl">| 1191 | 2020-08-29 12:04:53.353239 |
+</span></span><span class="line"><span class="cl">| 1192 | 2020-08-29 12:04:53.380346 |
+</span></span><span class="line"><span class="cl">| 1193 | 2020-08-29 12:04:53.391141 |
+</span></span><span class="line"><span class="cl">| 1194 | 2020-08-29 12:04:54.204525 |
+</span></span><span class="line"><span class="cl">| 1195 | 2020-08-29 12:04:55.284926 |
+</span></span><span class="line"><span class="cl">| 1196 | 2020-08-29 12:04:56.199496 |
+</span></span><span class="line"><span class="cl">| 1197 | 2020-08-29 12:04:57.222213 |
+</span></span><span class="line"><span class="cl">| 1198 | 2020-08-29 12:04:58.297598 |
+</span></span><span class="line"><span class="cl">| 1199 | 2020-08-29 12:04:59.192773 |
+</span></span><span class="line"><span class="cl">| 1200 | 2020-08-29 12:05:00.26938  |
+</span></span><span class="line"><span class="cl">| 1201 | 2020-08-29 12:05:01.217964 |
+</span></span><span class="line"><span class="cl">| 1202 | 2020-08-29 12:05:02.418454 |
+</span></span><span class="line"><span class="cl">| 1203 | 2020-08-29 12:05:03.212937 |
+</span></span><span class="line"><span class="cl">| 1204 | 2020-08-29 12:05:04.231207 |
+</span></span><span class="line"><span class="cl">| 1205 | 2020-08-29 12:05:05.202887 |
+</span></span><span class="line"><span class="cl">| 1206 | 2020-08-29 12:05:06.243436 |
+</span></span><span class="line"><span class="cl">| 1207 | 2020-08-29 12:05:07.221574 |
+</span></span><span class="line"><span class="cl">| 1208 | 2020-08-29 12:05:08.230837 |
+</span></span><span class="line"><span class="cl">| 1209 | 2020-08-29 12:05:09.218686 |
+</span></span><span class="line"><span class="cl">| 1210 | 2020-08-29 12:05:10.228458 |
+</span></span><span class="line"><span class="cl">| 1211 | 2020-08-29 12:05:11.28525  |
 </span></span></code></pre></div><p>何回か同じような検証を行った場合も RDS Proxy に掛かる時間は短かった。次はRDS Proxy を使用してLamdbaのコネクションプール的な使い方について整理したい。</p>
 <h3 id="参考資料">参考資料</h3>
 <blockquote>
@@ -544,8 +545,8 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/">ホーム</a>
           <a href="/blog/">記事一覧</a>
@@ -565,8 +566,8 @@
         </div>
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
-        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>

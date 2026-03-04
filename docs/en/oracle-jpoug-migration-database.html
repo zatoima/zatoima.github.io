@@ -75,6 +75,7 @@
       }
     })();
   </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
 <script>
@@ -271,208 +272,208 @@
 <h4 id="steps"><strong>Steps</strong></h4>
 <h5 id="1-enable-block-change-tracking"><strong>1. Enable Block Change Tracking</strong></h5>
 <p>Since we&rsquo;re using incremental backups, enable the Block Change Tracking file (change tracking file). This speeds up backup operations. For incremental backups, only blocks where data has changed are read directly based on this file, reducing backup time.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">DATABASE</span> ENABLE BLOCK CHANGE TRACKING;
-</span></span></code></pre></div><h5 id="2-take-level-0-backup"><strong>2. Take Level 0 Backup</strong></h5>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">ALTER</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">ENABLE</span><span class="w"> </span><span class="n">BLOCK</span><span class="w"> </span><span class="n">CHANGE</span><span class="w"> </span><span class="n">TRACKING</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h5 id="2-take-level-0-backup"><strong>2. Take Level 0 Backup</strong></h5>
 <p>Check the source-side SCN:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>CURRENT_SCN
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------
-</span></span></span><span style="display:flex;"><span>    <span style="color:#bd93f9">3450645</span>
-</span></span></code></pre></div><p>Take a Level 0 backup. In this example, we&rsquo;re migrating a tablespace called TTS. <a href="https://docs.oracle.com/cd/E57425_01/121/ARPLS/d_tts.htm" target="_blank" rel="noopener noreferrer">You need to verify that the transportable tablespace set is self-contained</a>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SQL</span><span class="o">&gt;</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="n">current_scn</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">v$database</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">CURRENT_SCN</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">-----------
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="mi">3450645</span><span class="w">
+</span></span></span></code></pre></div><p>Take a Level 0 backup. In this example, we&rsquo;re migrating a tablespace called TTS. <a href="https://docs.oracle.com/cd/E57425_01/121/ARPLS/d_tts.htm" target="_blank" rel="noopener noreferrer">You need to verify that the transportable tablespace set is self-contained</a>
  as needed.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>rman target /
-</span></span><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental level <span style="color:#bd93f9">0</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span> tablespace tts;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting backup <span style="color:#ff79c6">(</span>start time: 19-12-11<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>Using channel ORA_DISK_1
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting incremental level <span style="color:#bd93f9">0</span> data file backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: specifying data file<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> in backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Input data file, file <span style="color:#8be9fd;font-style:italic">number</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">00014</span> <span style="color:#8be9fd;font-style:italic">name</span><span style="color:#ff79c6">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting piece <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">(</span>19-12-11<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: piece <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">(</span>19-12-11<span style="color:#ff79c6">)</span> finished
-</span></span><span style="display:flex;"><span>Piece <span style="color:#8be9fd;font-style:italic">handle</span><span style="color:#ff79c6">=</span>/home/oracle/rman/tts_level0.bkp <span style="color:#8be9fd;font-style:italic">tag</span><span style="color:#ff79c6">=</span>TAG20191211T135511 <span style="color:#8be9fd;font-style:italic">comment</span><span style="color:#ff79c6">=</span>NONE
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: backup <span style="color:#8be9fd;font-style:italic">set</span> complete. Elapsed time: 00:00:01
-</span></span><span style="display:flex;"><span>Backup completed <span style="color:#ff79c6">(</span>completion time: 19-12-11<span style="color:#ff79c6">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">rman target /
+</span></span><span class="line"><span class="cl">backup <span class="k">for</span> transport allow inconsistent incremental level <span class="m">0</span> format <span class="s1">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span> tablespace tts<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting backup <span class="o">(</span>start time: 19-12-11<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Using channel ORA_DISK_1
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting incremental level <span class="m">0</span> data file backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: specifying data file<span class="o">(</span>s<span class="o">)</span> in backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Input data file, file <span class="nv">number</span><span class="o">=</span><span class="m">00014</span> <span class="nv">name</span><span class="o">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting piece <span class="m">1</span> <span class="o">(</span>19-12-11<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: piece <span class="m">1</span> <span class="o">(</span>19-12-11<span class="o">)</span> finished
+</span></span><span class="line"><span class="cl">Piece <span class="nv">handle</span><span class="o">=</span>/home/oracle/rman/tts_level0.bkp <span class="nv">tag</span><span class="o">=</span>TAG20191211T135511 <span class="nv">comment</span><span class="o">=</span>NONE
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: backup <span class="nb">set</span> complete. Elapsed time: 00:00:01
+</span></span><span class="line"><span class="cl">Backup completed <span class="o">(</span>completion time: 19-12-11<span class="o">)</span>
 </span></span></code></pre></div><h5 id="3-restore-from-level-0-backup-on-target-side"><strong>3. Restore from Level 0 Backup on Target Side</strong></h5>
 <p>Restore on the target side:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore all foreign datafiles to new from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ rman target /
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Recovery Manager: Release 19.0.0.0.0 - Production on Wed Dec <span style="color:#bd93f9">11</span> 13:46:43 <span style="color:#bd93f9">2019</span>
-</span></span><span style="display:flex;"><span>Version 19.3.0.0.0
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Copyright <span style="color:#ff79c6">(</span>c<span style="color:#ff79c6">)</span> 1982, 2019, Oracle and/or its affiliates. All rights reserved.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Connected to target database: DB19C <span style="color:#ff79c6">(</span><span style="color:#8be9fd;font-style:italic">DBID</span><span style="color:#ff79c6">=</span>2154771102<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; restore all foreign datafiles to new from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting restore on 19-12-11
-</span></span><span style="display:flex;"><span>Using channel ORA_DISK_1
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting restore of data file backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: specifying data file<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> to restore from backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: restoring all foreign files from backup piece
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: reading from backup piece /home/oracle/rman/tts_level0.bkp
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: restoring foreign file <span style="color:#bd93f9">14</span> to /u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: foreign piece handle /home/oracle/rman/tts_level0.bkp
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: backup piece <span style="color:#bd93f9">1</span> restored
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: restore complete. Elapsed time: 00:00:02
-</span></span><span style="display:flex;"><span>Finished restore on 19-12-11
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">restore all foreign datafiles to new from backupset <span class="s1">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>oracle@dbsrvec2 ~<span class="o">]</span>$ rman target /
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Recovery Manager: Release 19.0.0.0.0 - Production on Wed Dec <span class="m">11</span> 13:46:43 <span class="m">2019</span>
+</span></span><span class="line"><span class="cl">Version 19.3.0.0.0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Copyright <span class="o">(</span>c<span class="o">)</span> 1982, 2019, Oracle and/or its affiliates. All rights reserved.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Connected to target database: DB19C <span class="o">(</span><span class="nv">DBID</span><span class="o">=</span>2154771102<span class="o">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; restore all foreign datafiles to new from backupset <span class="s1">&#39;/home/oracle/rman/tts_level0.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting restore on 19-12-11
+</span></span><span class="line"><span class="cl">Using channel ORA_DISK_1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting restore of data file backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: specifying data file<span class="o">(</span>s<span class="o">)</span> to restore from backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: restoring all foreign files from backup piece
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: reading from backup piece /home/oracle/rman/tts_level0.bkp
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: restoring foreign file <span class="m">14</span> to /u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: foreign piece handle /home/oracle/rman/tts_level0.bkp
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: backup piece <span class="m">1</span> restored
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: restore complete. Elapsed time: 00:00:02
+</span></span><span class="line"><span class="cl">Finished restore on 19-12-11
 </span></span></code></pre></div><p>If DB_CREATE_FILE_DEST is not set, you&rsquo;ll get an error: &ldquo;RMAN-05088: DB_CREATE_FILE_DEST is not set.&rdquo;</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">ALTER</span> <span style="color:#ff79c6">SYSTEM</span> <span style="color:#ff79c6">SET</span> DB_CREATE_FILE_DEST <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/db19c&#39;</span> <span style="color:#ff79c6">SCOPE</span> <span style="color:#ff79c6">=</span> <span style="color:#ff79c6">both</span>;
-</span></span></code></pre></div><h5 id="4-take-incremental-backup"><strong>4. Take Incremental Backup</strong></h5>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">ALTER</span><span class="w"> </span><span class="k">SYSTEM</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">DB_CREATE_FILE_DEST</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;/u01/app/oracle/oradata/db19c&#39;</span><span class="w"> </span><span class="k">SCOPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">both</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h5 id="4-take-incremental-backup"><strong>4. Take Incremental Backup</strong></h5>
 <p>Check the source SCN again:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">SQL</span><span style="color:#ff79c6">&gt;</span> <span style="color:#ff79c6">select</span> current_scn <span style="color:#ff79c6">from</span> v$database;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>CURRENT_SCN
-</span></span><span style="display:flex;"><span><span style="color:#6272a4">-----------
-</span></span></span><span style="display:flex;"><span>    <span style="color:#bd93f9">3450702</span>
-</span></span></code></pre></div><p>Take a Level 1 incremental backup. The SCN specified here is the SCN obtained at the very beginning.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental from scn <span style="color:#bd93f9">3450645</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; backup <span style="color:#ff79c6">for</span> transport allow inconsistent incremental from scn <span style="color:#bd93f9">3450645</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting backup <span style="color:#ff79c6">(</span>start time: 19-12-11<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>Using channel ORA_DISK_1
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting full data file backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: specifying data file<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> in backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Input data file, file <span style="color:#8be9fd;font-style:italic">number</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">00014</span> <span style="color:#8be9fd;font-style:italic">name</span><span style="color:#ff79c6">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting piece <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">(</span>19-12-11<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: piece <span style="color:#bd93f9">1</span> <span style="color:#ff79c6">(</span>19-12-11<span style="color:#ff79c6">)</span> finished
-</span></span><span style="display:flex;"><span>Piece <span style="color:#8be9fd;font-style:italic">handle</span><span style="color:#ff79c6">=</span>/home/oracle/rman/tts_level1.bkp <span style="color:#8be9fd;font-style:italic">tag</span><span style="color:#ff79c6">=</span>TAG20191211T135615 <span style="color:#8be9fd;font-style:italic">comment</span><span style="color:#ff79c6">=</span>NONE
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: backup <span style="color:#8be9fd;font-style:italic">set</span> complete. Elapsed time: 00:00:01
-</span></span><span style="display:flex;"><span>Backup completed <span style="color:#ff79c6">(</span>completion time: 19-12-11<span style="color:#ff79c6">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">SQL</span><span class="o">&gt;</span><span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="n">current_scn</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">v$database</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="n">CURRENT_SCN</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="c1">-----------
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="mi">3450702</span><span class="w">
+</span></span></span></code></pre></div><p>Take a Level 1 incremental backup. The SCN specified here is the SCN obtained at the very beginning.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">backup <span class="k">for</span> transport allow inconsistent incremental from scn <span class="m">3450645</span> format <span class="s1">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; backup <span class="k">for</span> transport allow inconsistent incremental from scn <span class="m">3450645</span> format <span class="s1">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span> tablespace tts<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting backup <span class="o">(</span>start time: 19-12-11<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Using channel ORA_DISK_1
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting full data file backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: specifying data file<span class="o">(</span>s<span class="o">)</span> in backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Input data file, file <span class="nv">number</span><span class="o">=</span><span class="m">00014</span> <span class="nv">name</span><span class="o">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting piece <span class="m">1</span> <span class="o">(</span>19-12-11<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: piece <span class="m">1</span> <span class="o">(</span>19-12-11<span class="o">)</span> finished
+</span></span><span class="line"><span class="cl">Piece <span class="nv">handle</span><span class="o">=</span>/home/oracle/rman/tts_level1.bkp <span class="nv">tag</span><span class="o">=</span>TAG20191211T135615 <span class="nv">comment</span><span class="o">=</span>NONE
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: backup <span class="nb">set</span> complete. Elapsed time: 00:00:01
+</span></span><span class="line"><span class="cl">Backup completed <span class="o">(</span>completion time: 19-12-11<span class="o">)</span>
 </span></span></code></pre></div><p>Note that if there are no updates on the source side, the backup will be skipped with a warning:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>RMAN-06755: WARNING: datafile 14: incremental start SCN is too recent; using checkpoint SCN <span style="color:#bd93f9">3304366</span> instead
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting full data file backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: specifying data file<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> in backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Input data file, file <span style="color:#8be9fd;font-style:italic">number</span><span style="color:#ff79c6">=</span><span style="color:#bd93f9">00014</span> <span style="color:#8be9fd;font-style:italic">name</span><span style="color:#ff79c6">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
-</span></span><span style="display:flex;"><span>Datafile 00014: skipped because there are no changes
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: backup cancelled because all files were skipped
-</span></span><span style="display:flex;"><span>Backup completed <span style="color:#ff79c6">(</span>completion time: 19-12-11<span style="color:#ff79c6">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">RMAN-06755: WARNING: datafile 14: incremental start SCN is too recent<span class="p">;</span> using checkpoint SCN <span class="m">3304366</span> instead
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting full data file backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: specifying data file<span class="o">(</span>s<span class="o">)</span> in backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Input data file, file <span class="nv">number</span><span class="o">=</span><span class="m">00014</span> <span class="nv">name</span><span class="o">=</span>/u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
+</span></span><span class="line"><span class="cl">Datafile 00014: skipped because there are no changes
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: backup cancelled because all files were skipped
+</span></span><span class="line"><span class="cl">Backup completed <span class="o">(</span>completion time: 19-12-11<span class="o">)</span>
 </span></span></code></pre></div><h5 id="5-apply-incremental-backup"><strong>5. Apply Incremental Backup</strong></h5>
 <p>Apply the incremental backup to the data files. The data file specified here is the one output when the restore command was executed above.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting restore on 19-12-11
-</span></span><span style="display:flex;"><span>Using channel ORA_DISK_1
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: starting restore of data file backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: specifying data file<span style="color:#ff79c6">(</span>s<span style="color:#ff79c6">)</span> to restore from backup <span style="color:#8be9fd;font-style:italic">set</span>
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: restoring foreign file /u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: reading from backup piece /home/oracle/rman/tts_level1.bkp
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: foreign piece handle /home/oracle/rman/tts_level1.bkp
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: backup piece <span style="color:#bd93f9">1</span> restored
-</span></span><span style="display:flex;"><span>Channel ORA_DISK_1: restore complete. Elapsed time: 00:00:01
-</span></span><span style="display:flex;"><span>Finished restore on 19-12-11
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">recover foreign datafilecopy <span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; recover foreign datafilecopy <span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/tts_level1.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting restore on 19-12-11
+</span></span><span class="line"><span class="cl">Using channel ORA_DISK_1
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: starting restore of data file backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: specifying data file<span class="o">(</span>s<span class="o">)</span> to restore from backup <span class="nb">set</span>
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: restoring foreign file /u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: reading from backup piece /home/oracle/rman/tts_level1.bkp
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: foreign piece handle /home/oracle/rman/tts_level1.bkp
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: backup piece <span class="m">1</span> restored
+</span></span><span class="line"><span class="cl">Channel ORA_DISK_1: restore complete. Elapsed time: 00:00:01
+</span></span><span class="line"><span class="cl">Finished restore on 19-12-11
 </span></span></code></pre></div><p>Repeat the &ldquo;take incremental backup&rdquo; and &ldquo;apply incremental backup&rdquo; phases at any timing until migration day arrives.</p>
 <h5 id="6-apply-final-incremental-backup-and-obtain-metadata"><strong>6. Apply Final Incremental Backup and Obtain Metadata</strong></h5>
 <p>This is migration day work. Downtime for the source database begins at this point. Set the target TTS tablespace to read-only:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">only</span>;
-</span></span></code></pre></div><p>Create the final incremental backup with the tablespace now read-only. Obtain metadata to make the data files transportable to the destination database:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>backup <span style="color:#ff79c6">for</span> transport incremental from scn <span style="color:#bd93f9">3450702</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; backup <span style="color:#ff79c6">for</span> transport incremental from scn <span style="color:#bd93f9">3450702</span> format <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting backup <span style="color:#ff79c6">(</span>start time: 19-12-11<span style="color:#ff79c6">)</span>
-</span></span><span style="display:flex;"><span>Using channel ORA_DISK_1
-</span></span><span style="display:flex;"><span>Running TRANSPORT_SET_CHECK on specified tablespaces
-</span></span><span style="display:flex;"><span>TRANSPORT_SET_CHECK completed successfully
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Exporting metadata <span style="color:#ff79c6">for</span> specified tablespaces...
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Starting <span style="color:#f1fa8c">&#34;SYS&#34;</span>.<span style="color:#f1fa8c">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span>:
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/PLUGTS_BLK
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/TABLE
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/CONSTRAINT/CONSTRAINT
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/INDEX_STATISTICS
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/TABLE_STATISTICS
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/STATISTICS/MARKER
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Processing object <span style="color:#8be9fd;font-style:italic">type</span> TRANSPORTABLE_EXPORT/POST_INSTANCE/PLUGTS_BLK
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Master table <span style="color:#f1fa8c">&#34;SYS&#34;</span>.<span style="color:#f1fa8c">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span> successfully loaded/unloaded
-</span></span><span style="display:flex;"><span>   EXPDP&gt; ******************************************************************************
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Dump file <span style="color:#8be9fd;font-style:italic">set</span> <span style="color:#ff79c6">for</span> SYS.TRANSPORT_EXP_DB121S_bCex is:
-</span></span><span style="display:flex;"><span>   EXPDP&gt;   /u01/app/oracle/product/12.1.0.2/dbhome_1/dbs/backup_tts_DB121S_17308.dmp
-</span></span><span style="display:flex;"><span>   EXPDP&gt; ******************************************************************************
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Transportable tablespace TTS requires the following data files:
-</span></span><span style="display:flex;"><span>   EXPDP&gt;   /u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
-</span></span><span style="display:flex;"><span>   EXPDP&gt; Job <span style="color:#f1fa8c">&#34;SYS&#34;</span>.<span style="color:#f1fa8c">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span> successfully completed at Wed Dec <span style="color:#bd93f9">11</span> 14:02:24 <span style="color:#bd93f9">2019</span> elapsed <span style="color:#bd93f9">0</span> 00:00:47
-</span></span><span style="display:flex;"><span>Export completed
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>...
-</span></span><span style="display:flex;"><span>Backup completed <span style="color:#ff79c6">(</span>completion time: 19-12-11<span style="color:#ff79c6">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">alter</span><span class="w"> </span><span class="n">tablespace</span><span class="w"> </span><span class="n">tts</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">only</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>Create the final incremental backup with the tablespace now read-only. Obtain metadata to make the data files transportable to the destination database:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">backup <span class="k">for</span> transport incremental from scn <span class="m">3450702</span> format <span class="s1">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span class="s1">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; backup <span class="k">for</span> transport incremental from scn <span class="m">3450702</span> format <span class="s1">&#39;/home/oracle/rman/tts_last.bkp&#39;</span> tablespace tts DATAPUMP FORMAT <span class="s1">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting backup <span class="o">(</span>start time: 19-12-11<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Using channel ORA_DISK_1
+</span></span><span class="line"><span class="cl">Running TRANSPORT_SET_CHECK on specified tablespaces
+</span></span><span class="line"><span class="cl">TRANSPORT_SET_CHECK completed successfully
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Exporting metadata <span class="k">for</span> specified tablespaces...
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Starting <span class="s2">&#34;SYS&#34;</span>.<span class="s2">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span>:
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/PLUGTS_BLK
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/TABLE
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/CONSTRAINT/CONSTRAINT
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/INDEX_STATISTICS
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/TABLE_STATISTICS
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/STATISTICS/MARKER
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Processing object <span class="nb">type</span> TRANSPORTABLE_EXPORT/POST_INSTANCE/PLUGTS_BLK
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Master table <span class="s2">&#34;SYS&#34;</span>.<span class="s2">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span> successfully loaded/unloaded
+</span></span><span class="line"><span class="cl">   EXPDP&gt; ******************************************************************************
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Dump file <span class="nb">set</span> <span class="k">for</span> SYS.TRANSPORT_EXP_DB121S_bCex is:
+</span></span><span class="line"><span class="cl">   EXPDP&gt;   /u01/app/oracle/product/12.1.0.2/dbhome_1/dbs/backup_tts_DB121S_17308.dmp
+</span></span><span class="line"><span class="cl">   EXPDP&gt; ******************************************************************************
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Transportable tablespace TTS requires the following data files:
+</span></span><span class="line"><span class="cl">   EXPDP&gt;   /u01/app/oracle/oradata/DB121S/datafile/o1_mf_tts_gystzx22_.dbf
+</span></span><span class="line"><span class="cl">   EXPDP&gt; Job <span class="s2">&#34;SYS&#34;</span>.<span class="s2">&#34;TRANSPORT_EXP_DB121S_bCex&#34;</span> successfully completed at Wed Dec <span class="m">11</span> 14:02:24 <span class="m">2019</span> elapsed <span class="m">0</span> 00:00:47
+</span></span><span class="line"><span class="cl">Export completed
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Backup completed <span class="o">(</span>completion time: 19-12-11<span class="o">)</span>
 </span></span></code></pre></div><p>Apply the final backup to the data files:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; recover foreign datafilecopy <span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/tts_last.bkp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting restore on 19-12-11
-</span></span><span style="display:flex;"><span>...
-</span></span><span style="display:flex;"><span>Finished restore on 19-12-11
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">recover foreign datafilecopy <span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/tts_last.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; recover foreign datafilecopy <span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/tts_last.bkp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting restore on 19-12-11
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Finished restore on 19-12-11
 </span></span></code></pre></div><p>Restore the metadata export dump from the final backup set:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>restore dump file datapump destination <span style="color:#f1fa8c">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>RMAN&gt; restore dump file datapump destination <span style="color:#f1fa8c">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span style="color:#f1fa8c">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Starting restore on 19-12-11
-</span></span><span style="display:flex;"><span>...
-</span></span><span style="display:flex;"><span>Finished restore on 19-12-11
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">restore dump file datapump destination <span class="s1">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RMAN&gt; restore dump file datapump destination <span class="s1">&#39;/u01/app/oracle/admin/db19c/dpdump&#39;</span> from backupset <span class="s1">&#39;/home/oracle/rman/dp_tts_ts.dmp&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Starting restore on 19-12-11
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Finished restore on 19-12-11
 </span></span></code></pre></div><p><strong>7. Execute the Transportable Import!</strong></p>
 <p>By importing this metadata into the destination database, the data files we&rsquo;ve been carefully recovering (applying) become usable in the destination.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Import: Release 19.0.0.0.0 - Production on Wed Dec <span style="color:#bd93f9">11</span> 14:07:18 <span style="color:#bd93f9">2019</span>
-</span></span><span style="display:flex;"><span>Version 19.3.0.0.0
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>...
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>ORA-39123: Data Pump transportable tablespace job aborted.
-</span></span><span style="display:flex;"><span>ORA-29342: user TTS does not exist in the database.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Job <span style="color:#f1fa8c">&#34;SYSTEM&#34;</span>.<span style="color:#f1fa8c">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span> stopped due to fatal error at Wed Dec <span style="color:#bd93f9">11</span> 14:07:22 <span style="color:#bd93f9">2019</span> elapsed <span style="color:#bd93f9">0</span> 00:00:02
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">impdp system/oracle <span class="nv">directory</span><span class="o">=</span>data_pump_dir <span class="nv">dumpfile</span><span class="o">=</span>backup_tts_DB19C_54885.dmp <span class="nv">logfile</span><span class="o">=</span>backup_tts_DB19C_54885.log <span class="nv">transport_datafiles</span><span class="o">=</span><span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">[</span>oracle@dbsrvec2 ~<span class="o">]</span>$ impdp system/oracle <span class="nv">directory</span><span class="o">=</span>data_pump_dir <span class="nv">dumpfile</span><span class="o">=</span>backup_tts_DB19C_54885.dmp <span class="nv">logfile</span><span class="o">=</span>backup_tts_DB19C_54885.log <span class="nv">transport_datafiles</span><span class="o">=</span><span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Import: Release 19.0.0.0.0 - Production on Wed Dec <span class="m">11</span> 14:07:18 <span class="m">2019</span>
+</span></span><span class="line"><span class="cl">Version 19.3.0.0.0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">ORA-39123: Data Pump transportable tablespace job aborted.
+</span></span><span class="line"><span class="cl">ORA-29342: user TTS does not exist in the database.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Job <span class="s2">&#34;SYSTEM&#34;</span>.<span class="s2">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span> stopped due to fatal error at Wed Dec <span class="m">11</span> 14:07:22 <span class="m">2019</span> elapsed <span class="m">0</span> 00:00:02
 </span></span></code></pre></div><p>Create the user. Since the TTS tablespace doesn&rsquo;t exist yet at this point, don&rsquo;t specify a default tablespace:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; create user tts identified by <span style="color:#f1fa8c">&#34;oracle&#34;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>User created.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>SQL&gt; grant dba to tts;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Grant succeeded.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">SQL&gt; create user tts identified by <span class="s2">&#34;oracle&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">User created.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">SQL&gt; grant dba to tts<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Grant succeeded.
 </span></span></code></pre></div><p>Try again:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#ff79c6">[</span>oracle@dbsrvec2 ~<span style="color:#ff79c6">]</span>$ impdp system/oracle <span style="color:#8be9fd;font-style:italic">directory</span><span style="color:#ff79c6">=</span>data_pump_dir <span style="color:#8be9fd;font-style:italic">dumpfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.dmp <span style="color:#8be9fd;font-style:italic">logfile</span><span style="color:#ff79c6">=</span>backup_tts_DB19C_54885.log <span style="color:#8be9fd;font-style:italic">transport_datafiles</span><span style="color:#ff79c6">=</span><span style="color:#f1fa8c">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Import: Release 19.0.0.0.0 - Production on Wed Dec <span style="color:#bd93f9">11</span> 14:08:56 <span style="color:#bd93f9">2019</span>
-</span></span><span style="display:flex;"><span>Version 19.3.0.0.0
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>...
-</span></span><span style="display:flex;"><span>Job <span style="color:#f1fa8c">&#34;SYSTEM&#34;</span>.<span style="color:#f1fa8c">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span> successfully completed at Wed Dec <span style="color:#bd93f9">11</span> 14:09:09 <span style="color:#bd93f9">2019</span> elapsed <span style="color:#bd93f9">0</span> 00:00:13
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl"><span class="o">[</span>oracle@dbsrvec2 ~<span class="o">]</span>$ impdp system/oracle <span class="nv">directory</span><span class="o">=</span>data_pump_dir <span class="nv">dumpfile</span><span class="o">=</span>backup_tts_DB19C_54885.dmp <span class="nv">logfile</span><span class="o">=</span>backup_tts_DB19C_54885.log <span class="nv">transport_datafiles</span><span class="o">=</span><span class="s1">&#39;/u01/app/oracle/oradata/DB19C/datafile/o1_mf_tts_gz1xbopy_.dbf&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Import: Release 19.0.0.0.0 - Production on Wed Dec <span class="m">11</span> 14:08:56 <span class="m">2019</span>
+</span></span><span class="line"><span class="cl">Version 19.3.0.0.0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Job <span class="s2">&#34;SYSTEM&#34;</span>.<span class="s2">&#34;SYS_IMPORT_TRANSPORTABLE_01&#34;</span> successfully completed at Wed Dec <span class="m">11</span> 14:09:09 <span class="m">2019</span> elapsed <span class="m">0</span> 00:00:13
 </span></span></code></pre></div><p>The TTS tablespace has been created. Also change the default tablespace for the tts user:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>SQL&gt; <span style="color:#ff79c6">select</span> TABLESPACE_NAME from dba_tablespaces;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>TABLESPACE_NAME
-</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------
-</span></span><span style="display:flex;"><span>SYSTEM
-</span></span><span style="display:flex;"><span>SYSAUX
-</span></span><span style="display:flex;"><span>UNDOTBS1
-</span></span><span style="display:flex;"><span>TEMP
-</span></span><span style="display:flex;"><span>USERS
-</span></span><span style="display:flex;"><span>TTS
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#bd93f9">6</span> rows selected.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>SQL&gt; alter user tts DEFAULT TABLESPACE tts;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>User altered.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sh" data-lang="sh"><span class="line"><span class="cl">SQL&gt; <span class="k">select</span> TABLESPACE_NAME from dba_tablespaces<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">TABLESPACE_NAME
+</span></span><span class="line"><span class="cl">--------------------------------------------------------------------------------
+</span></span><span class="line"><span class="cl">SYSTEM
+</span></span><span class="line"><span class="cl">SYSAUX
+</span></span><span class="line"><span class="cl">UNDOTBS1
+</span></span><span class="line"><span class="cl">TEMP
+</span></span><span class="line"><span class="cl">USERS
+</span></span><span class="line"><span class="cl">TTS
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="m">6</span> rows selected.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">SQL&gt; alter user tts DEFAULT TABLESPACE tts<span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">User altered.
 </span></span></code></pre></div><p>Finally, change the tablespace in the destination to read-write and you&rsquo;re done:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ff79c6">alter</span> tablespace tts <span style="color:#ff79c6">read</span> <span style="color:#ff79c6">write</span>;
-</span></span></code></pre></div><h4 id="impressions"><strong>Impressions</strong></h4>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">alter</span><span class="w"> </span><span class="n">tablespace</span><span class="w"> </span><span class="n">tts</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="k">write</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><h4 id="impressions"><strong>Impressions</strong></h4>
 <p>As described above, this method has distinctive advantages compared to other migration methods. While it can&rsquo;t completely replace GoldenGate, it can be a viable option when you want to migrate without additional cost, minimize downtime, or perform a version upgrade.</p>
 <h4 id="4-oracle-zero-downtime-migration"><strong>4. Oracle Zero Downtime Migration</strong></h4>
 <h5 id="introduction"><strong>Introduction</strong></h5>
@@ -758,7 +759,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
         <div class="footer-links">
           <a href="/en/">Home</a>
           <a href="/en/blog/">Articles</a>
@@ -779,7 +780,7 @@
         <div class="footer-copyright">Copyright © 2019, zatoima.</div>
         <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
         <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
-        <div class="footer-disclaimer">本ブログは生成AI（主にClaude CodeやCortex Code CLI）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
       </div>
     </footer>
   </div>
