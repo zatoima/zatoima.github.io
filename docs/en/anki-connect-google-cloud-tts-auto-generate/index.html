@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS | zatoima</title>
+<meta name="title" content="Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS" />
+<meta name="description" content="A step-by-step guide to automating English phrase card creation using the AnkiConnect REST API and Google Cloud Text-to-Speech Neural2 voices — from card registration to high-quality audio attachment — all via curl commands. Covers deck creation, bulk note addition, TTS audio generation, media attachment, and a batch processing script." />
+<meta name="keywords" content="Anki,Google Cloud,TTS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS">
+  <meta property="og:description" content="A step-by-step guide to automating English phrase card creation using the AnkiConnect REST API and Google Cloud Text-to-Speech Neural2 voices — from card registration to high-quality audio attachment — all via curl commands. Covers deck creation, bulk note addition, TTS audio generation, media attachment, and a batch processing script.">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-08T00:00:00+00:00">
+    <meta property="article:tag" content="Anki">
+    <meta property="article:tag" content="Google Cloud">
+    <meta property="article:tag" content="TTS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS">
+  <meta name="twitter:description" content="A step-by-step guide to automating English phrase card creation using the AnkiConnect REST API and Google Cloud Text-to-Speech Neural2 voices — from card registration to high-quality audio attachment — all via curl commands. Covers deck creation, bulk note addition, TTS audio generation, media attachment, and a batch processing script.">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS\"",
+  "description": "\"A step-by-step guide to automating English phrase card creation using the AnkiConnect REST API and Google Cloud Text-to-Speech Neural2 voices — from card …\"",
+  "datePublished": "\"2026-03-08T00:00:00Z\"",
+  "dateModified": "\"2026-03-08T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/\""
+  },
+  "inLanguage": "en",
+  "wordCount":  1414 ,
+  "keywords": "[\"Anki\",\"Google Cloud\",\"TTS\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/" />
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="translation-notice">This is an English translation of a Japanese blog. Some content may not be fully translated.</div>
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/en/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/en/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - Site info for AI/LLM">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="Toggle dark mode" data-label-light="Light" data-label-dark="Dark" data-label-system="System">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="Switch language">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/" class="lang-dropdown-item" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/" class="lang-dropdown-item active" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search articles... (Ctrl&#43;K)" autocomplete="off" data-min-chars="Please enter at least 2 characters" data-no-results="No results found">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/en/">Home</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">Auto-Generate English Phrase Cards with …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>Auto-Generate English Phrase Cards with AnkiConnect and Google Cloud TTS</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-08'>
+            2026/03/08Published on
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 2 min read</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/en/blog/anki/" class="tag-badge">Anki</a>
+          
+          <a href="https://zatoima.github.io/en/blog/google-cloud/" class="tag-badge">Google Cloud</a>
+          
+          <a href="https://zatoima.github.io/en/blog/tts/" class="tag-badge">TTS</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="introduction">Introduction</h2>
+<p>I use Anki to memorize English phrases, but manually registering cards and attaching audio is tedious enough to make me fall off the habit. By combining the REST API of <a href="https://github.com/FooSoft/anki-connect" target="_blank" rel="noopener noreferrer">AnkiConnect</a>
+ with the Neural2 voices of <a href="https://cloud.google.com/text-to-speech" target="_blank" rel="noopener noreferrer">Google Cloud Text-to-Speech</a>
+, you can automate everything from card registration to high-quality audio attachment using only curl commands. This article documents that process.</p>
+<p>Here is an overview of the entire workflow.</p>
+<div class="mermaid-wrapper">
+  <div class="mermaid">flowchart LR
+    A[Phrase list&lt;br/&gt;text file] --&gt; B[AnkiConnect API&lt;br/&gt;Create deck &amp; add notes]
+    A --&gt; C[Google Cloud TTS API&lt;br/&gt;Neural2 audio generation]
+    C --&gt; D[MP3 file]
+    D --&gt; E[AnkiConnect API&lt;br/&gt;Save media &amp; update fields]
+    B --&gt; F[Anki&lt;br/&gt;Card with audio complete]
+    E --&gt; F</div>
+</div>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<table>
+  <thead>
+      <tr>
+          <th>Item</th>
+          <th>Details</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Anki</td>
+          <td>Version 23.10.0 or later</td>
+      </tr>
+      <tr>
+          <td>AnkiConnect</td>
+          <td>Plugin code <code>2055492159</code></td>
+      </tr>
+      <tr>
+          <td>gcloud CLI</td>
+          <td>Authenticated</td>
+      </tr>
+      <tr>
+          <td>Google Cloud</td>
+          <td>Text-to-Speech API enabled</td>
+      </tr>
+  </tbody>
+</table>
+<p>To install AnkiConnect, open Anki and go to <strong>Tools → Add-ons → Get Add-ons</strong>, then enter the code <code>2055492159</code>. A restart of Anki is required after installation. AnkiConnect starts an HTTP server on port 8765 and accepts JSON-formatted requests.</p>
+<p>Enable the Google Cloud Text-to-Speech API with the following command.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">gcloud services <span class="nb">enable</span> texttospeech.googleapis.com
+</span></span></code></pre></div><h2 id="bulk-register-cards-via-the-ankiconnect-api">Bulk-Register Cards via the AnkiConnect API</h2>
+<h3 id="check-the-connection">Check the connection</h3>
+<p>First, verify that AnkiConnect is running.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{&#34;action&#34;: &#34;version&#34;, &#34;version&#34;: 6}&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span><span class="nt">&#34;result&#34;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="nt">&#34;error&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+</span></span></code></pre></div><h3 id="create-a-deck">Create a deck</h3>
+<p>Use the <code>createDeck</code> action to create a new deck.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;createDeck&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;deck&#34;: &#34;English Meeting Phrases 15&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="check-the-model-note-type">Check the model (note type)</h3>
+<p>Before adding cards, confirm the model name and its field names.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># List all models</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{&#34;action&#34;: &#34;modelNames&#34;, &#34;version&#34;: 6}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># List fields for a model</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;modelFieldNames&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;modelName&#34;: &#34;Basic&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="bulk-add-notes">Bulk-add notes</h3>
+<p>Use the <code>addNotes</code> action to register multiple notes at once. The example below adds English meeting phrases in a Japanese-prompt → English-answer format for instant translation practice.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;addNotes&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">      &#34;notes&#34;: [
+</span></span></span><span class="line"><span class="cl"><span class="s1">        {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;deckName&#34;: &#34;English Meeting Phrases 15&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;modelName&#34;: &#34;Basic&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Front&#34;: &#34;Ask someone to repeat themselves when you did not catch what they said&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Back&#34;: &#34;Sorry, could you say that again?&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">          },
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;tags&#34;: [&#34;Week1&#34;, &#34;clarification&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s1">        },
+</span></span></span><span class="line"><span class="cl"><span class="s1">        {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;deckName&#34;: &#34;English Meeting Phrases 15&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;modelName&#34;: &#34;Basic&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Front&#34;: &#34;Ask someone to speak more slowly when they are talking too fast&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Back&#34;: &#34;Could you slow down a bit?&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">          },
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;tags&#34;: [&#34;Week1&#34;, &#34;clarification&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s1">        }
+</span></span></span><span class="line"><span class="cl"><span class="s1">      ]
+</span></span></span><span class="line"><span class="cl"><span class="s1">    }
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><p>The <code>result</code> array in the response contains the ID of each note. A <code>null</code> value indicates that a duplicate note was found and skipped.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span><span class="nt">&#34;result&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1772875633429</span><span class="p">,</span> <span class="mi">1772875633437</span><span class="p">],</span> <span class="nt">&#34;error&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+</span></span></code></pre></div><p>If you use a custom model, specify <code>fields</code> to match that model&rsquo;s fields. For example, if your model has fields like <code>Example</code>, <code>Synonyms</code>, and <code>GrammarNote</code>, you can populate all of them in the same request.</p>
+<h2 id="generate-audio-with-google-cloud-tts">Generate Audio with Google Cloud TTS</h2>
+<h3 id="set-the-quota-project">Set the quota project</h3>
+<p>When using gcloud CLI user credentials, you must specify the quota project via the <code>x-goog-user-project</code> header. Without it, you will receive a <code>PERMISSION_DENIED</code> error.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>gcloud auth print-access-token<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="nv">PROJECT</span><span class="o">=</span><span class="k">$(</span>gcloud config get-value project 2&gt;/dev/null<span class="k">)</span>
+</span></span></code></pre></div><h3 id="generate-an-mp3-with-a-neural2-voice">Generate an MP3 with a Neural2 voice</h3>
+<p>Google Cloud TTS Neural2 voices produce more natural-sounding speech compared to Standard or WaveNet voices, making them well-suited for language learning.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;x-goog-user-project: </span><span class="nv">$PROJECT</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;input&#34;: {&#34;text&#34;: &#34;Sorry, could you say that again? I missed the last part.&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;voice&#34;: {&#34;languageCode&#34;: &#34;en-US&#34;, &#34;name&#34;: &#34;en-US-Neural2-J&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;audioConfig&#34;: {&#34;audioEncoding&#34;: &#34;MP3&#34;, &#34;speakingRate&#34;: 0.9}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  <span class="s2">&#34;https://texttospeech.googleapis.com/v1/text:synthesize&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  <span class="p">|</span> python3 -c <span class="s2">&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">import sys, json, base64
+</span></span></span><span class="line"><span class="cl"><span class="s2">data = json.load(sys.stdin)
+</span></span></span><span class="line"><span class="cl"><span class="s2">sys.stdout.buffer.write(base64.b64decode(data[&#39;audioContent&#39;]))
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;</span> &gt; meeting_phrase_01.mp3
+</span></span></code></pre></div><p>Key parameters are as follows.</p>
+<table>
+  <thead>
+      <tr>
+          <th>Parameter</th>
+          <th>Description</th>
+          <th>Example value</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>voice.name</code></td>
+          <td>Voice model</td>
+          <td><code>en-US-Neural2-J</code> (male), <code>en-US-Neural2-F</code> (female)</td>
+      </tr>
+      <tr>
+          <td><code>audioConfig.speakingRate</code></td>
+          <td>Speaking rate (0.25–2.0)</td>
+          <td><code>0.9</code> (slightly slower, good for learning)</td>
+      </tr>
+      <tr>
+          <td><code>audioConfig.audioEncoding</code></td>
+          <td>Output format</td>
+          <td><code>MP3</code>, <code>OGG_OPUS</code>, <code>LINEAR16</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>The API response contains base64-encoded audio data in the <code>audioContent</code> field; decode it and write it to a file.</p>
+<h3 id="free-tier">Free tier</h3>
+<p>According to the <a href="https://cloud.google.com/text-to-speech/pricing" target="_blank" rel="noopener noreferrer">Google Cloud TTS pricing page</a>
+, Neural2 voices are free up to 1 million bytes per month. Since English phrases consist of ASCII characters (roughly 1 character ≈ 1 byte), personal English study usage is very unlikely to exceed the free tier.</p>
+<h2 id="attach-audio-files-to-anki-cards">Attach Audio Files to Anki Cards</h2>
+<h3 id="store-the-media-file">Store the media file</h3>
+<p>Use the <code>storeMediaFile</code> action to save an MP3 file to Anki&rsquo;s media folder. Pass the file as a base64-encoded string.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">B64</span><span class="o">=</span><span class="k">$(</span>base64 -i meeting_phrase_01.mp3<span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;action\&#34;: \&#34;storeMediaFile\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;version\&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;params\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;filename\&#34;: \&#34;meeting_phrase_01.mp3\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;data\&#34;: \&#34;</span><span class="nv">$B64</span><span class="s2">\&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }
+</span></span></span><span class="line"><span class="cl"><span class="s2">  }&#34;</span>
+</span></span></code></pre></div><h3 id="update-the-note-field">Update the note field</h3>
+<p>Retrieve the note ID with <code>findNotes</code>, then use <code>updateNoteFields</code> to set the Sound field to <code>[sound:filename]</code>.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># Get note IDs</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;findNotes&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;query&#34;: &#34;deck:English Meeting Phrases 15&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Update the Sound field</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;updateNoteFields&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">      &#34;note&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">        &#34;id&#34;: 1772875633429,
+</span></span></span><span class="line"><span class="cl"><span class="s1">        &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;Sound&#34;: &#34;[sound:meeting_phrase_01.mp3]&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">        }
+</span></span></span><span class="line"><span class="cl"><span class="s1">      }
+</span></span></span><span class="line"><span class="cl"><span class="s1">    }
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="note-on-card-templates">Note on card templates</h3>
+<p>If you store the value as <code>[sound:filename.mp3]</code> in the Sound field, writing <code>[sound:{{Sound}}]</code> in the card template will double-wrap it and audio will not play. Write only <code>{{Sound}}</code> in the template.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">&lt;!-- Bad: double-wrapping prevents playback --&gt;
+</span></span><span class="line"><span class="cl">[sound:{{Sound}}]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&lt;!-- Good: the field value is expanded as-is --&gt;
+</span></span><span class="line"><span class="cl">{{Sound}}
+</span></span></code></pre></div><h2 id="batch-processing-script">Batch Processing Script</h2>
+<p>Below is an example shell script that combines all of the steps above. It reads from a phrase list file and runs the full pipeline — card registration → TTS generation → audio attachment — in a single pass.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/bin/bash
+</span></span></span><span class="line"><span class="cl"><span class="nb">set</span> -euo pipefail
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">DECK</span><span class="o">=</span><span class="s2">&#34;English Meeting Phrases 15&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">MODEL</span><span class="o">=</span><span class="s2">&#34;Basic&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">VOICE</span><span class="o">=</span><span class="s2">&#34;en-US-Neural2-J&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">RATE</span><span class="o">=</span>0.9
+</span></span><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>gcloud auth print-access-token<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="nv">PROJECT</span><span class="o">=</span><span class="k">$(</span>gcloud config get-value project 2&gt;/dev/null<span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Create deck</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;createDeck\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;deck\&#34;: \&#34;</span><span class="nv">$DECK</span><span class="s2">\&#34;}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Phrase definitions (TSV: prompt&lt;TAB&gt;English phrase&lt;TAB&gt;example sentence&lt;TAB&gt;tag)</span>
+</span></span><span class="line"><span class="cl"><span class="k">while</span> <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\t&#39;</span> <span class="nb">read</span> -r front back example tag<span class="p">;</span> <span class="k">do</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># Add note</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_back</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$back</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_front</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$front</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nv">note_id</span><span class="o">=</span><span class="k">$(</span>curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;action\&#34;: \&#34;addNote\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;version\&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;params\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">        \&#34;note\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;deckName\&#34;: \&#34;</span><span class="nv">$DECK</span><span class="s2">\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;modelName\&#34;: \&#34;</span><span class="nv">$MODEL</span><span class="s2">\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;fields\&#34;: {\&#34;Front\&#34;: </span><span class="nv">$escaped_front</span><span class="s2">, \&#34;Back\&#34;: </span><span class="nv">$escaped_back</span><span class="s2">},
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;tags\&#34;: [\&#34;</span><span class="nv">$tag</span><span class="s2">\&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s2">        }
+</span></span></span><span class="line"><span class="cl"><span class="s2">      }
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.load(sys.stdin)[&#39;result&#39;])&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="s2">&#34;Added note: </span><span class="nv">$note_id</span><span class="s2"> - </span><span class="nv">$front</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># Generate TTS</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_example</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$example</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">fname</span><span class="o">=</span><span class="s2">&#34;phrase_</span><span class="si">${</span><span class="nv">note_id</span><span class="si">}</span><span class="s2">.mp3&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  curl -s -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;x-goog-user-project: </span><span class="nv">$PROJECT</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;input\&#34;: {\&#34;text\&#34;: </span><span class="nv">$escaped_example</span><span class="s2">},
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;voice\&#34;: {\&#34;languageCode\&#34;: \&#34;en-US\&#34;, \&#34;name\&#34;: \&#34;</span><span class="nv">$VOICE</span><span class="s2">\&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;audioConfig\&#34;: {\&#34;audioEncoding\&#34;: \&#34;MP3\&#34;, \&#34;speakingRate\&#34;: </span><span class="nv">$RATE</span><span class="s2">}
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    <span class="s2">&#34;https://texttospeech.googleapis.com/v1/text:synthesize&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json,base64; d=json.load(sys.stdin); sys.stdout.buffer.write(base64.b64decode(d[&#39;audioContent&#39;]))&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    &gt; <span class="s2">&#34;/tmp/</span><span class="nv">$fname</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># Save media to Anki + update field</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">b64</span><span class="o">=</span><span class="k">$(</span>base64 -i <span class="s2">&#34;/tmp/</span><span class="nv">$fname</span><span class="s2">&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;storeMediaFile\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;filename\&#34;: \&#34;</span><span class="nv">$fname</span><span class="s2">\&#34;, \&#34;data\&#34;: \&#34;</span><span class="nv">$b64</span><span class="s2">\&#34;}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;updateNoteFields\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;note\&#34;: {\&#34;id\&#34;: </span><span class="nv">$note_id</span><span class="s2">, \&#34;fields\&#34;: {\&#34;Sound\&#34;: \&#34;[sound:</span><span class="nv">$fname</span><span class="s2">]\&#34;}}}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="s2">&#34;  -&gt; TTS attached: </span><span class="nv">$fname</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="k">done</span> &lt; phrases.tsv
+</span></span></code></pre></div><p>The format of the input file <code>phrases.tsv</code> is as follows.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Ask someone to repeat themselves when you did not catch what they said	Sorry, could you say that again?	Sorry, could you say that again? I missed the last part.	Week1
+</span></span><span class="line"><span class="cl">Ask someone to speak more slowly when they are talking too fast	Could you slow down a bit?	Could you slow down a bit? I want to make sure I&#39;m following.	Week1
+</span></span></code></pre></div><h2 id="summary">Summary</h2>
+<ul>
+<li>The AnkiConnect API is easy to drive with curl, enabling deck creation, note addition, and media attachment in a fully programmable way.</li>
+<li>Google Cloud TTS Neural2 voices offer natural-sounding audio quality with a free tier of 1 million bytes per month, which is more than enough for personal English study.</li>
+<li>Pay attention to how the Sound field is handled in card templates (<code>{{Sound}}</code> vs <code>[sound:{{Sound}}]</code>).</li>
+</ul>
+<h2 id="references">References</h2>
+<div class="link-card">
+    <a href="https://github.com/FooSoft/anki-connect" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - FooSoft/anki-connect: Anki plugin to expose a remote API for creating flash cards.</div><div class="link-card-description">Anki plugin to expose a remote API for creating flash cards. - FooSoft/anki-connect</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/ca2f8e8f7423823104a5453640c03402d224d6b7a9c7b17f6b6bd0bf222d4950/FooSoft/anki-connect" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://cloud.google.com/text-to-speech" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Text-to-Speech: Lifelike AI Voices &amp;amp; Speech Synthesis</div><div class="link-card-description">Convert text to lifelike audio with Gemini-powered AI voices. Choose from 380&#43; natural-sounding voices across 75&#43; languages and variants.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=cloud.google.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">cloud.google.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://cloud.google.com/_static/cloud/images/social-icon-google-cloud-1200-630.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://cloud.google.com/text-to-speech/pricing" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Review pricing for Text-to-Speech</div><div class="link-card-description">Pricing for Text-to-Speech.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=cloud.google.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">cloud.google.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://cloud.google.com/_static/cloud/images/social-icon-google-cloud-1200-630.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-08-AnkiConnect%e3%81%a8Google-Cloud-TTS%e3%81%a7%e8%8b%b1%e8%aa%9e%e3%83%95%e3%83%ac%e3%83%bc%e3%82%ba%e3%82%ab%e3%83%bc%e3%83%89%e3%82%92%e8%87%aa%e5%8b%95%e7%94%9f%e6%88%90%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Suggest an edit on GitHub
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/en/personal-tech-blog-traffic-ai-search-impact/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← Previous article</span>
+        <span class="prev-next-title">How AI Search Has Changed Traffic to a Personal …</span>
+      </a>
+      
+      
+      <div class="prev-next-link next-link empty"></div>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fen%2fanki-connect-google-cloud-tts-auto-generate%2f&text=Auto-Generate&#43;English&#43;Phrase&#43;Cards&#43;with&#43;AnkiConnect&#43;and&#43;Google&#43;Cloud&#43;TTS" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Share on X">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="Add to Hatena Bookmark">B!</a>
+</div>
+
+
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/en/blog/anki/" class="tag-badge">Anki</a>
+  
+  <a href="https://zatoima.github.io/en/blog/google-cloud/" class="tag-badge">Google Cloud</a>
+  
+  <a href="https://zatoima.github.io/en/blog/tts/" class="tag-badge">TTS</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#bulk-register-cards-via-the-ankiconnect-api">Bulk-Register Cards via the AnkiConnect API</a>
+      <ul>
+        <li><a href="#check-the-connection">Check the connection</a></li>
+        <li><a href="#create-a-deck">Create a deck</a></li>
+        <li><a href="#check-the-model-note-type">Check the model (note type)</a></li>
+        <li><a href="#bulk-add-notes">Bulk-add notes</a></li>
+      </ul>
+    </li>
+    <li><a href="#generate-audio-with-google-cloud-tts">Generate Audio with Google Cloud TTS</a>
+      <ul>
+        <li><a href="#set-the-quota-project">Set the quota project</a></li>
+        <li><a href="#generate-an-mp3-with-a-neural2-voice">Generate an MP3 with a Neural2 voice</a></li>
+        <li><a href="#free-tier">Free tier</a></li>
+      </ul>
+    </li>
+    <li><a href="#attach-audio-files-to-anki-cards">Attach Audio Files to Anki Cards</a>
+      <ul>
+        <li><a href="#store-the-media-file">Store the media file</a></li>
+        <li><a href="#update-the-note-field">Update the note field</a></li>
+        <li><a href="#note-on-card-templates">Note on card templates</a></li>
+      </ul>
+    </li>
+    <li><a href="#batch-processing-script">Batch Processing Script</a></li>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-disclaimer"></div>
+        <div class="footer-links">
+          <a href="/en/">Home</a>
+          <a href="/en/blog/">Articles</a>
+          <a href="/en/tags/">Tags</a>
+          <a href="/en/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">The contents of this blog are my personal views and do not represent the official views of any company or organization I am affiliated with.</div>
+        <div class="footer-disclaimer"></div>
+      </div>
+    </footer>
+  </div>
+  
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: isDark ? 'dark' : 'neutral',
+      themeVariables: {
+        fontSize: '14px',
+      }
+    });
+  </script>
+  
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>

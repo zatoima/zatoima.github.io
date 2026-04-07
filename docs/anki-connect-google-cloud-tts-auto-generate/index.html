@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="shortcut icon" href="https://zatoima.github.io/favicon.svg" />
+<title>AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する | zatoima</title>
+<meta name="title" content="AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する" />
+<meta name="description" content="AnkiConnectのREST APIとGoogle Cloud Text-to-SpeechのNeural2音声を組み合わせ、英語フレーズカードの登録から高品質な音声添付までをcurlコマンドで自動化する手順を記録する。デッキ作成、ノート一括追加、TTS音声生成、メディア添付、一括処理スクリプトまでをカバーする。" />
+<meta name="keywords" content="Anki,Google Cloud,TTS," />
+
+
+<meta property="og:url" content="https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/">
+  <meta property="og:site_name" content="zatoima">
+  <meta property="og:title" content="AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する">
+  <meta property="og:description" content="AnkiConnectのREST APIとGoogle Cloud Text-to-SpeechのNeural2音声を組み合わせ、英語フレーズカードの登録から高品質な音声添付までをcurlコマンドで自動化する手順を記録する。デッキ作成、ノート一括追加、TTS音声生成、メディア添付、一括処理スクリプトまでをカバーする。">
+  <meta property="og:locale" content="ja">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="blog">
+    <meta property="article:published_time" content="2026-03-08T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-03-08T00:00:00+00:00">
+    <meta property="article:tag" content="Anki">
+    <meta property="article:tag" content="Google Cloud">
+    <meta property="article:tag" content="TTS">
+    <meta property="og:image" content="https://zatoima.github.io/images/share.png">
+
+
+
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://zatoima.github.io/images/share.png">
+  <meta name="twitter:title" content="AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する">
+  <meta name="twitter:description" content="AnkiConnectのREST APIとGoogle Cloud Text-to-SpeechのNeural2音声を組み合わせ、英語フレーズカードの登録から高品質な音声添付までをcurlコマンドで自動化する手順を記録する。デッキ作成、ノート一括追加、TTS音声生成、メディア添付、一括処理スクリプトまでをカバーする。">
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "\"AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する\"",
+  "description": "\"AnkiConnectのREST APIとGoogle Cloud Text-to-SpeechのNeural2音声を組み合わせ、英語フレーズカードの登録から高品質な音声添付までをcurlコマンドで自動化する手順を記録する。デッキ作成、ノート一括追加、TTS音声生成、メディア添付、一括処理スクリプトまでをカバーする。\"",
+  "datePublished": "\"2026-03-08T00:00:00Z\"",
+  "dateModified": "\"2026-03-08T00:00:00Z\"",
+  "author": {
+    "@type": "Person",
+    "name": "\"zatoima\"",
+    "url": "https://zatoima.github.io/about/"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "\"zatoima\""
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "\"https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/\""
+  },
+  "inLanguage": "ja",
+  "wordCount":  2855 ,
+  "keywords": "[\"Anki\",\"Google Cloud\",\"TTS\"]"
+}
+</script>
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLMs-full.txt" />
+
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || ((!t || t === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script><link rel="stylesheet" href="/css/zenn.css">
+<link rel="stylesheet" href="/css/syntax.css">
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-STFZ9QMXGM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-STFZ9QMXGM');
+</script>
+
+    
+    <link rel="alternate" hreflang="en" href="https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/" />
+    
+    <link rel="alternate" hreflang="ja" href="https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/" />
+  
+</head>
+
+<body>
+  <a href="#main" class="skip-link">メインコンテンツへスキップ</a>
+  <div class="reading-progress"></div>
+  
+  
+  <div class="site-wrapper">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-logo">zatoima</a>
+        <nav class="header-nav">
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+<a href="/index.xml">RSS</a>
+<a href="/other/">Other</a>
+<a href="/llms.txt" title="LLMs.txt - AI/LLM向けサイト情報">llms.txt</a>
+</nav>
+        <div class="header-actions">
+          <button id="search-btn" class="header-icon-btn" aria-label="検索">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button id="dark-mode-btn" class="header-icon-btn" aria-label="ダークモード切替" data-label-light="ライト" data-label-dark="ダーク" data-label-system="システム">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button><div class="lang-switcher">
+  <button id="lang-btn" class="header-icon-btn" aria-label="言語を切り替え">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </button>
+  <div id="lang-dropdown" class="lang-dropdown"><a href="https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/" class="lang-dropdown-item active" lang="ja">
+        日本語
+      </a>
+    <a href="https://zatoima.github.io/en/anki-connect-google-cloud-tts-auto-generate/" class="lang-dropdown-item" lang="en">
+        English
+      </a>
+    
+  </div>
+</div>
+<button id="hamburger-btn" class="hamburger-btn" aria-label="メニュー">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    
+    <div id="search-overlay" class="search-overlay">
+      <div class="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="記事を検索... (Ctrl&#43;K)" autocomplete="off" data-min-chars="2文字以上入力してください" data-no-results="見つかりませんでした">
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </div>
+
+    
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <main id="main" class="site-main">
+<div class="article-layout">
+  <article class="article-main">
+    
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+  <a href="/">ホーム</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <a href="/blog/">Blog</a>
+  <span class="breadcrumb-sep">&gt;</span>
+  
+  <span class="breadcrumb-current">AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自 …</span>
+</nav>
+
+    
+    <div class="article-card">
+      <div class="article-header">
+        <div class="article-emoji">📝</div>
+        <h1>AnkiConnectとGoogle Cloud TTSで英語フレーズカードを自動生成する</h1>
+        
+        <div class="article-meta">
+          <time class="article-date" datetime='2026-03-08'>
+            2026/03/08に公開
+          </time>
+          
+          
+          
+          <span class="reading-time">📖 約5分</span>
+        </div>
+        <div class="article-tags">
+          
+          <a href="https://zatoima.github.io/blog/anki/" class="tag-badge">Anki</a>
+          
+          <a href="https://zatoima.github.io/blog/google-cloud/" class="tag-badge">Google Cloud</a>
+          
+          <a href="https://zatoima.github.io/blog/tts/" class="tag-badge">TTS</a>
+          
+        </div>
+        
+      </div>
+      <div class="article-content">
+        <h2 id="はじめに">はじめに</h2>
+<p>英語フレーズの暗記にAnkiを使っているが、カードの手動登録と音声添付が面倒で続かなくなることがある。<a href="https://github.com/FooSoft/anki-connect" target="_blank" rel="noopener noreferrer">AnkiConnect</a>
+のREST APIと<a href="https://cloud.google.com/text-to-speech" target="_blank" rel="noopener noreferrer">Google Cloud Text-to-Speech</a>
+のNeural2音声を組み合わせると、curlコマンドだけでカード登録から高品質な音声添付まで自動化できる。この記事ではその手順を記録する。</p>
+<p>処理の全体像は以下の通り。</p>
+<div class="mermaid-wrapper">
+  <div class="mermaid">flowchart LR
+    A[フレーズ一覧&lt;br/&gt;テキスト] --&gt; B[AnkiConnect API&lt;br/&gt;デッキ作成・ノート追加]
+    A --&gt; C[Google Cloud TTS API&lt;br/&gt;Neural2 音声生成]
+    C --&gt; D[MP3ファイル]
+    D --&gt; E[AnkiConnect API&lt;br/&gt;メディア保存・フィールド更新]
+    B --&gt; F[Anki&lt;br/&gt;音声付きカード完成]
+    E --&gt; F</div>
+</div>
+
+<h2 id="前提条件">前提条件</h2>
+<table>
+  <thead>
+      <tr>
+          <th>項目</th>
+          <th>内容</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Anki</td>
+          <td>バージョン 23.10.0 以上</td>
+      </tr>
+      <tr>
+          <td>AnkiConnect</td>
+          <td>プラグインコード <code>2055492159</code></td>
+      </tr>
+      <tr>
+          <td>gcloud CLI</td>
+          <td>認証済み</td>
+      </tr>
+      <tr>
+          <td>Google Cloud</td>
+          <td>Text-to-Speech API 有効化済み</td>
+      </tr>
+  </tbody>
+</table>
+<p>AnkiConnectのインストールは、Ankiの「ツール → アドオン → 新たにアドオンを取得」からコード <code>2055492159</code> を入力する。インストール後はAnkiの再起動が必要。AnkiConnectはポート8765でHTTPサーバーを起動し、JSON形式のリクエストを受け付ける。</p>
+<p>Google Cloud Text-to-Speech APIの有効化は以下のコマンドで行う。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">gcloud services <span class="nb">enable</span> texttospeech.googleapis.com
+</span></span></code></pre></div><h2 id="ankiconnect-apiでカードを一括登録する">AnkiConnect APIでカードを一括登録する</h2>
+<h3 id="接続確認">接続確認</h3>
+<p>まずAnkiConnectが動作しているか確認する。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{&#34;action&#34;: &#34;version&#34;, &#34;version&#34;: 6}&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span><span class="nt">&#34;result&#34;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="nt">&#34;error&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+</span></span></code></pre></div><h3 id="デッキの作成">デッキの作成</h3>
+<p><code>createDeck</code> アクションで新しいデッキを作成する。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;createDeck&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;deck&#34;: &#34;英語会議フレーズ15&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="モデルノートタイプの確認">モデル（ノートタイプ）の確認</h3>
+<p>カード追加前にモデル名とフィールド名を確認する。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># モデル一覧</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{&#34;action&#34;: &#34;modelNames&#34;, &#34;version&#34;: 6}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># フィールド一覧</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;modelFieldNames&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;modelName&#34;: &#34;Basic&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="ノートの一括追加">ノートの一括追加</h3>
+<p><code>addNotes</code> アクションで複数ノートを一括登録する。以下は英語会議フレーズを日→英の瞬間英作文形式で登録する例。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;addNotes&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">      &#34;notes&#34;: [
+</span></span></span><span class="line"><span class="cl"><span class="s1">        {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;deckName&#34;: &#34;英語会議フレーズ15&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;modelName&#34;: &#34;Basic&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Front&#34;: &#34;聞き取れなかったとき、もう一度言ってもらうよう頼む&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Back&#34;: &#34;Sorry, could you say that again?&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">          },
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;tags&#34;: [&#34;Week1&#34;, &#34;聞き返す&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s1">        },
+</span></span></span><span class="line"><span class="cl"><span class="s1">        {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;deckName&#34;: &#34;英語会議フレーズ15&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;modelName&#34;: &#34;Basic&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Front&#34;: &#34;相手の話すスピードが速すぎるとき、ゆっくり話してもらうよう頼む&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">            &#34;Back&#34;: &#34;Could you slow down a bit?&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">          },
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;tags&#34;: [&#34;Week1&#34;, &#34;聞き返す&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s1">        }
+</span></span></span><span class="line"><span class="cl"><span class="s1">      ]
+</span></span></span><span class="line"><span class="cl"><span class="s1">    }
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><p>レスポンスの <code>result</code> 配列に各ノートのIDが返る。<code>null</code> が含まれている場合は重複ノートがありスキップされたことを示す。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span><span class="nt">&#34;result&#34;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1772875633429</span><span class="p">,</span> <span class="mi">1772875633437</span><span class="p">],</span> <span class="nt">&#34;error&#34;</span><span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+</span></span></code></pre></div><p>カスタムモデルを使っている場合は、そのモデルのフィールドに合わせて <code>fields</code> を指定する。たとえば <code>Example</code>（例文）、<code>Synonyms</code>（類義表現）、<code>GrammarNote</code>（文法メモ）などのフィールドがあれば、それらも同時に登録できる。</p>
+<h2 id="google-cloud-ttsで音声を生成する">Google Cloud TTSで音声を生成する</h2>
+<h3 id="quota-projectの設定">quota projectの設定</h3>
+<p>gcloud CLIのユーザー認証を使う場合、<code>x-goog-user-project</code> ヘッダーでquota projectを指定する必要がある。これがないと <code>PERMISSION_DENIED</code> エラーが返る。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>gcloud auth print-access-token<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="nv">PROJECT</span><span class="o">=</span><span class="k">$(</span>gcloud config get-value project 2&gt;/dev/null<span class="k">)</span>
+</span></span></code></pre></div><h3 id="neural2音声でmp3を生成">Neural2音声でMP3を生成</h3>
+<p>Google Cloud TTSのNeural2音声は、従来のStandard音声やWaveNet音声と比較して自然な発話が特徴。英語学習用途には十分な品質。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -s -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;x-goog-user-project: </span><span class="nv">$PROJECT</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;input&#34;: {&#34;text&#34;: &#34;Sorry, could you say that again? I missed the last part.&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;voice&#34;: {&#34;languageCode&#34;: &#34;en-US&#34;, &#34;name&#34;: &#34;en-US-Neural2-J&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;audioConfig&#34;: {&#34;audioEncoding&#34;: &#34;MP3&#34;, &#34;speakingRate&#34;: 0.9}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  <span class="s2">&#34;https://texttospeech.googleapis.com/v1/text:synthesize&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  <span class="p">|</span> python3 -c <span class="s2">&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">import sys, json, base64
+</span></span></span><span class="line"><span class="cl"><span class="s2">data = json.load(sys.stdin)
+</span></span></span><span class="line"><span class="cl"><span class="s2">sys.stdout.buffer.write(base64.b64decode(data[&#39;audioContent&#39;]))
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;</span> &gt; meeting_phrase_01.mp3
+</span></span></code></pre></div><p>主なパラメータは以下の通り。</p>
+<table>
+  <thead>
+      <tr>
+          <th>パラメータ</th>
+          <th>説明</th>
+          <th>値の例</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>voice.name</code></td>
+          <td>音声モデル</td>
+          <td><code>en-US-Neural2-J</code>（男性）、<code>en-US-Neural2-F</code>（女性）</td>
+      </tr>
+      <tr>
+          <td><code>audioConfig.speakingRate</code></td>
+          <td>発話速度（0.25〜2.0）</td>
+          <td><code>0.9</code>（やや遅め、学習向き）</td>
+      </tr>
+      <tr>
+          <td><code>audioConfig.audioEncoding</code></td>
+          <td>出力形式</td>
+          <td><code>MP3</code>, <code>OGG_OPUS</code>, <code>LINEAR16</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>APIレスポンスの <code>audioContent</code> フィールドにbase64エンコードされた音声データが含まれるため、デコードしてファイルに書き出す。</p>
+<h3 id="無料枠">無料枠</h3>
+<p><a href="https://cloud.google.com/text-to-speech/pricing" target="_blank" rel="noopener noreferrer">Google Cloud TTS の料金ページ</a>
+によると、Neural2音声は月100万バイトまで無料。英語フレーズ（ASCII文字）であれば1文字≒1バイトのため、個人の英語学習用途で無料枠を超えることはまずない。</p>
+<h2 id="音声ファイルをankiカードに添付する">音声ファイルをAnkiカードに添付する</h2>
+<h3 id="メディアファイルの保存">メディアファイルの保存</h3>
+<p><code>storeMediaFile</code> アクションでMP3ファイルをAnkiのメディアフォルダに保存する。ファイルはbase64エンコードして渡す。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nv">B64</span><span class="o">=</span><span class="k">$(</span>base64 -i meeting_phrase_01.mp3<span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;action\&#34;: \&#34;storeMediaFile\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;version\&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s2">    \&#34;params\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;filename\&#34;: \&#34;meeting_phrase_01.mp3\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;data\&#34;: \&#34;</span><span class="nv">$B64</span><span class="s2">\&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }
+</span></span></span><span class="line"><span class="cl"><span class="s2">  }&#34;</span>
+</span></span></code></pre></div><h3 id="ノートフィールドの更新">ノートフィールドの更新</h3>
+<p><code>findNotes</code> でノートIDを取得し、<code>updateNoteFields</code> でSoundフィールドに <code>[sound:ファイル名]</code> を設定する。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># ノートID取得</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;findNotes&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {&#34;query&#34;: &#34;deck:英語会議フレーズ15&#34;}
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Soundフィールドを更新</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s1">&#39;{
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;action&#34;: &#34;updateNoteFields&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;version&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    &#34;params&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">      &#34;note&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">        &#34;id&#34;: 1772875633429,
+</span></span></span><span class="line"><span class="cl"><span class="s1">        &#34;fields&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s1">          &#34;Sound&#34;: &#34;[sound:meeting_phrase_01.mp3]&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s1">        }
+</span></span></span><span class="line"><span class="cl"><span class="s1">      }
+</span></span></span><span class="line"><span class="cl"><span class="s1">    }
+</span></span></span><span class="line"><span class="cl"><span class="s1">  }&#39;</span>
+</span></span></code></pre></div><h3 id="カードテンプレートの注意点">カードテンプレートの注意点</h3>
+<p>Soundフィールドに <code>[sound:ファイル名.mp3]</code> という形式で保存した場合、カードテンプレート側で <code>[sound:{{Sound}}]</code> と書くと二重ラップになり音声が再生されない。テンプレートでは <code>{{Sound}}</code> とだけ書く。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">&lt;!-- NG: 二重ラップで再生されない --&gt;
+</span></span><span class="line"><span class="cl">[sound:{{Sound}}]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">&lt;!-- OK: フィールド値がそのまま展開される --&gt;
+</span></span><span class="line"><span class="cl">{{Sound}}
+</span></span></code></pre></div><h2 id="一括処理スクリプト">一括処理スクリプト</h2>
+<p>上記の処理をまとめたシェルスクリプトの例を示す。フレーズ一覧のファイルからカード登録 → TTS生成 → 音声添付までを一気に実行する。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/bin/bash
+</span></span></span><span class="line"><span class="cl"><span class="nb">set</span> -euo pipefail
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nv">DECK</span><span class="o">=</span><span class="s2">&#34;英語会議フレーズ15&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">MODEL</span><span class="o">=</span><span class="s2">&#34;Basic&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">VOICE</span><span class="o">=</span><span class="s2">&#34;en-US-Neural2-J&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="nv">RATE</span><span class="o">=</span>0.9
+</span></span><span class="line"><span class="cl"><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>gcloud auth print-access-token<span class="k">)</span>
+</span></span><span class="line"><span class="cl"><span class="nv">PROJECT</span><span class="o">=</span><span class="k">$(</span>gcloud config get-value project 2&gt;/dev/null<span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># デッキ作成</span>
+</span></span><span class="line"><span class="cl">curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">  -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;createDeck\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;deck\&#34;: \&#34;</span><span class="nv">$DECK</span><span class="s2">\&#34;}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># フレーズ定義（TSV: 日本語&lt;TAB&gt;英語フレーズ&lt;TAB&gt;例文&lt;TAB&gt;タグ）</span>
+</span></span><span class="line"><span class="cl"><span class="k">while</span> <span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\t&#39;</span> <span class="nb">read</span> -r front back example tag<span class="p">;</span> <span class="k">do</span>
+</span></span><span class="line"><span class="cl">  <span class="c1"># ノート追加</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_back</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$back</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_front</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$front</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nv">note_id</span><span class="o">=</span><span class="k">$(</span>curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;action\&#34;: \&#34;addNote\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;version\&#34;: 6,
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;params\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">        \&#34;note\&#34;: {
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;deckName\&#34;: \&#34;</span><span class="nv">$DECK</span><span class="s2">\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;modelName\&#34;: \&#34;</span><span class="nv">$MODEL</span><span class="s2">\&#34;,
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;fields\&#34;: {\&#34;Front\&#34;: </span><span class="nv">$escaped_front</span><span class="s2">, \&#34;Back\&#34;: </span><span class="nv">$escaped_back</span><span class="s2">},
+</span></span></span><span class="line"><span class="cl"><span class="s2">          \&#34;tags\&#34;: [\&#34;</span><span class="nv">$tag</span><span class="s2">\&#34;]
+</span></span></span><span class="line"><span class="cl"><span class="s2">        }
+</span></span></span><span class="line"><span class="cl"><span class="s2">      }
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.load(sys.stdin)[&#39;result&#39;])&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="s2">&#34;Added note: </span><span class="nv">$note_id</span><span class="s2"> - </span><span class="nv">$front</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># TTS生成</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">escaped_example</span><span class="o">=</span><span class="k">$(</span><span class="nb">printf</span> <span class="s1">&#39;%s&#39;</span> <span class="s2">&#34;</span><span class="nv">$example</span><span class="s2">&#34;</span> <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json; print(json.dumps(sys.stdin.read()))&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">fname</span><span class="o">=</span><span class="s2">&#34;phrase_</span><span class="si">${</span><span class="nv">note_id</span><span class="si">}</span><span class="s2">.mp3&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  curl -s -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;x-goog-user-project: </span><span class="nv">$PROJECT</span><span class="s2">&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;input\&#34;: {\&#34;text\&#34;: </span><span class="nv">$escaped_example</span><span class="s2">},
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;voice\&#34;: {\&#34;languageCode\&#34;: \&#34;en-US\&#34;, \&#34;name\&#34;: \&#34;</span><span class="nv">$VOICE</span><span class="s2">\&#34;},
+</span></span></span><span class="line"><span class="cl"><span class="s2">      \&#34;audioConfig\&#34;: {\&#34;audioEncoding\&#34;: \&#34;MP3\&#34;, \&#34;speakingRate\&#34;: </span><span class="nv">$RATE</span><span class="s2">}
+</span></span></span><span class="line"><span class="cl"><span class="s2">    }&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    <span class="s2">&#34;https://texttospeech.googleapis.com/v1/text:synthesize&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    <span class="p">|</span> python3 -c <span class="s2">&#34;import sys,json,base64; d=json.load(sys.stdin); sys.stdout.buffer.write(base64.b64decode(d[&#39;audioContent&#39;]))&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    &gt; <span class="s2">&#34;/tmp/</span><span class="nv">$fname</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c1"># Ankiにメディア保存 + フィールド更新</span>
+</span></span><span class="line"><span class="cl">  <span class="nv">b64</span><span class="o">=</span><span class="k">$(</span>base64 -i <span class="s2">&#34;/tmp/</span><span class="nv">$fname</span><span class="s2">&#34;</span><span class="k">)</span>
+</span></span><span class="line"><span class="cl">  curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;storeMediaFile\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;filename\&#34;: \&#34;</span><span class="nv">$fname</span><span class="s2">\&#34;, \&#34;data\&#34;: \&#34;</span><span class="nv">$b64</span><span class="s2">\&#34;}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  curl -s http://localhost:8765 -X POST <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -H <span class="s2">&#34;Content-Type: application/json&#34;</span> <span class="se">\
+</span></span></span><span class="line"><span class="cl">    -d <span class="s2">&#34;{\&#34;action\&#34;: \&#34;updateNoteFields\&#34;, \&#34;version\&#34;: 6, \&#34;params\&#34;: {\&#34;note\&#34;: {\&#34;id\&#34;: </span><span class="nv">$note_id</span><span class="s2">, \&#34;fields\&#34;: {\&#34;Sound\&#34;: \&#34;[sound:</span><span class="nv">$fname</span><span class="s2">]\&#34;}}}}&#34;</span> &gt; /dev/null
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nb">echo</span> <span class="s2">&#34;  -&gt; TTS attached: </span><span class="nv">$fname</span><span class="s2">&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="k">done</span> &lt; phrases.tsv
+</span></span></code></pre></div><p>入力ファイル <code>phrases.tsv</code> の形式は以下の通り。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">聞き取れなかったとき、もう一度言ってもらうよう頼む	Sorry, could you say that again?	Sorry, could you say that again? I missed the last part.	Week1
+</span></span><span class="line"><span class="cl">相手の話すスピードが速すぎるとき、ゆっくり話してもらうよう頼む	Could you slow down a bit?	Could you slow down a bit? I want to make sure I&#39;m following.	Week1
+</span></span></code></pre></div><h2 id="まとめ">まとめ</h2>
+<ul>
+<li>AnkiConnect APIはcurlで手軽に操作でき、デッキ作成・ノート追加・メディア添付をプログラマブルに実行できる</li>
+<li>Google Cloud TTS Neural2音声は自然な発話品質で、月100万バイトの無料枠があるため個人の英語学習用途には十分</li>
+<li>カードテンプレートのSoundフィールドの扱い（<code>{{Sound}}</code> vs <code>[sound:{{Sound}}]</code>）には注意が必要</li>
+</ul>
+<h2 id="参考資料">参考資料</h2>
+<div class="link-card">
+    <a href="https://github.com/FooSoft/anki-connect" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">GitHub - FooSoft/anki-connect: Anki plugin to expose a remote API for creating flash cards.</div><div class="link-card-description">Anki plugin to expose a remote API for creating flash cards. - FooSoft/anki-connect</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=github.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">github.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://opengraph.githubassets.com/ca2f8e8f7423823104a5453640c03402d224d6b7a9c7b17f6b6bd0bf222d4950/FooSoft/anki-connect" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://cloud.google.com/text-to-speech" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Text-to-Speech: Lifelike AI Voices &amp;amp; Speech Synthesis</div><div class="link-card-description">Convert text to lifelike audio with Gemini-powered AI voices. Choose from 380&#43; natural-sounding voices across 75&#43; languages and variants.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=cloud.google.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">cloud.google.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://cloud.google.com/_static/cloud/images/social-icon-google-cloud-1200-630.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+<div class="link-card">
+    <a href="https://cloud.google.com/text-to-speech/pricing" target="_blank" rel="noopener noreferrer">
+      <div class="link-card-body">
+        <div class="link-card-text">
+          <div class="link-card-title">Review pricing for Text-to-Speech</div><div class="link-card-description">Pricing for Text-to-Speech.</div><div class="link-card-meta">
+            <img class="link-card-favicon" src="https://www.google.com/s2/favicons?sz=32&amp;domain=cloud.google.com" alt="" loading="lazy" width="16" height="16">
+            <span class="link-card-domain">cloud.google.com</span>
+          </div>
+        </div><div class="link-card-image">
+            <img src="https://cloud.google.com/_static/cloud/images/social-icon-google-cloud-1200-630.png" alt="" loading="lazy">
+          </div></div>
+    </a>
+  </div>
+
+      </div>
+    </div>
+
+    
+    
+    
+    <a href="https://github.com/zatoima/zatoima.github.io/edit/main/content/blog/2026-03-08-AnkiConnect%e3%81%a8Google-Cloud-TTS%e3%81%a7%e8%8b%b1%e8%aa%9e%e3%83%95%e3%83%ac%e3%83%bc%e3%82%ba%e3%82%ab%e3%83%bc%e3%83%89%e3%82%92%e8%87%aa%e5%8b%95%e7%94%9f%e6%88%90%e3%81%99%e3%82%8b/index.md" target="_blank" rel="noopener noreferrer" class="github-edit-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      GitHubで編集を提案
+    </a>
+    
+    
+
+    
+    
+    <nav class="prev-next-nav">
+      
+      <a href="https://zatoima.github.io/personal-tech-blog-traffic-ai-search-impact/" class="prev-next-link prev-link">
+        <span class="prev-next-label">← 前の記事</span>
+        <span class="prev-next-title">AI検索時代に個人技術ブログのトラフィックはどう変わったか</span>
+      </a>
+      
+      
+      <div class="prev-next-link next-link empty"></div>
+      
+    </nav>
+    
+
+    
+<div class="share-buttons">
+  <span class="share-label">共有:</span>
+  <a href="https://twitter.com/intent/tweet?url=https%3a%2f%2fzatoima.github.io%2fanki-connect-google-cloud-tts-auto-generate%2f&text=AnkiConnect%E3%81%A8Google&#43;Cloud&#43;TTS%E3%81%A7%E8%8B%B1%E8%AA%9E%E3%83%95%E3%83%AC%E3%83%BC%E3%82%BA%E3%82%AB%E3%83%BC%E3%83%89%E3%82%92%E8%87%AA%E5%8B%95%E7%94%9F%E6%88%90%E3%81%99%E3%82%8B" target="_blank" rel="noopener noreferrer" class="share-btn share-twitter" aria-label="Xで共有">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </a>
+  <a href="https://b.hatena.ne.jp/entry/https://zatoima.github.io/anki-connect-google-cloud-tts-auto-generate/" target="_blank" rel="noopener noreferrer" class="share-btn share-hatena" aria-label="はてなブックマークに追加">B!</a>
+</div>
+
+
+
+
+
+
+<div class="post-tags">
+  
+  <a href="https://zatoima.github.io/blog/anki/" class="tag-badge">Anki</a>
+  
+  <a href="https://zatoima.github.io/blog/google-cloud/" class="tag-badge">Google Cloud</a>
+  
+  <a href="https://zatoima.github.io/blog/tts/" class="tag-badge">TTS</a>
+  
+</div>
+
+
+  </article>
+
+  
+  <aside class="article-sidebar">
+    <div class="toc-container">
+      <div class="toc-title">目次</div>
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#はじめに">はじめに</a></li>
+    <li><a href="#前提条件">前提条件</a></li>
+    <li><a href="#ankiconnect-apiでカードを一括登録する">AnkiConnect APIでカードを一括登録する</a>
+      <ul>
+        <li><a href="#接続確認">接続確認</a></li>
+        <li><a href="#デッキの作成">デッキの作成</a></li>
+        <li><a href="#モデルノートタイプの確認">モデル（ノートタイプ）の確認</a></li>
+        <li><a href="#ノートの一括追加">ノートの一括追加</a></li>
+      </ul>
+    </li>
+    <li><a href="#google-cloud-ttsで音声を生成する">Google Cloud TTSで音声を生成する</a>
+      <ul>
+        <li><a href="#quota-projectの設定">quota projectの設定</a></li>
+        <li><a href="#neural2音声でmp3を生成">Neural2音声でMP3を生成</a></li>
+        <li><a href="#無料枠">無料枠</a></li>
+      </ul>
+    </li>
+    <li><a href="#音声ファイルをankiカードに添付する">音声ファイルをAnkiカードに添付する</a>
+      <ul>
+        <li><a href="#メディアファイルの保存">メディアファイルの保存</a></li>
+        <li><a href="#ノートフィールドの更新">ノートフィールドの更新</a></li>
+        <li><a href="#カードテンプレートの注意点">カードテンプレートの注意点</a></li>
+      </ul>
+    </li>
+    <li><a href="#一括処理スクリプト">一括処理スクリプト</a></li>
+    <li><a href="#まとめ">まとめ</a></li>
+    <li><a href="#参考資料">参考資料</a></li>
+  </ul>
+</nav>
+    </div>
+  </aside>
+  
+</div>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
+        <div class="footer-links">
+          <a href="/">ホーム</a>
+          <a href="/blog/">記事一覧</a>
+          <a href="/tags/">タグ一覧</a>
+          <a href="/about/">About</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://github.com/zatoima" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </a>
+          <a href="https://x.com/zatoima1" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="/index.xml" aria-label="RSS">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C5 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+          </a>
+        </div>
+        <div class="footer-copyright">Copyright © 2019, zatoima.</div>
+        <div class="footer-disclaimer">memo blog. Hugo on GitHub Pages</div>
+        <div class="footer-disclaimer">本ブログの内容は個人的な見解であり、所属する企業・組織の公式な見解を示すものではありません。また、生成AI（主にClaude Code）を使用しています。適宜レビューした上でPublishしています。</div>
+        <div class="footer-disclaimer"></div>
+      </div>
+    </footer>
+  </div>
+  
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: isDark ? 'dark' : 'neutral',
+      themeVariables: {
+        fontSize: '14px',
+      }
+    });
+  </script>
+  
+  <script src="/js/lightbox.js" defer></script>
+  <script src="/js/toc-highlight.js" defer></script>
+  <script src="/js/code-copy.js" defer></script>
+  <script src="/js/dark-mode.js" defer></script>
+  <script src="/js/mobile-nav.js" defer></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/reading-progress.js" defer></script>
+  <script src="/js/lang-detect.js" defer></script>
+  <script src="/js/lang-switcher.js" defer></script>
+</body>
+
+</html>
