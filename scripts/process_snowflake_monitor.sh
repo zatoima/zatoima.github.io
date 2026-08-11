@@ -34,7 +34,8 @@ while IFS= read -r -d '' html_file; do
     s{"M PLUS 1p",\s*}{}g;
     s{<p class="lead">docs\.snowflake\.com.*?Slack に流れた通知の蓄積版です。</p>}{<p class="lead">公式ドキュメントのページ追加・本文変更、新機能、料金表の改定を日付ごとに確認できます。</p>}s;
     s{<p class="lead">Snowflake公式ドキュメントと料金表の更新情報を、日付ごとに確認できます。</p>}{<p class="lead">公式ドキュメントのページ追加・本文変更、新機能、料金表の改定を日付ごとに確認できます。</p>}s;
-    s{<footer>.*?</footer>}{}gs;
+    # 内部の生成時刻・DB情報だけの footer は外すが、AI要約の免責を含む footer は保持する。
+    s{<footer>(?:(?!claude).)*?</footer>}{}gsi;
     s{<p class="lead">本文差分のうち重要度の高いものを時系列で全件並べています。\s*日々の通知を追えなくても、ここだけ見れば重要な変更は拾えます。</p>}{<p class="lead">Snowflake公式ドキュメントから、既存機能への影響が大きい変更と新しく追加されたページをまとめています。</p>}s;
     s{<p class="lead">既存ページの本文が書き換わったもの。<strong>Tier S（破壊的）</strong>と\s*<strong>Tier A（仕様変更）</strong>。</p>}{<p class="lead">既存機能の動作、料金、設定方法に影響する可能性がある変更です。</p>}s;
     s{<p class="lead">新しく追加されたドキュメント。既存の仕様が変わったわけではないので、\s*仕様変更とは分けています（<strong>Tier N</strong>）。</p>}{<p class="lead">Snowflake公式サイトに新しく追加されたページです。既存機能の変更とは分けて掲載しています。</p>}s;
@@ -46,7 +47,7 @@ while IFS= read -r -d '' html_file; do
     s{ドキュメント差分レポート}{ドキュメント変更履歴}g;
     s{重要な変更}{主な変更}g;
     s{破壊的変更・仕様変更}{既存機能に影響する変更}g;
-    s{判定根拠: 追加行に「breaking change」}{変更内容: Automatic Clustering の変更説明を追加}g;
+    s{判定根拠: 追加行に「breaking change」}{変更内容: 追加行に「breaking change」を検出}g;
     s{判定根拠: 新規ページ}{変更内容: 新しいページを追加}g;
     s{判定根拠: 本文の変更 \(\+(\d+)/-(\d+)\)}{変更内容: 本文を更新（$1行追加・$2行削除）}g;
     s{判定根拠: 変更行数が閾値未満 \(&lt;4\)}{変更内容: 3行以下の小規模な更新}g;
@@ -70,16 +71,7 @@ while IFS= read -r -d '' html_file; do
     s{<div class="m">削除済み ([0-9,]+)</div>}{<div class="m">削除を確認: $1件</div>}g;
     s{<div class="v" style="font-size:1\.15rem">([^<]+)</div>\s*<div class="m">v([^ <]+) ／ Effective</div>}{<div class="v" style="font-size:1.15rem">適用日: $1</div>\n  <div class="m">料金表 v$2</div>}g;
     s{適用日: (January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})}{sprintf("適用日: %04d-%02d-%02d", $3, $month_number{$1}, $2)}ge;
-    s{ を筆頭に、}{の変更に加え、}g;
-    s{が重なり、変更量・影響度ともに大きい日となった。}{が追加されました。}g;
-    s{領域としては「Loading &amp; Unloading Data」と「Migrations」に新規ページが集中しており、ETL レス統合とデータ移行の強化という2つのトレンドが明確に読み取れる。}{新規ページは「Loading &amp; Unloading Data」と「Migrations」の分野に集中しています。}g;
-    s{既存ユーザーは直近でのコスト影響の再試算が急務である。}{該当するテーブルを新規作成する場合は、コストへの影響を確認してください。}g;
-    s{強制適用}{自動適用}g;
-    s{破壊的変更}{影響の大きい変更}g;
-    s{データ鮮度と運用コストの両面で大きな恩恵が見込まれる}{データ鮮度の向上と運用コストの削減が見込まれます}g;
-    s{開発工数削減に直結する}{開発工数の削減が見込まれます}g;
     s{(<pre\b.*?</pre>)|`([^`<>]+)`}{$1 // "<code>$2</code>"}gse;
-    s{\*\*(Automatic Clustering の課金・動作モデル刷新)\*\*}{<strong>$1</strong>}g;
     s{content="noindex, nofollow"}{content="index, follow"}g;
     s{Snowflake 監視ポータル}{Snowflake Doc Monitor}g;
     s{SNOWFLAKE MONITOR}{SNOWFLAKE DOC MONITOR}g;

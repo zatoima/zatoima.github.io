@@ -1,0 +1,29 @@
+name: Validate Hugo site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.156.0"
+          extended: true
+      - name: Build from a clean output directory
+        run: hugo --config hugo.toml --minify --destination /tmp/hugo-public
+      - name: Validate required publishing artifacts
+        run: |
+          test -f /tmp/hugo-public/.nojekyll
+          test -f /tmp/hugo-public/snowflake-monitor/index.html
+          test -f /tmp/hugo-public/snowflake-monitor/summary.json
+          python3 -m json.tool /tmp/hugo-public/snowflake-monitor/summary.json >/dev/null

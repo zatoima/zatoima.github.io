@@ -8,7 +8,34 @@ readonly DIFF_SITE="${DIFF_SITE:-$HOME/snowflake-docs-diff/site}"
 readonly STATIC_TARGET="$REPO_ROOT/static/snowflake-monitor"
 readonly DOCS_TARGET="$REPO_ROOT/docs/snowflake-monitor"
 readonly LOCK_FILE="${LOCK_FILE:-/tmp/snowflake-monitor-publish.lock}"
+readonly PUBLISH_LOG="${PUBLISH_LOG:-$HOME/logs/snowflake-monitor-publish.log}"
+readonly PUBLIC_SUMMARY_URL="${PUBLIC_SUMMARY_URL:-https://zatoima.github.io/snowflake-monitor/summary.json}"
 HTML_ONLY=(--include='*/' --include='*.html' --exclude='*' --prune-empty-dirs)
+
+mkdir -p "$(dirname "$PUBLISH_LOG")"
+if [[ -f "$PUBLISH_LOG" ]] && (( $(wc -c < "$PUBLISH_LOG") > 5242880 )); then
+  mv "$PUBLISH_LOG" "$PUBLISH_LOG.1"
+fi
+exec > >(tee -a "$PUBLISH_LOG") 2>&1
+
+verify_public_summary() {
+  local expected actual response_file attempt
+  expected="$(sha256sum "$DOCS_TARGET/summary.json" | awk '{print $1}')"
+  response_file="$(mktemp)"
+  trap 'rm -f "$response_file"' RETURN
+  for attempt in 1 2 3 4 5 6; do
+    if curl --fail --silent --show-error "$PUBLIC_SUMMARY_URL" -o "$response_file"; then
+      actual="$(sha256sum "$response_file" | awk '{print $1}')"
+      if [[ "$actual" == "$expected" ]]; then
+        echo "Verified public summary hash: $expected"
+        return 0
+      fi
+    fi
+    sleep 10
+  done
+  echo "Public summary did not reach expected hash: $expected" >&2
+  return 1
+}
 
 validate_changed_paths() {
   local changed_path
@@ -87,6 +114,7 @@ if git diff --cached --quiet; then
     "unpushed" \
     "$(git diff --name-only origin/main..HEAD | validate_changed_paths)"
   git push origin main
+  verify_public_summary
   exit 0
 fi
 
@@ -96,5 +124,7 @@ assert_only_monitor_changes \
   "unpushed" \
   "$(git diff --name-only origin/main..HEAD | validate_changed_paths)"
 git push origin main
+
+verify_public_summary
 
 echo "Published Snowflake monitor to GitHub Pages"
