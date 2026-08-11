@@ -133,17 +133,17 @@ stress-ng: metrc: vm  1324315  30.23  26.54  3.65  43810.44  43868.81
 
 ```bash
 # シーケンシャル書き込み
-fio --name=seq_write --directory=/home/opc/fio_test \
+fio --name=seq_write --directory=/home/cloud-user/fio_test \
     --rw=write --bs=1M --size=2G --numjobs=1 \
     --time_based --runtime=30 --iodepth=16 --ioengine=libaio --direct=1 --group_reporting
 
 # シーケンシャル読み込み
-fio --name=seq_read --directory=/home/opc/fio_test \
+fio --name=seq_read --directory=/home/cloud-user/fio_test \
     --rw=read --bs=1M --size=2G --numjobs=1 \
     --time_based --runtime=30 --iodepth=16 --ioengine=libaio --direct=1 --group_reporting
 
 # ランダム4K 読み書き
-fio --name=rand_rw --directory=/home/opc/fio_test \
+fio --name=rand_rw --directory=/home/cloud-user/fio_test \
     --rw=randrw --bs=4k --size=1G --numjobs=4 \
     --time_based --runtime=30 --iodepth=32 --ioengine=libaio --direct=1 --group_reporting
 ```

@@ -27,11 +27,11 @@ Docker20.10くらいからRHEL8系でもDockerが使えるようになったが�
 #### 環境設定
 
 ```
-[opc@oci-arm ~]$ cat /etc/redhat-release
+[cloud-user@oci-arm ~]$ cat /etc/redhat-release
 Red Hat Enterprise Linux release 8.6 (Ootpa)
-[opc@oci-arm ~]$ cat /etc/oracle-release
+[cloud-user@oci-arm ~]$ cat /etc/oracle-release
 Oracle Linux Server release 8.6
-[opc@oci-arm ~]$ cat /etc/os-release
+[cloud-user@oci-arm ~]$ cat /etc/os-release
 NAME="Oracle Linux Server"
 VERSION="8.6"
 ID="ol"
@@ -59,7 +59,7 @@ sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/dock
 ```
 
 ```
-[opc@oci-arm ~]$ sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+[cloud-user@oci-arm ~]$ sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 Adding repo from: https://download.docker.com/linux/centos/docker-ce.repo
 ```
 
@@ -70,7 +70,7 @@ sudo dnf install -y docker-ce docker-ce-cli containerd.io
 ```
 
 ```
-[opc@oci-arm ~]$ sudo dnf install -y docker-ce docker-ce-cli containerd.io
+[cloud-user@oci-arm ~]$ sudo dnf install -y docker-ce docker-ce-cli containerd.io
 Docker CE Stable - aarch64                                                                                                     431 kB/s |  26 kB     00:00
 Dependencies resolved.
 
@@ -96,18 +96,18 @@ sudo chgrp docker /var/run/docker.sock
 
 これを実施しないと権限エラーとなる。
 
-> [opc@oci-arm cli-plugins]$ docker ps
+> [cloud-user@oci-arm cli-plugins]$ docker ps
 > Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json": dial unix /var/run/docker.sock: connect: permission denied
 
 #### バージョン確認
 
 ```
-[opc@oci-arm ~]$ docker -v
+[cloud-user@oci-arm ~]$ docker -v
 Docker version 20.10.18, build b40c2f6
 ```
 
 ```
-[opc@oci-arm ~]$ docker version
+[cloud-user@oci-arm ~]$ docker version
 Client: Docker Engine - Community
  Version:           20.10.18
  API version:       1.41

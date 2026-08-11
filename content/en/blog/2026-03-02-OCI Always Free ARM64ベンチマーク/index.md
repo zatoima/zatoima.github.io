@@ -133,17 +133,17 @@ I measured sequential and random I/O on the `/home` volume (100GB) using `fio`.
 
 ```bash
 # Sequential write
-fio --name=seq_write --directory=/home/opc/fio_test \
+fio --name=seq_write --directory=/home/cloud-user/fio_test \
     --rw=write --bs=1M --size=2G --numjobs=1 \
     --time_based --runtime=30 --iodepth=16 --ioengine=libaio --direct=1 --group_reporting
 
 # Sequential read
-fio --name=seq_read --directory=/home/opc/fio_test \
+fio --name=seq_read --directory=/home/cloud-user/fio_test \
     --rw=read --bs=1M --size=2G --numjobs=1 \
     --time_based --runtime=30 --iodepth=16 --ioengine=libaio --direct=1 --group_reporting
 
 # Random 4K read/write
-fio --name=rand_rw --directory=/home/opc/fio_test \
+fio --name=rand_rw --directory=/home/cloud-user/fio_test \
     --rw=randrw --bs=4k --size=1G --numjobs=4 \
     --time_based --runtime=30 --iodepth=32 --ioengine=libaio --direct=1 --group_reporting
 ```

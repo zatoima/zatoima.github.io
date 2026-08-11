@@ -2,9 +2,9 @@
 set -euo pipefail
 
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly PORTAL_SITE="${PORTAL_SITE:-/home/opc/snowflake-monitor-portal/site}"
-readonly FEATURE_SITE="${FEATURE_SITE:-/home/opc/snowflake-feature-monitor/site}"
-readonly DIFF_SITE="${DIFF_SITE:-/home/opc/snowflake-docs-diff/site}"
+readonly PORTAL_SITE="${PORTAL_SITE:-$HOME/snowflake-monitor-portal/site}"
+readonly FEATURE_SITE="${FEATURE_SITE:-$HOME/snowflake-feature-monitor/site}"
+readonly DIFF_SITE="${DIFF_SITE:-$HOME/snowflake-docs-diff/site}"
 readonly STATIC_TARGET="$REPO_ROOT/static/snowflake-monitor"
 readonly DOCS_TARGET="$REPO_ROOT/docs/snowflake-monitor"
 readonly LOCK_FILE="${LOCK_FILE:-/tmp/snowflake-monitor-publish.lock}"

@@ -35,7 +35,7 @@ image:
 > ローカル・ディスク: ブロック・ストレージのみ
 
 ```sh
-[opc@oci-arm metabase]$ cat /etc/os-release 
+[cloud-user@oci-arm metabase]$ cat /etc/os-release 
 NAME="Oracle Linux Server"
 VERSION="7.9"
 ID="ol"
@@ -58,17 +58,17 @@ ORACLE_SUPPORT_PRODUCT_VERSION=7.9
 Docker
 
 ```sh
-[opc@oci-arm metabase]$ docker-compose -v
+[cloud-user@oci-arm metabase]$ docker-compose -v
 docker-compose version 1.29.2, build unknown
-[opc@oci-arm metabase]$ docker -v
+[cloud-user@oci-arm metabase]$ docker -v
 Docker version 19.03.11-ol, build 9bb540d
-[opc@oci-arm metabase]$ 
+[cloud-user@oci-arm metabase]$ 
 ```
 
 ディレクトリ構造
 
 ```sh
-[opc@oci-arm docker]$ tree
+[cloud-user@oci-arm docker]$ tree
 .
 ├── docker-compose.yaml
 ├── metabase
@@ -150,11 +150,11 @@ ENTRYPOINT ["/app/run_metabase.sh"]
 - docker-compose
 
 ```sh
-[opc@oci-arm metabase]$ docker-compose up -d
+[cloud-user@oci-arm metabase]$ docker-compose up -d
 Creating network "docker_default" with the default driver
 Creating docker_postgres_1 ... done
 Creating metabase          ... done
-[opc@oci-arm metabase]$ docker ps
+[cloud-user@oci-arm metabase]$ docker ps
 CONTAINER ID        IMAGE                     COMMAND                  CREATED             STATUS              PORTS                    NAMES
 c74acd420716        arm32v7/postgres:latest   "docker-entrypoint.s…"   5 seconds ago       Up 4 seconds        0.0.0.0:5432->5432/tcp   docker_postgres_1
 d15ea2032f2d        docker_metabase           "/app/run_metabase.sh"   5 seconds ago       Up 4 seconds        0.0.0.0:3000->3000/tcp   metabase
