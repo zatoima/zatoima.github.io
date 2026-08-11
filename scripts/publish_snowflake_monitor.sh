@@ -15,6 +15,7 @@ validate_changed_paths() {
   while IFS= read -r changed_path; do
     case "$changed_path" in
       static/snowflake-monitor/*.html | docs/snowflake-monitor/*.html | \
+      static/snowflake-monitor/summary.json | docs/snowflake-monitor/summary.json | \
       docs/css/snowflake-monitor-shell.css | docs/js/snowflake-monitor-shell.js)
         ;;
       *)

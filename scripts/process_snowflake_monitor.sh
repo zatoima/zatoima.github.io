@@ -86,4 +86,7 @@ while IFS= read -r -d '' html_file; do
   ' "$html_file"
 done < <(find "$TARGET_DIR" -type f -name '*.html' -print0)
 
+python3 "$REPO_ROOT/scripts/build_snowflake_monitor_summary.py" \
+  "$TARGET_DIR/index.html" "$TARGET_DIR/summary.json"
+
 echo "Processed Snowflake monitor HTML in $TARGET_DIR"
