@@ -31,6 +31,8 @@ while IFS= read -r -d '' html_file; do
     s{url\("/assets/}{url("/snowflake-monitor/assets/}g;
     s{\s*\@import\s+url\([^;\n]*mplus\.css[^;\n]*\);\s*}{}g;
     s{"M PLUS 1p",\s*}{}g;
+    s{<p class="lead">docs\.snowflake\.com.*?Slack に流れた通知の蓄積版です。</p>}{<p class="lead">Snowflake公式ドキュメントと料金表の更新情報を、日付ごとに確認できます。</p>}s;
+    s{<footer>.*?</footer>}{}gs;
     s{content="noindex, nofollow"}{content="index, follow"}g;
   ' "$html_file"
 done < <(find "$TARGET_DIR" -type f -name '*.html' -print0)
