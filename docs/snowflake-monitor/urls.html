@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.setAttribute("data-theme","dark");}else{document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="/css/zenn.css">
+<meta name="robots" content="index, follow">
+<title>ページの増減 — Snowflake 監視ポータル</title>
+<style>
+@import url("/snowflake-monitor/assets/mplus.css");
+
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --fg: #16181d; --muted: #666e7a;
+  --line: #e3e6ea; --accent: #29b5e8; --accent-dark: #11567f; --code-bg: #f2f4f7;
+  --s: #d92d20; --a: #e07800; --n: #2563eb; --b: #b0a000; --c: #8a929e;
+  --feat: #7b61ff; --url: #12a150; --credit: #d9822b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a; --card: #1c1f25; --fg: #e9ecf1; --muted: #9aa3b0;
+    --line: #2b2f37; --accent: #4fc9f4; --accent-dark: #9fe2fb; --code-bg: #24282f;
+    --s: #ff6b5e; --a: #ffb04d; --n: #7aa7ff; --b: #e2d24a; --c: #9aa3b0;
+    --feat: #a78bfa; --url: #4ade80; --credit: #fbbf24;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2.5rem 1.25rem 5rem; background: var(--bg); color: var(--fg);
+  font-family: "M PLUS 1p", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400; line-height: 1.9; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1040px; margin: 0 auto; }
+.eyebrow { font-weight: 900; font-size: .8rem; letter-spacing: .18em; color: var(--accent-dark); margin: 0 0 .75rem; }
+h1 { font-weight: 900; font-size: clamp(1.9rem, 5vw, 2.9rem); line-height: 1.35; margin: 0 0 .6rem; }
+h2 { font-weight: 900; font-size: 1.4rem; letter-spacing: .03em; margin: 2.6rem 0 1.1rem;
+     padding-left: .75rem; border-left: .4rem solid var(--accent); }
+h3 { font-weight: 700; font-size: 1.05rem; margin: 0 0 .5rem; line-height: 1.6; }
+.lead { color: var(--muted); margin: 0 0 1.5rem; }
+
+nav.top { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 2rem; }
+nav.top a {
+  font-size: .85rem; font-weight: 700; text-decoration: none; color: var(--fg);
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+  padding: .35rem .95rem;
+}
+nav.top a:hover { border-color: var(--accent); }
+nav.top a.here { background: var(--accent); border-color: var(--accent); color: #05222e; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .9rem; }
+.stat {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 1.1rem 1.25rem; text-decoration: none; color: var(--fg); display: block;
+}
+.stat:hover { border-color: var(--accent); }
+.stat .k { font-size: .78rem; font-weight: 900; letter-spacing: .08em; color: var(--muted); }
+.stat .v { font-size: 1.9rem; font-weight: 900; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.stat .m { font-size: .8rem; color: var(--muted); }
+.stat.feat { border-top: .28rem solid var(--feat); }
+.stat.page { border-top: .28rem solid var(--accent); }
+.stat.url  { border-top: .28rem solid var(--url); }
+.stat.cred { border-top: .28rem solid var(--credit); }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+        padding: 1.3rem 1.4rem; margin-bottom: 1rem; }
+.card p { margin: 0 0 .8rem; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+.summary { white-space: pre-line; }
+.reason { color: var(--muted); font-size: .85rem; }
+ul { margin: 0; padding-left: 1.3rem; } li { margin-bottom: .5rem; } li:last-child { margin-bottom: 0; }
+
+.day { display: flex; gap: 1.1rem; align-items: flex-start; margin-bottom: .5rem; }
+.day .date {
+  flex: 0 0 6.5rem; font-weight: 900; font-variant-numeric: tabular-nums;
+  padding-top: 1.15rem; color: var(--muted); font-size: .95rem;
+}
+.day .body { flex: 1 1 auto; min-width: 0; }
+.ev {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: .85rem 1.05rem; margin-bottom: .55rem;
+}
+.ev.page { border-left: .3rem solid var(--accent); }
+.ev.feat { border-left: .3rem solid var(--feat); }
+.ev.url  { border-left: .3rem solid var(--url); }
+.ev.cred { border-left: .3rem solid var(--credit); }
+.ev .t { font-weight: 900; font-size: .95rem; }
+.ev .d { color: var(--muted); font-size: .85rem; }
+.ev .s { font-size: .9rem; margin-top: .35rem; }
+
+.chip { display: inline-block; font-size: .75rem; font-weight: 700; padding: .16rem .6rem;
+        border-radius: 999px; background: var(--code-bg); border: 1px solid var(--line);
+        color: var(--muted); margin-right: .3rem; }
+.chip.tier-S { color: var(--s); border-color: var(--s); }
+.chip.tier-A { color: var(--a); border-color: var(--a); }
+.chip.tier-N { color: var(--n); border-color: var(--n); }
+.chip.tier-B { color: var(--b); border-color: var(--b); }
+.chip.tier-C { color: var(--c); border-color: var(--c); }
+
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 900; color: var(--muted); font-size: .78rem; letter-spacing: .05em; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+code { font-family: "SFMono-Regular", Consolas, monospace; background: var(--code-bg);
+       padding: .12em .4em; border-radius: 4px; font-size: .9em; }
+a { color: var(--accent-dark); font-weight: 700; }
+.empty { color: var(--muted); }
+footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--line);
+         color: var(--muted); font-size: .82rem; }
+</style>
+<link rel="stylesheet" href="/css/snowflake-monitor-shell.css">
+<script src="/js/snowflake-monitor-shell.js" defer></script>
+<script src="/js/dark-mode.js" defer></script>
+<script src="/js/mobile-nav.js" defer></script>
+<script src="/js/search.js" defer></script>
+<script src="/js/lang-switcher.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+<nav class="top"><a href="index.html">ダッシュボード</a><a href="breaking.html">重要な変更</a><a href="urls.html" class="here">ページ増減</a><a href="credits.html">料金改定</a><a href="/snowflake-monitor/diff/">本文差分レポート</a><a href="/snowflake-monitor/features/">新機能レポート</a></nav>
+<p class="eyebrow">URL INVENTORY</p>
+<h1>ページの増減</h1>
+<p class="lead">sitemap.xml の差分です。現在 <strong>8,331</strong> URL を監視しています
+（削除済み 8）。</p>
+<div class="card"><h3>2026-08-11（7 件）</h3><ul><li><span class="chip">新規</span><code>migrations</code> <a href="https://docs.snowflake.com/en/migrations/aim-for-datawarehouses/data-migration-validation/required-privileges">Required privileges</a></li><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/2026/other/2026-08-10-ai-multi-embed-large-video-files-ga">Aug 10, 2026: AI_MULTI_EMBED support for large video files in semantic video search (*General availability*)</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/data-integration/zero-copy/about-workday-ldq">About Workday Live Data Query for Snowflake</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/data-integration/zero-copy/workday/connect-and-query">Connect to Workday and query data from Snowflake</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/data-integration/zero-copy/workday/cortex-code">Use Cortex Code with Workday data</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/data-integration/zero-copy/workday/snowflake-setup">Set up Snowflake for Workday Live Data Query</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/data-integration/zero-copy/workday/troubleshooting">Troubleshoot Workday Live Data Query</a></li></ul></div><div class="card"><h3>2026-08-08（28 件）</h3><ul><li><span class="chip">新規</span><code>developer-guide</code> <a href="https://docs.snowflake.com/en/developer-guide/snowflake-cli/command-reference/dbt-commands/copy">snow dbt copy</a></li><li><span class="chip">新規</span><code>developer-guide</code> <a href="https://docs.snowflake.com/en/developer-guide/snowflake-cli/command-reference/helpers-commands/check-version">snow helpers check-version</a></li><li><span class="chip">新規</span><code>developer-guide</code> <a href="https://docs.snowflake.com/en/developer-guide/snowflake-ml/container-runtime/releases/cpu/2_8">Snowflake Container Runtime CPU Version 2.8 (Latest)</a></li><li><span class="chip">新規</span><code>developer-guide</code> <a href="https://docs.snowflake.com/en/developer-guide/snowflake-ml/container-runtime/releases/gpu/2_8">Snowflake Container Runtime GPU Version 2.8 (Latest)</a></li><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/2026/other/2026-08-04-gateway-monitoring-ab-testing-ga">Aug 4, 2026: Gateway Monitoring &amp; A/B Testing (*General availability*)</a></li><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/2026/other/2026-08-06-cowork-automations">Aug 6, 2026: Automations in Snowflake CoWork (*Public Preview*)</a></li><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/2026/other/2026-08-07-dcm-projects-ga">August 7, 2026: DCM Projects (*General availability*)</a></li><li><span class="chip">新規</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/snowflake_cowork_usage_history_view">SNOWFLAKE_COWORK_USAGE_HISTORY view</a></li><li><span class="chip">新規</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/billing/collaboration_rebate_contribution">COLLABORATION_REBATE_CONTRIBUTION view</a></li><li><span class="chip">新規</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/organization-usage/snowflake_cowork_usage_history">SNOWFLAKE_COWORK_USAGE_HISTORY view</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/agent-identity">Agent identity</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/snowflake-cowork/automations">Automations in Snowflake CoWork</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/tables-iceberg-configure-catalog-integration-rest-s3tables">Configure a catalog integration for Amazon S3 Tables</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/creating">Creating semantic views</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/creating-with-snowsight">Creating with Snowsight</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/custom-instructions">Custom instructions in Cortex Analyst</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/defining-configuring">Defining and configuring semantic views</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/improving-accuracy">Improving accuracy with AI</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/using">Using semantic views</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/verified-query-repository">Cortex Analyst Verified Query Repository</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/verified-query-suggestions">Suggestions for semantic models and views</a></li><li><span class="chip">削除</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/snowflake_intelligence_usage_history_view">snowflake_intelligence_usage_history_view</a></li><li><span class="chip">削除</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/organization-usage/snowflake_intelligence_usage_history">snowflake_intelligence_usage_history</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/custom-instructions">custom-instructions</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/verified-query-repository">verified-query-repository</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/verified-query-suggestions">verified-query-suggestions</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/autopilot">autopilot</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/ui">ui</a></li></ul></div><div class="card"><h3>2026-08-07（7 件）</h3><ul><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/2026/other/2026-08-05-openflow-sql-server-cdc-ga">Aug 5, 2026: Openflow Connector for SQL Server (CDC) (*General availability*)</a></li><li><span class="chip">新規</span><code>release-notes</code> <a href="https://docs.snowflake.com/en/release-notes/bcr-bundles/2026_06/bcr-2384">SEARCH_OPTIMIZATION_HISTORY views: New columns and column changes (Pending)</a></li><li><span class="chip">新規</span><code>sql-reference</code> <a href="https://docs.snowflake.com/en/sql-reference/local/ai_observability_events">AI_OBSERVABILITY_EVENTS table</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/budgets/budget-shared-resources-warehouses">Using budgets for warehouses (shared resources)</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability/evaluate-applications-trulens">Evaluate applications with TruLens</a></li><li><span class="chip">新規</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability/trace-applications-trulens">Trace and monitor applications with TruLens</a></li><li><span class="chip">削除</span><code>user-guide</code> <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability/evaluate-ai-applications">evaluate-ai-applications</a></li></ul></div>
+<footer>生成: 2026-08-11 20:40 ／ データ: OCI PostgreSQL <code>monitor</code> スキーマ
+／ 監視元: <a href="https://docs.snowflake.com/">docs.snowflake.com</a></footer>
+</div>
+</body>
+</html>

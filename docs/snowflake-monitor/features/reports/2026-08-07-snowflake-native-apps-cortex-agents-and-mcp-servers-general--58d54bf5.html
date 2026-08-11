@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.setAttribute("data-theme","dark");}else{document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="/css/zenn.css">
+<meta name="robots" content="index, follow">
+<title>Snowflake Native Apps: Cortex Agents and MCP servers (General availability) | Snowflake 新機能レポート</title>
+<style>
+@import url("../assets/mplus.css");
+
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --fg: #16181d;
+  --muted: #666e7a;
+  --line: #e3e6ea;
+  --accent: #29b5e8;
+  --accent-dark: #11567f;
+  --code-bg: #f2f4f7;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --card: #1c1f25;
+    --fg: #e9ecf1;
+    --muted: #9aa3b0;
+    --line: #2b2f37;
+    --accent: #4fc9f4;
+    --accent-dark: #9fe2fb;
+    --code-bg: #24282f;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 2.5rem 1.25rem 5rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "M PLUS 1p", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  line-height: 1.9;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 880px; margin: 0 auto; }
+
+.eyebrow {
+  font-weight: 900;
+  font-size: .8rem;
+  letter-spacing: .18em;
+  color: var(--accent-dark);
+  margin: 0 0 .75rem;
+}
+h1 {
+  font-weight: 900;
+  font-size: clamp(1.9rem, 5vw, 2.9rem);
+  line-height: 1.35;
+  letter-spacing: .01em;
+  margin: 0 0 1rem;
+}
+h2 {
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: .03em;
+  margin: 0 0 1.1rem;
+  padding-left: .75rem;
+  border-left: .4rem solid var(--accent);
+}
+h3 { font-weight: 700; font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
+
+.meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.chip {
+  font-size: .78rem;
+  font-weight: 700;
+  padding: .28rem .7rem;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.chip.date { color: var(--accent-dark); border-color: var(--accent); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.6rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.card p { margin: 0 0 .9rem; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+ul { margin: 0; padding-left: 1.3rem; }
+li { margin-bottom: .55rem; }
+li:last-child { margin-bottom: 0; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; }
+ol.steps li {
+  counter-increment: s;
+  position: relative;
+  padding-left: 2.6rem;
+  margin-bottom: .9rem;
+}
+ol.steps li::before {
+  content: counter(s);
+  position: absolute; left: 0; top: .1rem;
+  width: 1.85rem; height: 1.85rem;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #05222e;
+  font-weight: 900;
+  font-size: .9rem;
+}
+code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  background: var(--code-bg);
+  padding: .12em .4em;
+  border-radius: 4px;
+  font-size: .9em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; font-size: .86rem; line-height: 1.7; }
+a { color: var(--accent-dark); font-weight: 700; }
+.empty { color: var(--muted); }
+.source { font-size: .9rem; word-break: break-all; }
+.nav { margin-bottom: 2rem; font-weight: 700; }
+footer {
+  margin-top: 2.5rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted); font-size: .82rem;
+}
+.entry {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: .8rem;
+  text-decoration: none;
+  color: var(--fg);
+  font-weight: 400;
+}
+.entry:hover { border-color: var(--accent); }
+.entry .t { display: block; font-weight: 900; font-size: 1.05rem; line-height: 1.55; }
+.entry .d { display: block; color: var(--muted); font-size: .82rem; margin-top: .4rem; }
+</style>
+<link rel="stylesheet" href="/css/snowflake-monitor-shell.css">
+<script src="/js/snowflake-monitor-shell.js" defer></script>
+<script src="/js/dark-mode.js" defer></script>
+<script src="/js/mobile-nav.js" defer></script>
+<script src="/js/search.js" defer></script>
+<script src="/js/lang-switcher.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+<p class="eyebrow">SNOWFLAKE NEW FEATURE</p>
+<h1>Snowflake Native Apps: Cortex Agents and MCP servers (General availability)</h1>
+<div class="meta"><span class="chip date">2026-08-07</span><span class="chip">機能アップデート</span><span class="chip">General availability</span></div>
+<section class="card"><h2>概要</h2><p>Snowflake Native Apps の中で Cortex Agent と MCP サーバーを定義できる機能が、一般提供 (GA) になりました。アプリの提供者はセットアップスクリプトの中でこれらのオブジェクトを作成でき、アプリの利用者はチャット形式でアプリの機能や共有データを操作できるようになります。さらにアプリ間通信により、あるアプリのエージェントが別のアプリのエージェントや MCP サーバーを呼び出すこともできます。各アプリのデータとロジックの非公開性は保たれたまま、公開されたツールだけがやり取りの対象になる点が設計上の要点です。</p></section>
+<section class="card"><h2>ユースケース</h2><ul><li>データを共有する Native App に、そのデータについて自然言語で質問できる会話インターフェースを付ける</li>
+<li>アプリが内部に持つ Cortex Search サービスやセマンティックビューを、MCP ツールとして外部のエージェントに公開する</li>
+<li>アプリ内のストアドプロシージャや UDF を MCP ツール化し、AI エージェントから実行できる業務オペレーションにする</li>
+<li>すでに Snowpark Container Services で稼働している MCP エンドポイントを、アプリの一部として登録して配布する</li>
+<li>複数の Native App を組み合わせ、一方のエージェントが他方のエージェントに問い合わせる連携シナリオを構築する</li></ul></section>
+<section class="card"><h2>使い方</h2><p>アプリ提供者は、アプリのセットアップスクリプトの中で次の3種類のオブジェクトを作成します。</p>
+<p>- <strong>Cortex Agent</strong>: 共有データやアプリ機能に対する会話型の操作を提供する<br>- <strong>Snowflake マネージドの MCP サーバー</strong>: アプリ内の Cortex Search サービス、セマンティックビュー、プロシージャ、UDF を MCP ツールとして公開する<br>- <strong>SPCS ホストの MCP サーバー</strong>: 既存の Snowpark Container Services エンドポイントを MCP サーバーとして登録する</p>
+<p>利用者側は、caller grant と feature policy を通じてアプリが作成したエージェントと MCP サーバーを管理します。特定のロールにだけエージェントへのアクセスを委譲することも可能です。</p>
+<p>具体的な DDL の構文はリリースノート本文には記載がないため、参照先のドキュメントを確認してください。</p></section>
+<section class="card"><h2>手順</h2><ol class="steps"><li>提供者は、アプリのセットアップスクリプトに Cortex Agent または MCP サーバーの定義を追加する</li><li>MCP サーバーとして公開したい Cortex Search サービス、セマンティックビュー、プロシージャ、UDF を決める</li><li>SPCS 上の既存エンドポイントを使う場合は、それを MCP サーバーとして登録する</li><li>アプリをパッケージ化して利用者に配布する</li><li>利用者はインストール時に、公開されるツールへのアクセスを承認する</li><li>利用者は caller grant と feature policy で、どのロールにエージェントを使わせるかを設定する</li></ol></section>
+<section class="card"><h2>注意すること</h2><ul><li>アプリ間でエージェントを呼び出す場合でも、アクセスできるのは相手側が明示的に公開し、かつ利用者が承認したツールに限られます。想定した連携ができるかは、事前に公開範囲の設計を詰めておく必要があります。</li>
+<li>エージェントと MCP サーバーは利用者側の caller grant と feature policy に従います。権限設計を誤ると、アプリをインストールしてもエージェントが動作しません。</li>
+<li>MCP ツールとして公開したプロシージャや UDF は、AI エージェントから自律的に実行され得ます。副作用のある処理を公開する場合は特に慎重に検討してください。</li>
+<li>SPCS ホストの MCP サーバーを使う場合、コンテナの稼働コストが別途発生します。</li></ul></section>
+<section class="card"><h2>制約事項</h2><ul><li>作成できるオブジェクトは、Cortex Agent、Snowflake マネージド MCP サーバー、SPCS ホスト MCP サーバーの3種類です。</li>
+<li>各アプリのデータとロジックは相互に非公開であり、アプリ間で参照できるのは公開されたツールのみです。</li>
+<li>利用者が承認していないツールには、他アプリのエージェントからアクセスできません。</li>
+<li>対応リージョンやエディション要件については、リリースノートに記載なし。参照先のドキュメントで確認してください。</li></ul></section>
+<section class="card"><h2>出典</h2><p class="source"><a href="https://docs.snowflake.com/release-notes/2026/other/2026-08-07-native-apps-agents-mcp-ga">https://docs.snowflake.com/release-notes/2026/other/2026-08-07-native-apps-agents-mcp-ga</a></p></section>
+<footer><p><a href="../index.html">← レポート一覧</a></p><p>生成日時: 2026-08-10 23:31:29 / 本レポートは Snowflake 公式ドキュメントを claude で要約した非公式の資料です。正確な仕様は必ず出典を参照してください。</p></footer>
+</div>
+</body>
+</html>
