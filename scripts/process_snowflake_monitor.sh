@@ -29,6 +29,8 @@ while IFS= read -r -d '' html_file; do
     s{href="/assets/}{href="/snowflake-monitor/assets/}g;
     s{src="/assets/}{src="/snowflake-monitor/assets/}g;
     s{url\("/assets/}{url("/snowflake-monitor/assets/}g;
+    s{\s*\@import\s+url\([^;\n]*mplus\.css[^;\n]*\);\s*}{}g;
+    s{"M PLUS 1p",\s*}{}g;
     s{content="noindex, nofollow"}{content="index, follow"}g;
   ' "$html_file"
 done < <(find "$TARGET_DIR" -type f -name '*.html' -print0)
