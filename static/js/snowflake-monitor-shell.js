@@ -46,20 +46,31 @@
   var content = document.querySelector('body > .wrap');
   if (content) content.id = 'main';
 
-  var categoryLabels = {
-    'user-guide': 'ユーザーガイド',
-    'release-notes': 'リリースノート',
-    'sql-reference': 'SQLリファレンス',
-    'developer-guide': '開発者ガイド',
-    'migrations': '移行ガイド'
+  var categories = {
+    'user-guide': { label: 'ユーザーガイド', style: 'user-guide' },
+    'user guide': { label: 'ユーザーガイド', style: 'user-guide' },
+    'release-notes': { label: 'リリースノート', style: 'release-notes' },
+    'release notes': { label: 'リリースノート', style: 'release-notes' },
+    'sql-reference': { label: 'SQLリファレンス', style: 'sql-reference' },
+    'sql functions': { label: 'SQL関数', style: 'sql-reference' },
+    'account usage': { label: 'Account Usage', style: 'sql-reference' },
+    'organization usage': { label: 'Organization Usage', style: 'sql-reference' },
+    'developer-guide': { label: '開発者ガイド', style: 'developer-guide' },
+    'developer guide': { label: '開発者ガイド', style: 'developer-guide' },
+    'snowflake cli': { label: 'Snowflake CLI', style: 'developer-guide' },
+    'migrations': { label: '移行ガイド', style: 'migrations' },
+    'loading & unloading data': { label: 'データ連携', style: 'data-integration' },
+    'cortex code': { label: 'Cortex Code', style: 'cortex' },
+    'snowflake cortex (ai & ml)': { label: 'Snowflake Cortex', style: 'cortex' }
   };
 
-  document.querySelectorAll('.wrap li > code').forEach(function (category) {
+  document.querySelectorAll('.wrap li > code, .wrap .chip').forEach(function (category) {
     var categoryName = category.textContent.trim().toLowerCase();
-    if (!categoryLabels[categoryName]) return;
+    var categoryDefinition = categories[categoryName];
+    if (!categoryDefinition) return;
 
-    category.classList.add('monitor-category', 'monitor-category--' + categoryName);
-    category.title = 'カテゴリ: ' + categoryLabels[categoryName];
+    category.classList.add('monitor-category', 'monitor-category--' + categoryDefinition.style);
+    category.title = 'カテゴリ: ' + categoryDefinition.label;
   });
 
   document.body.insertAdjacentHTML('beforeend', `
