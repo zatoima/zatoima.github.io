@@ -46,6 +46,22 @@
   var content = document.querySelector('body > .wrap');
   if (content) content.id = 'main';
 
+  var categoryLabels = {
+    'user-guide': 'ユーザーガイド',
+    'release-notes': 'リリースノート',
+    'sql-reference': 'SQLリファレンス',
+    'developer-guide': '開発者ガイド',
+    'migrations': '移行ガイド'
+  };
+
+  document.querySelectorAll('.wrap li > code').forEach(function (category) {
+    var categoryName = category.textContent.trim().toLowerCase();
+    if (!categoryLabels[categoryName]) return;
+
+    category.classList.add('monitor-category', 'monitor-category--' + categoryName);
+    category.title = 'カテゴリ: ' + categoryLabels[categoryName];
+  });
+
   document.body.insertAdjacentHTML('beforeend', `
     <footer class="site-footer">
       <div class="footer-inner">
