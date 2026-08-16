@@ -8,15 +8,29 @@ readonly DIFF_SITE="${DIFF_SITE:-$HOME/snowflake-docs-diff/site}"
 readonly STATIC_TARGET="$REPO_ROOT/static/snowflake-monitor"
 readonly DOCS_TARGET="$REPO_ROOT/docs/snowflake-monitor"
 readonly LOCK_FILE="${LOCK_FILE:-/tmp/snowflake-monitor-publish.lock}"
-readonly PUBLISH_LOG="${PUBLISH_LOG:-$HOME/logs/snowflake-monitor-publish.log}"
+readonly PUBLISH_LOG="${PUBLISH_LOG-$HOME/logs/snowflake-monitor-publish.log}"
 readonly PUBLIC_SUMMARY_URL="${PUBLIC_SUMMARY_URL:-https://zatoima.github.io/snowflake-monitor/summary.json}"
 HTML_ONLY=(--include='*/' --include='*.html' --exclude='*' --prune-empty-dirs)
+PREPARE_DIR=""
 
-mkdir -p "$(dirname "$PUBLISH_LOG")"
-if [[ -f "$PUBLISH_LOG" ]] && (( $(wc -c < "$PUBLISH_LOG") > 5242880 )); then
-  mv "$PUBLISH_LOG" "$PUBLISH_LOG.1"
+cleanup() {
+  local exit_code=$?
+  trap - EXIT
+  if [[ -n "$PREPARE_DIR" && -d "$PREPARE_DIR" ]]; then
+    rm -rf -- "$PREPARE_DIR"
+  fi
+  exit "$exit_code"
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+if [[ -n "$PUBLISH_LOG" ]]; then
+  mkdir -p "$(dirname "$PUBLISH_LOG")"
+  if [[ -f "$PUBLISH_LOG" ]] && (( $(wc -c < "$PUBLISH_LOG") > 5242880 )); then
+    mv "$PUBLISH_LOG" "$PUBLISH_LOG.1"
+  fi
+  exec > >(tee -a "$PUBLISH_LOG") 2>&1
 fi
-exec > >(tee -a "$PUBLISH_LOG") 2>&1
 
 verify_public_summary() {
   local expected actual response_file attempt
@@ -85,17 +99,48 @@ fi
 
 git pull --rebase origin main
 
-mkdir -p "$STATIC_TARGET/features" "$STATIC_TARGET/diff"
-rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$PORTAL_SITE/" "$STATIC_TARGET/"
-rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$FEATURE_SITE/" "$STATIC_TARGET/features/"
-rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$DIFF_SITE/" "$STATIC_TARGET/diff/"
+PREPARE_DIR="$(mktemp -d "$REPO_ROOT/../.snowflake-monitor-publish.XXXXXX")"
+readonly PREPARED_STATIC="$PREPARE_DIR/static/snowflake-monitor"
+readonly PREPARED_DOCS="$PREPARE_DIR/docs/snowflake-monitor"
+mkdir -p "$PREPARED_STATIC"
+rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$PORTAL_SITE/" "$PREPARED_STATIC/"
+mkdir -p "$PREPARED_STATIC/features" "$PREPARED_STATIC/diff"
+rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$FEATURE_SITE/" "$PREPARED_STATIC/features/"
+rsync -a --delete --delete-excluded "${HTML_ONLY[@]}" "$DIFF_SITE/" "$PREPARED_STATIC/diff/"
 
-"$REPO_ROOT/scripts/process_snowflake_monitor.sh" "$STATIC_TARGET"
+"$REPO_ROOT/scripts/process_snowflake_monitor.sh" "$PREPARED_STATIC"
+for required_file in \
+  index.html breaking.html urls.html credits.html \
+  features/index.html diff/index.html summary.json; do
+  if [[ ! -s "$PREPARED_STATIC/$required_file" ]]; then
+    echo "Required generated file is missing or empty: $required_file" >&2
+    exit 1
+  fi
+done
+python3 -m json.tool "$PREPARED_STATIC/summary.json" >/dev/null
 
-mkdir -p "$DOCS_TARGET" "$REPO_ROOT/docs/css" "$REPO_ROOT/docs/js"
-rsync -a --delete "$STATIC_TARGET/" "$DOCS_TARGET/"
-install -m 0644 "$REPO_ROOT/static/css/snowflake-monitor-shell.css" "$REPO_ROOT/docs/css/snowflake-monitor-shell.css"
-install -m 0644 "$REPO_ROOT/static/js/snowflake-monitor-shell.js" "$REPO_ROOT/docs/js/snowflake-monitor-shell.js"
+mkdir -p "$PREPARED_DOCS" "$PREPARE_DIR/docs/css" "$PREPARE_DIR/docs/js"
+rsync -a --delete "$PREPARED_STATIC/" "$PREPARED_DOCS/"
+install -m 0644 "$REPO_ROOT/static/css/snowflake-monitor-shell.css" "$PREPARE_DIR/docs/css/snowflake-monitor-shell.css"
+install -m 0644 "$REPO_ROOT/static/js/snowflake-monitor-shell.js" "$PREPARE_DIR/docs/js/snowflake-monitor-shell.js"
+cmp "$PREPARED_STATIC/summary.json" "$PREPARED_DOCS/summary.json"
+
+if [[ -n "$(find "$PREPARE_DIR" -type l -print -quit)" ]]; then
+  echo "Generated snapshot must not contain symbolic links" >&2
+  exit 1
+fi
+unexpected_files="$(find "$PREPARED_STATIC" "$PREPARED_DOCS" -type f ! -name '*.html' ! -name 'summary.json' -print)"
+if [[ -n "$unexpected_files" ]]; then
+  echo "Generated snapshot contains unexpected files:" >&2
+  printf '%s\n' "$unexpected_files" >&2
+  exit 1
+fi
+
+mkdir -p "$STATIC_TARGET" "$DOCS_TARGET" "$REPO_ROOT/docs/css" "$REPO_ROOT/docs/js"
+rsync -a --delete-delay --delay-updates "$PREPARED_STATIC/" "$STATIC_TARGET/"
+rsync -a --delete-delay --delay-updates "$PREPARED_DOCS/" "$DOCS_TARGET/"
+install -m 0644 "$PREPARE_DIR/docs/css/snowflake-monitor-shell.css" "$REPO_ROOT/docs/css/snowflake-monitor-shell.css"
+install -m 0644 "$PREPARE_DIR/docs/js/snowflake-monitor-shell.js" "$REPO_ROOT/docs/js/snowflake-monitor-shell.js"
 
 git add \
   static/snowflake-monitor \
