@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.setAttribute("data-theme","dark");}else{document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="/css/zenn.css">
+<meta name="robots" content="index, follow">
+<title>Snowflake CLI (v3.25.0) | Snowflake 新機能レポート</title>
+<style>
+:root {
+  --bg: #f1f5f9; --card: #ffffff; --card-soft: #f8fafc; --fg: #18212f;
+  --muted: #64748b; --line: #dbe3ec; --accent: #29b5e8; --accent-dark: #075985;
+  --accent-soft: #e8f7fd; --code-bg: #111827; --code-fg: #e5eefb;
+  --warning: #b45309; --warning-bg: #fff7ed; --shadow: 0 12px 35px rgba(15, 23, 42, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a; --card: #1c1f25; --card-soft: #20242c; --fg: #e9ecf1;
+    --muted: #9aa3b0; --line: #303641; --accent: #4fc9f4; --accent-dark: #9fe2fb;
+    --accent-soft: #163142; --code-bg: #0f1117; --code-fg: #d9e4f2;
+    --warning: #fdba74; --warning-bg: #3a281a; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 2.5rem 1.25rem 5rem; background: var(--bg); color: var(--fg);
+  font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  font-weight: 400; line-height: 1.9; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; }
+.hero { position: relative; padding: 1rem 0 1.5rem; }
+.hero::after {
+  content: ""; position: absolute; right: 1rem; top: .5rem; width: 180px; height: 180px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(41,181,232,.16), rgba(41,181,232,0) 68%);
+}
+.eyebrow { font-weight: 800; font-size: .76rem; letter-spacing: .18em; color: var(--accent-dark); margin: 0 0 .7rem; }
+h1 { max-width: 920px; font-weight: 900; font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.24; letter-spacing: -.025em; margin: 0 0 .75rem; }
+.original-title { max-width: 820px; color: var(--muted); font-size: .9rem; margin: 0 0 1rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+.chip { font-size: .76rem; font-weight: 700; padding: .28rem .72rem; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.chip.date { color: var(--accent-dark); border-color: var(--accent); }
+.lede {
+  position: relative; z-index: 1; background: linear-gradient(135deg, var(--card), var(--accent-soft));
+  border: 1px solid var(--line); border-left: .35rem solid var(--accent); border-radius: 16px;
+  padding: 1.35rem 1.5rem; box-shadow: var(--shadow); margin-top: 1rem;
+}
+.lede .one-line { font-size: 1.12rem; font-weight: 800; line-height: 1.65; margin: 0 0 .65rem; }
+.lede p { margin: 0; }
+.report-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
+.toc { position: sticky; top: 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1rem; }
+.toc-title { margin: 0 0 .55rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.toc a { display: block; color: var(--muted); text-decoration: none; padding: .34rem .45rem; border-radius: 7px; font-size: .82rem; font-weight: 600; line-height: 1.45; }
+.toc a:hover { color: var(--accent-dark); background: var(--accent-soft); }
+.report-content { min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.55rem 1.6rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.section-head { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.section-num { flex: 0 0 auto; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: var(--accent-soft); color: var(--accent-dark); font-size: .75rem; font-weight: 900; }
+h2 { font-weight: 900; font-size: 1.28rem; letter-spacing: .01em; margin: 0; }
+.card p { margin: 0 0 .85rem; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+ul { margin: 0; padding-left: 1.25rem; }
+li { margin-bottom: .55rem; padding-left: .15rem; }
+li:last-child { margin-bottom: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: 0 0 1rem; }
+.fact { background: var(--card); border: 1px solid var(--line); border-top: .22rem solid var(--accent); border-radius: 12px; padding: 1rem; }
+.fact-label { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; margin-bottom: .35rem; }
+.fact-value { font-size: .86rem; font-weight: 700; line-height: 1.6; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps li { counter-increment: step; position: relative; padding: .25rem 0 1rem 3rem; margin: 0; border-left: 1px solid var(--line); }
+ol.steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps li::before { content: counter(step); position: absolute; left: -1rem; top: 0; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #05222e; font-weight: 900; font-size: .82rem; }
+.card.cautions { border-left: .28rem solid var(--warning); background: linear-gradient(90deg, var(--warning-bg), var(--card) 28%); }
+code { font-family: "SFMono-Regular", Consolas, monospace; background: var(--accent-soft); padding: .12em .4em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; overflow-x: auto; }
+pre code { background: none; color: inherit; padding: 0; font-size: .84rem; line-height: 1.7; }
+a { color: var(--accent-dark); font-weight: 700; }
+.empty { color: var(--muted); }
+.source { font-size: .86rem; word-break: break-all; }
+footer { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+.index-intro { color: var(--muted); max-width: 720px; margin: -.35rem 0 1.5rem; }
+.entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+.entry { display: flex; flex-direction: column; justify-content: space-between; min-height: 145px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.15rem 1.2rem; text-decoration: none; color: var(--fg); font-weight: 400; box-shadow: var(--shadow); transition: transform .18s, border-color .18s; }
+.entry:hover { border-color: var(--accent); transform: translateY(-2px); }
+.entry .t { display: block; font-weight: 900; font-size: 1rem; line-height: 1.55; }
+.entry .d { display: block; color: var(--muted); font-size: .78rem; margin-top: .8rem; }
+@media (max-width: 780px) {
+  body { padding: 1.5rem .9rem 3rem; }
+  .report-layout { grid-template-columns: 1fr; }
+  .toc { position: static; display: flex; gap: .25rem; overflow-x: auto; padding: .65rem; }
+  .toc-title { display: none; }
+  .toc a { flex: 0 0 auto; white-space: nowrap; }
+  .facts, .entries { grid-template-columns: 1fr; }
+  .card { padding: 1.25rem 1.1rem; }
+  .hero::after { width: 120px; height: 120px; }
+}
+</style>
+<link rel="stylesheet" href="/css/snowflake-monitor-shell.css">
+<script src="/js/snowflake-monitor-shell.js" defer></script>
+<script src="/js/dark-mode.js" defer></script>
+<script src="/js/mobile-nav.js" defer></script>
+<script src="/js/search.js" defer></script>
+<script src="/js/lang-switcher.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<p class="eyebrow">SNOWFLAKE NEW FEATURE / PRACTICAL BRIEF</p>
+<h1>Snowflake CLI v3.25.0でApp Runtime運用とデプロイ制御を強化</h1>
+<p class="original-title">Snowflake CLI (v3.25.0)</p>
+<div class="meta"><span class="chip date">2026-08-24</span><span class="chip">機能アップデート</span></div>
+<div class="lede">
+<p class="one-line">App Runtimeの環境別デプロイ、段階実行、特定インスタンスのログ取得をSnowflake CLIで実行できる</p>
+<p>Snowflake CLI v3.25.0では、Snowflake App Runtime向けにapp.yml version 2、環境別target、段階的なデプロイ実行が追加されました。水平スケール時はsnow app events --instanceで特定サービスインスタンスのライブコンテナログを取得できます。snow dbt deployではdbt_projects_profiles.ymlの利用がGenerally Availableになりました。なお、DCMのpreview、refresh、testは引き続きGenerally Availableではなく、明示的なCLI feature flagが必要です。</p>
+</div></header>
+<div class="facts">
+<div class="fact"><div class="fact-label">CHANGE TYPE</div><div class="fact-value">機能アップデート</div></div>
+<div class="fact"><div class="fact-label">PRIMARY AUDIENCE</div><div class="fact-value">Snowflake App Runtimeを開発・運用するアプリケーションチーム</div></div>
+<div class="fact"><div class="fact-label">AVAILABILITY</div><div class="fact-value">Snowflake CLI v3.25.0として2026年8月24日に公開</div></div>
+</div>
+<div class="report-layout"><aside class="toc"><p class="toc-title">CONTENTS</p><a href="#why">なぜ重要か</a><a href="#audience">対象となるチーム</a><a href="#availability">提供条件</a><a href="#use-cases">ユースケース</a><a href="#usage">仕組みと使い方</a><a href="#steps">導入ステップ</a><a href="#cautions">運用上の注意</a><a href="#limitations">制約事項</a><a href="#actions">次に確認すること</a><a href="#source">公式情報</a></aside><main class="report-content"><section class="card" id="why"><div class="section-head"><span class="section-num">01</span><h2>なぜ重要か</h2></div><p>従来のApp Runtimeデプロイは、環境別設定やupload・build・deployの個別実行を標準化しにくい場合がありました。今回の変更により、targetsでデプロイ先を選択し、必要なフェーズだけを実行できます。また、Workspaceのlive状態をビルド対象にすることで、保存済みの最新作業内容がデプロイされます。</p></section><section class="card" id="audience"><div class="section-head"><span class="section-num">02</span><h2>対象となるチーム</h2></div><ul><li>Snowflake App Runtimeを開発・運用するアプリケーションチーム</li>
+<li>複数環境へのリリースを管理するDevOps・Platform Engineeringチーム</li>
+<li>dbtプロジェクトをSnowflake CLIからデプロイするデータエンジニア</li>
+<li>Snowflake CLIの認証・接続設定を管理する基盤管理者</li></ul></section><section class="card" id="availability"><div class="section-head"><span class="section-num">03</span><h2>提供条件</h2></div><ul><li>Snowflake CLI v3.25.0として2026年8月24日に公開</li>
+<li>提供ステータス全体はリリースノートに記載なし</li>
+<li>エディションおよびリージョンの記載なし</li>
+<li>app.yml version 2、--target、段階デプロイはSnowflake App Runtime向け。Native Appのフローは変更なし</li>
+<li>dbt_projects_profiles.ymlのsnow dbt deploy対応はGenerally Available。DCMのpreview、refresh、testはGenerally Availableではない</li></ul></section><section class="card" id="use-cases"><div class="section-head"><span class="section-num">04</span><h2>ユースケース</h2></div><ul><li>開発・ステージング・本番をtargetsに定義し、snow app deploy --targetで対象環境を明示してデプロイする。</li>
+<li>コードを先にアップロードして内容を確認し、その後にビルドまたは昇格を行う。snow app deploy --upload-only、--build-only、--promote-onlyを使い分ける。</li>
+<li>App Runtimeを水平スケールしている環境で、特定インスタンスの挙動を調査する。snow app events --instance &lt;N&gt;で対象インスタンスのライブコンテナログを取得する。</li>
+<li>Workspace上で編集中のアプリをデプロイする。デプロイ時には最後にコミットした版ではなく、versions/live/の現在の作業状態がビルドされる。</li>
+<li>dbtプロジェクトでdbt_projects_profiles.ymlを採用し、デプロイ対象プロジェクト内へ同じ名前でプロファイルをステージングする。</li></ul></section><section class="card" id="usage"><div class="section-head"><span class="section-num">05</span><h2>仕組みと使い方</h2></div><p>App Runtimeプロジェクトでは、app.yml version 2が存在するとsnow appコマンドはsnowflake.ymlではなくapp.ymlを基準に動作します。app.ymlのtargetsブロックに名前付きの環境別デプロイを定義し、deploy、open、events、teardown、validateに--targetを指定します。</p>
+<p>主な実行例:</p>
+<p>snow app deploy --target staging<br>snow app deploy --target staging --upload-only<br>snow app deploy --target staging --build-only<br>snow app deploy --target production --promote-only<br>snow app events --instance 2</p>
+<p>接続追加時に一時認証情報のクライアント保存設定をconfig.tomlへ書き込む場合:</p>
+<p>snow connection add --client-store-temporary-credential</p>
+<p>snow sql --local-onlyの既定値を環境変数で設定する場合:</p>
+<p>SNOWFLAKE_CLI_SQL_LOCAL_ONLY=true snow sql</p>
+<p>なお、dbt_projects_profiles.ymlは--profiles-dirで指定したディレクトリ、または指定がなければプロジェクトルートに置きます。同じディレクトリにprofiles.ymlと両方がある場合はdbt_projects_profiles.ymlが優先され、警告が表示されます。</p></section><section class="card" id="steps"><div class="section-head"><span class="section-num">06</span><h2>導入ステップ</h2></div><ol class="steps"><li>Snowflake CLIをv3.25.0へ更新し、snow --versionなどで実行バージョンを確認する。</li><li>App Runtimeプロジェクトでapp.yml version 2とtargetsの設計を確認し、既存のNative Appプロジェクトとは分離して扱う。</li><li>非本番環境で--targetを指定したvalidate、upload-only、build-onlyを実行し、対象環境と各フェーズの結果を確認する。</li><li>Workspace利用時は、デプロイ直前のlive状態が意図した内容であることを確認してからpromote-onlyを実行する。</li><li>dbtプロジェクトではprofilesディレクトリ内のファイル名と優先順位を確認し、テスト環境へsnow dbt deployを実行する。</li><li>認証情報保存やsnow sqlの既定値を変更する場合は、config.tomlまたは環境変数を適用した接続で動作を検証する。</li></ol></section><section class="card cautions" id="cautions"><div class="section-head"><span class="section-num">07</span><h2>運用上の注意</h2></div><ul><li>app.yml version 2があるApp Runtimeプロジェクトでは、それがsnowflake.ymlより優先されます。既存プロジェクトに追加する前に、コマンドが参照する定義ファイルを確認してください。</li>
+<li>--instanceを省略したsnow app eventsはinstance 0を対象にします。水平スケール環境で別インスタンスを調査する場合は番号を明示してください。</li>
+<li>dbt_projects_profiles.ymlとprofiles.ymlが同じprofilesディレクトリにある場合、前者が優先されます。意図せずデプロイ設定が切り替わらないよう、リポジトリ内の配置を点検してください。</li>
+<li>snow appコマンドがoutputディレクトリを扱う際、作成したbundle以外のファイルは削除しないよう修正されていますが、生成物の保存先や残存ディレクトリの警告は運用上確認してください。</li>
+<li>client_store_temporary_credentialの有効化はconfig.tomlに設定を書き込みます。認証情報の保管方針と設定ファイルのアクセス管理を事前に確認してください。</li></ul></section><section class="card" id="limitations"><div class="section-head"><span class="section-num">08</span><h2>制約事項</h2></div><ul><li>app.yml version 2の新しいフローはSnowflake App Runtime向けで、Native Appのフローは変更されません。App Runtime以外への適用可否はリリースノートに記載なし。</li>
+<li>snow app events --instanceはSnowflake App Runtimeのみ対応します。</li>
+<li>snow dcm preview、snow dcm refresh、snow dcm testはGenerally Availableではありません。--helpへの表示にはenable_dcm_preview_featuresの有効化が必要です。</li>
+<li>Snowflake CLI v3.25.0のエディション別提供条件、リージョン制限、必要権限の詳細はリリースノートに記載なし。</li>
+<li>各コマンドのapp.yml version 2におけるtargetsの詳細なスキーマや設定例は、リリースノート本文だけでは網羅されていません。</li></ul></section><section class="card" id="actions"><div class="section-head"><span class="section-num">09</span><h2>次に確認すること</h2></div><ul><li>公式のSnowflake CLIおよびApp Runtimeのapp.yml version 2ドキュメントで、targetsのスキーマ、必須項目、必要権限を確認する。</li>
+<li>検証用App Runtime環境でvalidateからupload-only、build-only、promote-onlyまでを実行し、既存CI/CDの手順との差分を確認する。</li>
+<li>公式の接続設定ドキュメントでclient_store_temporary_credentialの保存対象、保護要件、環境変数との優先順位を確認する。</li>
+<li>dbt_projects_profiles.ymlの公式仕様を確認し、profiles.ymlとの共存時に本番デプロイへ影響がないかをテストする。</li></ul></section><section class="card" id="source"><div class="section-head"><span class="section-num">→</span><h2>公式情報</h2></div><p>仕様・提供条件は更新される可能性があります。導入前に必ず公式リリースノートを確認してください。</p><p class="source"><a href="https://docs.snowflake.com/release-notes/clients-drivers/snowflake-cli-2026">https://docs.snowflake.com/release-notes/clients-drivers/snowflake-cli-2026</a></p></section></main></div>
+<footer><p><a href="../index.html">← レポート一覧</a></p><p>生成日時: 2026-08-26 22:10:55 / 本レポートは Snowflake 公式ドキュメントを claude で要約した非公式の資料です。正確な仕様は必ず出典を参照してください。</p></footer>
+</div>
+</body>
+</html>
