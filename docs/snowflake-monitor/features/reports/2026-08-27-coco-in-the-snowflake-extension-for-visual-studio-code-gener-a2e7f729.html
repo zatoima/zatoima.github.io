@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.setAttribute("data-theme","dark");}else{document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="/css/zenn.css">
+<meta name="robots" content="index, follow">
+<title>CoCo in the Snowflake Extension for Visual Studio Code (General availability) | Snowflake 新機能レポート</title>
+<style>
+:root {
+  --bg: #f1f5f9; --card: #ffffff; --card-soft: #f8fafc; --fg: #18212f;
+  --muted: #64748b; --line: #dbe3ec; --accent: #29b5e8; --accent-dark: #075985;
+  --accent-soft: #e8f7fd; --code-bg: #111827; --code-fg: #e5eefb;
+  --warning: #b45309; --warning-bg: #fff7ed; --shadow: 0 12px 35px rgba(15, 23, 42, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a; --card: #1c1f25; --card-soft: #20242c; --fg: #e9ecf1;
+    --muted: #9aa3b0; --line: #303641; --accent: #4fc9f4; --accent-dark: #9fe2fb;
+    --accent-soft: #163142; --code-bg: #0f1117; --code-fg: #d9e4f2;
+    --warning: #fdba74; --warning-bg: #3a281a; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 2.5rem 1.25rem 5rem; background: var(--bg); color: var(--fg);
+  font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  font-weight: 400; line-height: 1.9; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; }
+.hero { position: relative; padding: 1rem 0 1.5rem; }
+.hero::after {
+  content: ""; position: absolute; right: 1rem; top: .5rem; width: 180px; height: 180px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(41,181,232,.16), rgba(41,181,232,0) 68%);
+}
+.eyebrow { font-weight: 800; font-size: .76rem; letter-spacing: .18em; color: var(--accent-dark); margin: 0 0 .7rem; }
+h1 { max-width: 920px; font-weight: 900; font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.24; letter-spacing: -.025em; margin: 0 0 .75rem; }
+.original-title { max-width: 820px; color: var(--muted); font-size: .9rem; margin: 0 0 1rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+.chip { font-size: .76rem; font-weight: 700; padding: .28rem .72rem; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.chip.date { color: var(--accent-dark); border-color: var(--accent); }
+.lede {
+  position: relative; z-index: 1; background: linear-gradient(135deg, var(--card), var(--accent-soft));
+  border: 1px solid var(--line); border-left: .35rem solid var(--accent); border-radius: 16px;
+  padding: 1.35rem 1.5rem; box-shadow: var(--shadow); margin-top: 1rem;
+}
+.lede .one-line { font-size: 1.12rem; font-weight: 800; line-height: 1.65; margin: 0 0 .65rem; }
+.lede p { margin: 0; }
+.report-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
+.toc { position: sticky; top: 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1rem; }
+.toc-title { margin: 0 0 .55rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.toc a { display: block; color: var(--muted); text-decoration: none; padding: .34rem .45rem; border-radius: 7px; font-size: .82rem; font-weight: 600; line-height: 1.45; }
+.toc a:hover { color: var(--accent-dark); background: var(--accent-soft); }
+.report-content { min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.55rem 1.6rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.section-head { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.section-num { flex: 0 0 auto; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: var(--accent-soft); color: var(--accent-dark); font-size: .75rem; font-weight: 900; }
+h2 { font-weight: 900; font-size: 1.28rem; letter-spacing: .01em; margin: 0; }
+.card p { margin: 0 0 .85rem; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+ul { margin: 0; padding-left: 1.25rem; }
+li { margin-bottom: .55rem; padding-left: .15rem; }
+li:last-child { margin-bottom: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: 0 0 1rem; }
+.fact { background: var(--card); border: 1px solid var(--line); border-top: .22rem solid var(--accent); border-radius: 12px; padding: 1rem; }
+.fact-label { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; margin-bottom: .35rem; }
+.fact-value { font-size: .86rem; font-weight: 700; line-height: 1.6; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps li { counter-increment: step; position: relative; padding: .25rem 0 1rem 3rem; margin: 0; border-left: 1px solid var(--line); }
+ol.steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps li::before { content: counter(step); position: absolute; left: -1rem; top: 0; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #05222e; font-weight: 900; font-size: .82rem; }
+.card.cautions { border-left: .28rem solid var(--warning); background: linear-gradient(90deg, var(--warning-bg), var(--card) 28%); }
+code { font-family: "SFMono-Regular", Consolas, monospace; background: var(--accent-soft); padding: .12em .4em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; overflow-x: auto; }
+pre code { background: none; color: inherit; padding: 0; font-size: .84rem; line-height: 1.7; }
+a { color: var(--accent-dark); font-weight: 700; }
+.empty { color: var(--muted); }
+.source { font-size: .86rem; word-break: break-all; }
+footer { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+.index-intro { color: var(--muted); max-width: 720px; margin: -.35rem 0 1.5rem; }
+.entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+.entry { display: flex; flex-direction: column; justify-content: space-between; min-height: 145px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.15rem 1.2rem; text-decoration: none; color: var(--fg); font-weight: 400; box-shadow: var(--shadow); transition: transform .18s, border-color .18s; }
+.entry:hover { border-color: var(--accent); transform: translateY(-2px); }
+.entry .t { display: block; font-weight: 900; font-size: 1rem; line-height: 1.55; }
+.entry .d { display: block; color: var(--muted); font-size: .78rem; margin-top: .8rem; }
+@media (max-width: 780px) {
+  body { padding: 1.5rem .9rem 3rem; }
+  .report-layout { grid-template-columns: 1fr; }
+  .toc { position: static; display: flex; gap: .25rem; overflow-x: auto; padding: .65rem; }
+  .toc-title { display: none; }
+  .toc a { flex: 0 0 auto; white-space: nowrap; }
+  .facts, .entries { grid-template-columns: 1fr; }
+  .card { padding: 1.25rem 1.1rem; }
+  .hero::after { width: 120px; height: 120px; }
+}
+</style>
+<link rel="stylesheet" href="/css/snowflake-monitor-shell.css">
+<script src="/js/snowflake-monitor-shell.js" defer></script>
+<script src="/js/dark-mode.js" defer></script>
+<script src="/js/mobile-nav.js" defer></script>
+<script src="/js/search.js" defer></script>
+<script src="/js/lang-switcher.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<p class="eyebrow">SNOWFLAKE NEW FEATURE / PRACTICAL BRIEF</p>
+<h1>Visual Studio Code の Snowflake Extension に CoCo が正式搭載</h1>
+<p class="original-title">CoCo in the Snowflake Extension for Visual Studio Code (General availability)</p>
+<div class="meta"><span class="chip date">2026-08-27</span><span class="chip">機能アップデート</span><span class="chip">General availability</span></div>
+<div class="lede">
+<p class="one-line">SQL開発者がVisual Studio Code上で、実行中の文脈やエラーを保ったままCoCoに相談・修正依頼できる</p>
+<p>CoCo in the Snowflake Extension for Visual Studio Code が General availability になりました。既存の SQL および Snowpark Python のワークフロー横にサイドパネルを表示し、Snowflake アカウントへの接続を維持したままローカルで作業できます。SQL 文の上部に表示される Ask CoCo や、クエリ失敗時の Fix with CoCo から、対象の文脈を引き継いで CoCo を起動できます。今回のリリースでは、クエリ結果の表示に Snowsight results viewer も既定で使われます。</p>
+</div></header>
+<div class="facts">
+<div class="fact"><div class="fact-label">CHANGE TYPE</div><div class="fact-value">機能アップデート</div></div>
+<div class="fact"><div class="fact-label">PRIMARY AUDIENCE</div><div class="fact-value">Snowflake SQL 開発者</div></div>
+<div class="fact"><div class="fact-label">AVAILABILITY</div><div class="fact-value">提供ステータスは General availability</div></div>
+</div>
+<div class="report-layout"><aside class="toc"><p class="toc-title">CONTENTS</p><a href="#why">なぜ重要か</a><a href="#audience">対象となるチーム</a><a href="#availability">提供条件</a><a href="#use-cases">ユースケース</a><a href="#usage">仕組みと使い方</a><a href="#steps">導入ステップ</a><a href="#cautions">運用上の注意</a><a href="#limitations">制約事項</a><a href="#actions">次に確認すること</a><a href="#source">公式情報</a></aside><main class="report-content"><section class="card" id="why"><div class="section-head"><span class="section-num">01</span><h2>なぜ重要か</h2></div><p>従来は、作業中の SQL やクエリエラーを別途 CoCo に渡す手間がありました。今回の統合により、SQL 文または失敗した SQL とエラーを起点に CoCo を開けるようになり、Visual Studio Code 内で作業を継続できます。クエリ結果は Snowsight results viewer で最大 100 万行を表示できます。</p></section><section class="card" id="audience"><div class="section-head"><span class="section-num">02</span><h2>対象となるチーム</h2></div><ul><li>Snowflake SQL 開発者</li>
+<li>Snowpark Python 開発者</li>
+<li>データ基盤・分析エンジニア</li>
+<li>Visual Studio Code の開発環境を標準化するチーム</li></ul></section><section class="card" id="availability"><div class="section-head"><span class="section-num">03</span><h2>提供条件</h2></div><ul><li>提供ステータスは General availability</li>
+<li>Snowflake Extension for Visual Studio Code 1.39 以降が必要</li>
+<li>エディションの記載はリリースノートに記載なし</li>
+<li>リージョンの記載はリリースノートに記載なし</li>
+<li>CoCo の別インストールは不要</li></ul></section><section class="card" id="use-cases"><div class="section-head"><span class="section-num">04</span><h2>ユースケース</h2></div><ul><li>SQL 文の作成中に Ask CoCo を選択し、その SQL を文脈として質問する。</li>
+<li>クエリが失敗した際に Fix with CoCo を選択し、失敗した SQL とエラーを渡して原因確認や修正案の検討を行う。</li>
+<li>Snowflake アカウントに接続したまま、Visual Studio Code の SQL や Snowpark Python 開発と CoCo の相談を同じ画面で進める。</li>
+<li>大量のクエリ結果を確認する際に、既定の Snowsight results viewer で最大 100 万行を表示する。</li></ul></section><section class="card" id="usage"><div class="section-head"><span class="section-num">05</span><h2>仕組みと使い方</h2></div><p>Snowflake Extension for Visual Studio Code 1.39 以降を導入すると、CoCo に必要なものも拡張機能に含まれるため、別途 CoCo をインストールせず利用できます。SQL エディターで各 SQL 文の上に表示される Ask CoCo を選択すると、その文をコンテキストにして CoCo が開きます。クエリ結果ペインで失敗メッセージに表示される Fix with CoCo を選択すると、失敗した SQL とエラーをコンテキストにして開きます。必要に応じて、CoCo: CLI Path または <code>snowflake.coco.cliPath</code> に CoCo 実行ファイルのフルパスを設定できます。主な設定は次のとおりです。</p>
+<p>- <code>snowflake.coco.cliPath</code>: 使用する CoCo 実行ファイルを上書き。既定値は未設定。<br>- <code>snowflake.coco.showAskCocoAboveStatement</code>: SQL 文上の Ask CoCo を表示。既定で有効。<br>- <code>snowflake.coco.enabled</code>: すべてのワークスペースで CoCo サイドパネルを有効化または無効化。既定で有効。<br>- <code>snowflake.queryResults.snowsightResultsViewer</code>: Snowsight results viewer を使用。今回のリリースで既定で有効。無効にすると従来の結果テーブルに戻せます。</p></section><section class="card" id="steps"><div class="section-head"><span class="section-num">06</span><h2>導入ステップ</h2></div><ol class="steps"><li>Snowflake Extension for Visual Studio Code のバージョンが 1.39 以降であることを確認する。</li><li>拡張機能をインストールまたは更新し、Snowflake アカウントに接続する。</li><li>CoCo サイドパネルが有効であることを <code>snowflake.coco.enabled</code> で確認する。</li><li>SQL 文の上にある Ask CoCo、または失敗したクエリの結果ペインにある Fix with CoCo を選択する。</li><li>必要に応じて <code>snowflake.coco.cliPath</code> に使用する CoCo 実行ファイルのフルパスを設定する。</li><li>Snowsight results viewer が運用に合わない場合は <code>snowflake.queryResults.snowsightResultsViewer</code> を無効化して結果表示を検証する。</li></ol></section><section class="card cautions" id="cautions"><div class="section-head"><span class="section-num">07</span><h2>運用上の注意</h2></div><ul><li>このリリースでは CoCo の別インストールは不要ですが、特定の実行ファイルを使う場合は <code>snowflake.coco.cliPath</code> にフルパスを設定する必要があります。</li>
+<li>Snowsight results viewer が既定で有効になるため、既存の結果表示や利用者の確認手順に影響がないか更新後に確認してください。</li>
+<li>Ask CoCo は既定で各 SQL 文の上に表示されます。画面上の操作を減らしたい場合は <code>snowflake.coco.showAskCocoAboveStatement</code> を無効にできます。</li>
+<li>CoCo サイドパネルの有効・無効設定はすべてのワークスペースが対象です。ワークスペース単位での制御可否はリリースノートに記載なしです。</li></ul></section><section class="card" id="limitations"><div class="section-head"><span class="section-num">08</span><h2>制約事項</h2></div><ul><li>利用可能な Snowflake エディション、リージョン、OS、アカウント権限の詳細はリリースノートに記載なしです。</li>
+<li>CoCo が Ask CoCo や Fix with CoCo で引き継ぐ具体的なコンテキスト範囲や、対応する質問・修正機能の詳細はリリースノートに記載なしです。</li>
+<li>CoCo の実行ファイルを指定する場合のバージョン互換性や配置要件はリリースノートに記載なしです。</li>
+<li>Snowsight results viewer の最大表示行数は 100 万行ですが、性能、メモリ使用量、その他の結果表示制限はリリースノートに記載なしです。</li></ul></section><section class="card" id="actions"><div class="section-head"><span class="section-num">09</span><h2>次に確認すること</h2></div><ul><li>公式の「CoCo in the Snowflake Extension for Visual Studio Code」と「Start CoCo from the editor and query results」を確認する。</li>
+<li>検証用ワークスペースで Extension 1.39 以降を使い、Ask CoCo と Fix with CoCo の起動・コンテキスト引き継ぎを確認する。</li>
+<li>自組織の Snowflake 接続方式、権限、対応 OS、CoCo 実行ファイル要件を公式ドキュメントで確認する。</li>
+<li>Snowsight results viewer の既定化が既存の SQL レビューや結果取得手順に与える影響を小規模に検証する。</li></ul></section><section class="card" id="source"><div class="section-head"><span class="section-num">→</span><h2>公式情報</h2></div><p>仕様・提供条件は更新される可能性があります。導入前に必ず公式リリースノートを確認してください。</p><p class="source"><a href="https://docs.snowflake.com/release-notes/2026/other/2026-08-27-coco-vscode-extension-ga">https://docs.snowflake.com/release-notes/2026/other/2026-08-27-coco-vscode-extension-ga</a></p></section></main></div>
+<footer><p><a href="../index.html">← レポート一覧</a></p><p>生成日時: 2026-08-28 09:10:51 / 本レポートは Snowflake 公式ドキュメントを claude で要約した非公式の資料です。正確な仕様は必ず出典を参照してください。</p></footer>
+</div>
+</body>
+</html>
