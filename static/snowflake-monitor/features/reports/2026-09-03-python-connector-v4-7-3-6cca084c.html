@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){var t=localStorage.getItem("theme");if(t==="dark"||((!t||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.setAttribute("data-theme","dark");}else{document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="/css/zenn.css">
+<meta name="robots" content="index, follow">
+<title>Python Connector (v4.7.3) | Snowflake 新機能レポート</title>
+<style>
+:root {
+  --bg: #f1f5f9; --card: #ffffff; --card-soft: #f8fafc; --fg: #18212f;
+  --muted: #64748b; --line: #dbe3ec; --accent: #29b5e8; --accent-dark: #075985;
+  --accent-soft: #e8f7fd; --code-bg: #111827; --code-fg: #e5eefb;
+  --warning: #b45309; --warning-bg: #fff7ed; --shadow: 0 12px 35px rgba(15, 23, 42, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a; --card: #1c1f25; --card-soft: #20242c; --fg: #e9ecf1;
+    --muted: #9aa3b0; --line: #303641; --accent: #4fc9f4; --accent-dark: #9fe2fb;
+    --accent-soft: #163142; --code-bg: #0f1117; --code-fg: #d9e4f2;
+    --warning: #fdba74; --warning-bg: #3a281a; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 2.5rem 1.25rem 5rem; background: var(--bg); color: var(--fg);
+  font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  font-weight: 400; line-height: 1.9; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1060px; margin: 0 auto; }
+.hero { position: relative; padding: 1rem 0 1.5rem; }
+.hero::after {
+  content: ""; position: absolute; right: 1rem; top: .5rem; width: 180px; height: 180px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(41,181,232,.16), rgba(41,181,232,0) 68%);
+}
+.eyebrow { font-weight: 800; font-size: .76rem; letter-spacing: .18em; color: var(--accent-dark); margin: 0 0 .7rem; }
+h1 { max-width: 920px; font-weight: 900; font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.24; letter-spacing: -.025em; margin: 0 0 .75rem; }
+.original-title { max-width: 820px; color: var(--muted); font-size: .9rem; margin: 0 0 1rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+.chip { font-size: .76rem; font-weight: 700; padding: .28rem .72rem; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.chip.date { color: var(--accent-dark); border-color: var(--accent); }
+.lede {
+  position: relative; z-index: 1; background: linear-gradient(135deg, var(--card), var(--accent-soft));
+  border: 1px solid var(--line); border-left: .35rem solid var(--accent); border-radius: 16px;
+  padding: 1.35rem 1.5rem; box-shadow: var(--shadow); margin-top: 1rem;
+}
+.lede .one-line { font-size: 1.12rem; font-weight: 800; line-height: 1.65; margin: 0 0 .65rem; }
+.lede p { margin: 0; }
+.report-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
+.toc { position: sticky; top: 1rem; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1rem; }
+.toc-title { margin: 0 0 .55rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.toc a { display: block; color: var(--muted); text-decoration: none; padding: .34rem .45rem; border-radius: 7px; font-size: .82rem; font-weight: 600; line-height: 1.45; }
+.toc a:hover { color: var(--accent-dark); background: var(--accent-soft); }
+.report-content { min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.55rem 1.6rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.section-head { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.section-num { flex: 0 0 auto; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: var(--accent-soft); color: var(--accent-dark); font-size: .75rem; font-weight: 900; }
+h2 { font-weight: 900; font-size: 1.28rem; letter-spacing: .01em; margin: 0; }
+.card p { margin: 0 0 .85rem; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+ul { margin: 0; padding-left: 1.25rem; }
+li { margin-bottom: .55rem; padding-left: .15rem; }
+li:last-child { margin-bottom: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: 0 0 1rem; }
+.fact { background: var(--card); border: 1px solid var(--line); border-top: .22rem solid var(--accent); border-radius: 12px; padding: 1rem; }
+.fact-label { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; margin-bottom: .35rem; }
+.fact-value { font-size: .86rem; font-weight: 700; line-height: 1.6; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps li { counter-increment: step; position: relative; padding: .25rem 0 1rem 3rem; margin: 0; border-left: 1px solid var(--line); }
+ol.steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps li::before { content: counter(step); position: absolute; left: -1rem; top: 0; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #05222e; font-weight: 900; font-size: .82rem; }
+.card.cautions { border-left: .28rem solid var(--warning); background: linear-gradient(90deg, var(--warning-bg), var(--card) 28%); }
+code { font-family: "SFMono-Regular", Consolas, monospace; background: var(--accent-soft); padding: .12em .4em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; overflow-x: auto; }
+pre code { background: none; color: inherit; padding: 0; font-size: .84rem; line-height: 1.7; }
+a { color: var(--accent-dark); font-weight: 700; }
+.empty { color: var(--muted); }
+.source { font-size: .86rem; word-break: break-all; }
+footer { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+.index-intro { color: var(--muted); max-width: 720px; margin: -.35rem 0 1.5rem; }
+.entries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+.entry { display: flex; flex-direction: column; justify-content: space-between; min-height: 145px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.15rem 1.2rem; text-decoration: none; color: var(--fg); font-weight: 400; box-shadow: var(--shadow); transition: transform .18s, border-color .18s; }
+.entry:hover { border-color: var(--accent); transform: translateY(-2px); }
+.entry .t { display: block; font-weight: 900; font-size: 1rem; line-height: 1.55; }
+.entry .d { display: block; color: var(--muted); font-size: .78rem; margin-top: .8rem; }
+@media (max-width: 780px) {
+  body { padding: 1.5rem .9rem 3rem; }
+  .report-layout { grid-template-columns: 1fr; }
+  .toc { position: static; display: flex; gap: .25rem; overflow-x: auto; padding: .65rem; }
+  .toc-title { display: none; }
+  .toc a { flex: 0 0 auto; white-space: nowrap; }
+  .facts, .entries { grid-template-columns: 1fr; }
+  .card { padding: 1.25rem 1.1rem; }
+  .hero::after { width: 120px; height: 120px; }
+}
+</style>
+<link rel="stylesheet" href="/css/snowflake-monitor-shell.css">
+<script src="/js/snowflake-monitor-shell.js" defer></script>
+<script src="/js/dark-mode.js" defer></script>
+<script src="/js/mobile-nav.js" defer></script>
+<script src="/js/search.js" defer></script>
+<script src="/js/lang-switcher.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<p class="eyebrow">SNOWFLAKE NEW FEATURE / PRACTICAL BRIEF</p>
+<h1>Python Connector 4.7.3で認証・ログ秘匿性とOCSP検証を強化</h1>
+<p class="original-title">Python Connector (v4.7.3)</p>
+<div class="meta"><span class="chip date">2026-09-03</span><span class="chip">機能アップデート</span></div>
+<div class="lede">
+<p class="one-line">Snowflake Connector for Python利用者は、WIF認証の接続先制限、秘密情報の自動マスキング、OCSP検証改善を適用できます。</p>
+<p>Version 4.7.3は、WORKLOAD_IDENTITY認証の接続先制限、ログ内の秘密情報マスキング、OCSP失効確認の改善を含むセキュリティ更新です。SQL DEBUGログや結果バッチログから、トークン、Authorizationヘッダー、qrmkなどの機微情報が出力されにくくなりました。Python 3.14t向けの実験的wheelも公開されていますが、本番利用は想定されていません。通常の4.x系Connectorとして提供され、5.0.0rc1のUniversal Core版とは別のバージョン系列です。</p>
+</div></header>
+<div class="facts">
+<div class="fact"><div class="fact-label">CHANGE TYPE</div><div class="fact-value">機能アップデート</div></div>
+<div class="fact"><div class="fact-label">PRIMARY AUDIENCE</div><div class="fact-value">認証・IAMを担当するセキュリティチーム</div></div>
+<div class="fact"><div class="fact-label">AVAILABILITY</div><div class="fact-value">Version 4.7.3として2026年9月3日に公開</div></div>
+</div>
+<div class="report-layout"><aside class="toc"><p class="toc-title">CONTENTS</p><a href="#why">なぜ重要か</a><a href="#audience">対象となるチーム</a><a href="#availability">提供条件</a><a href="#use-cases">ユースケース</a><a href="#usage">仕組みと使い方</a><a href="#steps">導入ステップ</a><a href="#cautions">運用上の注意</a><a href="#limitations">制約事項</a><a href="#actions">次に確認すること</a><a href="#source">公式情報</a></aside><main class="report-content"><section class="card" id="why"><div class="section-head"><span class="section-num">01</span><h2>なぜ重要か</h2></div><p>従来は、WIF認証のホスト検証範囲や詳細ログにおける秘密情報の露出、PrivateLink環境を含むOCSPキャッシュURLの扱いに注意が必要でした。4.7.3では認識済みSnowflakeホストへの接続を基本とし、各種ログのマスキングと失効確認の判定を強化しています。深いコールスタックでのconnect()遅延や、://を含むURLをsplit_statementsが切り詰める問題も修正されました。</p></section><section class="card" id="audience"><div class="section-head"><span class="section-num">02</span><h2>対象となるチーム</h2></div><ul><li>認証・IAMを担当するセキュリティチーム</li>
+<li>Pythonアプリケーションの開発・運用チーム</li>
+<li>監査ログと障害解析基盤を管理するSRE・プラットフォームチーム</li>
+<li>PrivateLinkやフォーク処理を利用するデータ基盤チーム</li></ul></section><section class="card" id="availability"><div class="section-head"><span class="section-num">03</span><h2>提供条件</h2></div><ul><li>Version 4.7.3として2026年9月3日に公開</li>
+<li>提供ステータスはリリースノートに記載なし</li>
+<li>エディションの記載はリリースノートに記載なし</li>
+<li>リージョンの記載はリリースノートに記載なし</li>
+<li>Python 3.14t向けwheelは実験的提供で、本番利用向けではない</li></ul></section><section class="card" id="use-cases"><div class="section-head"><span class="section-num">04</span><h2>ユースケース</h2></div><ul><li>WORKLOAD_IDENTITY認証を使う環境で、想定外のホストへの認証情報送信を抑制する。独自ドメインなどを使う場合は、認識済みホストサフィックスを追加設定します。</li>
+<li>DEBUGログを有効にして接続障害を調査する。SQL、OAuthトークン、Authorizationヘッダー、接続トークンなどのマスキングにより、調査ログの機微情報リスクを下げられます。</li>
+<li>PrivateLink環境でOCSP応答キャッシュを利用する。明示したSF_OCSP_RESPONSE_CACHE_SERVER_URLが優先され、無効なPrivateLinkホストでは公開デフォルトURLが使われます。</li>
+<li>深いフレームスタックからconnect()するジョブやサービスを更新し、接続確立の性能改善を検証する。</li>
+<li>unquoted URLを含む複数SQLをsplit_statementsで処理するアプリケーションを更新し、://を含むURLの切り詰めが発生しないことを確認する。</li></ul></section><section class="card" id="usage"><div class="section-head"><span class="section-num">05</span><h2>仕組みと使い方</h2></div><p>通常どおりVersion 4.7.3のsnowflake-connector-pythonをアプリケーション環境へ適用します。WORKLOAD_IDENTITYでSnowflakeの標準ドメイン以外のホストサフィックスを許可する場合は、SNOWFLAKE_WIF_ALLOWED_HOST_SUFFIXES環境変数に追加します。ログの秘密情報マスキングは既定で有効で、無効化する場合のみSNOWFLAKE_DISABLE_LOG_SECRET_MASKING=trueを設定しますが、ログの取り扱いリスクを事前に確認してください。OCSPキャッシュURLを固定する場合はSF_OCSP_RESPONSE_CACHE_SERVER_URLを設定します。この変数はPrivateLinkホスト向けにConnectorが導出するURLより優先されます。</p></section><section class="card" id="steps"><div class="section-head"><span class="section-num">06</span><h2>導入ステップ</h2></div><ol class="steps"><li>利用中のsnowflake-connector-pythonのバージョン、Pythonバージョン、認証方式、ログ設定を棚卸しします。</li><li>検証用の分離環境にVersion 4.7.3を適用し、既存アプリケーションの依存関係と起動を確認します。</li><li>WORKLOAD_IDENTITY、OAuth、PrivateLink、DEBUGログを利用する構成では、該当する接続・ログ・OCSP設定を明示して接続試験を行います。</li><li>トークンやAuthorizationヘッダー、SQL、qrmkなどがログに残らないことと、障害解析に必要な構造的メタデータが残ることを確認します。</li><li>深いコールスタック、URLを含むsplit_statements、フォーク後のOCSPキャッシュを使う処理で回帰テストを実施します。</li><li>結果を踏まえて本番適用の可否、ロールバック手順、ログ監視ルールを決定します。</li></ol></section><section class="card cautions" id="cautions"><div class="section-head"><span class="section-num">07</span><h2>運用上の注意</h2></div><ul><li>SNOWFLAKE_DISABLE_LOG_SECRET_MASKING=trueを設定すると既定の秘密情報マスキングを無効化できます。通常は設定せず、やむを得ない場合もログのアクセス制御と保存期間を確認してください。</li>
+<li>WORKLOAD_IDENTITYはsnowflakecomputing.com、snowflakecomputing.cn、snowflakecomputing.milで終わる認識済みホストに制限されます。独自のホストサフィックスを使う場合はSNOWFLAKE_WIF_ALLOWED_HOST_SUFFIXESの設定が必要です。</li>
+<li>PrivateLinkのOCSPキャッシュURLは、.privatelink.ラベルを含み、認識済みSnowflakeドメインで終わる有効なホストだけがConnector導出の対象です。</li>
+<li>ログマスキングはログハンドラーがレコードを出力するときに遅延実行されます。既存のカスタムハンドラーやログ転送処理との互換性を検証してください。</li></ul></section><section class="card" id="limitations"><div class="section-head"><span class="section-num">08</span><h2>制約事項</h2></div><ul><li>Python 3.14t向けwheelは実験的提供であり、本番利用を意図していません。</li>
+<li>Version 4.7.3の提供ステータス、対応エディション、対応リージョンはリリースノートに記載なしです。</li>
+<li>5.0.0rc1のUniversal Core版は別の公開プレビュー系列です。4.7.3の導入によってasyncio用のsnowflake.connector.aioや5.0.0rc1固有の変更が利用可能になるわけではありません。</li>
+<li>認識済みホストサフィックスの追加方法は環境変数による指定に限られ、許可するサフィックスの妥当性や組織内の利用条件は別途確認が必要です。</li></ul></section><section class="card" id="actions"><div class="section-head"><span class="section-num">09</span><h2>次に確認すること</h2></div><ul><li>Snowflake Connector for Pythonの公式ドキュメントで、Version 4.7.3のインストール方法、サポート対象Python、認証設定を確認する。</li>
+<li>WORKLOAD_IDENTITYを利用する環境では、実際の接続ホストとSNOWFLAKE_WIF_ALLOWED_HOST_SUFFIXESの必要性をセキュリティ担当と確認する。</li>
+<li>PrivateLink利用環境では、SF_OCSP_RESPONSE_CACHE_SERVER_URL、DNS、プロキシ、ファイアウォールの疎通を検証する。</li>
+<li>公式のVersion 5.0.0rc1移行ガイダンスとは分けて、4.7.3への更新によるアプリケーション、依存ライブラリ、ログ監視の回帰試験を行う。</li></ul></section><section class="card" id="source"><div class="section-head"><span class="section-num">→</span><h2>公式情報</h2></div><p>仕様・提供条件は更新される可能性があります。導入前に必ず公式リリースノートを確認してください。</p><p class="source"><a href="https://docs.snowflake.com/release-notes/clients-drivers/python-connector-2026">https://docs.snowflake.com/release-notes/clients-drivers/python-connector-2026</a></p></section></main></div>
+<footer><p><a href="../index.html">← レポート一覧</a></p><p>生成日時: 2026-09-04 21:10:56 / 本レポートは Snowflake 公式ドキュメントを claude で要約した非公式の資料です。正確な仕様は必ず出典を参照してください。</p></footer>
+</div>
+</body>
+</html>
